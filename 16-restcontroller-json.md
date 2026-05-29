@@ -1,0 +1,332 @@
+---
+theme: penguin
+class: text-center
+highlighter: shiki
+lineNumbers: true
+drawings:
+  persist: false
+transition: slide-left
+title: 返回值改成 JSON 格式—@RestController
+routeAlias: ch16
+style: |
+  .slidev-layout p,
+  .slidev-layout li,
+  .slidev-layout td,
+  .slidev-layout th,
+  .slidev-layout div {
+    font-size: max(16px, 1em);
+  }
+  table {
+    width: 100%;
+    margin: 1rem 0;
+    border-collapse: collapse;
+  }
+  th, td {
+    padding: 8px !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+  .index-table td {
+    text-align: center;
+    font-family: monospace;
+  }
+---
+
+<div class="flex flex-col justify-center items-center h-full" style="background: #ffffff;">
+  <p style="color: #5eada0; font-size: 1rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 1.2rem;">
+    Spring Boot Backend Masterclass
+  </p>
+  <h1 style="color: #1a5c5c; font-size: 3.2rem; font-weight: 900; line-height: 1.15; margin-bottom: 1.5rem;">
+    返回值改成 JSON 格式<br>@RestController
+  </h1>
+  <div style="height: 4px; width: 320px; background: linear-gradient(90deg, #5eada0, #a7d9d0); border-radius: 2px; margin-bottom: 1.5rem;"></div>
+  <p style="color: #4a7c7c; font-size: 1.15rem; font-style: italic;">
+    「Spring Boot 自動幫你把 Java 物件轉成 JSON」
+  </p>
+  <Link to="home" style="color: #9dc4c4; font-size: 0.85rem; margin-top: 2rem; text-decoration: none; letter-spacing: 0.05em;">← 返回目錄</Link>
+</div>
+
+<!--
+大家好，上一章我們學了 JSON 的格式。
+
+但現在有個問題：我知道 JSON 長什麼樣子了，可是我要怎麼讓 Spring Boot 的 API 回傳 JSON 格式的資料呢？
+
+這一章就是要解決這個問題。我們會看到，其實 @RestController 早就幫我們做好這件事了，而且用法非常簡單。
+-->
+
+---
+layout: default
+---
+
+# Outline
+
+- **回顧：到目前為止的返回數據** — 從回傳字串到回傳 Java 物件的演進
+- **如何將返回值轉換成 JSON？** — Jackson 自動轉換機制、三步驟實作
+- **@Controller vs @RestController** — 差別、適用情境、現代開發建議
+- **章節總結** — 核心概念整理
+
+<!--
+這章的重點是實作。我們會一步一步建立一個能回傳 JSON 的 API，最後再補充說明 @Controller 和 @RestController 的差別。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 回顧
+
+## 到目前為止的返回數據
+
+<!--
+先快速回顧一下我們目前的情況。
+-->
+
+---
+
+# 回顧：到目前為止的返回數據
+
+| 章節 | 回傳類型 | 回傳內容 |
+| --- | --- | --- |
+| Ch 3–14 | `String` | `"Hello World"` |
+| Ch 15 | — | 學習了 JSON 格式 |
+| **Ch 16（本章）** | **Java 物件** | **自動轉換成 JSON** |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>目標：</b> 讓 Controller 回傳一個 Java 物件，Spring Boot 自動把它轉成 JSON 格式回應給前端。
+</div>
+
+<!--
+我們從第三章開始，Controller 一直都只能回傳字串。
+上一章我們學了 JSON 格式是什麼。
+這一章要把這兩件事合起來：讓 API 真正回傳 JSON。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 1
+
+## 如何將 Spring Boot 的返回值轉換成 JSON 格式？
+
+<!--
+好，進入本章核心。我們要怎麼讓 Spring Boot 的 API 回傳 JSON？
+-->
+
+---
+
+# Spring Boot 自動轉換的秘密
+
+`@RestController` 會自動將回傳的 Java 物件轉換成 JSON 格式：
+
+| 步驟 | 說明 |
+| --- | --- |
+| 1 | Controller 方法回傳一個 Java 物件（例如 `Student`） |
+| 2 | `@RestController` 交給底層的 **Jackson** 函式庫處理 |
+| 3 | Jackson 把 Java 物件的欄位轉成 JSON key-value |
+| 4 | 前端收到的就是 JSON 格式的回應 |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>Jackson：</b> Spring Boot 預設整合的 JSON 序列化函式庫，無需額外設定，開箱即用。
+</div>
+
+<!--
+秘密就藏在 @RestController 裡。
+
+當我們的方法回傳一個 Java 物件，@RestController 不會直接把物件丟出去，而是交給一個叫做 Jackson 的函式庫。
+Jackson 的工作就是把 Java 物件「翻譯」成 JSON 格式的字串。
+
+好消息是，Spring Boot 已經幫我們把 Jackson 設定好了，我們完全不需要額外安裝或設定任何東西。
+
+接下來我們用三個步驟，實際做一個能回傳 JSON 的 API。
+-->
+
+---
+
+# Step 1：建立 Student 類別
+
+建立一個 `Student.java`，用來代表學生資料：
+
+```java
+public class Student {
+    private Integer id;
+    private String name;
+}
+```
+
+| 欄位 | 類型 | 說明 |
+| --- | --- | --- |
+| `id` | `Integer` | 學生 ID，對應 JSON 的整數類型 |
+| `name` | `String` | 學生姓名，對應 JSON 的字串類型 |
+
+<!--
+第一步，建立一個簡單的 Java 類別 Student，有兩個欄位：id 和 name。
+
+這種只有欄位和 getter/setter 的類別，在 Java 裡通常叫做 POJO（Plain Old Java Object）。
+
+注意欄位都是 private，這樣才符合物件導向的封裝原則。
+下一步我們要加上 getter 和 setter，讓 Jackson 能讀到這些欄位的值。
+-->
+
+---
+
+# Step 2：加上 Getter 和 Setter
+
+Jackson 需要透過 Getter 讀取欄位值，才能轉換成 JSON：
+
+```java
+public Integer getId() {
+    return id;
+}
+public void setId(Integer id) {
+    this.id = id;
+}
+public String getName() {
+    return name;
+}
+public void setName(String name) {
+    this.name = name;
+}
+```
+
+<!--
+第二步，為每個欄位加上 getter 和 setter。
+
+⚠️ 這裡很重要：Jackson 是透過呼叫 getter 方法來讀取欄位的值，並轉換成 JSON 的 key-value。
+如果沒有 getter，Jackson 就讀不到欄位，那個欄位就不會出現在 JSON 裡。
+
+命名規則是固定的：getId 對應 "id"，getName 對應 "name"，Jackson 會自動把 get 去掉、首字母小寫，作為 JSON 的 key。
+
+在 Eclipse 裡，你可以用右鍵 → Source → Generate Getters and Setters 自動產生，不用手動打。
+-->
+
+---
+
+# Step 3：Controller 回傳 Student 物件
+
+把原本回傳 `String` 改成回傳 `Student` 物件：
+
+```java
+@RestController
+public class MyController {
+
+    @RequestMapping("/test")
+    public Student test() {
+        Student student = new Student();
+        student.setId(123);
+        student.setName("Judy");
+        return student;
+    }
+}
+```
+
+<!--
+第三步，修改 Controller。
+
+注意看方法的回傳類型，從原來的 String 改成了 Student。
+我們建立一個 Student 物件，設定好 id 和 name，然後直接 return 出去。
+
+@RestController 會攔截這個回傳值，交給 Jackson 轉成 JSON，再回應給前端。
+整個過程對我們來說完全透明，我們只需要 return 物件就好。
+-->
+
+---
+
+# 執行結果
+
+啟動後用 API Tester 呼叫 `GET http://localhost:8080/test`：
+
+| 項目 | 內容 |
+| --- | --- |
+| 請求 URL | `http://localhost:8080/test` |
+| Http Method | `GET` |
+| 回應 Status | `200 OK` |
+| 回應 Body | JSON 格式的學生資料 |
+
+```json
+{
+    "id": 123,
+    "name": "Judy"
+}
+```
+
+<!--
+啟動 Spring Boot，打開 API Tester，發送 GET 請求到 /test。
+
+你會看到回應的 body 變成了 JSON 格式！id 和 name 都正確對應到我們在 Student 物件裡設定的值。
+
+這就是 @RestController 的魔法——我們只需要 return 一個 Java 物件，它自動幫我們轉成 JSON。
+
+大家有沒有發現，我們完全沒有手動寫任何 JSON 字串，一切都是 Spring Boot 自動完成的？
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 補充
+
+## @Controller 和 @RestController 的差別在哪裡？
+
+<!--
+學完了怎麼回傳 JSON，我們來補充一個很多人會問的問題：@Controller 和 @RestController 有什麼差別？
+-->
+
+---
+
+# @Controller 和 @RestController 的差別
+
+| 項目 | `@Controller` | `@RestController` |
+| --- | --- | --- |
+| 回傳值用途 | 被當作「前端樣板名稱」 | 被當作「JSON 資料」自動轉換 |
+| 適用情境 | JSP、Thymeleaf 等樣板引擎 | REST API（回傳 JSON） |
+| 時代背景 | 早期前後端未分離的架構 | 現代前後端分離架構 |
+| 是否需要 `@ResponseBody` | 需要（每個方法都要加） | 不需要（已內建） |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>建議：</b> 現代 Spring Boot 開發以 REST API 為主，優先使用 <code>@RestController</code>。
+</div>
+
+<!--
+@Controller 是比較早期的 Annotation。在前後端還沒分離的年代，後端要直接渲染 HTML 頁面，這時候 Controller 的方法回傳的是「樣板名稱」，例如 "index.html"，框架再去找對應的 HTML 樣板渲染。
+
+@RestController 則是為了 REST API 設計的。它等於 @Controller + @ResponseBody，方法的回傳值會直接被轉成 JSON 寫進 Http Response 的 body 裡。
+
+在現代的前後端分離架構中，後端只負責提供 JSON 資料，前端（React、Vue）自己渲染畫面。
+所以我們幾乎都用 @RestController，@Controller 只在需要整合 JSP 或 Thymeleaf 時才用到。
+-->
+
+---
+
+# 章節總結
+
+| 重點 | 說明 |
+| --- | --- |
+| 自動轉換機制 | `@RestController` 透過 Jackson 自動將 Java 物件轉成 JSON |
+| 建立步驟 | 定義 Java 類別 → 加 Getter/Setter → Controller 回傳物件 |
+| Getter 的重要性 | Jackson 透過 Getter 讀取欄位值，缺少則欄位不出現在 JSON |
+| @Controller vs @RestController | 前者回傳樣板名稱，後者回傳 JSON |
+| 現代建議 | REST API 一律使用 `@RestController` |
+
+<!--
+好，讓我們總結今天學到的東西。
+
+第一，@RestController 透過 Jackson 自動把 Java 物件轉成 JSON，我們不需要手動處理。
+第二，步驟是：建立 Java 類別、加 Getter/Setter、Controller 回傳物件。
+第三，Getter 是關鍵，Jackson 靠它讀取欄位值。
+第四，@Controller 和 @RestController 有本質差異，現代開發用後者。
+
+今天的內容是 Spring Boot 開發 REST API 的核心。從這章開始，我們的 API 就能真正回傳結構化的 JSON 資料了！
+-->
+
+---
+layout: end
+---
+
+# Q & A
+
+<!--
+今天的內容就到這裡。大家有任何問題嗎？
+-->

@@ -1,0 +1,289 @@
+---
+theme: penguin
+class: text-center
+highlighter: shiki
+lineNumbers: true
+drawings:
+  persist: false
+transition: slide-left
+title: Spring Data JPA 的用法（下）—執行查詢操作
+routeAlias: ch27
+style: |
+  .slidev-layout p,
+  .slidev-layout li,
+  .slidev-layout td,
+  .slidev-layout th,
+  .slidev-layout div {
+    font-size: max(16px, 1em);
+  }
+  table {
+    width: 100%;
+    margin: 1rem 0;
+    border-collapse: collapse;
+  }
+  th, td {
+    padding: 8px !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+  .index-table td {
+    text-align: center;
+    font-family: monospace;
+  }
+---
+
+<div class="flex flex-col justify-center items-center h-full" style="background: #ffffff;">
+  <p style="color: #5eada0; font-size: 1rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 1.2rem;">
+    Spring Boot Backend Masterclass
+  </p>
+  <h1 style="color: #1a5c5c; font-size: 2.8rem; font-weight: 900; line-height: 1.15; margin-bottom: 1.5rem;">
+    Spring Data JPA 的用法（下）<br>執行查詢操作
+  </h1>
+  <div style="height: 4px; width: 320px; background: linear-gradient(90deg, #5eada0, #a7d9d0); border-radius: 2px; margin-bottom: 1.5rem;"></div>
+  <p style="color: #4a7c7c; font-size: 1.15rem; font-style: italic;">
+    「用方法名稱就能查詢，不需要寫 SQL」
+  </p>
+  <Link to="home" style="color: #9dc4c4; font-size: 0.85rem; margin-top: 2rem; text-decoration: none; letter-spacing: 0.05em;">← 返回目錄</Link>
+</div>
+
+<!--
+大家好，上一章我們學了 Spring Data JPA 的設定，以及 save() 和 deleteById() 的用法。
+
+今天要學查詢操作：findAll() 查詢所有資料、findById() 查詢單筆資料，以及 Spring Data JPA 最神奇的功能——用方法命名規則自動產生查詢 SQL。
+-->
+
+---
+layout: default
+---
+
+# Outline
+
+- **`findAll()` 和 `findById()`** — 查詢全部與查詢單筆的用法
+- **使用查詢方法操作資料** — 實際整合 Controller 呼叫 JpaRepository
+- **自訂查詢方法** — 方法命名規則自動產生 SQL，Spring Data JPA 最強特色
+- **章節總結** — JPA 查詢完整整理，三種框架比較收尾
+
+<!--
+今天的核心是查詢操作。特別是最後的自訂查詢方法，是 Spring Data JPA 和 Spring JDBC 差異最大的地方。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 1
+
+## findAll() 和 findById() 的用法介紹
+
+<!--
+先看兩個最基本的查詢方法。
+-->
+
+---
+
+# JpaRepository 的查詢方法
+
+| 方法 | 回傳類型 | 說明 |
+| --- | --- | --- |
+| `findAll()` | `List<Student>` | 查詢所有學生（SELECT * FROM student） |
+| `findById(id)` | `Optional<Student>` | 根據 id 查詢單筆學生 |
+| `existsById(id)` | `boolean` | 判斷某個 id 是否存在 |
+| `count()` | `long` | 回傳資料表的資料筆數 |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>這些方法都不需要自己實作</b>，繼承 JpaRepository 就自動擁有，Spring 在啟動時自動產生實作。
+</div>
+
+<!--
+JpaRepository 內建了許多查詢方法，這頁列出最常用的四個。
+
+最重要的是 findAll() 和 findById()，幾乎每個後端 API 都會用到。
+
+注意 findById() 回傳的是 Optional<Student>，不是直接的 Student 物件。
+Optional 是 Java 的一種包裝類別，用來處理「可能為 null」的情況——如果 id 不存在，資料庫回傳 null，Optional 可以安全地處理這種情況，避免 NullPointerException。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 2
+
+## 使用查詢方法操作數據
+
+<!--
+了解了方法之後，來看程式碼範例。
+-->
+
+---
+
+# findAll() — 查詢所有學生
+
+`findAll()` 自動執行 `SELECT * FROM student`：
+
+```java
+List<Student> list = studentRepository.findAll();
+return list;
+```
+
+| 說明 | 詳情 |
+| --- | --- |
+| 不需要任何參數 | JPA 自動產生並執行 `SELECT * FROM student` |
+| 回傳值 | `List<Student>`，每個物件對應資料表的一行 |
+| 自動映射 | JPA 自動把欄位值映射到 Student 的欄位，**不需要 RowMapper** |
+
+<!--
+findAll() 是最簡單的查詢方法，一行搞定。
+
+和 Spring JDBC 相比，Spring JDBC 需要：寫 SQL + 建 Map + 建 RowMapper + 呼叫 query()，整整四步。
+Spring Data JPA 只需要一行 findAll()，JPA 自動處理所有細節。
+
+回傳的 List<Student> 可以直接 return 給 Controller，@RestController 自動轉成 JSON 陣列。
+-->
+
+---
+
+# findById() — 查詢單筆學生
+
+`findById()` 根據 id 查詢，回傳 `Optional<Student>`：
+
+```java
+Optional<Student> result = studentRepository.findById(studentId);
+Student student = result.orElse(null);
+return student;
+```
+
+| 說明 | 詳情 |
+| --- | --- |
+| `findById(id)` | 執行 `SELECT * FROM student WHERE id = ?` |
+| 回傳 Optional | 安全包裝，避免 id 不存在時產生 NullPointerException |
+| `orElse(null)` | 如果找到就回傳 Student，找不到就回傳 null |
+
+<!--
+findById() 多了一個步驟：從 Optional 取出 Student 物件。
+
+orElse(null) 的意思是：「如果 Optional 裡有值就取出來，否則就給 null」。
+
+實務上不建議直接 return null，更好的做法是判斷 result.isPresent() 後回傳 404 的 Http Status Code，但初學階段先理解基本用法。
+
+⚠️ 注意：findById() 的參數類型必須和 JpaRepository<Student, Integer> 的第二個泛型一致，這裡是 Integer。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 3
+
+## 自訂查詢方法與用法總結
+
+<!--
+Spring Data JPA 最強大的功能：用方法命名就能自動產生 SQL。
+-->
+
+---
+
+# 自訂查詢方法 — 方法命名規則
+
+只需在 `StudentRepository` 定義方法簽名，JPA 自動產生 SQL：
+
+| 方法名稱 | JPA 自動產生的 SQL |
+| --- | --- |
+| `findByName(String name)` | `SELECT * FROM student WHERE name = ?` |
+| `findByNameAndId(String name, Integer id)` | `SELECT * FROM student WHERE name = ? AND id = ?` |
+| `findByNameContaining(String keyword)` | `SELECT * FROM student WHERE name LIKE %?%` |
+| `countByName(String name)` | `SELECT COUNT(*) FROM student WHERE name = ?` |
+
+<!--
+這是 Spring Data JPA 最神奇的功能——「方法命名查詢」（Derived Query）。
+
+我們只需要在 StudentRepository 裡按照規則寫方法名稱，JPA 就會自動解析方法名稱、產生對應的 SQL。
+
+findByName → WHERE name = ?
+findByNameAndId → WHERE name = ? AND id = ?
+findByNameContaining → WHERE name LIKE %?%
+
+完全不用寫 SQL，方法名稱就是 SQL！這就是 Spring Data JPA 最大的優勢。
+-->
+
+---
+
+# 在 StudentRepository 定義自訂查詢方法
+
+```java
+public interface StudentRepository extends JpaRepository<Student, Integer> {
+    List<Student> findByName(String name);
+}
+```
+
+| 使用方式 | 說明 |
+| --- | --- |
+| 在介面直接宣告方法 | 不需要實作，Spring 自動產生 |
+| 呼叫 | `studentRepository.findByName("Judy")` |
+| 效果 | 執行 `SELECT * FROM student WHERE name = 'Judy'` |
+
+<!--
+實際在程式碼裡加入自訂查詢方法非常簡單。
+
+只需要在 StudentRepository 介面裡加一行方法宣告，不用寫方法的實作內容。
+Spring 在啟動時解析方法名稱，自動建立對應的查詢邏輯。
+
+呼叫時就和一般方法一樣：studentRepository.findByName("Judy")，回傳 List<Student>。
+
+這個功能讓一般的 CRUD 查詢幾乎不需要寫任何 SQL，大幅減少開發時間。
+-->
+
+---
+
+# Spring Data JPA vs Spring JDBC — 查詢比較
+
+| 比較項目 | Spring JDBC | Spring Data JPA |
+| --- | --- | --- |
+| 查詢所有 | `query(sql, map, rowMapper)` | `findAll()` |
+| 查詢單筆 | `query(sql+WHERE, map, rowMapper)` | `findById(id)` |
+| 自訂條件查詢 | 手寫 SQL + map + RowMapper | 定義方法名稱，JPA 自動產生 SQL |
+| 結果映射 | 需要手寫 RowMapper | JPA 自動映射，不需要 RowMapper |
+
+<!--
+用這張表格比較兩者的查詢方式。
+
+Spring JDBC 每次查詢都要寫 SQL + RowMapper，程式碼較多但控制精確。
+Spring Data JPA 大部分情況只需要呼叫方法或定義方法名稱，程式碼很少。
+
+選哪個取決於需求：簡單 CRUD 首選 JPA，複雜的多表 JOIN 查詢 Spring JDBC 或原生 SQL 更合適。
+-->
+
+---
+
+# 章節總結
+
+| 重點 | 說明 |
+| --- | --- |
+| `findAll()` | 查詢所有資料，回傳 `List<Student>` |
+| `findById(id)` | 查詢單筆，回傳 `Optional<Student>`，需用 `orElse()` 取值 |
+| 自訂查詢方法 | 在 Repository 定義方法名稱，JPA 自動產生 SQL |
+| 命名規則 | `findBy + 欄位名稱`，支援 And、Containing 等關鍵字 |
+| 不需要 RowMapper | JPA 自動把查詢結果映射到 Java 物件 |
+
+<!--
+今天的重點總結。
+
+第一，findAll() 查詢所有資料，一行搞定，不需要 RowMapper。
+第二，findById() 回傳 Optional，記得用 orElse() 取出 Student 物件。
+第三，自訂查詢方法：方法名稱就是 SQL，Spring 自動實作。
+第四，Spring Data JPA 最大的優勢：大幅減少程式碼，尤其是查詢操作。
+
+學完上下篇，Spring Data JPA 的 CRUD 操作全部學完了！
+-->
+
+---
+layout: end
+---
+
+# Q & A
+
+<!--
+今天的內容就到這裡。大家有任何問題嗎？
+-->

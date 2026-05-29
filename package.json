@@ -1,0 +1,27 @@
+{
+  "name": "springboot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "slidev index.md",
+    "build": "slidev build index.md",
+    "export": "slidev export index.md --format pdf --with-toc false --timeout 60000",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.0",
+  "devDependencies": {
+    "@slidev/cli": "^52.15.2",
+    "@slidev/theme-default": "^0.25.0",
+    "playwright-chromium": "^1.60.0",
+    "sass-embedded": "^1.100.0"
+  },
+  "dependencies": {
+    "@iconify-json/logos": "^1.2.11",
+    "pdf-lib": "^1.17.1",
+    "slidev-theme-penguin": "^2.3.1"
+  }
+}
