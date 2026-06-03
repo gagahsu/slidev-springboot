@@ -88,7 +88,7 @@ class: flex flex-col justify-center items-center text-center
 
 **Step 1：** 開啟 MySQL Workbench，點選本機連線（Local instance）進入
 
-<img src="./screenshots/ch23-workbench-portal.png" class="rounded border mt-4 mx-auto" style="max-height: 340px;" />
+<img src="/screenshots/ch23-workbench-portal.png" class="rounded border mt-4 mx-auto" style="max-height: 340px;" />
 
 <!--
 Step 1：開啟 Workbench，點 Local instance MySQL 進入。
@@ -100,7 +100,7 @@ Step 1：開啟 Workbench，點 Local instance MySQL 進入。
 
 **Step 2：** 點選上方工具列的 **Create a new schema** 圖示（圓柱 + 加號）
 
-<img src="./screenshots/ch23-workbench-schema-btn.png" class="rounded border mt-4 mx-auto" style="max-height: 340px;" />
+<img src="/screenshots/ch23-workbench-schema-btn.png" class="rounded border mt-4 mx-auto" style="max-height: 340px;" />
 
 <!--
 工具列找到「圓柱+加號」的圖示就是 Create a new schema。
@@ -126,7 +126,7 @@ Step 1：開啟 Workbench，點 Local instance MySQL 進入。
 </div>
 <div>
 
-<img src="./screenshots/ch23-workbench-schema-dialog.png" class="rounded border w-full" />
+<img src="/screenshots/ch23-workbench-schema-dialog.png" class="rounded border w-full" />
 
 </div>
 </div>
@@ -147,7 +147,7 @@ Apply 後 Workbench 會顯示 SQL 預覽，確認沒問題再按第二個 Apply�
 | 1 | 在左側 Navigator 展開 `myjdbc` → 右鍵 `Tables` → **Create Table...** |
 | 2 | 在 `Table Name` 填入資料表名稱（例如 `student`） |
 
-<img src="./screenshots/ch23-workbench-create-table.png" class="rounded border mt-4 mx-auto" style="max-height: 320px;" />
+<img src="/screenshots/ch23-workbench-create-table.png" class="rounded border mt-4 mx-auto" style="max-height: 320px;" />
 
 <!--
 在左側 SCHEMAS 找到 myjdbc，展開後右鍵 Tables，選 Create Table 進入建立畫面。
@@ -164,7 +164,7 @@ Table Name 填 student，這個名稱之後 SQL 裡會用到。
 | 4 | 勾選 `id` 欄位的 **PK**（Primary Key）和 **AI**（Auto Increment） |
 | 5 | 點 **Apply** → 確認 SQL → 再點 **Apply** → **Finish** |
 
-<img src="./screenshots/ch23-workbench-table-columns.png" class="rounded border mt-3 mx-auto" style="max-height: 220px;" />
+<img src="/screenshots/ch23-workbench-table-columns.png" class="rounded border mt-3 mx-auto" style="max-height: 220px;" />
 
 <!--
 建立 Table 時，id 欄位設為 Primary Key 和 Auto Increment，新增資料時 id 會自動產生，不需要手動指定。
@@ -181,7 +181,7 @@ Table Name 填 student，這個名稱之後 SQL 裡會用到。
 | `id` | `INT` | PK、AI | 學生 ID，自動遞增，不需手動填入 |
 | `name` | `VARCHAR(256)` | — | 學生姓名 |
 
-<img src="./screenshots/ch23-workbench-table-result.png" class="rounded border mt-4 mx-auto" style="max-height: 260px;" />
+<img src="/screenshots/ch23-workbench-table-result.png" class="rounded border mt-4 mx-auto" style="max-height: 260px;" />
 
 <!--
 之後 Spring JDBC 執行 INSERT 時只需要填 name，id 會自動填入。
@@ -543,7 +543,7 @@ JAR List 頁面看起來有東西，但那個路徑是壞的。
 ✅ <b>好用功能：</b> 寫完 Spring JDBC 的 INSERT 後，直接右鍵 Table → Edit 確認資料有沒有寫進去，不需要另開 MySQL Workbench。
 </div>
 
-<img src="./screenshots/ch23-data-source-edit.png" class="rounded border mt-3 mx-auto" style="max-height: 150px;" />
+<img src="/screenshots/ch23-data-source-edit.png" class="rounded border mt-3 mx-auto" style="max-height: 150px;" />
 
 <!--
 連線建立成功後，Data Source Explorer 裡就會出現資料庫結構。

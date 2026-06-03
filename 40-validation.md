@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: Spring Boot Validation
-routeAlias: ch35
+routeAlias: ch40
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -533,9 +533,45 @@ class: flex flex-col justify-center items-center text-center
 
 ---
 
+# 自訂驗證 Annotation — 檔案結構
+
+建立兩個獨立的 `.java` 檔，放在 `validation` 套件下：
+
+```
+src/main/java/com/example/demo/
+├── controller/
+│   └── StudentController.java
+├── dto/
+│   └── CreateStudentRequest.java   ← 在這裡使用 @ValidPhone
+└── validation/
+    ├── ValidPhone.java             ← Step 1：定義 Annotation
+    └── PhoneValidator.java         ← Step 2：實作驗證邏輯
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>慣例：</b> <code>validation/</code> 套件專門放自訂驗證相關類別，與 Controller、Service 分開。
+</div>
+
+<!--
+兩個類別的職責完全不同：
+ValidPhone.java 是 Annotation 的「外殼」——定義名稱、屬性、指向哪個驗證器。
+PhoneValidator.java 是「實作」——真正執行 isValid() 判斷邏輯。
+
+這兩個檔案必須放在同一套件下，Spring 才能正確解析 @Constraint(validatedBy = ...) 的關聯。
+-->
+
+---
+
 # 定義 @ValidPhone Annotation
 
 ```java
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import jakarta.validation.Constraint;
+import jakarta.validation.Payload;
+
 @Target({ ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
 @Constraint(validatedBy = PhoneValidator.class)
@@ -578,6 +614,100 @@ PhoneValidator 實作 ConstraintValidator 介面，泛型帶入兩個型別：
 isValid 方法是核心：回傳 true 代表通過驗證，false 代表失敗。
 
 ⚠️ 注意：當 value 為 null 時，我們回傳 true——讓 @NotBlank 負責處理空值，而不是在自訂驗證器裡重複處理。這是自訂驗證器的慣例。
+-->
+
+---
+
+# 在 DTO 使用 @ValidPhone
+
+在 `CreateStudentRequest.java` 的欄位上標注自訂 Annotation，用法與內建 Annotation 完全相同：
+
+```java
+public class CreateStudentRequest {
+
+    @NotBlank(message = "姓名不能為空")
+    private String name;
+
+    @NotBlank(message = "密碼不能為空")
+    private String password;
+
+    @Min(value = 0, message = "分數不能為負數")
+    @Max(value = 100, message = "分數不能超過 100")
+    private Integer score;
+
+    @NotBlank(message = "電話不能為空")
+    @ValidPhone                          // ← 自訂 Annotation
+    private String phone;
+}
+```
+
+<!--
+注意 phone 欄位同時標了 @NotBlank 和 @ValidPhone：
+@NotBlank 負責擋掉 null 和空字串。
+@ValidPhone 負責驗證格式是否符合台灣手機號碼規則。
+
+這樣分工，PhoneValidator 的 isValid() 就不需要重複處理 null 的情況，邏輯更單純。
+
+@ValidPhone 的 import 是來自你自己的 validation 套件：import com.example.demo.validation.ValidPhone;
+-->
+
+---
+
+# 自訂 Annotation 的完整執行流程
+
+```
+POST /students（body 帶 phone: "0912345"）
+         ↓
+  @Valid 觸發驗證
+         ↓
+  Spring 掃描 @ValidPhone
+         ↓
+  呼叫 PhoneValidator.isValid("0912345", ...)
+         ↓
+  "0912345".matches("^09\\d{8}$") → false（只有 7 碼）
+         ↓
+  拋出 MethodArgumentNotValidException
+         ↓
+  ValidationExceptionHandler 攔截
+         ↓
+  回傳 HTTP 400
+```
+
+```json
+{
+  "errors": [
+    { "field": "phone", "message": "電話號碼格式不正確" }
+  ]
+}
+```
+
+<!--
+把整個流程串起來看：
+1. Controller 的 @Valid 是觸發點。
+2. Spring 發現欄位有 @ValidPhone，去找 @Constraint 指向的 PhoneValidator。
+3. PhoneValidator.isValid() 回傳 false，驗證失敗。
+4. Spring 拋出 MethodArgumentNotValidException。
+5. ValidationExceptionHandler 攔截，整理成 errors 陣列回傳。
+
+整個流程你只需要寫：Annotation 定義、Validator 邏輯、DTO 標注——Handler 已經在 Part 5 建好了，完全不需要改。
+-->
+
+---
+
+# 自訂 Annotation vs 內建 Annotation 比較
+
+| | 內建 Annotation | 自訂 Annotation |
+| --- | --- | --- |
+| 範例 | `@Email`、`@NotBlank`、`@Min` | `@ValidPhone`、`@ValidIdNumber` |
+| 驗證邏輯 | 框架內建，無法修改 | 自己在 `isValid()` 撰寫，完全彈性 |
+| 適用場景 | 通用格式（非空、長度、數值範圍） | 業務專屬規則（手機號碼、身分證、統一編號） |
+| 建立成本 | 直接使用，零成本 | 需建立 2 個類別 |
+| 錯誤處理 | 由現有 `ValidationExceptionHandler` 統一攔截 | 同左，**不需要額外修改 Handler** |
+
+<!--
+最後一列是重點：自訂 Annotation 驗證失敗拋出的例外，和內建 Annotation 一樣都是 MethodArgumentNotValidException——所以 Part 5 建好的 ValidationExceptionHandler 完全不需要改，就能處理自訂驗證的失敗。
+
+建議規則：能用內建的就用內建的；需要業務邏輯才建自訂的。不要過度設計。
 -->
 
 ---

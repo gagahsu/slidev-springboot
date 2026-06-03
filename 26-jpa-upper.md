@@ -62,7 +62,9 @@ layout: default
 - **什麼是 Spring Data JPA？** — ORM 概念、與 Spring JDBC 的差異
 - **設定 Spring Data JPA** — 依賴加入、application.properties 設定
 - **`@Entity` 定義資料模型** — 把 Java 類別對應到資料庫表格
+- **補充：`@IdClass` 複合主鍵** — 兩個欄位共同作為 Primary Key
 - **`JpaRepository` 執行 CUD** — save()、deleteById() 用法
+- **JpaRepository 完整方法表** — 內建 CRUD 方法一覽
 - **章節總結** — 核心概念整理，下一章預告
 
 <!--
@@ -261,6 +263,72 @@ name 欄位不需要加任何 Annotation，JPA 會自動把它映射到資料表
 -->
 
 ---
+
+# 補充：@IdClass — 複合主鍵
+
+當一張表需要用「兩個欄位一起」作為主鍵時，使用 `@IdClass`：
+
+| 項目 | 說明 |
+| --- | --- |
+| 適用場景 | 複合主鍵（Composite Primary Key）— 多個欄位共同組成 PK |
+| 步驟一 | 建立 ID 類別（實作 `Serializable`，覆寫 `equals` / `hashCode`） |
+| 步驟二 | Entity 加 `@IdClass(MyId.class)`，每個 PK 欄位各加 `@Id` |
+| Repository | 宣告改為 `JpaRepository<Entity, MyId>` |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>常見場景：</b> 關聯表，例如「小工具-組織」對應表，widgetId + orgId 共同唯一識別一筆資料。
+</div>
+
+<!--
+一般情況下主鍵只有一個欄位，但某些關聯表需要兩個欄位共同才能唯一識別一筆資料。
+
+例如「小工具組織對應表」：同一個 widgetId 可以對應多個組織，同一個 orgId 也可以對應多個小工具。
+不能只用 widgetId 或 orgId 當主鍵，需要用兩者的組合。
+
+這就是 @IdClass 的使用時機。
+-->
+
+---
+
+# 補充：@IdClass — 程式碼範例
+
+**步驟一：建立 ID 類別（實作 Serializable）**
+
+```java
+public class WidgetOrgId implements Serializable {
+    private String widgetId;
+    private String orgId;
+    // 需覆寫 equals() 和 hashCode()
+}
+```
+
+**步驟二：Entity 加 @IdClass，每個 PK 欄位加 @Id**
+
+```java
+@Entity
+@Table(name = "widget_org")
+@IdClass(value = WidgetOrgId.class)
+public class WidgetOrg {
+    @Id
+    @Column(name = "widget_id")
+    private String widgetId;
+    @Id
+    @Column(name = "org_id")
+    private String orgId;
+}
+```
+
+<!--
+步驟一：建立 WidgetOrgId 類別，實作 Serializable，包含所有 PK 欄位。
+一定要覆寫 equals() 和 hashCode()，JPA 用這兩個方法判斷兩個主鍵是否相同。
+
+步驟二：Entity 類別加 @IdClass(WidgetOrgId.class)，然後對每個 PK 欄位各加一個 @Id。
+Entity 裡的欄位名稱要和 ID 類別的欄位名稱相同。
+
+⚠️ Repository 宣告要改：JpaRepository<WidgetOrg, WidgetOrgId>，第二個泛型改成 ID 類別。
+-->
+
+---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---
@@ -373,6 +441,36 @@ deleteById() 非常簡單：傳入要刪除的 id，JPA 自動產生 DELETE SQL 
 
 ---
 
+# JpaRepository 完整方法表
+
+繼承 `JpaRepository` 後，以下方法全部自動可用：
+
+| 分類 | 方法 | 說明 |
+| --- | --- | --- |
+| 查詢 | `findAll()` | 取得所有資料，回傳 `List<T>` |
+| 查詢 | `findById(id)` | 根據 id 查詢，回傳 `Optional<T>` |
+| 查詢 | `existsById(id)` | 判斷 id 是否存在，回傳 `boolean` |
+| 查詢 | `count()` | 回傳資料筆數，回傳 `long` |
+| 儲存 | `save(entity)` | INSERT（id 為 null）或 UPDATE（id 有值） |
+| 儲存 | `saveAll(list)` | 批次儲存 |
+| 刪除 | `deleteById(id)` | 根據 id 刪除 |
+| 刪除 | `delete(entity)` | 刪除指定物件 |
+| 刪除 | `deleteAll()` | 刪除所有資料 |
+| 分頁 | `findAll(Pageable)` | 分頁查詢，回傳 `Page<T>`（下章介紹） |
+
+<!--
+這頁把 JpaRepository 內建的所有常用方法整理在一起，方便查閱。
+
+查詢：findAll()、findById()、existsById()、count()。
+儲存：save() 最常用，saveAll() 用於批次操作。
+刪除：deleteById() 最常用。
+分頁：findAll(Pageable) 會在後面的章節介紹。
+
+這些方法都不需要自己實作，繼承 JpaRepository 就全部自動可用。
+-->
+
+---
+
 # 章節總結
 
 | 重點 | 說明 |
@@ -381,6 +479,7 @@ deleteById() 非常簡單：傳入要刪除的 id，JPA 自動產生 DELETE SQL 
 | build.gradle | `spring-boot-starter-data-jpa` |
 | `@Entity` | 標記 Java 類別對應資料庫表格 |
 | `@Id` + `@GeneratedValue` | 標記主鍵 + 設定自動遞增 |
+| `@IdClass` | 複合主鍵：建 ID 類別（實作 Serializable）+ Entity 加 `@IdClass` + 每個 PK 欄位加 `@Id` |
 | `JpaRepository` | 繼承後自動擁有所有 CRUD 方法 |
 | `save()` | id 為 null → INSERT；id 有值 → UPDATE |
 | `deleteById()` | 根據 id 執行 DELETE |

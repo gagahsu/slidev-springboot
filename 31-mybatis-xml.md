@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: MyBatis 的用法（下）—XML Mapper 寫法
-routeAlias: ch30
+routeAlias: ch31
 style: |
   .slidev-layout p,
   .slidev-layout li,

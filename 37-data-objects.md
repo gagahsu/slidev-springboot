@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: Spring Boot 資料物件—PO、DTO、VO、DAO
-routeAlias: ch32
+routeAlias: ch37
 style: |
   .slidev-layout p,
   .slidev-layout li,

@@ -114,7 +114,7 @@ class: flex flex-col justify-center items-center text-center
 </div>
 <div>
 
-<img src="./screenshots/ch03-03-initializr-settings.png" style="max-height:400px; width:100%; object-fit:contain;" />
+<img src="/screenshots/ch03-03-initializr-settings.png" style="max-height:400px; width:100%; object-fit:contain;" />
 
 </div>
 </div>
@@ -150,7 +150,7 @@ Java 版本選 17，這是目前企業主流的 LTS 版本。
 </div>
 <div>
 
-<img src="./screenshots/ch03-04-initializr-web-dep.png" style="max-height:380px; width:100%; object-fit:contain;" />
+<img src="/screenshots/ch03-04-initializr-web-dep.png" style="max-height:380px; width:100%; object-fit:contain;" />
 
 </div>
 </div>
@@ -229,7 +229,7 @@ class: flex flex-col justify-center items-center text-center
 </div>
 <div>
 
-<img src="./screenshots/ch03-05-eclipse-import.png" style="max-height:400px; width:100%; object-fit:contain;" />
+<img src="/screenshots/ch03-05-eclipse-import.png" style="max-height:400px; width:100%; object-fit:contain;" />
 
 </div>
 </div>
@@ -261,8 +261,8 @@ Eclipse 會自動下載依賴並建構（首次約 1–3 分鐘）。
 </div>
 <div class="flex flex-col gap-3">
 
-<img src="./screenshots/ch03-06-gradle-wizard.png" style="max-height:190px; width:100%; object-fit:contain;" />
-<img src="./screenshots/ch03-07-gradle-browse.png" style="max-height:190px; width:100%; object-fit:contain;" />
+<img src="/screenshots/ch03-06-gradle-wizard.png" style="max-height:190px; width:100%; object-fit:contain;" />
+<img src="/screenshots/ch03-07-gradle-browse.png" style="max-height:190px; width:100%; object-fit:contain;" />
 
 </div>
 </div>
@@ -333,7 +333,7 @@ Spring Initializr 產生的 build.gradle 預設使用 Toolchain API 來指定 JD
 </div>
 <div>
 
-<img src="./screenshots/ch03-08-project-structure.png" style="max-height:380px; width:100%; object-fit:contain;" />
+<img src="/screenshots/ch03-08-project-structure.png" style="max-height:380px; width:100%; object-fit:contain;" />
 
 </div>
 </div>
@@ -384,8 +384,8 @@ class: flex flex-col justify-center items-center text-center
 </div>
 <div class="flex flex-col gap-3">
 
-<img src="./screenshots/ch03-09-new-class-1.png" style="max-height:185px; width:100%; object-fit:contain;" />
-<img src="./screenshots/ch03-09-new-class-2.png" style="max-height:185px; width:100%; object-fit:contain;" />
+<img src="/screenshots/ch03-09-new-class-1.png" style="max-height:185px; width:100%; object-fit:contain;" />
+<img src="/screenshots/ch03-09-new-class-2.png" style="max-height:185px; width:100%; object-fit:contain;" />
 
 </div>
 </div>
@@ -457,7 +457,7 @@ class: flex flex-col justify-center items-center text-center
 | 對象 | `DemoApplication.java`（啟動入口） |
 | 選單 | Run As → **Java Application** |
 
-<img src="./screenshots/ch03-10-run-as.png" style="max-height:320px; width:100%; object-fit:contain; margin-top:12px;" />
+<img src="/screenshots/ch03-10-run-as.png" style="max-height:320px; width:100%; object-fit:contain; margin-top:12px;" />
 
 <!--
 要啟動 Spring Boot 程式，找到 DemoApplication.java，對它點右鍵，選 Run As → Java Application。
@@ -479,7 +479,7 @@ class: flex flex-col justify-center items-center text-center
 | `Started DemoApplication` | Spring Boot 啟動完成 |
 | `Tomcat started on port 8080` | 內建伺服器已開始監聽 |
 
-<img src="./screenshots/ch03-11-console-started.png" style="max-height:280px; width:100%; object-fit:contain; margin-top:12px;" />
+<img src="/screenshots/ch03-11-console-started.png" style="max-height:280px; width:100%; object-fit:contain; margin-top:12px;" />
 
 <!--
 等幾秒鐘之後，Console 視窗會印出一大串日誌，找到這兩行最重要：
@@ -506,7 +506,7 @@ http://localhost:8080/test
 
 瀏覽器頁面會顯示 Hello World，Eclipse Console 同步出現 `Hi!`。
 
-<img src="./screenshots/ch03-12-browser-result.png" style="max-height:280px; width:100%; object-fit:contain; margin-top:12px;" />
+<img src="/screenshots/ch03-12-browser-result.png" style="max-height:280px; width:100%; object-fit:contain; margin-top:12px;" />
 
 <!--
 現在最激動人心的時刻來了！
@@ -534,7 +534,7 @@ http://localhost:8080/test
 | 瀏覽器 | `Hello World` |
 | Eclipse Console | `Hi!` |
 
-<img src="./screenshots/ch03-13-console-result.png" style="max-height:280px; width:100%; object-fit:contain; margin-top:12px;" />
+<img src="/screenshots/ch03-13-console-result.png" style="max-height:280px; width:100%; object-fit:contain; margin-top:12px;" />
 
 <!--
 看完瀏覽器，再切回 Eclipse 的 Console 視窗看看。

@@ -96,7 +96,7 @@ MySQL 是目前最主流的關聯式資料庫之一，Spring Boot 專案後續�
 
 前往 `dev.mysql.com/downloads/installer/` 下載，選擇下方 **565.9 MB** 的 Full Bundle 版本。
 
-<img src="./screenshots/ch02-01-mysql-download.png" alt="MySQL 下載頁面" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
+<img src="/screenshots/ch02-01-mysql-download.png" alt="MySQL 下載頁面" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
 
 <div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 下載後點「No thanks, just start my download.」即可跳過 Oracle 帳號登入。
@@ -120,7 +120,7 @@ MySQL 是目前最主流的關聯式資料庫之一，Spring Boot 專案後續�
 
 執行 `.exe` 安裝程式，Setup Type 選擇 **Server only**。
 
-<img src="./screenshots/ithome/img-03.png" alt="MySQL Setup Type" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
+<img src="/screenshots/ithome/img-03.png" alt="MySQL Setup Type" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
 
 <!--
 雙擊 exe 檔執行安裝程式，如果 Windows 詢問管理員權限，選「是」允許。
@@ -136,7 +136,7 @@ MySQL 是目前最主流的關聯式資料庫之一，Spring Boot 專案後續�
 
 在 **Select Products** 畫面，從左側把 **MySQL Workbench** 和 **MySQL Shell** 加到右側安裝清單。
 
-<img src="./screenshots/ithome/img-04.png" alt="MySQL Select Products" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
+<img src="/screenshots/ithome/img-04.png" alt="MySQL Select Products" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
 
 <div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>要加的元件：</b> MySQL Server + MySQL Workbench + MySQL Shell，選好後按 Next。
@@ -158,7 +158,7 @@ MySQL 是目前最主流的關聯式資料庫之一，Spring Boot 專案後續�
 
 確認安裝清單後按 **Execute**，等待所有元件安裝完成。
 
-<img src="./screenshots/ithome/img-05.png" alt="MySQL 安裝進度" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
+<img src="/screenshots/ithome/img-05.png" alt="MySQL 安裝進度" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
 
 <!--
 按 Execute 之後，安裝程式會開始安裝 MySQL Server、Workbench、Shell。
@@ -180,7 +180,7 @@ MySQL 是目前最主流的關聯式資料庫之一，Spring Boot 專案後續�
 | Port | `3306` | MySQL 預設連接埠，保持不變 |
 | Authentication | Strong Password Encryption | 安全性較高，保持預設 |
 
-<img src="./screenshots/ithome/img-07.png" alt="MySQL Type and Networking" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
+<img src="/screenshots/ithome/img-07.png" alt="MySQL Type and Networking" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
 
 <!--
 進入 MySQL Server 設定精靈，這裡有幾個重要的設定。
@@ -207,7 +207,7 @@ Port 保持 3306 不要改，這是 MySQL 的標準連接埠，之後在 Spring 
 ⚠️ <b>重要：</b> root 是 MySQL 的最高權限帳號。密碼請記在安全的地方，之後 Spring Boot 連接資料庫時會用到。
 </div>
 
-<img src="./screenshots/ithome/img-09.png" alt="MySQL root 密碼設定" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
+<img src="/screenshots/ithome/img-09.png" alt="MySQL root 密碼設定" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
 
 <!--
 這個步驟最重要！設定 root 帳號的密碼。
@@ -245,7 +245,7 @@ Windows Service 設定讓 MySQL 在電腦開機時自動啟動，這樣你每次
 
 按 **Execute** 套用設定，完成後按 **Finish** 結束安裝精靈。
 
-<img src="./screenshots/ithome/img-10.png" alt="MySQL Windows Service" style="width:100%; max-height:320px; object-fit:contain; margin-top:8px;" />
+<img src="/screenshots/ithome/img-10.png" alt="MySQL Windows Service" style="width:100%; max-height:320px; object-fit:contain; margin-top:8px;" />
 
 <!--
 按 Execute 套用所有設定，等所有步驟都變成打勾之後，按 Finish。
@@ -259,7 +259,7 @@ Windows Service 設定讓 MySQL 在電腦開機時自動啟動，這樣你每次
 
 開啟 **MySQL Workbench** 確認可以連線。
 
-<img src="./screenshots/ithome/img-15.png" alt="MySQL Workbench 主畫面" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
+<img src="/screenshots/ithome/img-15.png" alt="MySQL Workbench 主畫面" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
 
 <div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>驗證方式：</b> 看到 Workbench 主畫面有「Local instance MySQL80」連線卡片，點擊輸入 root 密碼後能成功進入，代表安裝成功！
@@ -307,7 +307,7 @@ layout: two-cols
 
 ::right::
 
-<img src="./screenshots/ch02-02-git-download-page.png" alt="Git 官網首頁" style="width:100%; height:100%; object-fit:contain;" />
+<img src="/screenshots/ch02-02-git-download-page.png" alt="Git 官網首頁" style="width:100%; height:100%; object-fit:contain;" />
 
 <!--
 開啟瀏覽器，進入 git-scm.com。
@@ -327,7 +327,7 @@ layout: two-cols
 
 ::right::
 
-<img src="./screenshots/ch02-03-git-download-link.png" alt="Git 下載連結頁面" style="width:100%; height:100%; object-fit:contain;" />
+<img src="/screenshots/ch02-03-git-download-link.png" alt="Git 下載連結頁面" style="width:100%; height:100%; object-fit:contain;" />
 
 <!--
 點選 Click here to download，瀏覽器就會自動開始下載最新版的 Git 安裝程式。
@@ -349,7 +349,7 @@ layout: two-cols
 
 ::right::
 
-<img src="./screenshots/ch02-04-git-install.png" alt="Git 安裝精靈 Select Components" style="width:100%; height:100%; object-fit:contain;" />
+<img src="/screenshots/ch02-04-git-install.png" alt="Git 安裝精靈 Select Components" style="width:100%; height:100%; object-fit:contain;" />
 
 <!--
 下載完成後雙擊執行安裝程式，按幾個 Next 就會看到 Select Components 這個畫面。
@@ -452,7 +452,7 @@ layout: two-cols
 
 ::right::
 
-<img src="./screenshots/ch02-05-github-signup.png" alt="GitHub 註冊頁面" style="width:100%; height:100%; object-fit:contain;" />
+<img src="/screenshots/ch02-05-github-signup.png" alt="GitHub 註冊頁面" style="width:100%; height:100%; object-fit:contain;" />
 
 <!--
 打開瀏覽器，輸入 github.com，點右上角的 Sign up。
@@ -519,7 +519,7 @@ layout: two-cols
 
 ::right::
 
-<img src="./screenshots/ch02-06-github-desktop-download.png" alt="GitHub Desktop 下載頁面" style="width:100%; height:100%; object-fit:contain;" />
+<img src="/screenshots/ch02-06-github-desktop-download.png" alt="GitHub Desktop 下載頁面" style="width:100%; height:100%; object-fit:contain;" />
 
 <!--
 開啟瀏覽器，輸入 desktop.github.com。
@@ -537,7 +537,7 @@ layout: two-cols
 
 安裝完成後，GitHub Desktop 自動開啟，點選 **Sign in to GitHub.com** 登入。
 
-<img src="./screenshots/ch02-07-github-desktop-welcome.png" alt="GitHub Desktop 歡迎畫面" style="max-height:220px; object-fit:contain; margin-top:8px;" />
+<img src="/screenshots/ch02-07-github-desktop-welcome.png" alt="GitHub Desktop 歡迎畫面" style="max-height:220px; object-fit:contain; margin-top:8px;" />
 
 <div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>還沒有 GitHub 帳號？</b> 先前往 <code>github.com</code> 免費註冊一個帳號再回來登入。
@@ -566,7 +566,7 @@ layout: two-cols
 
 按 **Finish** 完成設定。
 
-<img src="./screenshots/ch02-08-github-desktop-configure.png" alt="GitHub Desktop Configure Git" style="width:70%; max-height:180px; object-fit:contain; margin-top:8px;" />
+<img src="/screenshots/ch02-08-github-desktop-configure.png" alt="GitHub Desktop Configure Git" style="width:70%; max-height:180px; object-fit:contain; margin-top:8px;" />
 
 <!--
 登入成功後，會進入 Configure Git 畫面。
@@ -584,7 +584,7 @@ Email 建議填和 GitHub 帳號相同的 Email，這樣 commit 紀錄才能正�
 
 設定完成後進入 GitHub Desktop 主畫面，三個工具全部安裝完畢！
 
-<img src="./screenshots/ch02-09-github-desktop-main.png" alt="GitHub Desktop 主畫面" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
+<img src="/screenshots/ch02-09-github-desktop-main.png" alt="GitHub Desktop 主畫面" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
 
 <div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>安裝完成確認清單：</b> ✅ MySQL Workbench 可連線　✅ <code>git --version</code> 有輸出　✅ GitHub Desktop 已登入帳號

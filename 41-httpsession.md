@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: HttpSession 管理
-routeAlias: ch36
+routeAlias: ch41
 style: |
   .slidev-layout p,
   .slidev-layout li,

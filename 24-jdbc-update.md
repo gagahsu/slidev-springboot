@@ -60,7 +60,8 @@ layout: default
 
 # Outline
 
-- **Spring JDBC 用法前言** — JdbcTemplate 兩大方法：`update()` 與 `query()`
+- **Spring JDBC 三大方法** — `execute()`、`update()`、`query()`
+- **`execute()` — DDL 操作** — 建立資料表、`CREATE TABLE`
 - **`update()` 基本用法** — 執行 INSERT、SQL 參數佔位符 `?`
 - **`update()` 的 map 參數用法** — 具名參數、NamedParameterJdbcTemplate
 - **`update()` 總結** — UPDATE / DELETE 範例、回傳值意義
@@ -85,27 +86,61 @@ class: flex flex-col justify-center items-center text-center
 
 ---
 
-# Spring JDBC 的兩大操作類別
+# Spring JDBC 的三大操作方法
 
-Spring JDBC 把 SQL 操作分成兩類，對應不同的方法：
+JdbcTemplate 提供三個主要方法，對應不同的 SQL 操作類型：
 
-| 類別 | 對應 SQL | 使用的方法 | 本章 |
+| 方法 | 對應 SQL | 說明 | 本章 |
 | --- | --- | --- | --- |
-| **修改類（update series）** | INSERT / UPDATE / DELETE | `update()` | ← 本章 |
-| 查詢類（query series） | SELECT | `query()` / `queryForObject()` | 下一章 |
+| `execute()` | CREATE / DROP（DDL） | 無動態參數，直接執行 | ← 本章 |
+| `update()` | INSERT / UPDATE / DELETE | 需 Map 傳入動態參數 | ← 本章 |
+| `query()` | SELECT | 回傳 List，需 RowMapper | 下一章 |
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>記憶口訣：</b> 會「改變」資料庫內容的用 <code>update()</code>；只「讀取」不修改的用 <code>query()</code>。
+💡 <b>記憶口訣：</b> DDL 建表用 <code>execute()</code>；改變資料用 <code>update()</code>；讀取資料用 <code>query()</code>。
 </div>
 
 <!--
-Spring JDBC 把所有 SQL 操作分成兩大類，分別對應不同的方法。
+Spring JDBC 把 SQL 操作分成三種方法，各有不同用途。
 
-INSERT、UPDATE、DELETE 這三種 SQL 都會「改變」資料庫的內容，所以統一用 update() 方法來執行。
+execute()：最簡單，用於不帶動態參數的 SQL，例如建立資料表。
+update()：INSERT、UPDATE、DELETE 都會改變資料庫內容，統一用 update() 執行。
+query()：SELECT 只讀取資料，用 query() 系列的方法。
 
-SELECT 只是「讀取」資料，不修改任何內容，所以用 query() 系列的方法。
+今天先學 execute() 和 update()，下一章學 query()。
+-->
 
-今天先學 update()，下一章學 query()。
+---
+
+# execute() — 建立資料表（DDL 操作）
+
+`execute()` 適合不需要傳入動態參數的 SQL，最常用於 DDL 操作：
+
+| 項目 | 說明 |
+| --- | --- |
+| 注入工具 | `JdbcTemplate`（不需要具名參數，直接執行） |
+| 適用場景 | `CREATE TABLE`、`DROP TABLE` 等 DDL 語法 |
+| 回傳型別 | `void`（不回傳任何值） |
+
+```java
+@Autowired
+private JdbcTemplate jdbcTemplate;
+
+public void createTable() {
+    String sql = "CREATE TABLE IF NOT EXISTS student " +
+                 "(id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50))";
+    jdbcTemplate.execute(sql);
+}
+```
+
+<!--
+execute() 是三個方法中最簡單的一個，用來執行「不帶動態參數」的 SQL。
+
+最典型的用途是建立資料表，CREATE TABLE 語法通常是固定的，不需要傳入任何動態值。
+
+這裡注入的是 JdbcTemplate，不是 NamedParameterJdbcTemplate，因為不需要處理具名參數。
+
+⚠️ 實務上，建表通常用 schema.sql 或 Flyway/Liquibase 管理，而不是寫在應用程式碼裡；但初學階段先理解 execute() 的作用。
 -->
 
 ---
@@ -383,7 +418,8 @@ DELETE：SQL 通常只有 WHERE 條件，Map 只放 id。
 
 | 重點 | 說明 |
 | --- | --- |
-| 兩大類別 | 修改類（INSERT/UPDATE/DELETE）用 `update()`；查詢類（SELECT）下一章學 |
+| 三大方法 | DDL 用 `execute()`；修改資料用 `update()`；查詢資料 `query()` 下一章學 |
+| `execute()` | 執行 DDL（`CREATE TABLE` 等），注入 `JdbcTemplate`，不需要動態參數 |
 | 核心工具 | `NamedParameterJdbcTemplate`，透過 `@Autowired` 注入 |
 | 具名參數 | SQL 裡用 `:paramName`，Map 的 key 需完全一致 |
 | 四個步驟 | 注入 → 寫 SQL → 建立 Map → 呼叫 `update()` |

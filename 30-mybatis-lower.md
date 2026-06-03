@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: MyBatis 的用法（中）—執行查詢操作
-routeAlias: ch29
+routeAlias: ch30
 style: |
   .slidev-layout p,
   .slidev-layout li,

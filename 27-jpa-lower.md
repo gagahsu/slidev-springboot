@@ -60,6 +60,8 @@ layout: default
 - **`findAll()` 和 `findById()`** — 查詢全部與查詢單筆的用法
 - **使用查詢方法操作資料** — 實際整合 Controller 呼叫 JpaRepository
 - **自訂查詢方法** — 方法命名規則自動產生 SQL，Spring Data JPA 最強特色
+- **完整 Keyword 表** — And、Or、Between、Like、In、OrderBy 等常用關鍵字
+- **分頁查詢** — `Page`、`Pageable`、`PageRequest.of()` 用法
 - **章節總結** — JPA 查詢完整整理，三種框架比較收尾
 
 <!--
@@ -237,6 +239,100 @@ Spring 在啟動時解析方法名稱，自動建立對應的查詢邏輯。
 
 ---
 
+# Spring Data JPA Keyword 一覽
+
+Repository 方法名稱支援以下關鍵字，JPA 自動解析產生 SQL：
+
+| Keyword | 方法命名範例 | 等同 SQL 條件 |
+| --- | --- | --- |
+| `And` | `findByNameAndCity` | `WHERE name = ? AND city = ?` |
+| `Or` | `findByNameOrCity` | `WHERE name = ? OR city = ?` |
+| `Between` | `findByAgeBetween` | `WHERE age BETWEEN ? AND ?` |
+| `LessThan` | `findByAgeLessThan` | `WHERE age < ?` |
+| `GreaterThan` | `findByAgeGreaterThan` | `WHERE age > ?` |
+| `Like` | `findByNameLike` | `WHERE name LIKE ?`（需自帶 `%`） |
+| `Containing` | `findByNameContaining` | `WHERE name LIKE %?%` |
+| `In` | `findByCityIn(Collection)` | `WHERE city IN (...)` |
+| `OrderBy` | `findByAgeOrderByNameDesc` | `WHERE age = ? ORDER BY name DESC` |
+| `Distinct` | `findDistinctByCity` | `SELECT DISTINCT ... WHERE city = ?` |
+
+<!--
+這頁是完整的 keyword 對照表，方便日後開發查閱。
+
+最常用的是 And、Or、Between、Containing（模糊查詢）、In（多值查詢）、OrderBy（排序）。
+
+需要注意：Like 要自己在參數值加上 %，例如 findByNameLike("%Judy%")。
+Containing 則是框架自動幫你加上前後的 %，更方便。
+
+記住這些關鍵字，大部分的查詢需求都可以用方法命名來解決，不需要寫 SQL。
+-->
+
+---
+
+# 分頁查詢 — Page 與 Pageable
+
+當資料量大時，一次回傳所有資料會讓 API 變慢，分頁查詢只回傳「某一頁」的資料：
+
+| 類別 | 說明 |
+| --- | --- |
+| `Pageable` | 分頁請求的介面，定義「第幾頁」和「每頁幾筆」 |
+| `PageRequest` | `Pageable` 的實作，用 `PageRequest.of(page, size)` 建立 |
+| `Page<T>` | 分頁查詢結果，包含本頁資料和總筆數資訊 |
+
+| `PageRequest.of()` 參數 | 說明 |
+| --- | --- |
+| `page` | 頁碼，從 **0** 開始（第 1 頁 = 0，第 2 頁 = 1） |
+| `size` | 每頁顯示的資料筆數，必須大於 0 |
+
+<!--
+分頁查詢是後端 API 非常常見的需求。
+
+想像你在 Google 搜尋，結果有 100 萬筆，但每次只顯示 10 筆，這就是分頁的概念。
+
+Spring Data JPA 的分頁用三個類別配合：
+Pageable 是請求的規格；PageRequest 是建立 Pageable 的工具；Page 是回傳結果。
+
+⚠️ 頁碼從 0 開始：PageRequest.of(0, 10) 是第 1 頁，PageRequest.of(1, 10) 是第 2 頁。
+-->
+
+---
+
+# 分頁查詢 — 程式碼範例
+
+**呼叫 JpaRepository 內建的分頁方法：**
+
+```java
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+
+// 第 1 頁（index=0），每頁 4 筆
+Page<Student> result = studentRepository.findAll(PageRequest.of(0, 4));
+List<Student> students = result.getContent();   // 取得本頁資料
+long total = result.getTotalElements();          // 取得總筆數
+int totalPages = result.getTotalPages();         // 取得總頁數
+```
+
+**自訂查詢也支援分頁（在 Repository 加 Pageable 參數）：**
+
+```java
+Page<Student> findByCity(String city, Pageable pageable);
+```
+
+<!--
+看實際的程式碼。
+
+findAll(Pageable) 是 JpaRepository 內建的方法，不需要額外宣告，直接呼叫即可。
+
+回傳的 Page 物件很豐富：
+- getContent()：取得本頁的資料列表
+- getTotalElements()：資料庫裡符合條件的總筆數
+- getTotalPages()：根據 size 算出的總頁數
+
+自訂查詢方法也可以加上 Pageable 參數，JPA 一樣自動處理分頁邏輯。
+-->
+
+---
+
 # Spring Data JPA vs Spring JDBC — 查詢比較
 
 | 比較項目 | Spring JDBC | Spring Data JPA |
@@ -264,7 +360,8 @@ Spring Data JPA 大部分情況只需要呼叫方法或定義方法名稱，程�
 | `findAll()` | 查詢所有資料，回傳 `List<Student>` |
 | `findById(id)` | 查詢單筆，回傳 `Optional<Student>`，需用 `orElse()` 取值 |
 | 自訂查詢方法 | 在 Repository 定義方法名稱，JPA 自動產生 SQL |
-| 命名規則 | `findBy + 欄位名稱`，支援 And、Containing 等關鍵字 |
+| 命名規則 | `findBy + 欄位名稱`，支援 And、Or、Between、In、OrderBy 等關鍵字 |
+| 分頁查詢 | `findAll(PageRequest.of(page, size))`，回傳 `Page<T>`，頁碼從 0 開始 |
 | 不需要 RowMapper | JPA 自動把查詢結果映射到 Java 物件 |
 
 <!--

@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: MyBatis 的用法（上）—設定與 CUD 操作
-routeAlias: ch28
+routeAlias: ch29
 style: |
   .slidev-layout p,
   .slidev-layout li,
