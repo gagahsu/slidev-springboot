@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: 實戰：用 JPA 打造完整的 CRUD API
-routeAlias: ch38
+routeAlias: ch37
 style: |
   .slidev-layout p,
   .slidev-layout li,

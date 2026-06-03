@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: Spring Boot 排程
-routeAlias: ch43
+routeAlias: ch42
 style: |
   .slidev-layout p,
   .slidev-layout li,

@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: Spring Security
-routeAlias: ch45
+routeAlias: ch44
 style: |
   .slidev-layout p,
   .slidev-layout li,

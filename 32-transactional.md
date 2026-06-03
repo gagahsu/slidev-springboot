@@ -309,7 +309,15 @@ public void processOrder(Order order) {
 }
 ```
 
-**Rollback 規則總結：**
+<!--
+noRollbackFor 的使用場景比較少，通常是「業務邏輯驗證失敗」這類情況，我們故意拋出 RuntimeException 但不想 Rollback（例如只是回傳錯誤訊息，不需要撤銷操作）。
+
+記住：rollbackFor 和 noRollbackFor 可以同時使用，Spring 會合併規則判斷。
+-->
+
+---
+
+# Rollback 規則總結
 
 | 設定 | Rollback 行為 |
 | --- | --- |
@@ -319,9 +327,7 @@ public void processOrder(Order order) {
 | `noRollbackFor = IllegalArgumentException.class` | RuntimeException（排除 IllegalArgumentException） |
 
 <!--
-noRollbackFor 的使用場景比較少，通常是「業務邏輯驗證失敗」這類情況，我們故意拋出 RuntimeException 但不想 Rollback（例如只是回傳錯誤訊息，不需要撤銷操作）。
-
-記住：rollbackFor 和 noRollbackFor 可以同時使用，Spring 會合併規則判斷。
+rollbackFor 讓受檢例外也觸發 Rollback；noRollbackFor 讓特定 RuntimeException 不觸發 Rollback。兩者可以同時使用，Spring 會合併規則判斷。
 -->
 
 ---
@@ -353,7 +359,7 @@ layout: default
 # 練習：為轉帳 API 加上事務保護
 ### 任務說明
 
-承接 Ch 33 的學生管理系統，在 `StudentService` 中加入一個新功能：
+在 `StudentService` 中加入一個新功能：
 
 **「扣除學生積分並新增懲戒記錄」**，需要同時執行兩個操作：
 

@@ -64,7 +64,7 @@ layout: default
 - **參數傳遞方式** — `:name` 命名參數 vs `?1` 位置參數
 - **@Modifying — UPDATE / DELETE** — 修改操作必加的 Annotation
 - **INSERT** — 只能用 nativeQuery = true
-- **SELECT 進階** — distinct、order by、like、join
+- **SELECT 進階** — distinct、order by、like、join、`JoinVo` 自訂回傳類別
 - **分頁查詢** — `Page`、`Pageable`、`PageRequest`
 
 <!--
@@ -390,6 +390,44 @@ like 的 % 放在參數值裡，不是放在 SQL 字串裡——% 是模式的�
 join 查詢涉及多張表，回傳的欄位來自不同 Entity，所以要建立 VO 類別專門裝這些欄位。
 
 VO 類別不需要加 @Entity，但要有包含所有查詢欄位的建構方法，而且 @Query 裡要寫 VO 的完整路徑（包含 package）。
+-->
+
+---
+
+# JoinVo — 自訂回傳類別
+
+`JoinVo` 是專門接收 join 查詢結果的類別，**不加 `@Entity`**，只需要一個建構方法：
+
+```java
+package com.example.vo;
+
+public class JoinVo {
+
+    private String id;
+    private String name;
+    private int amount;
+
+    // 建構方法欄位順序必須和 @Query 的 new JoinVo(...) 完全一致
+    public JoinVo(String id, String name, int amount) {
+        this.id = id;
+        this.name = name;
+        this.amount = amount;
+    }
+
+    // Getter 和 Setter
+}
+```
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>兩個必要條件：</b> ① VO 有對應的建構方法 ② <code>@Query</code> 裡使用 VO 的<b>完整 package 路徑</b>（<code>com.example.vo.JoinVo</code>）
+</div>
+
+<!--
+JoinVo 的建構方法參數順序要和 @Query 的 new JoinVo(p.id, p.name, a.amount) 完全一致。
+JPA 是用建構方法來組裝回傳物件，順序錯了就會拿到錯誤的值或出現類型不符的例外。
+
+VO 放在 vo 套件下是業界慣例，和 Entity 分開管理。
+如果有 Lombok，可以加 @AllArgsConstructor + @Getter 省略手寫建構方法和 Getter。
 -->
 
 ---

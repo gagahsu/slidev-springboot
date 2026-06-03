@@ -65,7 +65,7 @@ layout: default
 - **設定 XML Mapper** — application.properties、mapper.xml 結構說明
 - **基本 CRUD in XML** — `<insert>`、`<update>`、`<delete>`、`<select>`
 - **resultMap** — 解決資料庫欄位和 Java 屬性名稱不一致的問題
-- **動態 SQL** — `<if>`、`<where>`、`<set>`、`<foreach>`
+- **動態 SQL** — `<if>`、`<where>`、`<set>`、`<foreach>` IN 查詢、`<foreach>` 批次 INSERT
 - **Annotation vs XML 選擇建議** — 各自適用場景
 - **章節總結** — XML Mapper 核心觀念整理
 
@@ -517,6 +517,34 @@ MyBatis 的動態 SQL 標籤讓你直接在 XML 裡寫「如果這個條件有�
 -->
 
 ---
+
+# `<foreach>` — 批次 INSERT
+
+一次插入多筆資料，比迴圈逐筆呼叫效能更好：
+
+```xml
+<!-- @Mapper 方法：int batchInsert(@Param("list") List<Student> list); -->
+<insert id="batchInsert">
+    INSERT INTO student(id, name) VALUES
+    <foreach collection="list" item="s" separator=",">
+        (#{s.id}, #{s.name})
+    </foreach>
+</insert>
+```
+
+| `<foreach>` 屬性 | 說明 |
+| --- | --- |
+| `collection="list"` | 對應 `@Param("list")` 的參數名稱 |
+| `item="s"` | 集合裡每個元素的別名 |
+| `separator=","` | 每組 VALUES 之間用逗號分隔 |
+
+<!--
+MyBatis 的批次 INSERT 和 IN 查詢都用 <foreach>，差別在於位置：
+IN 查詢把 <foreach> 放在 WHERE 子句；批次 INSERT 把 <foreach> 放在 VALUES 後面。
+產生的 SQL 是 INSERT INTO student(id, name) VALUES (?, ?), (?, ?), (?, ?)——一次送出所有資料。
+-->
+
+---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---
@@ -565,7 +593,8 @@ MyBatis 會分別去找對應的 SQL，不會衝突。
 | resultMap | 欄位名稱不一致時，手動指定映射關係 |
 | `<if>` + `<where>` | 動態 WHERE 條件，自動處理 AND 和 WHERE 關鍵字 |
 | `<set>` | 動態 UPDATE，實作部分更新 |
-| `<foreach>` | 集合參數，生成 IN (?,?,?) SQL |
+| `<foreach>` IN | 集合參數放在 WHERE，生成 `IN (?,?,?)` |
+| `<foreach>` 批次 INSERT | 集合參數放在 VALUES 後，生成多行 INSERT |
 | 混搭 | Annotation 和 XML 可在同一個 @Mapper 混搭使用 |
 
 <!--

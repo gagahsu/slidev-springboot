@@ -471,7 +471,34 @@ deleteById() 非常簡單：傳入要刪除的 id，JPA 自動產生 DELETE SQL 
 
 ---
 
-# 章節總結
+# saveAll() — 批次新增
+
+`saveAll()` 一次儲存多筆資料，效能優於迴圈逐筆 `save()`：
+
+```java
+List<Student> students = Arrays.asList(
+    new Student("Alice"),
+    new Student("Bob"),
+    new Student("Carol")
+);
+studentRepository.saveAll(students);
+```
+
+| 說明 | 詳情 |
+| --- | --- |
+| 傳入 `List<T>` | 每筆 id 為 null → 全部執行 `INSERT` |
+| 回傳 `List<T>` | 回傳儲存後的物件（含資料庫自動產生的 id） |
+| 效能 | 批次操作，比迴圈 `save()` 減少往返次數 |
+
+<!--
+saveAll() 是 JpaRepository 內建的批次操作方法。
+當 List 裡每筆的 id 都是 null，JPA 執行批次 INSERT，資料庫自動產生 id。
+如果部分物件的 id 已有值，JPA 會改執行 UPDATE。
+-->
+
+---
+
+# 章節總結（一）：設定與資料模型
 
 | 重點 | 說明 |
 | --- | --- |
@@ -480,19 +507,33 @@ deleteById() 非常簡單：傳入要刪除的 id，JPA 自動產生 DELETE SQL 
 | `@Entity` | 標記 Java 類別對應資料庫表格 |
 | `@Id` + `@GeneratedValue` | 標記主鍵 + 設定自動遞增 |
 | `@IdClass` | 複合主鍵：建 ID 類別（實作 Serializable）+ Entity 加 `@IdClass` + 每個 PK 欄位加 `@Id` |
-| `JpaRepository` | 繼承後自動擁有所有 CRUD 方法 |
-| `save()` | id 為 null → INSERT；id 有值 → UPDATE |
-| `deleteById()` | 根據 id 執行 DELETE |
 | Spring Boot 3.x | 使用 `jakarta.persistence.*`，非 `javax.persistence.*` |
 
-<!--
-今天的重點總結。
+---
 
-第一，Spring Data JPA 用 ORM 概念操作資料庫，幾乎不寫 SQL。
-第二，在 build.gradle 加 spring-boot-starter-data-jpa。
-第三，@Entity 類別對應資料表，記得用 jakarta.persistence.*。
-第四，繼承 JpaRepository 就自動得到所有 CRUD 方法。
-第五，save() 同時負責新增和更新，deleteById() 負責刪除。
+# 章節總結（二）：Repository 與操作
+
+| 重點 | 說明 |
+| --- | --- |
+| `JpaRepository` | 繼承後自動擁有所有 CRUD 方法，不需要實作 |
+| `save()` | id 為 null → INSERT；id 有值 → UPDATE |
+| `deleteById()` | 根據 id 執行 DELETE；id 不存在會拋出例外 |
+
+<!--
+設定與資料模型的重點：
+
+Spring Data JPA 用 ORM 概念，不寫 SQL。
+build.gradle 加 spring-boot-starter-data-jpa。
+@Entity 對應資料表，@Id + @GeneratedValue 處理主鍵。
+Spring Boot 3.x 記得用 jakarta.persistence.*。
+-->
+
+<!--
+Repository 與操作的重點：
+
+繼承 JpaRepository 就自動得到所有 CRUD 方法。
+save()：id 為 null 執行 INSERT，id 有值執行 UPDATE。
+deleteById()：id 不存在會拋出例外，注意處理。
 
 下一章繼續學查詢操作：findAll() 和 findById()。
 -->

@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: JWT 認證
-routeAlias: ch46
+routeAlias: ch45
 style: |
   .slidev-layout p,
   .slidev-layout li,

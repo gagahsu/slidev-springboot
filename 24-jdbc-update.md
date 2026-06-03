@@ -61,14 +61,14 @@ layout: default
 # Outline
 
 - **Spring JDBC 三大方法** — `execute()`、`update()`、`query()`
-- **`execute()` — DDL 操作** — 建立資料表、`CREATE TABLE`
-- **`update()` 基本用法** — 執行 INSERT、SQL 參數佔位符 `?`
-- **`update()` 的 map 參數用法** — 具名參數、NamedParameterJdbcTemplate
-- **`update()` 總結** — UPDATE / DELETE 範例、回傳值意義
+- **Part 1：execute() — DDL 操作** — 建立資料表、`CREATE TABLE`
+- **Part 2：update() 基本概念** — `NamedParameterJdbcTemplate`、具名參數 vs `?`、四個步驟
+- **Part 3：update() 完整範例** — INSERT / UPDATE / DELETE 範例、回傳值意義
+- **Part 4：批次新增** — `batchUpdate()` 原理與實作
 - **章節總結** — 修改類 SQL 完整整理
 
 <!--
-今天的架構：先介紹 Spring JDBC 的工具，然後一步一步學 update() 方法，最後總結三種 SQL 的用法。
+今天的架構：先介紹 Spring JDBC 的三大工具，然後一步一步學 update() 方法，最後總結三種 SQL 的用法。
 -->
 
 ---
@@ -91,7 +91,7 @@ class: flex flex-col justify-center items-center text-center
 JdbcTemplate 提供三個主要方法，對應不同的 SQL 操作類型：
 
 | 方法 | 對應 SQL | 說明 | 本章 |
-| --- | --- | --- | --- |
+| --- | --- | --- |  --- |
 | `execute()` | CREATE / DROP（DDL） | 無動態參數，直接執行 | ← 本章 |
 | `update()` | INSERT / UPDATE / DELETE | 需 Map 傳入動態參數 | ← 本章 |
 | `query()` | SELECT | 回傳 List，需 RowMapper | 下一章 |
@@ -108,6 +108,19 @@ update()：INSERT、UPDATE、DELETE 都會改變資料庫內容，統一用 upda
 query()：SELECT 只讀取資料，用 query() 系列的方法。
 
 今天先學 execute() 和 update()，下一章學 query()。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 1
+
+## execute() — DDL 操作
+
+<!--
+先看最簡單的 execute()，了解建表的寫法。
 -->
 
 ---
@@ -144,6 +157,19 @@ execute() 是三個方法中最簡單的一個，用來執行「不帶動態參�
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 2
+
+## update() 基本概念
+
+<!--
+進入本章重點：update() 的核心工具和基本概念。
+-->
+
+---
 
 # 核心工具：NamedParameterJdbcTemplate
 
@@ -169,16 +195,28 @@ Spring JDBC 主要透過 NamedParameterJdbcTemplate 這個物件來執行 SQL。
 -->
 
 ---
-layout: section
-class: flex flex-col justify-center items-center text-center
----
 
-# Part 1
+# 具名參數 vs `?` 佔位符
 
-## update() 的基本用法
+Spring JDBC 支援兩種 SQL 參數寫法：
+
+| 比較項目 | `?` 佔位符（`JdbcTemplate`） | `:paramName`（`NamedParameterJdbcTemplate`） |
+| --- | --- | --- |
+| SQL 範例 | `INSERT INTO student VALUES (?, ?)` | `INSERT INTO student VALUES (:id, :name)` |
+| 傳入方式 | `Object[]` 陣列，順序不能錯 | `Map<String, Object>`，用名稱對應 |
+| 可讀性 | 低（看不出參數代表什麼） | 高（名稱直接說明用途） |
+| 本課程使用 | — | ✅ 使用 `NamedParameterJdbcTemplate` |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>選擇 <code>:paramName</code>：</b> 參數多時不會搞混順序，程式碼更易讀、更好維護。
+</div>
 
 <!--
-來看 update() 怎麼用。
+Java 原生 JDBC 用的是 ? 佔位符，傳參數要用 Object[] 陣列，順序必須對應 SQL 裡的 ? 位置。
+參數一多就很容易寫錯順序。
+
+Spring JDBC 的 NamedParameterJdbcTemplate 改用 :paramName，用名稱對應，不依賴順序。
+本課程統一使用 NamedParameterJdbcTemplate。
 -->
 
 ---
@@ -201,82 +239,16 @@ class: flex flex-col justify-center items-center text-center
 -->
 
 ---
-
-# Step 1：注入 NamedParameterJdbcTemplate
-
-在 Dao 類別中，用 `@Autowired` 注入工具：
-
-```java
-@Autowired
-private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
-```
-
-| 項目 | 說明 |
-| --- | --- |
-| `@Autowired` | 讓 Spring 自動注入 `NamedParameterJdbcTemplate` 物件 |
-| 宣告位置 | 通常放在 Dao 類別的欄位中 |
-| 不需要 `new` | Spring 自動建立，我們只需要宣告即可 |
-
-
-<!--
-第一步，在 Dao 類別加上這個欄位宣告。
-
-@Autowired 讓 Spring Boot 自動幫我們注入 NamedParameterJdbcTemplate 的實體。
-
-我們不需要自己 new，Spring 在啟動時會自動根據 application.properties 的連線設定建立好這個物件。
-這和我們之前學 @Autowired 注入 Bean 的概念完全一樣。
-
-如果 IDE 出現 "cannot be resolved to a type"，通常是沒有 import，讓 IDE 自動 import 或手動加上即可。
--->
-
----
-
-# Steps 2–4：完整的 INSERT 範例
-
-呼叫 `update()` 新增一筆學生資料到資料庫：
-
-```java
-@Repository
-public class StudentDao {
-
-    @Autowired
-    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
-
-    public void createStudent(Student student) {
-        String sql = "INSERT INTO student(id, name) VALUES (:studentId, :studentName)";
-        Map<String, Object> map = new HashMap<>();
-        map.put("studentId", student.getId());
-        map.put("studentName", student.getName());
-        namedParameterJdbcTemplate.update(sql, map);
-    }
-}
-```
-
-<!--
-看完整的 INSERT 例子。
-
-類別加上 @Repository，告訴 Spring 這是資料存取層的 Bean。
-方法名稱 createStudent，接收一個 Student 物件。
-
-第一行：SQL 字串，用 :studentId 和 :studentName 作為具名佔位符。
-第二行：建立 HashMap，準備存放參數值。
-第三、四行：把 student 物件的 id 和 name 放進 map，key 對應 SQL 裡的 :paramName。
-第五行：呼叫 update()，把 SQL 和 map 傳進去，Spring JDBC 執行 SQL。
-
-⚠️ 注意：map.put() 的 key 字串必須和 SQL 的 :paramName 完全一致（大小寫也要一樣），否則執行時會找不到對應的值。
--->
-
----
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# Part 2
+# Part 3
 
-## update() 中的 map 參數用法
+## update() 完整範例
 
 <!--
-剛才看了程式碼，但 map 的角色是什麼？為什麼一定要用 Map？
+概念學完了，來看實際程式碼。從注入工具開始，接著理解 Map，再看完整的 INSERT、UPDATE、DELETE 範例。
 -->
 
 ---
@@ -330,16 +302,44 @@ Map 的運作很簡單：SQL 裡的 :paramName，對應 map 裡同名的 key。
 -->
 
 ---
-layout: section
-class: flex flex-col justify-center items-center text-center
----
 
-# Part 3
+# 完整的 INSERT 範例
 
-## update() 方法的用法總結
+呼叫 `update()` 新增一筆學生資料到資料庫：
+
+```java
+@Repository
+public class StudentDao {
+
+    // Step 1: 注入 NamedParameterJdbcTemplate
+    @Autowired
+    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+
+    public void createStudent(Student student) {
+        // Step 2: 定義 SQL，用 :paramName 作為佔位符
+        String sql = "INSERT INTO student(id, name) VALUES (:studentId, :studentName)";
+        // Step 3: 建立 Map，填入參數值
+        Map<String, Object> map = new HashMap<>();
+        map.put("studentId", student.getId());
+        map.put("studentName", student.getName());
+        // Step 4: 呼叫 update() 執行 SQL
+        namedParameterJdbcTemplate.update(sql, map);
+    }
+}
+```
 
 <!--
-INSERT 學完了，來看 UPDATE 和 DELETE 的用法。
+把四個步驟全部合在一起看。
+
+類別加上 @Repository，告訴 Spring 這是資料存取層的 Bean。
+方法名稱 createStudent，接收一個 Student 物件。
+
+第一行：SQL 字串，用 :studentId 和 :studentName 作為具名佔位符。
+第二行：建立 HashMap，準備存放參數值。
+第三、四行：把 student 物件的 id 和 name 放進 map，key 對應 SQL 裡的 :paramName。
+第五行：呼叫 update()，把 SQL 和 map 傳進去，Spring JDBC 執行 SQL。
+
+⚠️ 注意：map.put() 的 key 字串必須和 SQL 的 :paramName 完全一致（大小寫也要一樣），否則執行時會找不到對應的值。
 -->
 
 ---
@@ -349,11 +349,23 @@ INSERT 學完了，來看 UPDATE 和 DELETE 的用法。
 用 `update()` 修改資料庫中的學生資料：
 
 ```java
-String sql = "UPDATE student SET name = :studentName WHERE id = :studentId";
-Map<String, Object> map = new HashMap<>();
-map.put("studentId", student.getId());
-map.put("studentName", student.getName());
-namedParameterJdbcTemplate.update(sql, map);
+@Repository
+public class StudentDao {
+
+    @Autowired
+    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+
+    public void updateStudent(Student student) {
+        // Step 2: 定義 SQL
+        String sql = "UPDATE student SET name = :studentName WHERE id = :studentId";
+        // Step 3: 建立 Map
+        Map<String, Object> map = new HashMap<>();
+        map.put("studentId", student.getId());
+        map.put("studentName", student.getName());
+        // Step 4: 呼叫 update() 執行 SQL
+        namedParameterJdbcTemplate.update(sql, map);
+    }
+}
 ```
 
 <!--
@@ -372,10 +384,22 @@ WHERE 子句限定了要更新哪一筆資料，避免把所有資料都改掉�
 用 `update()` 刪除資料庫中的學生資料：
 
 ```java
-String sql = "DELETE FROM student WHERE id = :studentId";
-Map<String, Object> map = new HashMap<>();
-map.put("studentId", studentId);
-namedParameterJdbcTemplate.update(sql, map);
+@Repository
+public class StudentDao {
+
+    @Autowired
+    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+
+    public void deleteStudent(Integer studentId) {
+        // Step 2: 定義 SQL
+        String sql = "DELETE FROM student WHERE id = :studentId";
+        // Step 3: 建立 Map
+        Map<String, Object> map = new HashMap<>();
+        map.put("studentId", studentId);
+        // Step 4: 呼叫 update() 執行 SQL
+        namedParameterJdbcTemplate.update(sql, map);
+    }
+}
 ```
 
 <!--
@@ -386,6 +410,33 @@ SQL 是 DELETE FROM student WHERE id = :studentId，Map 只放一個 studentId�
 ⚠️ 和 UPDATE 一樣，DELETE 一定要加 WHERE 條件！沒有 WHERE 的 DELETE 會把整張資料表的資料全部刪光，這是非常危險的操作。
 
 另外注意：這裡的 studentId 是 @PathVariable 從 URL 路徑接收到的值（Integer 類型），不是 Student 物件的 id。
+-->
+
+---
+
+# update() 的回傳值
+
+`update()` 執行後，回傳一個 `int`，代表「受影響的資料列數」：
+
+| SQL 操作 | 情境 | 回傳值 |
+| --- | --- | --- |
+| `INSERT` | 成功新增一筆 | `1` |
+| `UPDATE` | WHERE 條件符合 3 筆，全部更新 | `3` |
+| `UPDATE` | WHERE 條件沒有符合的資料 | `0` |
+| `DELETE` | 成功刪除一筆 | `1` |
+
+```java
+int rowsAffected = namedParameterJdbcTemplate.update(sql, map);
+// rowsAffected == 0 代表沒有任何資料被更新或刪除
+```
+
+<!--
+update() 不是 void，它回傳一個 int，代表 SQL 影響了幾筆資料。
+
+實務上可以用這個回傳值做判斷：
+如果 UPDATE 或 DELETE 的回傳值是 0，表示沒有符合條件的資料，可以選擇拋出例外或回傳 404 給前端。
+
+這個判斷在後面的章節會實作，現在先知道有這個回傳值就好。
 -->
 
 ---
@@ -413,26 +464,94 @@ DELETE：SQL 通常只有 WHERE 條件，Map 只放 id。
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 4
+
+## 批次新增：batchUpdate()
+
+<!--
+一次插入大量資料時，逐筆 update() 效能很差。batchUpdate() 讓多筆操作一次送出。
+-->
+
+---
+
+# 為什麼需要 batchUpdate()？
+
+假設要一次新增 1000 筆學生資料：
+
+| 做法 | 資料庫往返次數 | SQL 編譯次數 | 效能 |
+| --- | --- | --- | --- |
+| 迴圈逐筆 `update()` | 1000 次 | 1000 次 | 慢 |
+| `batchUpdate()` | **1 次** | **1 次** | 快 |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>原理：</b> 把 1000 筆 INSERT 打包成一個請求一次送給資料庫，大幅減少網路往返成本。
+</div>
+
+<!--
+效能差異的根源是「資料庫往返成本（Round Trip Cost）」。每次資料庫操作都有網路延遲，1000 次就是 1000 倍的成本。
+batchUpdate() 把所有操作打包，SQL 也只需要編譯一次。
+-->
+
+---
+
+# batchUpdate() 完整程式碼
+
+```java
+@Repository
+public class StudentDao {
+
+    @Autowired
+    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+
+    public int[] batchInsert(List<Student> list) {
+        String sql = "INSERT INTO student(id, name) VALUES (:id, :name)";
+        List<Map<String, Object>> batchParams = new ArrayList<>();
+        for (Student s : list) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", s.getId());
+            map.put("name", s.getName());
+            batchParams.add(map);
+        }
+        return namedParameterJdbcTemplate.batchUpdate(
+            sql, batchParams.toArray(new Map[0]));
+    }
+}
+```
+
+<!--
+batchUpdate() 的參數是 SQL + Map 陣列，每個 Map 對應一筆資料的參數值。
+回傳 int[]，每個元素代表對應那筆操作影響的行數（成功是 1）。
+和逐筆 update() 相比，SQL 語法完全相同，只是包裝方式不同。
+-->
+
+---
 
 # 章節總結
 
 | 重點 | 說明 |
 | --- | --- |
-| 三大方法 | DDL 用 `execute()`；修改資料用 `update()`；查詢資料 `query()` 下一章學 |
-| `execute()` | 執行 DDL（`CREATE TABLE` 等），注入 `JdbcTemplate`，不需要動態參數 |
+| 三大方法 | DDL 用 `execute()`；修改資料用 `update()`；查詢資料用 `query()`（下一章） |
+| `execute()` | 執行 DDL（`CREATE TABLE` 等），注入 `JdbcTemplate`，無動態參數 |
 | 核心工具 | `NamedParameterJdbcTemplate`，透過 `@Autowired` 注入 |
-| 具名參數 | SQL 裡用 `:paramName`，Map 的 key 需完全一致 |
+| 具名參數 | SQL 用 `:paramName`，比 `?` 更清楚；Map 的 key 需完全一致 |
 | 四個步驟 | 注入 → 寫 SQL → 建立 Map → 呼叫 `update()` |
+| 回傳值 | `update()` 回傳 `int`，代表受影響的資料列數 |
 | 安全注意 | UPDATE 和 DELETE 一定要加 WHERE 條件 |
+| `batchUpdate()` | 批次新增用 `Map[]` 傳參數，回傳 `int[]`；效能遠優於逐筆 `update()` |
 
 <!--
 好，今天的重點總結。
 
 第一，Spring JDBC 把 SQL 分成修改類和查詢類，今天學的 update() 負責修改類。
 第二，核心工具是 NamedParameterJdbcTemplate，用 @Autowired 注入。
-第三，SQL 裡的 :paramName 和 Map 的 key 名稱必須完全一致。
+第三，本課程使用 :paramName 具名參數而非 ? 佔位符，SQL 和 Map 的 key 名稱必須完全一致。
 第四，四個固定步驟：注入、寫 SQL、建 Map、執行 update()。
-第五，UPDATE 和 DELETE 必須有 WHERE 條件，這是很重要的習慣。
+第五，update() 回傳受影響的列數，可以用來判斷操作是否成功。
+第六，UPDATE 和 DELETE 必須有 WHERE 條件，這是很重要的習慣。
 
 下一章我們學查詢類——用 query() 執行 SELECT，從資料庫讀取資料。
 -->

@@ -269,6 +269,33 @@ Containing 則是框架自動幫你加上前後的 %，更方便。
 
 ---
 
+# In — 動態多值查詢
+
+`findByXxxIn(Collection)` 支援動態個數的 IN 條件：
+
+```java
+// Repository 定義
+List<Student> findByNameIn(Collection<String> names);
+
+// 呼叫
+List<String> names = Arrays.asList("Alice", "Bob", "Carol");
+List<Student> result = studentRepository.findByNameIn(names);
+// → SELECT * FROM student WHERE name IN ('Alice', 'Bob', 'Carol')
+```
+
+| 說明 | 詳情 |
+| --- | --- |
+| 參數型別 | `Collection<T>`，可傳 `List`、`Set` |
+| 動態個數 | 傳幾個值，JPA 自動產生幾個 `IN (?)` 佔位符 |
+| 組合使用 | `findByNameInAndCity(Collection<String> names, String city)` |
+
+<!--
+In 是 Spring Data JPA 命名查詢最實用的 keyword 之一。
+只需在 Collection 裡放入要查的值，JPA 自動展開成對應的 IN 語法，不需要手寫 SQL。
+-->
+
+---
+
 # 分頁查詢 — Page 與 Pageable
 
 當資料量大時，一次回傳所有資料會讓 API 變慢，分頁查詢只回傳「某一頁」的資料：

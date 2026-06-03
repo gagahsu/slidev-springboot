@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: 單元測試與日誌
-routeAlias: ch42
+routeAlias: ch41
 style: |
   .slidev-layout p,
   .slidev-layout li,

@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: Spring Boot Cache
-routeAlias: ch44
+routeAlias: ch43
 style: |
   .slidev-layout p,
   .slidev-layout li,

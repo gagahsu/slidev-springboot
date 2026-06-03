@@ -247,66 +247,61 @@ style: |
     </Link>
     <Link to="ch35" class="chapter-card">
       <div class="chapter-num">Ch 35</div>
-      <div>批次新增與動態查詢</div>
-      <div class="chapter-subtitle">Batch Insert / REGEXP 動態條件</div>
-    </Link>
-    <Link to="ch36" class="chapter-card">
-      <div class="chapter-num">Ch 36</div>
       <div>MVC 架構模式</div>
       <div class="chapter-subtitle">Controller-Service-Dao 三層架構</div>
     </Link>
-    <Link to="ch37" class="chapter-card">
-      <div class="chapter-num">Ch 37</div>
+    <Link to="ch36" class="chapter-card">
+      <div class="chapter-num">Ch 36</div>
       <div>Spring Boot 資料物件</div>
       <div class="chapter-subtitle">PO / DTO / VO / DAO</div>
     </Link>
-    <Link to="ch38" class="chapter-card">
-      <div class="chapter-num">Ch 38</div>
+    <Link to="ch37" class="chapter-card">
+      <div class="chapter-num">Ch 37</div>
       <div>實戰：JPA CRUD API</div>
       <div class="chapter-subtitle">Entity / Repository / Service / Controller</div>
     </Link>
-    <Link to="ch39" class="chapter-card">
-      <div class="chapter-num">Ch 39</div>
+    <Link to="ch38" class="chapter-card">
+      <div class="chapter-num">Ch 38</div>
       <div>OpenAPI 與 Swagger UI</div>
       <div class="chapter-subtitle">springdoc / @Operation / @Schema</div>
     </Link>
-    <Link to="ch40" class="chapter-card">
-      <div class="chapter-num">Ch 40</div>
+    <Link to="ch39" class="chapter-card">
+      <div class="chapter-num">Ch 39</div>
       <div>Spring Boot Validation</div>
       <div class="chapter-subtitle">Bean Validation / @Valid / @Validated</div>
     </Link>
-    <Link to="ch41" class="chapter-card">
-      <div class="chapter-num">Ch 41</div>
+    <Link to="ch40" class="chapter-card">
+      <div class="chapter-num">Ch 40</div>
       <div>HttpSession 管理</div>
       <div class="chapter-subtitle">Session / JSESSIONID / invalidate</div>
     </Link>
-    <Link to="ch42" class="chapter-card">
-      <div class="chapter-num">Ch 42</div>
+    <Link to="ch41" class="chapter-card">
+      <div class="chapter-num">Ch 41</div>
       <div>單元測試與日誌</div>
       <div class="chapter-subtitle">JUnit 5 / Mockito / SLF4J / Logback</div>
     </Link>
-    <Link to="ch43" class="chapter-card">
-      <div class="chapter-num">Ch 43</div>
+    <Link to="ch42" class="chapter-card">
+      <div class="chapter-num">Ch 42</div>
       <div>Spring Boot 排程</div>
       <div class="chapter-subtitle">@Scheduled / @EnableScheduling / Cron</div>
     </Link>
-    <Link to="ch44" class="chapter-card">
-      <div class="chapter-num">Ch 44</div>
+    <Link to="ch43" class="chapter-card">
+      <div class="chapter-num">Ch 43</div>
       <div>Spring Boot Cache</div>
       <div class="chapter-subtitle">@Cacheable / @CacheEvict / @CachePut</div>
     </Link>
-    <Link to="ch45" class="chapter-card">
-      <div class="chapter-num">Ch 45</div>
+    <Link to="ch44" class="chapter-card">
+      <div class="chapter-num">Ch 44</div>
       <div>Spring Security</div>
       <div class="chapter-subtitle">SecurityFilterChain / BCrypt / CSRF</div>
     </Link>
-    <Link to="ch46" class="chapter-card">
-      <div class="chapter-num">Ch 46</div>
+    <Link to="ch45" class="chapter-card">
+      <div class="chapter-num">Ch 45</div>
       <div>JWT 認證</div>
       <div class="chapter-subtitle">jjwt / OncePerRequestFilter / Stateless</div>
     </Link>
-    <Link to="ch47" class="chapter-card">
-      <div class="chapter-num">Ch 47</div>
+    <Link to="ch46" class="chapter-card">
+      <div class="chapter-num">Ch 46</div>
       <div>Spring Cloud 微服務</div>
       <div class="chapter-subtitle">Eureka / Gateway / OpenFeign / Config</div>
     </Link>
@@ -417,42 +412,39 @@ src: ./33-lock.md
 src: ./34-sql-injection.md
 ---
 ---
-src: ./35-batch-dynamic.md
+src: ./35-mvc-architecture.md
 ---
 ---
-src: ./36-mvc-architecture.md
+src: ./36-data-objects.md
 ---
 ---
-src: ./37-data-objects.md
+src: ./37-jpa-practice.md
 ---
 ---
-src: ./38-jpa-practice.md
+src: ./38-openapi.md
 ---
 ---
-src: ./39-openapi.md
+src: ./39-validation.md
 ---
 ---
-src: ./40-validation.md
+src: ./40-httpsession.md
 ---
 ---
-src: ./41-httpsession.md
+src: ./41-unit-test-logging.md
 ---
 ---
-src: ./42-unit-test-logging.md
+src: ./42-scheduling.md
 ---
 ---
-src: ./43-scheduling.md
+src: ./43-cache.md
 ---
 ---
-src: ./44-cache.md
+src: ./44-spring-security.md
 ---
 ---
-src: ./45-spring-security.md
+src: ./45-jwt.md
 ---
 ---
-src: ./46-jwt.md
----
----
-src: ./47-spring-cloud.md
+src: ./46-spring-cloud.md
 ---
 

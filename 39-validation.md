@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: Spring Boot Validation
-routeAlias: ch40
+routeAlias: ch39
 style: |
   .slidev-layout p,
   .slidev-layout li,

@@ -199,12 +199,12 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# 補充一
+# Part 2
 
 ## Spring JDBC、Spring Data JPA、MyBatis 的差別在哪裡？
 
 <!--
-學 Spring Boot 資料庫操作，常會聽到三個名詞：Spring JDBC、Spring Data JPA、MyBatis。來看看它們的差別。
+接下來看三種資料庫操作框架的差別：Spring JDBC、Spring Data JPA、MyBatis。
 -->
 
 ---
@@ -240,7 +240,7 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# 補充二
+# Part 3
 
 ## 什麼是 CRUD？
 

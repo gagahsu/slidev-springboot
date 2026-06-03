@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: Spring Cloud 微服務
-routeAlias: ch47
+routeAlias: ch46
 style: |
   .slidev-layout p,
   .slidev-layout li,

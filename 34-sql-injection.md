@@ -402,7 +402,7 @@ List<Student> searchByName(@Param("name") String name);
 
 Spring 的三種框架——JDBCTemplate、JPA、MyBatis——只要正確使用，都已經幫你防範 SQL Injection。
 
-下一章我們要學批次新增和動態參數查詢，這兩個功能底層也是基於 PreparedStatement，學完今天再去看會很容易理解。
+下一章我們要學 MVC 三層架構——把 Controller、Service、Dao 的職責分清楚，打好後端系統設計的基礎。
 -->
 
 ---

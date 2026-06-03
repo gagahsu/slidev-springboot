@@ -58,6 +58,11 @@ function findGlobalLayerFiles(names: string[]): string[] {
 }
 
 export default defineConfig({
+  server: {
+    fs: {
+      allow: [process.cwd(), resolve('/')]
+    }
+  },
   optimizeDeps: {
     include: ['@fix-webm-duration/fix'],
   },

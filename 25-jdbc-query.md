@@ -61,6 +61,7 @@ layout: default
 
 - **`query()` 方法介紹** — 與 `update()` 的差別、RowMapper 的角色
 - **使用 `query()` 查詢資料** — Step 1 RowMapper、Step 2 查全部、Step 3 帶 WHERE 條件
+- **動態 IN 查詢** — `NamedParameterJdbcTemplate` 原生支援 `Collection` 參數
 - **章節總結** — CRUD 四個操作全部學齊
 
 <!--
@@ -330,6 +331,31 @@ Step 3 是帶 WHERE 條件的查詢，用來查詢特定 id 的學生。
 -->
 
 ---
+
+# 動態 IN 查詢
+
+`NamedParameterJdbcTemplate` 原生支援 `Collection` 參數，自動展開成 `IN (?,?,?)`：
+
+```java
+public List<Student> getStudentsByIds(List<Integer> ids) {
+    String sql = "SELECT id, name FROM student WHERE id IN (:ids)";
+    Map<String, Object> map = new HashMap<>();
+    map.put("ids", ids);   // List 直接傳入，Spring JDBC 自動展開
+    return namedParameterJdbcTemplate.query(sql, map, new StudentRowMapper());
+}
+```
+
+| 傳入 | Spring JDBC 自動產生 |
+| --- | --- |
+| `ids = [1, 2, 3]` | `WHERE id IN (?, ?, ?)`，綁定 1, 2, 3 |
+| `ids = [5]` | `WHERE id IN (?)`，綁定 5 |
+
+<!--
+NamedParameterJdbcTemplate 的具名參數支援 Collection 型別——直接把 List<Integer> 放進 Map，Spring JDBC 自動根據 List 的大小展開成對應數量的佔位符。
+不需要手動拼接 SQL，也不需要 REGEXP workaround，是處理動態 IN 條件最直接的方式。
+-->
+
+---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---
@@ -375,6 +401,7 @@ INSERT/UPDATE/DELETE 用 update()，SELECT 用 query()。
 | `mapRow()` | 用 `rs.getInt()`/`rs.getString()` 讀取欄位，回傳 Java 物件 |
 | 回傳值 | `List<T>`，每行資料對應一個 Java 物件 |
 | CRUD 完整 | INSERT/UPDATE/DELETE → `update()`；SELECT → `query()` ✅ |
+| 動態 IN 查詢 | `Map.put("ids", list)`，Spring JDBC 自動展開為 `IN (?,?,?)` |
 
 <!--
 好，今天的重點總結。

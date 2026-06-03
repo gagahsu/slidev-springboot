@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: OpenAPI 與 Swagger UI
-routeAlias: ch39
+routeAlias: ch38
 style: |
   .slidev-layout p,
   .slidev-layout li,

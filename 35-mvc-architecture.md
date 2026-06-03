@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: MVC 架構模式—Controller-Service-Dao 三層式架構
-routeAlias: ch36
+routeAlias: ch35
 style: |
   .slidev-layout p,
   .slidev-layout li,
