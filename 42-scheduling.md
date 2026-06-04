@@ -58,6 +58,20 @@ style: |
 -->
 
 ---
+layout: default
+---
+
+# Outline
+
+- **為什麼需要排程？** — 定時任務的常見情境
+- **@EnableScheduling** — 啟用 Spring Boot 排程功能
+- **@Scheduled 三種模式** — `fixedRate`、`fixedDelay`、`cron`
+- **Cron 表達式** — 五欄 cron 語法與常見範例
+- **initialDelay 與外部化設定** — 透過 properties 控制排程時間
+- **非同步排程** — `@Async` + `@EnableAsync`
+- **實作練習**
+
+---
 
 # 為什麼需要排程？
 
@@ -156,12 +170,13 @@ public class MyApplication {
 | 建立排程執行緒池 | 自動建立執行緒來執行排程任務 |
 | 啟動後立即生效 | 應用程式啟動後排程就開始運作 |
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>提示：</b> 可以放在任何 <code>@Configuration</code> 類別上。建議集中在一個 <code>SchedulingConfig</code> 設定類別，管理更清楚。</div>
-
 <!--
 啟用排程功能非常簡單，就是在你的設定類別加上 @EnableScheduling。
 
 加上這個 annotation 之後，Spring 就會開始掃描所有 Bean，找出裡面有 @Scheduled 的方法，然後自動幫你排程執行。
+
+提示：@EnableScheduling 可以放在任何 @Configuration 類別上。
+建議集中在一個 SchedulingConfig 設定類別，不要散落各處，管理更清楚。
 -->
 
 ---
@@ -181,6 +196,16 @@ public class HelloScheduler {
 }
 ```
 
+`fixedRate = 5000` 表示每 **5000 毫秒（5 秒）** 執行一次。
+
+<!--
+非常簡單：建立一個普通的 Spring Component，在你想定期執行的方法上加 @Scheduled，指定執行的時間間隔。
+-->
+
+---
+
+# @Scheduled 方法的四條規則
+
 | 規則 | 說明 |
 |---|---|
 | 回傳值 | 必須是 `void` |
@@ -188,12 +213,12 @@ public class HelloScheduler {
 | 類別 | 必須是 Spring Bean（有 `@Component` 等） |
 | 存取修飾 | 建議 `public`（避免 proxy 問題） |
 
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">⚠️ Spring 是自動呼叫排程方法的，所以它不知道要傳什麼參數 — 這也是為什麼方法不能有參數、回傳值要是 void。</div>
+
 <!--
-非常簡單：你只需要建立一個普通的 Spring Component，然後在你想定期執行的方法上加 @Scheduled，指定執行的時間間隔。
-
-這個範例是每 5000 毫秒，也就是每 5 秒執行一次。
-
 排程方法必須是 void 且無參數，因為 Spring 是自動呼叫的，它不知道要傳什麼參數給你。
+
+存取修飾建議 public，因為 Spring AOP 用的是 proxy，private 方法無法被 proxy 攔截，排程可能失效。
 -->
 
 ---
@@ -323,9 +348,9 @@ class: flex flex-col justify-center items-center text-center
 
 ---
 
-# cron — 精確時間點排程
+# cron — 精確時間點排程（1/2）
 
-Spring Boot cron 表達式格式（6 個欄位）：
+Spring Boot cron 表達式格式（6 個欄位，左到右）：
 
 | 位置 | 欄位 | 允許值 | 特殊字元 |
 |---|---|---|---|
@@ -336,21 +361,36 @@ Spring Boot cron 表達式格式（6 個欄位）：
 | 5 | 月 (Month) | 1–12 或 JAN–DEC | `, - * /` |
 | 6 | 週 (Day of Week) | 0–7 或 SUN–SAT | `, - * ? /` |
 
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">⚠️ Spring Boot cron 有 <b>6 欄</b>，比 Linux crontab 多一個「秒」欄位，直接複製 Linux cron 會對不上。</div>
+
+<!--
+cron 表達式是排程世界的「標準語言」，很多系統都用它。
+
+Spring Boot 的 cron 格式和 Linux 的 crontab 有一點差別：Spring 的 cron 有 6 個欄位，多了「秒」這個欄位。
+-->
+
+---
+
+# cron — 精確時間點排程（2/2）
+
 ```java
+// 格式：秒 分 時 日 月 週
+//        0  0  9  *  * MON-FRI
+//        ↑  ↑  ↑  ↑  ↑  ↑
+//        秒 分 時 日 月 週（每個工作日）
+
 @Scheduled(cron = "0 0 9 * * MON-FRI")
 public void sendMorningReport() {
     System.out.println("早安！寄出每日報表");
 }
 ```
 
+每個工作日（週一到週五）早上 **9:00:00** 執行一次。
+
 <!--
-cron 表達式是排程世界的「標準語言」，很多系統都用它。
-
-Spring Boot 的 cron 格式和 Linux 的 crontab 有一點差別：Spring 的 cron 有 6 個欄位，多了「秒」這個欄位。
-
-表格從左到右是：秒、分、時、日、月、週。
-
 "0 0 9 * * MON-FRI" 的意思是：每個工作日早上 9:00:00 執行。
+
+* 代表任意值，日和月都是 * 表示每天每月都符合。
 -->
 
 ---

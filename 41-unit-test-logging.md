@@ -54,25 +54,19 @@ style: |
 -->
 
 ---
+layout: default
+---
 
-## 本章大綱
+# Outline
 
-<table>
-  <thead>
-    <tr><th>段落</th><th>主題</th></tr>
-  </thead>
-  <tbody>
-    <tr><td>1</td><td>為什麼需要單元測試？</td></tr>
-    <tr><td>2</td><td>JUnit 5 基礎：@Test、@BeforeEach、@AfterEach</td></tr>
-    <tr><td>3</td><td>Assertions — 斷言語法</td></tr>
-    <tr><td>4</td><td>Mockito 與 @MockBean</td></tr>
-    <tr><td>5</td><td>@SpringBootTest — 整合測試</td></tr>
-    <tr><td>6</td><td>SLF4J + Logback 日誌體系</td></tr>
-    <tr><td>7</td><td>application.properties 日誌設定</td></tr>
-    <tr><td>8</td><td>實作練習 × 2</td></tr>
-    <tr><td>9</td><td>總結</td></tr>
-  </tbody>
-</table>
+- **為什麼需要單元測試？** — 測試的核心價值
+- **JUnit 5 基礎** — `@Test`、`@BeforeEach`、`@AfterEach`
+- **Assertions — 斷言語法** — `assertEquals`、`assertThrows`、`assertAll`
+- **Mockito 與 @MockitoBean** — Mock 依賴、驗證互動行為
+- **@SpringBootTest** — 整合測試與 `@WebMvcTest`、`@DataJpaTest`
+- **SLF4J + Logback** — Spring Boot 預設日誌體系
+- **application.properties 日誌設定** — level、file、rolling policy
+- **實作練習**
 
 <!--
 這章的內容不算少，但其實學完之後你會發現邏輯很一致。
@@ -141,6 +135,36 @@ JUnit 5 是 Java 世界最主流的測試框架，Spring Boot 3.x 預設就整�
 
 ---
 
+## Spring Boot 測試的檔案結構
+
+測試檔案放在 `src/test/java`，**套件路徑與主程式完全對應**：
+
+```
+src/
+├── main/java/com/example/demo/
+│   ├── controller/
+│   │   └── UserController.java
+│   └── service/
+│       └── UserService.java
+└── test/java/com/example/demo/
+    ├── controller/
+    │   └── UserControllerTest.java    ← 測試 UserController
+    └── service/
+        └── UserServiceTest.java       ← 測試 UserService
+```
+
+`spring-boot-starter-test` 已內建 JUnit 5、Mockito、AssertJ，Spring Initializr 預設自動加入，不需手動設定。
+
+<!--
+這個結構很重要，很多新手不知道測試檔案要放哪裡。
+
+src/test/java 的套件結構要和 src/main/java 完全一致，這樣測試才能存取到 package-private 的成員。
+
+命名慣例是在原類別名稱後面加 Test，例如 UserService 對應 UserServiceTest。
+-->
+
+---
+
 ## JUnit 5 — 測試類別的骨架
 
 Spring Boot 測試的 dependency 已內建在 `spring-boot-starter-test` 中。
@@ -179,7 +203,7 @@ Spring Boot 3.x 全面採用 JUnit 5，所以不需要加 @RunWith，那是 JUni
 
 ---
 
-## JUnit 5 — 常用 Annotation 一覽
+## JUnit 5 — 生命週期 Annotation
 
 | Annotation | 用途 |
 |------------|------|
@@ -188,18 +212,79 @@ Spring Boot 3.x 全面採用 JUnit 5，所以不需要加 @RunWith，那是 JUni
 | `@AfterEach` | 每個 `@Test` 後執行，通常用來清理 |
 | `@BeforeAll` | 整個測試類別執行前跑一次（需 `static`） |
 | `@AfterAll` | 整個測試類別執行後跑一次（需 `static`） |
+
+<!--
+最常用的就是這五個。
+
+@BeforeEach 和 @AfterEach 是最頻繁使用的，每個測試方法前後都會跑。
+
+@BeforeAll 和 @AfterAll 整個類別只跑一次，通常用來建立或關閉昂貴的資源（例如資料庫連線）。
+-->
+
+---
+
+## @BeforeAll / @AfterAll — 為什麼需要 static？
+
+```java
+class DatabaseTest {
+
+    @BeforeAll
+    static void initDb() {          // 必須是 static
+        // 啟動測試用資料庫連線（昂貴操作，只做一次）
+    }
+
+    @AfterAll
+    static void closeDb() {         // 必須是 static
+        // 關閉連線
+    }
+
+    @BeforeEach
+    void setUp() {                  // 不需要 static
+        // 每個測試前的初始化
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">⚠️ <b>為什麼要 static？</b> JUnit 5 每個 <code>@Test</code> 都會建立一個<b>新的測試類別實例</b>，所以在任何實例存在之前就要執行的 <code>@BeforeAll</code> 只能是 static 方法。<code>@BeforeEach</code> 則不需要，因為它在實例建立後才跑。</div>
+
+<!--
+忘記加 static 是新手最常遇到的編譯錯誤之一。
+
+JUnit 5 預設的 test lifecycle 是 PER_METHOD，也就是每個測試方法建立一個新實例。
+如果加上 @TestInstance(TestInstance.Lifecycle.PER_CLASS)，@BeforeAll 就不需要 static 了，但這是進階用法，先記住預設要加 static 就好。
+-->
+
+---
+
+## JUnit 5 — 進階控制 Annotation
+
+| Annotation | 用途 |
+|------------|------|
 | `@Disabled` | 暫時停用某個測試 |
 | `@DisplayName` | 為測試取一個人類可讀的名稱 |
 | `@Nested` | 在類別內再建立巢狀測試群組 |
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>注意：</b> Spring Boot 3.x 使用 JUnit 5，<code>@ExtendWith</code> 取代了 JUnit 4 的 <code>@RunWith</code>。</div>
+```java
+@DisplayName("使用者服務測試")
+class UserServiceTest {
+
+    @Nested
+    @DisplayName("查詢使用者")
+    class FindUser {
+
+        @Test
+        @Disabled("尚未實作此功能")
+        void findByEmail_尚未實作() { }
+    }
+}
+```
 
 <!--
-這張表記起來，考試會考（開玩笑）。
+@Disabled 比直接 comment 掉測試方法更正式，測試報告會顯示它被跳過而不是消失。
 
-最常用的就是前四個。@Disabled 在你暫時不想跑某個測試時很好用，比 comment 掉更正式。
+@DisplayName 讓測試報告更易讀，特別是在 CI 介面上。
 
-@DisplayName 可以讓測試報告長得更好看，特別是 CI 上面。
+@Nested 讓你把相關測試分群組，結構更清晰。
 -->
 
 ---
@@ -250,10 +335,10 @@ void 測試各種斷言() {
         throw new IllegalArgumentException("錯誤");
     });
 
-    assertAll("使用者資料",
-        () -> assertEquals("Alice", user.getName()),
-        () -> assertEquals(25, user.getAge()),
-        () -> assertNotNull(user.getEmail())
+    assertAll("數字驗證",
+        () -> assertEquals(4, 2 + 2),
+        () -> assertTrue(10 > 5),
+        () -> assertNotNull("hello")
     );
 }
 ```
@@ -274,7 +359,7 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 ## Part 4
-# Mockito 與 @MockBean
+# Mockito 與 @MockitoBean
 
 <!--
 單元測試的精神是「只測這一個單元」，不要牽扯到資料庫、外部 API 這些東西。
@@ -286,14 +371,75 @@ class: flex flex-col justify-center items-center text-center
 
 ---
 
+## 本節範例情境（1/2）：Model 與依賴介面
+
+```java
+// 資料模型（Java 16+ record）
+public record User(Long id, String name) {}
+public record Order(Long id, Long userId, String item) {}
+
+// Repository — 依賴資料庫，測試時要 Mock
+public interface UserRepository extends JpaRepository<User, Long> {}
+
+// EmailService — 會真的寄信，測試時要 Mock
+public interface EmailService {
+    void sendConfirmation(Order order);
+}
+```
+
+這三個都是 `OrderService` 的**外部依賴**，單元測試時不應該真正呼叫它們。
+
+<!--
+User 和 Order 用 record 宣告，簡潔不囉嗦。
+
+UserRepository 繼承 JpaRepository，背後需要資料庫連線。
+EmailService 是自訂介面，呼叫後會真的寄出 Email。
+
+這兩個依賴就是我們等等要 Mock 掉的目標。
+-->
+
+---
+
+## 本節範例情境（2/2）：OrderService 實作
+
+```java
+@Service
+public class OrderService {
+    private final UserRepository userRepository;
+    private final EmailService emailService;
+
+    public OrderService(UserRepository userRepository,
+                        EmailService emailService) {
+        this.userRepository = userRepository;
+        this.emailService = emailService;
+    }
+
+    public Order createOrder(Long userId, String item) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+        Order order = new Order(1L, userId, item);
+        emailService.sendConfirmation(order);
+        return order;
+    }
+}
+```
+
+<!--
+OrderService 透過建構子注入依賴，這樣 Mockito 的 @InjectMocks 才能把 Mock 注入進去。
+
+createOrder 內部呼叫了 userRepository 和 emailService，
+所以測試時這兩個都需要 Mock。
+-->
+
+---
+
 ## 為什麼需要 Mock？
 
 想像你在測試 `OrderService.createOrder()`，但它內部會呼叫：
 
 | 依賴 | 問題 |
 |------|------|
-| `UserRepository.findById()` | 需要資料庫 |
-| `InventoryService.checkStock()` | 需要外部服務 |
+| `UserRepository.findById()` | 需要資料庫連線 |
 | `EmailService.sendConfirmation()` | 會真的寄出 Email |
 
 解決方案：**用假物件（Mock）替代真實依賴**，讓 Mock 回傳我們指定的假資料。
@@ -310,37 +456,62 @@ OK 來看 Mockito 怎麼用。
 
 ---
 
-## Mockito — @ExtendWith + @Mock 用法
+## Mockito — @ExtendWith + @Mock 用法（1/2）
 
 純 Mockito（不啟動 Spring Context）：
+
+<div class="mt-2 mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>注意：</b> Spring Boot 3.x 使用 JUnit 5，<code>@ExtendWith</code> 取代了 JUnit 4 的 <code>@RunWith</code>。網路上舊文章若出現 <code>@RunWith(MockitoJUnitRunner.class)</code>，換成 <code>@ExtendWith(MockitoExtension.class)</code> 即可。</div>
 
 ```java
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
 
     @Mock
-    private UserRepository userRepository;
+    private UserRepository userRepository;  // 假的 Repository
+
+    @Mock
+    private EmailService emailService;      // 假的 EmailService
 
     @InjectMocks
-    private OrderService orderService;
-
-    @Test
-    void createOrder_使用者存在_建立成功() {
-        User fakeUser = new User(1L, "Alice");
-        when(userRepository.findById(1L))
-            .thenReturn(Optional.of(fakeUser));
-        Order result = orderService.createOrder(1L, "item-A");
-        assertNotNull(result);
-    }
+    private OrderService orderService;      // 真實的 Service，Mock 自動注入
 }
 ```
 
 <!--
-@ExtendWith(MockitoExtension.class) 是 JUnit 5 的寫法，取代了 JUnit 4 的 @RunWith(MockitoJUnitRunner.class)。
-
 @Mock 建立假物件，@InjectMocks 建立真實的 Service 並把 Mock 注入進去。
 
-when(...).thenReturn(...) 就是告訴 Mock：「如果有人呼叫你這個方法，就回傳這個值」。
+OrderService 有幾個依賴，就要宣告幾個 @Mock，缺一個就是 null。
+-->
+
+---
+
+## Mockito — @ExtendWith + @Mock 用法（2/2）
+
+```java
+    @Test
+    void createOrder_使用者存在_建立成功() {
+        // Arrange：設定 Mock 行為
+        User fakeUser = new User(1L, "Alice");
+        when(userRepository.findById(1L))
+            .thenReturn(Optional.of(fakeUser));
+
+        // Act：呼叫被測方法
+        Order result = orderService.createOrder(1L, "item-A");
+
+        // Assert：驗證結果
+        assertNotNull(result);
+        verify(emailService, times(1)).sendConfirmation(result);
+    }
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>Arrange / Act / Assert（AAA）：</b> 測試方法的標準三段式結構，先準備資料、再執行、最後驗證。</div>
+
+<!--
+when(...).thenReturn(...) 告訴 Mock：如果有人呼叫你這個方法，就回傳這個值。
+
+verify 確認 emailService.sendConfirmation 有被呼叫一次，這樣才完整測到 createOrder 的行為。
+
+AAA 是業界標準寫法，養成習慣讓測試更易讀。
 -->
 
 ---
@@ -367,38 +538,6 @@ verify 這個東西很重要，特別是測試那些沒有回傳值的方法，�
 any() 系列的 matcher 讓你不用指定精確的參數值，只要型別對就好。
 -->
 
----
-
-## @MockBean — 在 Spring Context 中 Mock
-
-當你需要 Spring Context 但又不想用真實 Bean 時：
-
-```java
-@SpringBootTest
-class OrderServiceIntegrationTest {
-
-    @Autowired
-    private OrderService orderService;
-
-    @MockBean
-    private EmailService emailService;
-
-    @Test
-    void createOrder_不寄真實Email() {
-        doNothing().when(emailService).sendConfirmation(any());
-        orderService.createOrder(1L, "item-A");
-        verify(emailService, times(1)).sendConfirmation(any());
-    }
-}
-```
-
-<!--
-@MockBean 是 Spring Boot 提供的，它會把 Spring Context 裡面的真實 Bean 替換成 Mock。
-
-跟純 @Mock 的差別是：@MockBean 需要啟動 Spring Context，速度比較慢，但可以測試整個 Spring 的依賴注入是否正確。
-
-通常我的原則是：能用純 Mockito 就用純 Mockito，只有需要測試 Spring 相關行為才用 @MockBean。
--->
 
 ---
 layout: section
@@ -409,7 +548,7 @@ class: flex flex-col justify-center items-center text-center
 # @SpringBootTest — 整合測試
 
 <!--
-剛才的 @MockBean 已經偷偷用到了 @SpringBootTest。
+剛才的 @MockitoBean 已經偷偷用到了 @SpringBootTest。
 
 現在我們正式介紹它。
 
@@ -433,7 +572,7 @@ class UserControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private UserService userService;
 }
 ```
@@ -450,6 +589,42 @@ class UserControllerTest {
 
 ---
 
+## 本節範例情境：UserController 層
+
+```java
+public record UserDto(Long id, String name) {}
+
+@Service
+public class UserService {
+    public UserDto findById(Long id) {
+        // 實際查詢資料庫，此處簡化
+        return new UserDto(id, "Alice");
+    }
+}
+
+@RestController
+@RequestMapping("/users")
+public class UserController {
+    private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @GetMapping("/{id}")
+    public UserDto getUser(@PathVariable("id") Long id) {
+        return userService.findById(id);
+    }
+}
+```
+
+<!--
+@WebMvcTest 只啟動 Web 層，UserService 不會被建立，
+所以測試中要用 @MockitoBean 提供假的 UserService。
+-->
+
+---
+
 ## @WebMvcTest — Controller 測試範例
 
 ```java
@@ -459,7 +634,7 @@ class UserControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private UserService userService;
 
     @Test
@@ -531,6 +706,18 @@ Spring Boot 預設整合的是 SLF4J + Logback，我們來看怎麼用。
 | Logback | Spring Boot 預設的日誌**實作** |
 | 優點 | 程式碼只依賴 SLF4J 介面，未來換實作不需改程式碼 |
 
+SLF4J 與 Logback 的關係，就像 JDBC 和資料庫驅動：程式碼寫 SLF4J，底層換 Log4j2 也不需改程式碼。
+
+<!--
+SLF4J 是介面層，Logback 是實作層。
+
+Spring Boot 預設整合 Logback，不需要額外設定，加入 spring-boot-starter 就自動有了。
+-->
+
+---
+
+## SLF4J + Logback — 基本用法
+
 ```java
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -548,6 +735,8 @@ public class OrderService {
     }
 }
 ```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>用 <code>{}</code> 佔位符</b>，不要字串串接。Log level 未開啟時，Logback 不會做字串運算，效能更好。</div>
 
 <!--
 如果你用 Lombok，可以在 class 上加 @Slf4j，它會自動幫你產生 log 變數，不需要那兩行宣告。
@@ -759,7 +948,7 @@ logging.logback.rollingpolicy.max-history=30
 | JUnit 5 | `@Test`、`@BeforeEach`、`@AfterEach`，Spring Boot 3.x 不再用 `@RunWith` |
 | Assertions | `assertEquals`、`assertThrows`、`assertAll`，注意 expected/actual 順序 |
 | Mockito | `@ExtendWith(MockitoExtension.class)`、`@Mock`、`@InjectMocks`、`when().thenReturn()` |
-| @MockBean | 需要 Spring Context 時，用 `@MockBean` 替換真實 Bean |
+| @MockitoBean | 需要 Spring Context 時，用 `@MockitoBean` 替換真實 Bean |
 | @SpringBootTest | 完整整合測試；Controller 測試用 `@WebMvcTest`；JPA 用 `@DataJpaTest` |
 | SLF4J + Logback | Spring Boot 預設整合，透過 SLF4J 介面寫 log |
 | Log Level | TRACE < DEBUG < INFO < WARN < ERROR，Production 用 INFO |

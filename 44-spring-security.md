@@ -56,6 +56,24 @@ Spring Security 就是幫我們解決這件事的框架。
 -->
 
 ---
+layout: default
+---
+
+# Outline
+
+- **認證 vs 授權** — Authentication / Authorization 核心概念
+- **加入 Spring Security 依賴** — pom.xml 設定
+- **預設行為** — Spring Security 開箱即用的保護機制
+- **SecurityFilterChain** — Spring Boot 3.x 的設定方式
+- **路徑授權規則** — `requestMatchers` 與 `hasRole`
+- **InMemoryUserDetailsManager** — 快速測試帳號設定
+- **UserDetailsService** — 從資料庫載入使用者
+- **BCryptPasswordEncoder** — 密碼加密
+- **CSRF 保護** — 何時開、何時關
+- **Filter Chain 架構** — Spring Security 執行流程
+- **實作練習**
+
+---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---
@@ -114,15 +132,12 @@ class: flex flex-col justify-center items-center text-center
 
 ---
 
-# pom.xml 加入依賴
+# build.gradle 加入依賴
 
 只要加一行依賴，Spring Security 就會自動生效：
 
-```xml
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-security</artifactId>
-</dependency>
+```groovy
+implementation 'org.springframework.boot:spring-boot-starter-security'
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">

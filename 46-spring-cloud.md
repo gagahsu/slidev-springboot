@@ -52,19 +52,19 @@ style: |
 -->
 
 ---
+layout: default
+---
 
-# 本章學習目標
+# Outline
 
-| 主題 | 你將學到什麼 |
-|------|-------------|
-| 單體 vs 微服務 | 兩種架構的優缺點比較 |
-| 微服務的挑戰 | 服務發現、負載平衡、設定管理、熔斷 |
-| Spring Cloud 是什麼 | 解決微服務問題的工具箱 |
-| Eureka | 服務註冊與發現 |
-| Spring Cloud Gateway | API 閘道器入口 |
-| OpenFeign | 宣告式 HTTP 客戶端 |
-| Spring Cloud Config | 集中式設定管理 |
-| Resilience4j Circuit Breaker | 熔斷器保護機制 |
+- **單體 vs 微服務** — 兩種架構的優缺點比較
+- **微服務的挑戰** — 服務發現、負載平衡、設定管理、熔斷
+- **Spring Cloud 是什麼** — 解決微服務問題的工具箱
+- **Eureka** — 服務註冊與發現
+- **Spring Cloud Gateway** — API 閘道器入口
+- **OpenFeign** — 宣告式 HTTP 客戶端
+- **Spring Cloud Config** — 集中式設定管理
+- **Resilience4j Circuit Breaker** — 熔斷器保護機制
 
 <!--
 這張投影片告訴學員今天會走過的路。
@@ -155,7 +155,7 @@ class: flex flex-col justify-center items-center text-center
 |------|---------|---------|
 | **服務發現** | 服務 A 要呼叫服務 B，該打哪個 IP？ | Eureka — 服務登記處 |
 | **負載平衡** | 服務 B 有三個實例，請求要怎麼分配？ | Spring Cloud LoadBalancer |
-| **設定管理** | 100 個服務各自有 yml，如何統一管理？ | Spring Cloud Config |
+| **設定管理** | 100 個服務各自有 properties，如何統一管理？ | Spring Cloud Config |
 | **熔斷保護** | 服務 C 回應很慢，服務 A 一直等，執行緒耗盡怎麼辦？ | Resilience4j Circuit Breaker |
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
@@ -184,14 +184,14 @@ class: flex flex-col justify-center items-center text-center
 
 # Spring Cloud：微服務的工具箱
 
-| Spring Cloud 子專案 | 解決的問題 | 對應挑戰 |
+| Spring Cloud 子專案 | 解決的問題 | 部署方式 |
 |--------------------|----------|---------|
-| **Eureka** | 服務註冊與發現 | 服務發現 |
-| **Spring Cloud LoadBalancer** | 客戶端負載平衡 | 負載平衡 |
-| **Spring Cloud Gateway** | API 閘道器 | 統一入口管理 |
-| **OpenFeign** | 宣告式 HTTP 呼叫 | 服務間通訊 |
-| **Spring Cloud Config** | 集中式設定管理 | 設定管理 |
-| **Resilience4j** | 熔斷、重試、限流 | 熔斷保護 |
+| **Eureka** | 服務註冊與發現 | ✅ 獨立專案（eureka-server） |
+| **Spring Cloud LoadBalancer** | 客戶端負載平衡 | 📦 函式庫，加進各服務 |
+| **Spring Cloud Gateway** | API 閘道器 | ✅ 獨立專案（api-gateway） |
+| **OpenFeign** | 宣告式 HTTP 呼叫 | 📦 函式庫，加進需要呼叫其他服務的服務 |
+| **Spring Cloud Config** | 集中式設定管理 | ✅ 獨立專案（config-server） |
+| **Resilience4j** | 熔斷、重試、限流 | 📦 函式庫，加進各服務 |
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>版本對應：</b> Spring Cloud 2023.x + Spring Boot 3.x + JDK 17+。版本不匹配是最常見的踩坑來源。
@@ -200,6 +200,41 @@ class: flex flex-col justify-center items-center text-center
 <!--
 這張表是全章的總綱。後面每個 Part 都會展開其中一行。
 版本對應非常重要——很多踩坑都來自版本不匹配。
+-->
+
+---
+
+# 微服務專案架構 Overview
+
+```
+外部請求
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
+│  api-gateway（獨立專案，port 8080）               │
+│  Spring Cloud Gateway + Eureka Client            │
+└──────────────┬──────────────────────────────────┘
+               │ 路由轉發（lb://）
+       ┌───────┴────────┐
+       ▼                ▼
+┌─────────────┐  ┌─────────────┐
+│ user-service│  │order-service│  ← 各業務服務（獨立專案）
+│  port 8081  │  │  port 8082  │     Eureka Client
+└─────────────┘  └──────┬──────┘     OpenFeign（order 呼叫 user）
+                        │ OpenFeign  Resilience4j
+                        ▼
+                 user-service
+
+┌──────────────────────────────┐  ┌──────────────────────┐
+│  eureka-server（port 8761）  │  │ config-server（8888） │
+│  所有服務向此登記             │  │ 所有服務從此拉設定     │
+└──────────────────────────────┘  └──────────────────────┘
+```
+
+<!--
+這張圖是全章的骨架。
+獨立專案：eureka-server、config-server、api-gateway、各業務服務。
+函式庫（加進業務服務）：OpenFeign、LoadBalancer、Resilience4j。
 -->
 
 ---
@@ -221,11 +256,8 @@ Eureka 是 Netflix 開源、Spring Cloud 整合的服務發現元件。
 
 **加入依賴：**
 
-```xml
-<dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
-</dependency>
+```groovy
+implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-server'
 ```
 
 **啟動類加上 `@EnableEurekaServer`：**
@@ -251,20 +283,12 @@ public class EurekaServerApplication {
 
 # Eureka Server：設定檔
 
-```yaml
-server:
-  port: 8761
-
-spring:
-  application:
-    name: eureka-server
-
-eureka:
-  client:
-    register-with-eureka: false
-    fetch-registry: false
-  instance:
-    hostname: localhost
+```properties
+server.port=8761
+spring.application.name=eureka-server
+eureka.client.register-with-eureka=false
+eureka.client.fetch-registry=false
+eureka.instance.hostname=localhost
 ```
 
 <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
@@ -282,24 +306,15 @@ register-with-eureka: false 和 fetch-registry: false 這兩個設定很容易�
 
 **加入依賴：**
 
-```xml
-<dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-</dependency>
+```groovy
+implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 ```
 
 **設定檔指定服務名稱與 Eureka Server 位址：**
 
-```yaml
-spring:
-  application:
-    name: order-service
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
+```properties
+spring.application.name=order-service
+eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
@@ -331,28 +346,19 @@ class: flex flex-col justify-center items-center text-center
 
 **依賴：**
 
-```xml
-<dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-gateway</artifactId>
-</dependency>
+```groovy
+implementation 'org.springframework.cloud:spring-cloud-starter-gateway'
 ```
 
-**application.yml 路由設定：**
+**application.properties 路由設定：**
 
-```yaml
-spring:
-  cloud:
-    gateway:
-      routes:
-        - id: order-service
-          uri: lb://order-service
-          predicates:
-            - Path=/api/orders/**
-        - id: user-service
-          uri: lb://user-service
-          predicates:
-            - Path=/api/users/**
+```properties
+spring.cloud.gateway.routes[0].id=order-service
+spring.cloud.gateway.routes[0].uri=lb://order-service
+spring.cloud.gateway.routes[0].predicates[0]=Path=/api/orders/**
+spring.cloud.gateway.routes[1].id=user-service
+spring.cloud.gateway.routes[1].uri=lb://user-service
+spring.cloud.gateway.routes[1].predicates[0]=Path=/api/users/**
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
@@ -381,71 +387,62 @@ OpenFeign 讓你用介面 + annotation 宣告式地定義 HTTP 呼叫。
 
 ---
 
-# OpenFeign：宣告式 HTTP 客戶端
+# OpenFeign（1/2）：定義與啟用
 
-**依賴：**
-
-```xml
-<dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-openfeign</artifactId>
-</dependency>
-```
-
-**定義 FeignClient 介面：**
+**① `UserClient.java`（在 order-service 中定義）**
 
 ```java
-@FeignClient(name = "user-service")
+@FeignClient(name = "user-service")   // 對應 Eureka 上的服務名稱
 public interface UserClient {
     @GetMapping("/users/{id}")
     User getUserById(@PathVariable Long id);
 }
 ```
 
-**啟動類開啟 Feign：**
+**② `OrderServiceApplication.java`（啟用 Feign 掃描）**
 
 ```java
 @SpringBootApplication
-@EnableFeignClients
-public class OrderServiceApplication { ... }
+@EnableFeignClients   // 掃描所有 @FeignClient，註冊為 Spring Bean
+public class OrderServiceApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(OrderServiceApplication.class, args);
+    }
+}
 ```
 
 <!--
-這個對比非常直觀。OpenFeign 讓程式碼更乾淨，也更接近「寫 Service 呼叫 Repository」的感覺。
-
-而且 Feign 整合了 Eureka，name = "user-service" 會自動從 Eureka 解析位址，不需要寫死 IP。
+@FeignClient 宣告介面，@EnableFeignClients 讓 Spring 把這個介面實例化成 Bean。
+name = "user-service" 對應 Eureka 上的 spring.application.name，不是 IP。
 -->
 
 ---
 
-# OpenFeign 使用方式
+# OpenFeign（2/2）：注入與使用
 
-注入並使用，就像呼叫本地方法：
+**③ `OrderService.java`（注入 UserClient，直接呼叫）**
 
 ```java
 @Service
 @RequiredArgsConstructor
 public class OrderService {
 
-    private final UserClient userClient;
+    private final UserClient userClient;  // Spring 自動注入 Feign 產生的實作
 
     public OrderDetail getOrderDetail(Long orderId, Long userId) {
-        User user = userClient.getUserById(userId);
-        // 繼續業務邏輯...
+        User user = userClient.getUserById(userId);  // 實際發出 HTTP GET 到 user-service
         return new OrderDetail(orderId, user.getName());
     }
 }
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>注意：</b> @FeignClient 的 name 對應 Eureka 上的服務名稱（spring.application.name）。Feign 透過 Eureka 找到服務實例，再發出 HTTP 請求，整個過程對你透明。
+💡 <code>UserClient</code> 只是介面，Feign 在背後自動產生實作，把方法呼叫轉成 HTTP 請求，再透過 Eureka 找到 <code>user-service</code> 的實際位址。
 </div>
 
 <!--
-三個步驟：加依賴、@EnableFeignClients、定義介面。
-
-呼叫遠端服務就像呼叫本地介面方法一樣，Feign 幫你處理 HTTP 細節。
-這就是 OpenFeign「宣告式」的魅力。
+UserClient 是介面，沒有實作類別。Feign 在 @EnableFeignClients 掃描後，自動產生一個代理物件注入進來。
+呼叫 userClient.getUserById(1L) 實際上是發出 GET http://user-service/users/1，Eureka 解析位址。
 -->
 
 ---
@@ -457,7 +454,7 @@ class: flex flex-col justify-center items-center text-center
 ## Spring Cloud Config：集中管理設定
 
 <!--
-100 個微服務，每個都有自己的 application.yml。
+100 個微服務，每個都有自己的 application.properties。
 改一個資料庫密碼要逐一重啟？這在生產環境是噩夢。
 Spring Cloud Config 讓你把設定集中放在 Git 倉庫，所有服務動態讀取。
 -->
@@ -470,17 +467,14 @@ Spring Cloud Config 讓你把設定集中放在 Git 倉庫，所有服務動態�
 
 | 元件 | 角色 |
 |------|------|
-| Git 倉庫 | 存放所有服務的設定檔（order-service.yml、user-service.yml 等） |
+| Git 倉庫 | 存放所有服務的設定檔（order-service.properties、user-service.properties 等） |
 | Config Server | 橋接 Git 倉庫與各微服務 |
 | 各微服務（Config Client） | 從 Config Server 拉取自己的設定 |
 
 **Config Server 依賴與啟動類：**
 
-```xml
-<dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-config-server</artifactId>
-</dependency>
+```groovy
+implementation 'org.springframework.cloud:spring-cloud-config-server'
 ```
 
 ```java
@@ -493,6 +487,54 @@ public class ConfigServerApplication { ... }
 Git 倉庫作為設定來源是最常見的做法。
 修改設定只需要 push 到 Git，服務可以透過 /actuator/refresh 動態重新載入，
 不需要重啟——這在生產環境非常有價值。
+-->
+
+---
+
+# Spring Cloud Config：完整使用流程（1/2）
+
+**① Git 倉庫放設定檔**（`.properties` 格式，檔名 = 服務名稱）
+
+```
+config-repo/
+├── order-service.properties   # order-service 專用設定
+└── user-service.properties    # user-service 專用設定
+```
+
+**② Config Server 的 `application.properties`**
+
+```properties
+server.port=8888
+spring.cloud.config.server.git.uri=https://github.com/your-org/config-repo
+```
+
+<!--
+Git 倉庫的檔名對應服務的 spring.application.name。
+Config Server 本身也是一個 Spring Boot 專案，加上 @EnableConfigServer。
+-->
+
+---
+
+# Spring Cloud Config：完整使用流程（2/2）
+
+**③ 各微服務（Config Client）的 `application.properties`**
+
+```properties
+spring.application.name=order-service
+spring.config.import=optional:configserver:http://localhost:8888
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>運作原理：</b> 服務啟動時，先向 Config Server 拉取 <code>order-service.properties</code> 的內容，再繼續啟動。Git 設定更新後，呼叫 <code>/actuator/refresh</code> 即可動態重新載入，不需重啟。
+</div>
+
+<div class="mt-2 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <code>optional:</code> 前綴表示 Config Server 不在線時服務仍可啟動（用本地設定），適合開發環境。
+</div>
+
+<!--
+spring.config.import 是 Spring Boot 3.x 的新寫法，取代舊版的 bootstrap.properties。
+spring.application.name 決定去 Git 倉庫找哪個檔案。
 -->
 
 ---
@@ -510,6 +552,37 @@ class: flex flex-col justify-center items-center text-center
 
 ---
 
+# 熔斷器運作原理
+
+`@CircuitBreaker` 透過 **AOP 攔截**每一次方法呼叫，自動追蹤成功/失敗：
+
+```
+你呼叫 checkInventory()
+         ↓
+  Resilience4j 攔截
+         ↓
+     查當前狀態
+    ┌─────┴──────┐
+  Closed        Open
+    ↓              ↓
+執行真實程式碼   直接呼叫 fallback()
+inventoryClient    不碰下游服務
+  .check()
+    ↓
+記錄結果（成功 or 失敗）
+失敗率 > 50% → 切換成 Open
+```
+
+| 你負責 | Resilience4j 負責 |
+|--------|-----------------|
+| 寫業務方法 + fallback 方法 | 攔截呼叫、追蹤失敗率、切換狀態 |
+
+<!--
+關鍵概念：你不需要手動判斷狀態。Resilience4j 全自動處理，透過 AOP 在你完全不知情的情況下攔截方法呼叫。
+-->
+
+---
+
 # 熔斷器三種狀態
 
 | 狀態 | 行為 | 轉換條件 |
@@ -518,24 +591,41 @@ class: flex flex-col justify-center items-center text-center
 | **Open（開啟）** | 直接回傳錯誤，不呼叫下游 | 等待冷卻時間 → Half-Open |
 | **Half-Open（半開）** | 允許少量請求試探 | 試探成功 → Closed；失敗 → Open |
 
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>雪崩效應：</b> 沒有熔斷器時，下游服務變慢 → 上游執行緒全部卡住等待 → 整個系統癱瘓。Open 狀態直接回傳 fallback，不等待，保護上游。
+</div>
+
+<!--
+Half-Open 狀態是在試探「下游服務是否已經恢復」。
+-->
+
+---
+
+# 熔斷器：狀態與程式碼的對應
+
 ```java
 @CircuitBreaker(name = "inventoryService",
                 fallbackMethod = "inventoryFallback")
 public InventoryResponse checkInventory(String productCode) {
+    // ← Closed / Half-Open 狀態：執行這裡，正常呼叫下游
     return inventoryClient.check(productCode);
 }
 
 public InventoryResponse inventoryFallback(String productCode,
                                             Exception e) {
+    // ← Open 狀態：跳過上面直接執行這裡，不呼叫下游
     return new InventoryResponse(productCode, false);
 }
 ```
 
-<!--
-熔斷器就像電路保護裝置：發現電流異常（失敗率過高），立刻切斷，
-不讓問題蔓延到其他地方。Half-Open 狀態是在試探「下游服務是否已經恢復」。
+| 狀態 | 執行哪段 |
+|------|---------|
+| Closed | `checkInventory()` → 呼叫真實服務 |
+| Open | 直接跳到 `inventoryFallback()`，不碰下游 |
+| Half-Open | `checkInventory()` 試探；成功回 Closed，失敗回 Open |
 
-fallbackMethod 是熔斷器開啟時的降級處理，不是直接回傳錯誤，而是回傳一個「說得過去」的預設值。
+<!--
+fallbackMethod 就是 Open 狀態的出口，回傳一個「說得過去」的預設值，讓系統繼續運作而不是直接報錯。
 -->
 
 ---
@@ -602,20 +692,15 @@ layout: default
 # 練習一：解題提示
 ### 提示說明
 
-**pom.xml 必須加入 Spring Cloud BOM：**
+**build.gradle 必須加入 Spring Cloud BOM：**
 
-```xml
-<dependencyManagement>
-  <dependencies>
-    <dependency>
-      <groupId>org.springframework.cloud</groupId>
-      <artifactId>spring-cloud-dependencies</artifactId>
-      <version>2023.0.3</version>
-      <type>pom</type>
-      <scope>import</scope>
-    </dependency>
-  </dependencies>
-</dependencyManagement>
+```groovy
+dependencies {
+    implementation platform(
+        'org.springframework.cloud:spring-cloud-dependencies:2023.0.3')
+    // 其他依賴不需要指定版本，由 BOM 管理
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+}
 ```
 
 **常見問題排查：**

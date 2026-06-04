@@ -54,27 +54,23 @@ JWT 就是這條「手環」！伺服器把你的身份資訊加密簽名後交�
 -->
 
 ---
+layout: default
+---
 
-# 本章大綱
+# Outline
 
-<div class="index-table">
-
-| 節次 | 主題 |
-|------|------|
-| 1 | HttpSession 的水平擴展問題 |
-| 2 | JWT 結構與三個組成部分 |
-| 3 | JWT Claims 詳解 |
-| 4 | JWT vs Session 比較 |
-| 5 | jjwt 0.12.x 依賴設定 |
-| 6 | JwtUtil：生成與驗證 Token |
-| 7 | JwtAuthFilter（OncePerRequestFilter） |
-| 8 | SecurityFilterChain 設定 |
-| 9 | AuthController 登入端點 |
-| 10 | 完整登入流程 |
-| 11 | 安全最佳實踐 |
-| 12 | 實作練習 |
-
-</div>
+- **Session 的水平擴展問題** — 為什麼需要 JWT？
+- **JWT 結構** — Header、Payload、Signature 三個組成部分
+- **JWT Claims 詳解** — 標準 Claims 與自訂 Claims
+- **JWT vs Session 比較** — 無狀態 vs 有狀態
+- **jjwt 0.12.x 依賴設定** — pom.xml 設定
+- **JwtUtil** — 生成與驗證 Token
+- **JwtAuthFilter** — `OncePerRequestFilter` 攔截請求
+- **SecurityFilterChain** — 整合 JWT 的安全設定
+- **AuthController** — 登入端點實作
+- **完整登入流程** — 端對端流程圖解
+- **安全最佳實踐** — Token 管理注意事項
+- **實作練習**
 
 <!--
 這是本章的學習路線圖。我們先從「為什麼需要 JWT」出發，理解 Session 在分散式系統的痛點；接著深入 JWT 的結構與原理；然後實作整套 Spring Boot 3.x 的 JWT 認證流程。
@@ -103,7 +99,13 @@ class: flex flex-col justify-center items-center text-center
 | 自動擴展（Auto Scaling） | ❌ 新開的 Pod 沒有舊的 Session 資料 |
 | 容器化部署（K8s） | ❌ Pod 重啟後 Session 全部消失 |
 
-**解法比較：**
+<!--
+想像一個大型主題樂園，有兩個售票口。你在左邊售票口登記了，拿到一張號碼牌。但右邊售票口的工作人員根本不知道你登記過！這就是水平擴展時 Session 的問題。
+-->
+
+---
+
+# HttpSession 的解法比較
 
 | 解法 | 缺點 |
 |------|------|
@@ -112,8 +114,6 @@ class: flex flex-col justify-center items-center text-center
 | **JWT（無狀態）** | **⭐ 伺服器完全不需要儲存狀態** |
 
 <!--
-想像一個大型主題樂園，有兩個售票口。你在左邊售票口登記了，拿到一張號碼牌。但右邊售票口的工作人員根本不知道你登記過！這就是水平擴展時 Session 的問題。
-
 JWT 提供了另一條路：讓客戶端自己帶著身份證明！
 -->
 
@@ -245,30 +245,16 @@ class: flex flex-col justify-center items-center text-center
 
 ---
 
-# pom.xml：加入 jjwt 依賴
+# build.gradle：加入 jjwt 依賴
 
-```xml
-<dependency>
-    <groupId>io.jsonwebtoken</groupId>
-    <artifactId>jjwt-api</artifactId>
-    <version>0.12.5</version>
-</dependency>
-<dependency>
-    <groupId>io.jsonwebtoken</groupId>
-    <artifactId>jjwt-impl</artifactId>
-    <version>0.12.5</version>
-    <scope>runtime</scope>
-</dependency>
-<dependency>
-    <groupId>io.jsonwebtoken</groupId>
-    <artifactId>jjwt-jackson</artifactId>
-    <version>0.12.5</version>
-    <scope>runtime</scope>
-</dependency>
+```groovy
+implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
+runtimeOnly    'io.jsonwebtoken:jjwt-impl:0.12.5'
+runtimeOnly    'io.jsonwebtoken:jjwt-jackson:0.12.5'
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>注意：</b> jjwt-impl 和 jjwt-jackson 都要設 <code>runtime</code> scope！jjwt-api 是編譯期介面，後兩者是執行期實作。
+💡 <b>注意：</b> jjwt-impl 和 jjwt-jackson 都要設 <code>runtimeOnly</code>！jjwt-api 是編譯期介面，後兩者是執行期實作。
 </div>
 
 <!--
@@ -375,7 +361,7 @@ style: |
   pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
 ---
 
-# JwtAuthFilter（1/2）：抽取 Token
+# JwtAuthFilter（1/3）：類別宣告
 
 ```java
 @Component
@@ -391,7 +377,27 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain)
             throws ServletException, IOException {
+        // ...
+    }
+}
+```
 
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>Spring Boot 3.x：</b> import 路徑是 <code>jakarta.servlet.*</code>，不是舊版的 <code>javax.servlet.*</code>。
+</div>
+
+<!--
+OncePerRequestFilter 保證每個請求只執行一次，即使有 Forward 或 Include 也不會重複執行。
+-->
+
+---
+style: |
+  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
+---
+
+# JwtAuthFilter（2/3）：抽取 Token
+
+```java
         String authHeader = request.getHeader("Authorization");
         String token = null;
         String username = null;
@@ -401,16 +407,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             token = authHeader.substring(7);
             username = jwtUtil.extractUsername(token);
         }
-        // 下一頁繼續...
 ```
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>Spring Boot 3.x：</b> import 路徑是 <code>jakarta.servlet.*</code>，不是舊版的 <code>javax.servlet.*</code>。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>Authorization Header 格式：</b> <code>Bearer &lt;token&gt;</code>，<code>substring(7)</code> 跳過前七個字元取得純 Token。
 </div>
 
 <!--
-OncePerRequestFilter 保證每個請求只執行一次，即使有 Forward 或 Include 也不會重複執行。
-
 Authorization Header 的格式是「Bearer 空格 token」，我們用 substring(7) 跳過前七個字元取得純 Token。
 -->
 
@@ -419,7 +422,7 @@ style: |
   pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
 ---
 
-# JwtAuthFilter（2/2）：設定 Authentication
+# JwtAuthFilter（3/3）：設定 Authentication
 
 ```java
         if (username != null &&
@@ -469,7 +472,7 @@ style: |
   pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
 ---
 
-# SecurityConfig：完整設定
+# SecurityConfig（1/2）：SecurityFilterChain
 
 ```java
 @Configuration
@@ -494,18 +497,37 @@ public class SecurityConfig {
                 UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
 }
 ```
 
 <!--
-幾個關鍵設定：
+csrf().disable()：REST API 通常不需要 CSRF 保護。
+SessionCreationPolicy.STATELESS：告訴 Spring Security 不要建立或使用 Session。
+/auth/** permitAll：登入端點要開放。
+addFilterBefore：把 JwtAuthFilter 插在 UsernamePasswordAuthenticationFilter 之前。
+-->
 
-csrf().disable()：REST API 通常不需要 CSRF 保護；SessionCreationPolicy.STATELESS：告訴 Spring Security 不要建立或使用 Session；/auth/** permitAll：登入端點要開放；addFilterBefore：把 JwtAuthFilter 插在 UsernamePasswordAuthenticationFilter 之前。
+---
+style: |
+  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
+---
+
+# SecurityConfig（2/2）：PasswordEncoder Bean
+
+```java
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>為什麼要宣告 PasswordEncoder Bean？</b><br>
+Spring Security 的 <code>DaoAuthenticationProvider</code> 在驗證密碼時會自動注入它。沒有宣告會導致啟動失敗或密碼驗證永遠失敗。
+</div>
+
+<!--
+PasswordEncoder 要宣告成 Bean，讓 Spring 自動注入給 AuthenticationManager 用。BCryptPasswordEncoder 是目前推薦的密碼雜湊演算法。
 -->
 
 ---
@@ -649,11 +671,7 @@ JWT 用起來很爽，但有幾個安全陷阱要注意。
 | **不存敏感資料** | Payload 只放 ID、角色，不放密碼 | 把密碼放進 Claims |
 | **密鑰存環境變數** | 用 `${jwt.secret}` 從設定讀取 | 硬編碼在程式碼 |
 
-**生成安全密鑰：**
 
-```bash
-openssl rand -base64 32
-```
 
 <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
 ⚠️ <b>永遠不要把密鑰提交到 Git！</b> 一旦洩漏，任何人都能偽造 Token。

@@ -57,27 +57,21 @@ Cache 就是這個概念——把常用的結果先記起來，不要每次都�
 -->
 
 ---
+layout: default
+---
 
-# 本章大綱
+# Outline
 
-<table class="index-table">
-  <thead>
-    <tr><th>順序</th><th>主題</th></tr>
-  </thead>
-  <tbody>
-    <tr><td>01</td><td>為什麼需要 Cache？</td></tr>
-    <tr><td>02</td><td>Spring Cache 抽象層與 CacheManager</td></tr>
-    <tr><td>03</td><td>pom.xml 依賴與 @EnableCaching</td></tr>
-    <tr><td>04–06</td><td>@Cacheable 深度解析（key / condition / unless）</td></tr>
-    <tr><td>07–08</td><td>@CacheEvict 與 beforeInvocation</td></tr>
-    <tr><td>09–10</td><td>@CachePut 與 @Cacheable 比較</td></tr>
-    <tr><td>11–12</td><td>Caffeine Cache 設定</td></tr>
-    <tr><td>13–14</td><td>Redis Cache 補充</td></tr>
-    <tr><td>15</td><td>注意事項：什麼時候不該用 Cache？</td></tr>
-    <tr><td>16–19</td><td>實作練習 ×2</td></tr>
-    <tr><td>20</td><td>本章總結</td></tr>
-  </tbody>
-</table>
+- **為什麼需要 Cache？** — 效能瓶頸與快取的解決思路
+- **Spring Cache 抽象層** — `CacheManager` 與實作選擇
+- **@EnableCaching** — 啟用快取與依賴設定
+- **@Cacheable** — 深度解析 `key`、`condition`、`unless`
+- **@CacheEvict** — 清除快取與 `beforeInvocation`
+- **@CachePut** — 更新快取與 `@Cacheable` 比較
+- **Caffeine Cache** — 本地快取設定
+- **Redis Cache** — 分散式快取補充
+- **什麼時候不該用 Cache？** — 注意事項
+- **實作練習**
 
 <!--
 先來看一下這章的學習地圖。
@@ -217,24 +211,19 @@ class: flex flex-col justify-center items-center text-center
 
 ---
 
-# pom.xml 依賴
+# build.gradle 依賴
 
 **最小依賴（記憶體 Cache）：**
 
-```xml
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-cache</artifactId>
-</dependency>
+```groovy
+implementation 'org.springframework.boot:spring-boot-starter-cache'
 ```
 
 **加入 Caffeine（高效能記憶體 Cache）：**
 
-```xml
-<dependency>
-    <groupId>com.github.ben-manes.caffeine</groupId>
-    <artifactId>caffeine</artifactId>
-</dependency>
+```groovy
+implementation 'org.springframework.boot:spring-boot-starter-cache'
+implementation 'com.github.ben-manes.caffeine:caffeine'
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
@@ -272,9 +261,9 @@ public class MyApplication {
 | 掃描 Cache 注解 | 在 Bean 的方法上找 `@Cacheable`、`@CacheEvict`、`@CachePut` |
 | 注入 CacheManager | 將 CacheManager 與注解綁定 |
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">⚠️ <b>常見錯誤：</b> 依賴加了、注解也貼了，但忘了 <code>@EnableCaching</code>，Cache 完全不會生效！</div>
-
 <!--
+⚠️ 常見錯誤：依賴加了、注解也貼了，但忘了 @EnableCaching，Cache 完全不會生效！
+
 @EnableCaching 的作用原理跟 @EnableTransactionManagement 一樣，
 都是透過 AOP 在方法執行前後插入邏輯。
 
@@ -331,7 +320,51 @@ value 是 Cache 的名稱，就像便利貼的標籤；key 是用 SpEL 表達式
 
 ---
 
-# @Cacheable 屬性詳解
+# SpEL — Spring Expression Language（1/2）
+
+Cache 的 `key`、`condition`、`unless` 都用 **SpEL** 撰寫。
+
+SpEL 是 Spring 內建的表達式語言，讓 annotation 屬性可以動態取值：
+
+| SpEL 寫法 | 意義 |
+|---|---|
+| `#id` | 方法參數 `id` 的值 |
+| `#user.name` | 參數物件 `user` 的 `name` 屬性 |
+| `#result` | 方法回傳值 |
+| `#result == null` | 回傳值是否為 null |
+| `#id > 0` | 參數 `id` 大於 0 |
+| `'prefix:' + #id` | 字串串接 |
+
+<!--
+SpEL 不只用在 Cache，@PreAuthorize、@Value 等 annotation 也用它。
+記住：# 開頭取參數，#result 取回傳值，支援簡單的運算式和條件判斷。
+-->
+
+---
+
+# SpEL — Spring Expression Language（2/2）
+
+對照 `@Cacheable` 的實際用法：
+
+```java
+@Cacheable(
+    value = "products",
+    key = "#id",                   // 取參數 id 當 Cache key
+    condition = "#id > 0",         // id > 0 才啟用 Cache
+    unless = "#result == null"     // 回傳 null 不存進 Cache
+)
+public Product findById(Long id) { ... }
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 SpEL 不只用在 Cache，<code>@PreAuthorize</code>、<code>@Value</code> 等 annotation 也使用相同語法。</div>
+
+<!--
+這個範例把三個屬性全部串在一起，讓大家看清楚各自的角色。
+-->
+
+---
+
+# @Cacheable 屬性詳解（1/2）
 
 | 屬性 | 型別 | 說明 |
 |---|---|---|
@@ -341,28 +374,37 @@ value 是 Cache 的名稱，就像便利貼的標籤；key 是用 SpEL 表達式
 | `unless` | SpEL | 為 `true` 就**不**存入 Cache（執行後判斷） |
 | `sync` | `boolean` | 是否同步（防止 Cache Stampede） |
 
-```java
-@Cacheable(
-    value = "products",
-    key = "#id",
-    condition = "#id > 0",
-    unless = "#result == null"
-)
-public Product findById(Long id) { ... }
-```
-
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>condition vs unless：</b> condition 在方法執行前評估（決定是否查 Cache），unless 在方法執行後評估（決定是否存入 Cache）。
 </div>
 
 <!--
 condition 和 unless 的差異非常容易搞混：
-
 condition = "方法要不要參與 Cache 機制"，在執行前決定
 unless = "結果要不要存進 Cache"，在執行後決定
+-->
 
-常見用法：unless = "#result == null" 表示「如果查出來是 null 就不要存進 Cache」
-——避免把「查不到」這個結果快取起來。
+---
+
+# @Cacheable 屬性詳解（2/2）
+
+```java
+@Cacheable(
+    value = "products",   // Cache 名稱
+    key = "#id",          // 以參數 id 當 key
+    condition = "#id > 0",        // id > 0 才使用 Cache
+    unless = "#result == null"    // 查出 null 不存入 Cache
+)
+public Product findById(Long id) { ... }
+```
+
+常見用法：`unless = "#result == null"` — 避免把「查不到資料」這個結果也快取起來，否則之後補資料也不會生效。
+
+<!--
+unless = "#result == null" 是實務上必加的保護。
+
+想像一下：id=999 的商品不存在，查出 null 被快取了。
+之後商品上架，id=999 有資料了，但 Cache 裡還是 null，使用者一直看不到新商品。
 -->
 
 ---
@@ -438,7 +480,7 @@ allEntries = true 是一個很粗暴但有時候必要的選項，
 
 ---
 
-# beforeInvocation 的差異
+# beforeInvocation 的差異（1/2）
 
 | | `beforeInvocation = false`（預設）| `beforeInvocation = true` |
 |---|---|---|
@@ -448,8 +490,29 @@ allEntries = true 是一個很粗暴但有時候必要的選項，
 | 資料一致性 | 較高 | 較低 |
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>建議：</b> 絕大多數場景用預設值（<code>false</code>）就好，只有在「方法本體需要先看到最新資料」的特殊情況才考慮 <code>true</code>。
+💡 <b>建議：</b> 絕大多數場景用預設值（<code>false</code>）就好。
 </div>
+
+---
+
+# beforeInvocation 的差異（2/2）
+
+```java
+// 預設（false）：DB 更新成功才清 Cache
+// → 若 save() 拋出例外，Cache 保持原樣（資料仍正確）
+@CacheEvict(value = "products", key = "#product.id")
+public Product update(Product product) {
+    return productRepository.save(product);  // 若這裡炸了，Cache 不會被清
+}
+
+// beforeInvocation = true：先清 Cache，再執行方法
+// → 就算 save() 拋出例外，Cache 已被清除
+@CacheEvict(value = "products", key = "#product.id",
+            beforeInvocation = true)
+public Product forceUpdate(Product product) {
+    return productRepository.save(product);
+}
+```
 
 <!--
 預設 false 的邏輯是：如果 DB 更新失敗（拋出例外），Cache 裡的資料還是對的，
@@ -552,7 +615,7 @@ class: flex flex-col justify-center items-center text-center
 
 ---
 
-# Caffeine application.properties 設定
+# Caffeine application.properties 設定（1/2）
 
 ```properties
 spring.cache.type=caffeine
@@ -569,8 +632,20 @@ spring.cache.cache-names=products,categories,users
 | `expireAfterAccess` | 最後存取後過期 | `expireAfterAccess=5m` |
 | `initialCapacity` | 初始容量 | `initialCapacity=100` |
 
+---
+
+# Caffeine application.properties 設定（2/2）
+
+**expireAfterWrite vs expireAfterAccess：**
+
+| | `expireAfterWrite` | `expireAfterAccess` |
+|---|---|---|
+| 計時起點 | 寫入時間 | 最後一次存取時間 |
+| 時間到就過期？ | 是，不管有沒有人用 | 只要有人存取就重置計時 |
+| 適合場景 | 資料有明確時效性（如匯率、天氣） | 熱點資料，一直有人用就不過期 |
+
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>expireAfterWrite vs expireAfterAccess：</b> 前者從「寫入時間」算起，有明確時效性；後者從「最後存取時間」算起，只要有人用就不過期，適合熱點資料。
+💡 不確定選哪個？優先用 <code>expireAfterWrite</code>，行為可預期，不會因為「一直有人讀」就永遠不更新。
 </div>
 
 <!--
@@ -578,6 +653,38 @@ spring.cache.cache-names=products,categories,users
 
 expireAfterWrite：從「寫入時間」算起，不管有沒有人讀，時間到就過期。適合資料有明確時效性的場景。
 expireAfterAccess：從「最後一次存取時間」算起，一直有人用就不會過期。適合熱點資料。
+-->
+
+---
+
+# Caffeine Cache 完整使用範例
+
+**Step 1 — build.gradle：**
+```groovy
+implementation 'org.springframework.boot:spring-boot-starter-cache'
+implementation 'com.github.ben-manes.caffeine:caffeine'
+```
+
+**Step 2 — application.properties：**
+```properties
+spring.cache.type=caffeine
+spring.cache.caffeine.spec=maximumSize=500,expireAfterWrite=10m
+spring.cache.cache-names=products
+```
+
+**Step 3 — 主程式加 @EnableCaching，Service 加注解（與之前完全相同）：**
+```java
+@Cacheable(value = "products", key = "#id")
+public Product findById(Long id) { ... }
+
+@CacheEvict(value = "products", key = "#id")
+public void deleteById(Long id) { ... }
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>重點：</b> 換成 Caffeine 後，Service 的 <code>@Cacheable</code> 注解完全不用改，只有設定檔不同。</div>
+
+<!--
+這就是 Spring Cache 抽象層的優雅之處：業務程式碼不用動，換底層只改設定。
 -->
 
 ---
@@ -597,15 +704,12 @@ Caffeine 很好，但它有一個致命的限制：它住在單一 JVM 記憶體
 
 ---
 
-# Redis Cache pom.xml 與設定
+# Redis Cache build.gradle 與設定
 
 **加入 Redis Starter：**
 
-```xml
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-data-redis</artifactId>
-</dependency>
+```groovy
+implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 ```
 
 **application.properties：**
@@ -665,6 +769,67 @@ Redis 存的是 byte[]，所以物件要轉成 byte 才能存進去。
 而且不同版本的 class 可能不相容。
 
 建議用 GenericJackson2JsonRedisSerializer，存成 JSON 格式。
+-->
+
+---
+
+# Redis Cache 完整使用範例（1/2）
+
+**Step 1 — build.gradle：**
+```groovy
+implementation 'org.springframework.boot:spring-boot-starter-cache'
+implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+```
+
+**Step 2 — application.properties：**
+```properties
+spring.cache.type=redis
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
+spring.cache.redis.time-to-live=600000
+spring.cache.redis.key-prefix=myapp:
+spring.cache.redis.use-key-prefix=true
+```
+
+**Step 3 — 主程式：**
+```java
+@SpringBootApplication
+@EnableCaching
+public class MyApplication { ... }
+```
+
+---
+
+# Redis Cache 完整使用範例（2/2）
+
+**Step 4 — Service 注解與 Caffeine 完全相同：**
+```java
+@Service
+public class ProductService {
+
+    @Cacheable(value = "products", key = "#id",
+               unless = "#result == null")
+    public Product findById(Long id) {
+        return productRepository.findById(id).orElseThrow();
+    }
+
+    @CachePut(value = "products", key = "#result.id")
+    public Product update(Product product) {
+        return productRepository.save(product);
+    }
+
+    @CacheEvict(value = "products", key = "#id")
+    public void deleteById(Long id) {
+        productRepository.deleteById(id);
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>Caffeine → Redis 移轉：</b> Service 的注解一行都不用改，只需換 build.gradle 依賴和 application.properties 設定。</div>
+
+<!--
+這就是 Spring Cache 抽象層設計的核心價值：
+本機開發用 Caffeine，部署多機時換 Redis，業務程式碼零改動。
 -->
 
 ---
