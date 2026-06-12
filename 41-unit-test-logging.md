@@ -730,7 +730,8 @@ public class OrderService {
 
     public Order createOrder(Long userId, String item) {
         log.debug("建立訂單，userId={}, item={}", userId, item);
-        log.info("訂單建立成功，orderId={}", order.getId());
+        Order order = new Order(1L, userId, item);
+        log.info("訂單建立成功，orderId={}", order.id());
         return order;
     }
 }

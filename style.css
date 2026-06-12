@@ -8,6 +8,8 @@
   font-style: normal !important;
 }
 
+* { -webkit-user-select: text !important; user-select: text !important; }
+
 /* Operator snippets that must render exactly as typed, without code-font ligatures */
 .no-liga-code,
 .no-liga-code-block,

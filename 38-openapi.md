@@ -185,20 +185,20 @@ implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17'
 
 | 說明 | 詳情 |
 | --- | --- |
-| `springdoc-openapi-starter-webmvc-ui` | Spring Boot 3.x 使用此 artifact（v2.x 系列） |
-| `2.8.17` | 目前最新穩定版，Spring Boot 3.x 需搭配 v2.x |
+| `springdoc-openapi-starter-webmvc-ui` | Spring Boot 3.x / 4.x 使用此 artifact（v2.x 系列） |
+| `2.8.17` | 目前最新穩定版，Spring Boot 3.x / 4.x 需搭配 v2.x |
 | 零設定啟動 | 加完依賴重新啟動，文件即自動出現 |
 
 <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>版本對應：</b> Spring Boot 2.x 用 <code>springdoc-openapi-ui</code>（v1.x）；Spring Boot 3.x 必須用 <code>springdoc-openapi-starter-webmvc-ui</code>（v2.x），兩者不能混用。
+⚠️ <b>版本對應：</b> Spring Boot 2.x 用 <code>springdoc-openapi-ui</code>（v1.x）；Spring Boot 3.x / 4.x 必須用 <code>springdoc-openapi-starter-webmvc-ui</code>（v2.x），兩者不能混用。
 </div>
 
 <!--
 只需要在 build.gradle 加上這一行依賴，重新啟動 Spring Boot，Swagger UI 就會自動出現。
 
-特別注意版本：Spring Boot 3.x 對應 springdoc-openapi v2.x，如果用 v1.x 的 artifact 名稱會找不到。
+特別注意版本：Spring Boot 3.x / 4.x 對應 springdoc-openapi v2.x，如果用 v1.x 的 artifact 名稱會找不到。
 
-記住這個規律：Boot 3 → springdoc v2 → artifact 名稱要加 -starter-webmvc-ui。
+記住這個規律：Boot 3 / 4 → springdoc v2 → artifact 名稱要加 -starter-webmvc-ui。
 -->
 
 ---

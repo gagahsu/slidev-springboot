@@ -119,13 +119,13 @@ score 可能是 -999 或 200——ScoreVO 在計算字母等第時直接拋出�
 
 | 面向 | 說明 |
 | --- | --- |
-| 規範名稱 | Jakarta Bean Validation 3.0（Spring Boot 3.x） |
+| 規範名稱 | Jakarta Bean Validation 3.0（Spring Boot 3.x / 4.x） |
 | 核心概念 | 用 Annotation 標注欄位限制，框架自動觸發驗證 |
 | 觸發時機 | Controller 收到請求時，Spring 自動執行驗證 |
 | 驗證失敗 | 自動回傳 HTTP 400 Bad Request |
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-⚠️ <b>Spring Boot 3.x 版本注意：</b> import 必須用 <code>jakarta.validation.*</code>，不再是舊版的 <code>javax.validation.*</code>
+⚠️ <b>Spring Boot 3.x / 4.x 版本注意：</b> import 必須用 <code>jakarta.validation.*</code>，不再是舊版的 <code>javax.validation.*</code>
 </div>
 
 <!--
@@ -133,7 +133,7 @@ Bean Validation 就是一套「把規則寫在資料類別上」的規範。
 
 類比：就像在表單的每個欄位旁邊貼一張便條紙，寫著「這裡必填」、「這裡要填 Email 格式」——但這張便條紙是寫給 Spring 看的，Spring 會自動照著規則驗。
 
-特別提醒：Spring Boot 3.x 之後，所有 Validation 的 import 都改成了 jakarta.validation，不再是 javax.validation。這是版本升級的重要改變，大家要特別注意。
+特別提醒：Spring Boot 3.x / 4.x 之後，所有 Validation 的 import 都改成了 jakarta.validation，不再是 javax.validation。這是版本升級的重要改變，大家要特別注意。
 -->
 
 ---

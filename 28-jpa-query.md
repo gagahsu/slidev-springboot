@@ -375,7 +375,7 @@ distinct 用於取不重複值，搭配建構方法 new PersonInfo(city) 只取�
 List<PersonInfo> findByCityLike(String keyword);
 
 // join：跨 Entity 查詢，回傳自訂 VO
-@Query("select new com.example.vo.JoinVo(p.id, p.name, a.amount) "
+@Query("select new com.example.demo.ch28.JoinVo(p.id, p.name, a.amount) "
      + "from PersonInfo p join Atm a on p.id = a.account")
 List<JoinVo> joinPersonAndAtm();
 ```
@@ -399,7 +399,7 @@ VO 類別不需要加 @Entity，但要有包含所有查詢欄位的建構方法
 `JoinVo` 是專門接收 join 查詢結果的類別，**不加 `@Entity`**，只需要一個建構方法：
 
 ```java
-package com.example.vo;
+package com.example.demo.ch28;
 
 public class JoinVo {
 
@@ -419,7 +419,7 @@ public class JoinVo {
 ```
 
 <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>兩個必要條件：</b> ① VO 有對應的建構方法 ② <code>@Query</code> 裡使用 VO 的<b>完整 package 路徑</b>（<code>com.example.vo.JoinVo</code>）
+⚠️ <b>兩個必要條件：</b> ① VO 有對應的建構方法 ② <code>@Query</code> 裡使用 VO 的<b>完整 package 路徑</b>（<code>com.example.demo.ch28.JoinVo</code>）
 </div>
 
 <!--

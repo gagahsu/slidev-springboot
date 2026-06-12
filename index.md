@@ -305,6 +305,11 @@ style: |
       <div>Spring Cloud 微服務</div>
       <div class="chapter-subtitle">Eureka / Gateway / OpenFeign / Config</div>
     </Link>
+    <Link to="ch47" class="chapter-card">
+      <div class="chapter-num">Ch 47</div>
+      <div>實戰：動態問卷系統</div>
+      <div class="chapter-subtitle">CRUD / Session / JWT Auth</div>
+    </Link>
 
   </div>
 </div>
@@ -446,5 +451,8 @@ src: ./45-jwt.md
 ---
 ---
 src: ./46-spring-cloud.md
+---
+---
+src: ./47-dynamic-survey.md
 ---
 

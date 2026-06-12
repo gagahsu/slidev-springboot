@@ -342,10 +342,15 @@ MyController 上面的 @RestController 本身就會讓它成為 Bean，所以第
 # 完整範例 — Step 3：MyController 完整程式碼
 
 ```java
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 @RestController
 public class MyController {
     @Autowired
     private Printer printer;
+
     @RequestMapping("/test")
     public String test() {
         printer.print("Hello World");

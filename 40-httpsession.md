@@ -173,13 +173,13 @@ public class SessionController {
 ```
 
 <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>Spring Boot 3.x 注意：</b> import 路徑是 <code>jakarta.servlet.http.HttpSession</code>，不是舊版的 <code>javax.servlet.http.HttpSession</code>。
+⚠️ <b>Spring Boot 3.x / 4.x 注意：</b> import 路徑是 <code>jakarta.servlet.http.HttpSession</code>，不是舊版的 <code>javax.servlet.http.HttpSession</code>。
 </div>
 
 <!--
 在 Spring Boot 中使用 HttpSession 非常簡單——只要在 Controller 方法的參數加上 HttpSession，框架就會自動注入，不需要額外設定。
 
-注意 import 路徑：Spring Boot 3.x 改用 Jakarta EE，所以是 jakarta.servlet.http.HttpSession，不是以前的 javax.servlet.http.HttpSession。這是 Spring Boot 2.x 升 3.x 最常見的 import 錯誤之一。
+注意 import 路徑：Spring Boot 3.x / 4.x 改用 Jakarta EE，所以是 jakarta.servlet.http.HttpSession，不是以前的 javax.servlet.http.HttpSession。這是 Spring Boot 2.x 升 3.x / 4.x 最常見的 import 錯誤之一。
 
 session.setAttribute("username", username) 就是把使用者名稱存進 Session 的暫存空間。session.getId() 回傳的就是 JSESSIONID 的值。
 -->
@@ -372,14 +372,14 @@ layout: default
 ### 提示說明
 
 1. `HttpSession` 宣告在方法參數中，Spring Boot 會自動注入，不需要 `@Autowired`
-2. import 路徑：`jakarta.servlet.http.HttpSession`（Spring Boot 3.x，注意是 `jakarta` 不是 `javax`）
+2. import 路徑：`jakarta.servlet.http.HttpSession`（Spring Boot 3.x / 4.x，注意是 `jakarta` 不是 `javax`）
 3. `getAttribute` 回傳的是 `Object`，需要強制轉型：`(String) session.getAttribute("username")`
 4. Postman 預設開啟 Cookie Jar，可確保跨請求自動持有 JSESSIONID；可在 Postman Cookies 頁籤觀察到它
 
 <!--
 最容易出錯的地方有兩個：
 
-第一是 import 路徑，Jakarta EE 遷移是 Spring Boot 3.x 的大改變，如果 IDE 自動補全了 javax.servlet.http.HttpSession，一定要手動改掉。
+第一是 import 路徑，Jakarta EE 遷移是 Spring Boot 3.x / 4.x 的大改變，如果 IDE 自動補全了 javax.servlet.http.HttpSession，一定要手動改掉。
 
 第二是 getAttribute 的型別轉型——因為 Session 存的是 Object，取出來一定要轉型，如果型別不對會在 Runtime 拋出 ClassCastException。
 
@@ -438,7 +438,7 @@ ResponseEntity 的用法大家在 ch21 已經學過，這裡只是複習一下�
 | Session 存在的原因 | HTTP 無狀態，需要額外機制記錄使用者狀態 |
 | JSESSIONID | 瀏覽器持有的 Cookie，用來識別伺服器端的 Session |
 | 取得 HttpSession | 在 Controller 方法參數宣告 `HttpSession`，Spring Boot 自動注入 |
-| import 路徑 | Spring Boot 3.x：`jakarta.servlet.http.HttpSession` |
+| import 路徑 | Spring Boot 3.x / 4.x：`jakarta.servlet.http.HttpSession` |
 | 核心 API | `setAttribute` / `getAttribute` / `invalidate` / `getId` |
 | 逾時設定 | `server.servlet.session.timeout=30m` |
 | 登出實作 | 呼叫 `session.invalidate()`，不能只刪除 attribute |
@@ -450,7 +450,7 @@ ResponseEntity 的用法大家在 ch21 已經學過，這裡只是複習一下�
 
 第二，Spring Boot 中使用 HttpSession 非常簡單，直接在方法參數宣告就能取得，不需要額外設定。
 
-第三，Spring Boot 3.x 的 import 是 jakarta.servlet.http.HttpSession，這個一定要記住。
+第三，Spring Boot 3.x / 4.x 的 import 是 jakarta.servlet.http.HttpSession，這個一定要記住。
 
 第四，登出要用 invalidate()，而不是只刪屬性。
 

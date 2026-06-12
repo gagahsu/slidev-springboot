@@ -41,7 +41,7 @@ style: |
   .slidev-layout code {
     font-size: 0.88em !important;
     line-height: 1.4 !important;
-    white-space: pre !important; /* 關閉 style.css 的 pre-wrap 以增加寬度感 */
+    white-space: pre !important;
     word-break: normal !important;
   }
 ---
@@ -60,279 +60,177 @@ style: |
   <Link to="home" style="color: #9dc4c4; font-size: 0.85rem; margin-top: 2rem; text-decoration: none; letter-spacing: 0.05em;">← 返回目錄</Link>
 </div>
 
-<!--
-大家好！這堂課我們要進入最刺激的階段，就是將前面學到的所有技術——從 IoC、MVC 到 JPA、Security，全部融合在一起，實作出一個具備「動態問卷管理」與「會員系統」的完整後端 API。
-這就像是我們學會了各種烹飪技巧後，現在要親自掌廚完成一整桌滿漢全席。準備好了嗎？我們開始吧！
--->
-
----
-layout: default
----
-
-# Outline
-
-- **第一部分：環境設定與基礎架構** (Gradle, Properties, Common Response)
-- **第二部分：問卷管理 (Admin CRUD)** (動態查詢、編輯、刪除)
-- **第三部分：問卷填寫與作答流程** (Session 暫存、資料庫存取)
-- **第四部分：資料統計與回饋** (作答詳情、統計報表)
-- **第五部分：會員系統與安全機制** (JWT 註冊、登入與權限控管)
-
-<!--
-今天的課程會分成五大塊。
-我們會先處理環境設定，確保專案能跑起來。
-接著是管理端的問卷管理功能。
-然後是重頭戲：如何讓使用者填寫問卷，以及如何優雅地處理暫存。
-最後我們會實作統計報表和最核心的安全認證模組。
--->
-
 ---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# 第一部分：環境設定與基礎架構
-
-<!--
-工欲善其事，必先利其器。
-我們先把開發環境和統一的回應格式定義好，讓後面的開發事半功倍。
--->
+# 設定
 
 ---
+layout: default
+---
 
-# 專案依賴設定 (build.gradle)
+# build.gradle 設定(1)
 
-| 依賴名稱 | 功能說明 |
-| --- | --- |
-| `spring-boot-starter-data-jpa` | 提供 JPA 支援與 Hibernate 實作 |
-| `spring-boot-starter-webmvc` | 提供 REST API 開發與 MVC 架構支援 |
-| `spring-boot-starter-validation` | 提供 @NotBlank, @Size 等資料驗證支援 |
-| `spring-boot-starter-security` | 提供安全控管與加密支援 |
+<div v-pre>
 
 ```groovy
-dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
+dependencies {    // [資料庫存取] 提供 JPA 支援與 Hibernate 實作
+   implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+  
+   // [Web 核心] 提供 REST API 開發與 MVC 架構支援
+	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+  
+   // [資料驗證] 提供 @NotBlank, @Size 等 Bean Validation 註解支援
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+  
+   // [安全機制] 提供 Spring Security 權限控管與加密支援
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+  
+   // [JWT 介面] 定義 JSON Web Token 的 API 規範
+   implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+  
+   // [開發利器] 使用註解自動產生 Getter/Setter (編譯時期)
+	compileOnly 'org.projectlombok:lombok'
 }
 ```
 
-<!--
-首先在 build.gradle 中加入必要的 starter。
-這就像是幫我們的機器人裝上各種功能的零件：JPA 用來對接資料庫，WebMVC 處理 HTTP 請求，Validation 幫我們擋掉壞資料，Security 則是我們的前線警衛。
--->
+</div>
 
 ---
+layout: default
+---
 
-# 專案依賴設定 — 擴充與工具
+# build.gradle 設定(2)
 
-| 依賴名稱 | 功能說明 |
-| --- | --- |
-| `jjwt-api / impl / jackson` | JSON Web Token 的 API 規範與實作 |
-| `lombok` | 使用註解自動產生 Getter/Setter (編譯時期) |
-| `mysql-connector-j` | 連結 MySQL 資料庫的驅動程式 |
-| `spring-boot-devtools` | 熱部署，修改程式碼後自動重啟 |
+<div v-pre>
 
 ```groovy
-dependencies {
-    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
-    runtimeOnly 'com.mysql:mysql-connector-j'
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+dependencies {      // [熱部署] 程式修改後自動重啟伺服器，提升開發效率
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+  
+   // [MySQL 驅動] 程式執行時連結 MySQL 資料庫的驅動程式
+	runtimeOnly 'com.mysql:mysql-connector-j'
+  
+   // [JWT 實作] 執行時期所需的 JWT 加密與解析邏輯
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+   runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+  
+   // [Lombok 處理器] 讓編譯器能識別 Lombok 註解並產生代碼
+	annotationProcessor 'org.projectlombok:lombok'
+  
+   // [單元測試] 提供測試框架與 Security 測試支援
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+   testImplementation 'org.springframework.security:spring-security-test'
+
 }
 ```
 
-<!--
-除了核心零件，我們還需要一些「高效能工具」。
-JWT 是我們實作無狀態認證的關鍵；Lombok 幫我們省去寫 Getter/Setter 的力氣；MySQL 驅動則讓專案能跟資料庫溝通。
-這就像是幫廚房裝上洗碗機和氣炸鍋，讓流程更順暢。
--->
+</div>
 
 ---
-
-# 專案依賴設定 — 單元測試
-
-| 依賴名稱 | 功能說明 |
-| --- | --- |
-| `spring-boot-starter-test` | 提供 JUnit 5、AssertJ、Mockito 等測試支援 |
-| `spring-security-test` | 提供 Security 相關的 Mock 認證測試支援 |
-
-```groovy
-dependencies {
-    // [單元測試] 提供測試框架與 Security 測試支援
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.security:spring-security-test'
-}
-```
-
-<!--
-最後，別忘了「品管部門」。
-我們加入了測試相關的 starter。
-spring-boot-starter-test 內建了 JUnit 和 Mockito，讓我們可以模擬各種情境來測試邏輯。
-而 security-test 則讓我們可以模擬「已登入管理員」或「未登入使用者」的身份來測試 API 的安全性。
-有好的測試，程式碼品質才有保障。
--->
-
+layout: default
 ---
 
-# 資料庫與 JPA 設定
+# application.properties 設定
 
-| 設定項 | 說明 |
-| --- | --- |
-| `spring.datasource.*` | 資料庫連線資訊 (URL, Username, Password) |
-| `hibernate.ddl-auto` | `update`：根據 Entity 自動更新資料表結構 |
-| `jwt.secret` / `jwt.expiration` | JWT 簽署密鑰與過期時間設定 |
-
----
-
-# 資料庫與 JPA 設定 — 範例
+<div v-pre>
 
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/dynamic_survey?useSSL=false&serverTimezone=UTC
+# Database Configuration (MySQL)
+spring.datasource.url=jdbc:mysql://localhost:3306/dynamic_survey?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
 spring.datasource.username=root
 spring.datasource.password=root
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
-
+# JPA / Hibernate
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
-
+# Logging
+logging.level.org.springframework.web=INFO
+logging.level.com.example.dynamicsurvey=DEBUG
+# JWT Configuration (Secret should be stored securely in prod)
 jwt.secret=vW9mK2v6yB?E(G+KbPeShVmYq3t6w9z$C&E)H@McQfTjWnZr4u7x!A%D*G-KaPdS
 jwt.expiration=86400000
 ```
 
-<!--
-設定檔 application.properties 就像是專案的「聯絡通訊錄」。
-我們要告訴 Spring Boot 資料庫住在哪裡（URL），門牌密碼是什麼（Username/Password）。
-同時我們設定了 JWT 的密鑰，這就像是刻印章的模子，絕對不能讓別人偷走喔！
--->
+</div>
 
 ---
-
-# 安全機制基礎設定 (SecurityConfig)
-
-| 關鍵註解 | 說明 |
-| --- | --- |
-| `@Configuration` | 標記這是一個設定類別 |
-| `@EnableWebSecurity` | 開啟 Spring Security 的 Web 安全功能 |
-| `SecurityFilterChain` | 定義請求過濾鏈，決定哪些 API 需要驗證 |
-
+layout: default
 ---
 
-# 安全機制基礎設定 — 過濾鏈實作
+# config - SecurityConfig
+
+<div v-pre>
 
 ```java
-@Configuration @EnableWebSecurity
-public class WebSecurityConfig {
-    @Bean
-    public AuthTokenFilter authenticationJwtTokenFilter() { return new AuthTokenFilter(); }
-
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable()) // 徹底禁用 CSRF (403 主因)
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // 開啟跨域
-            .sessionManagement(session -> 
-                session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)) // 支援 Session
-            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll()); // 開發期全公開
-
-        http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
-        return http.build();
-    }
+@Configuration
+@EnableWebSecurity // 開啟 Web 安全功能
+public class SecurityConfig {
+   @Bean
+   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+       http
+           .csrf(csrf -> csrf.disable())
+           .authorizeHttpRequests(auth -> auth
+               .anyRequest().permitAll() // 這裡定義了不需要登入
+           );
+       return http.build(); // Spring 會自動拿到這個回傳的物件並使用它
+   }
+   @Bean
+   public BCryptPasswordEncoder passwordEncoder() {
+       return new BCryptPasswordEncoder();
+   }
 }
 ```
 
----
-
-# 安全機制基礎設定 — CORS 與 Bean
-
-| 組件名稱 | 說明 |
-| --- | --- |
-| `passwordEncoder` | 使用 BCrypt 加密演算法 |
-| `authenticationManager` | 負責處理身分驗證的核心組件 |
-| `CorsConfiguration` | 設定允許的來源 (Origin) 與 方法 (Methods) |
+</div>
 
 ---
-
-# 安全機制基礎設定 — CORS 實作
-
-```java
-    @Bean
-    public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration c) throws Exception {
-        return c.getAuthenticationManager();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.asList("http://localhost:4200"));
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowCredentials(true); // 必須開啟以支援 Session Cookie
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
-```
-
-<!--
-在開發初期，為了方便測試 API，我們可以先把 Security 設定為 `permitAll()`，也就是開放通行。
-這就像是新店開張，我們先把大門敞開，讓師傅們可以自由進出裝潢，等完工了我們再裝上感應鎖。
--->
-
+layout: default
 ---
 
-# 狀態碼定義 (RspCode Enum)
+# VO - 狀態碼 Enum
 
-| 常見狀態碼 | 意義 |
-| --- | --- |
-| `SUCCESS (200)` | 執行成功 |
-| `NOT_FOUND (404)` | 找不到資料 |
-| `DUPLICATE_ERROR (409)` | 資料重複 (如 Email 已註冊) |
+### `RspCode.java`
+
+<div v-pre>
 
 ```java
 public enum RspCode {
     SUCCESS(200, "Success"),
     ERROR(400, "Error"),
     NOT_FOUND(404, "Not Found"),
-    DUPLICATE_ERROR(409, "Duplicate Data");
+    DUPLICATE_ERROR(409, "Duplicate Data"),
+    UNAUTHORIZED(401, "Unauthorized"),
+    INTERNAL_SERVER_ERROR(500, "Internal Server Error");
 
     private final int code;
     private final String message;
-    // Constructor & Getters...
+
+    RspCode(int code, String message) {
+        this.code = code;
+        this.message = message;
+    }
+
+    public int getCode() { return code; }
+    public String getMessage() { return message; }
 }
 ```
 
-<!--
-為了讓前後端溝通有一套「共通語言」，我們定義了狀態碼。
-就像郵差送信，成功會蓋「投遞成功」，找不到人會蓋「查無此人」。
-這樣前端看到 404 就知道要顯示「找不到這份問卷」，看到 409 就知道要提示「這個帳號被用過了」。
--->
+</div>
 
 ---
-
-# 統一回應物件 (AppResponse)
-
-| 屬性名稱 | 說明 |
-| --- | --- |
-| `code` | 自定義狀態碼 (如 200, 404) |
-| `message` | 給前端看的提示文字 |
-| `data` | 實際要回傳的內容 (泛型設計) |
-
-<!--
-我們不直接回傳資料，而是把它包在一個「標準貨櫃」裡。
-不管是回傳單筆資料、列表，還是錯誤訊息，外殼都長得一模一樣。
-前端工程師拿到這個貨櫃後，只要檢查 `code` 是不是 200，就知道這次 API 呼叫是否成功。
--->
-
+layout: default
 ---
 
-# 統一回應物件 — 實作
+# VO - 統一回應物件
+
+### `AppResponse.java`
+
+<div v-pre>
 
 ```java
 @Data
@@ -344,42 +242,311 @@ public class AppResponse<T> {
     public static <T> AppResponse<T> success(T data) {
         AppResponse<T> response = new AppResponse<>();
         response.setCode(200);
+        response.setMessage("Success");
         response.setData(data);
+        return response;
+    }
+
+    public static <T> AppResponse<T> error(RspCode rspCode) {
+        AppResponse<T> response = new AppResponse<>();
+        response.setCode(rspCode.getCode());
+        response.setMessage(rspCode.getMessage());
+        return response;
+    }
+
+    public static <T> AppResponse<T> error(RspCode rspCode, String customMessage) {
+        AppResponse<T> response = new AppResponse<>();
+        response.setCode(rspCode.getCode());
+        response.setMessage(customMessage);
         return response;
     }
 }
 ```
 
-<!--
-這裡用泛型 `T` 代表真正的資料內容，所以同一個 AppResponse 可以包單筆物件，也可以包列表。
-`success` 是一個工廠方法，讓我們在 Service 或 Controller 裡不用每次都手動 new 物件、設定 code、設定 data。
-後面所有 API 都會用這個格式回傳，讓前端收到的 JSON 結構保持一致。
--->
+</div>
 
 ---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# 第二部分：問卷管理 (Admin CRUD)
-
-<!--
-接下來我們來實作「老闆」要用的功能。
-包含如何新增、查詢、修改與刪除問卷。
--->
+# 新增&修改問卷
 
 ---
+layout: default
+---
 
-# 問卷動態篩選 — Repository
+# 問卷管理 (Admin CRUD) — 架構與流程
 
-| 技術亮點 | 說明 |
-| --- | --- |
-| `JPQL` | 在 `@Query` 中撰寫類 SQL 語句 |
-| `LIKE %:title%` | 實現模糊查詢 |
-| `IS NULL OR ...` | 處理動態參數 (如果參數為空則不篩選該條件) |
+```mermaid
+graph LR
+    Client[Postman / Client] -->|HTTP POST / PUT| Controller[AdminSurveyController]
+    Controller -->|DTO| Service[SurveyService]
+    Service -->|Entity| Repository[SurveyRepository]
+    Repository -->|JPA / SQL| DB[(Database)]
+```
+
+---
+layout: default
+---
+
+# Repository
+
+- SurveyRepository.java
+
+<div v-pre>
 
 ```java
 public interface SurveyRepository extends JpaRepository<Survey, Long> {
+  
+
+}
+```
+
+</div>
+
+---
+layout: default
+---
+
+# DTO — 問卷傳輸物件
+
+- `OptionDTO.java` — 選項傳輸物件
+- `QuestionDTO.java` — 題目傳輸物件
+- `SurveyDTO.java` — 問卷主體傳輸物件
+
+---
+layout: default
+---
+
+# Service
+
+- SurveyService.java
+
+- @Autowired
+- SurveyRepository surveyRepository;
+- private SurveyDTO convertToDTO(Survey s)
+- public AppResponse&lt;SurveyDTO&gt; saveSurvey(SurveyDTO dto)
+
+---
+layout: default
+---
+
+# AdminSurveyController.java
+
+- Controller
+
+<div v-pre>
+
+```java
+@Autowired
+   SurveyService surveyService;
+
+@PostMapping
+public AppResponse<Object> createSurvey(@Valid @RequestBody SurveyDTO surveyDTO)
+
+@PutMapping("/{id}")
+public AppResponse<Object> updateSurvey(@PathVariable("id")  Long id, @Valid @RequestBody SurveyDTO surveyDTO)
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 使用 Postman 測試 — 新增與更新問卷
+
+### 1. 新增問卷
+- **Method**: `POST`
+- **URL**: `http://localhost:8080/api/admin/surveys`
+- **Body (JSON)**:
+
+<div v-pre>
+
+```json
+{
+    "title": "2026 程式語言喜好大調查",
+    "description": "為了瞭解開發者趨勢，請花一分鐘填寫此問卷。",
+    "startDate": "2026-03-01",
+    "endDate": "2026-03-31",
+    "status": "PUBLISHED",
+    "questions": [
+        {
+            "title": "您最常使用的程式語言是？",
+            "type": "SINGLE",
+            "required": true,
+            "orderIndex": 0,
+            "options": [
+                { "optionText": "Java", "orderIndex": 0 },
+                { "optionText": "TypeScript", "orderIndex": 1 },
+                { "optionText": "Python", "orderIndex": 2 }
+            ]
+        },
+        {
+            "title": "您目前從事的開發領域有？(可多選)",
+            "type": "MULTI",
+            "required": true,
+            "orderIndex": 1,
+            "options": [
+                { "optionText": "網頁前端", "orderIndex": 0 },
+                { "optionText": "網頁後端", "orderIndex": 1 },
+                { "optionText": "手機 App", "orderIndex": 2 }
+            ]
+        },
+        {
+            "title": "對本課程有什麼建議嗎？",
+            "type": "TEXT",
+            "required": false,
+            "orderIndex": 2,
+            "options": []
+        }
+    ]
+}
+```
+
+</div>
+
+- **預期結果**: `code: 200`, `data: 問卷內容`
+
+---
+
+### 2. 更新問卷
+- **Method**: `PUT`
+- **URL**: `http://localhost:8080/api/admin/surveys/1` *(請替換成對應的問卷 ID)*
+- **Body (JSON)**:
+
+<div v-pre>
+
+```json
+{
+    "id": 1,
+    "title": "【已更新】2026 開發者趨勢調查",
+    "description": "更新：感謝大家踴躍參與，問卷延長至四月中旬。",
+    "startDate": "2026-03-01",
+    "endDate": "2026-04-15",
+    "status": "PUBLISHED",
+    "questions": [
+        {
+            "title": "您最常使用的程式語言是？",
+            "type": "SINGLE",
+            "required": true,
+            "orderIndex": 0,
+            "options": [
+                { "optionText": "Java (Spring Boot)", "orderIndex": 0 },
+                { "optionText": "TypeScript (Angular)", "orderIndex": 1 },
+                { "optionText": "Python (FastAPI)", "orderIndex": 2 },
+                { "optionText": "Go", "orderIndex": 3 }
+            ]
+        },
+        {
+            "title": "您最喜歡的開發工具？",
+            "type": "SINGLE",
+            "required": true,
+            "orderIndex": 1,
+            "options": [
+                { "optionText": "VS Code", "orderIndex": 0 },
+                { "optionText": "IntelliJ IDEA", "orderIndex": 1 }
+            ]
+        }
+    ]
+}
+```
+
+</div>
+
+- **預期結果**: `code: 200`, `data: 問卷內容`
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 刪除問卷
+
+---
+layout: default
+---
+
+# SurveyService.java
+
+- Service
+
+<div v-pre>
+
+```java
+/**
+    * [功能] 刪除問卷
+    */
+   @Transactional
+   public AppResponse<Object> deleteSurvey(Long id) {
+       surveyRepository.deleteById(id);
+       return AppResponse.success(null);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# AdminSurveyController.java
+
+- Controller
+
+<div v-pre>
+
+```java
+/**
+    * [功能] 刪除問卷
+    * -------------------------------------------------------------------------
+    * 【技術細節】
+    * 1. @DeleteMapping: 指定使用 DELETE 方法。
+    */
+   @DeleteMapping("/{id}")
+   public AppResponse<Object> deleteSurvey(@PathVariable("id") Long id) {
+       return surveyService.deleteSurvey(id);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 使用 Postman 測試
+
+- 刪除問卷
+- Method: DELETE
+- URL: http://localhost:8080/api/admin/surveys/1
+- 預期結果: code: 200, data: null
+- 1請替換成對應的問卷ID
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 查詢問卷列表
+
+---
+layout: default
+---
+
+# Repository
+
+- SurveyRepository.java
+
+<div v-pre>
+
+```java
+public interface SurveyRepository extends JpaRepository<Survey, Long> {
+     /**
+    * 多條件動態篩選
+    * 支援根據標題關鍵字、日期區間進行搜尋。
+    */
    @Query("SELECT s FROM Survey s WHERE " +
           "(:title IS NULL OR s.title LIKE %:title%) AND " +
           "(:startDate IS NULL OR s.startDate >= :startDate) AND " +
@@ -390,394 +557,1513 @@ public interface SurveyRepository extends JpaRepository<Survey, Long> {
 }
 ```
 
-<!--
-搜尋功能通常最麻煩的是「如果使用者沒輸入怎麼辦？」。
-這裡我們用了一個小技巧：`(:title IS NULL OR s.title LIKE %:title%)`。
-如果沒輸入標題，前半段就會變成 True，這行條件就失效了。
-這就像是去圖書館找書，你可以只說「標題有 Spring 的」，也可以加上「出版日期在今年以後的」。
--->
+</div>
 
 ---
+layout: default
+---
 
-# 管理端查詢服務 — Service
+# SurveyService.java
 
-| 邏輯處理 | 說明 |
-| --- | --- |
-| `surveyRepository.findByFilters` | 呼叫多條件查詢 |
-| `stream().map()` | 將 Entity 轉換為 DTO |
-| `Collectors.toList()` | 收集結果轉為列表 |
+- Service
+
+<div v-pre>
 
 ```java
 public AppResponse<List<SurveyDTO>> getSurveysByAdmin(String title, LocalDate start, LocalDate end) {
-    List<Survey> surveys = surveyRepository.findByFilters(title, start, end);
-    return AppResponse.success(
-        surveys.stream()
-               .map(this::convertToDTO)
-               .collect(Collectors.toList())
-    );
-}
+       List<Survey> surveys = surveyRepository.findByFilters(title, start, end);
+       return AppResponse.success(surveys.stream().map(s -> {
+           SurveyDTO dto = convertToDTO(s);
+           return dto;
+       }).collect(Collectors.toList()));
+   }
 ```
 
-<!--
-Service 層是專案的「大腦」。
-它負責向 Repository 拿出生鮮食材（Entity），經過加工處理（convertToDTO），最後裝進標準貨櫃（AppResponse）送出去。
-這樣做的好處是，我們不會把資料庫的底細（密碼、關聯等）直接攤給外面的人看。
--->
+</div>
 
 ---
+layout: default
+---
 
-# 管理端控制器 — Controller
+# AdminSurveyController.java
 
-| 註解 | 說明 |
-| --- | --- |
-| `@GetMapping` | 指定 API 接收 GET 請求 |
-| `@RequestParam` | 取得網址後方的 Query Parameters |
-| `@DateTimeFormat` | 自動解析日期格式字串為 LocalDate 對象 |
+- Controller
+
+<div v-pre>
 
 ```java
 @GetMapping
-public AppResponse<?> getSurveys(
-    @RequestParam(name = "title", required = false) String title,
-    @RequestParam(name = "startDate", required = false) 
-    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-    @RequestParam(name = "endDate", required = false) 
-    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-    
-    return surveyService.getSurveysByAdmin(title, startDate, endDate);
-}
+    public AppResponse<Object> getSurveys(
+            @RequestParam(name = "title",required = false) String title,
+            @RequestParam(name = "startDate",required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(name = "endDate",required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        // 將篩選條件傳交給 Service 處理業務查詢
+        return surveyService.getSurveysByAdmin(title, startDate, endDate);
+    }
 ```
 
-<!--
-Controller 就像是餐廳的「服務生」。
-它負責接單，確認客人要找的標題是什麼、日期範圍在哪。
-特別注意日期格式，我們用了 `@DateTimeFormat`，這樣 Spring 就會幫我們把字串變成好用的 Java 日期物件。
--->
+</div>
 
 ---
-
-# 使用 Postman 測試 — 取得列表
-
-| 測試情境 | URL 範例 |
-| --- | --- |
-| 取得所有問卷 | `GET /api/admin/surveys` |
-| 根據標題篩選 | `GET /api/admin/surveys?title=2025` |
-| 根據日期篩選 | `GET /api/admin/surveys?startDate=2026-03-01` |
-
-```json
-{
-  "code": 200,
-  "data": [
-    { "id": 1, "title": "2025 年度滿意度調查", "status": "PUBLISHED" },
-    { "id": 2, "title": "新功能許願池", "status": "DRAFT" }
-  ]
-}
-```
-
-<!--
-功能寫完了一定要測！我們用 Postman 來模擬前端發送請求。
-不管是帶參數還是不帶參數，都要確認回傳的 JSON 格式是不是我們定義的 AppResponse。
-如果你看到 200，恭喜你，功能運作正常！
--->
-
+layout: default
 ---
 
-# 刪除功能實作 — Service & Controller
+# 使用 Postman 測試
 
-| 層級 | 關鍵實作 |
-| --- | --- |
-| **Service** | `surveyRepository.deleteById(id);` |
-| **Controller** | `@DeleteMapping("/{id}")` |
+1. 取得問卷列表
+- Method: GET
+- URL: http://localhost:8080/api/admin/surveys
+- 預期結果: code: 200, data: 所有問卷內容
 
-```java
-// Service
-@Transactional
-public AppResponse<?> deleteSurvey(Long id) {
-    surveyRepository.deleteById(id);
-    return AppResponse.success(null);
-}
-
-// Controller
-@DeleteMapping("/{id}")
-public AppResponse<?> deleteSurvey(@PathVariable("id") Long id) {
-    return surveyService.deleteSurvey(id);
-}
-```
-
-<!--
-刪除功能相對簡單，但要注意加上 `@Transactional`。
-這確保了如果刪除過程發生意外，資料庫會回復原狀，不會發生「刪了一半」的情況。
-Controller 使用了 `@DeleteMapping`，這是 RESTful 風格的標準寫法。
--->
+2. 取得問卷列表(Filter)
+- Method: GET
+- URL: http://localhost:8080/api/admin/surveys?title=2025&startDate=2026-03-01
+- 預期結果: code: 200, data: 所有符合條件的問卷內容
 
 ---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# 第三部分：問卷填寫與作答流程
-
-<!--
-現在我們切換到「使用者」的角色。
-如何取得正在進行中的問卷，並實作「填寫 -> 預覽 -> 提交」的流程。
--->
+# 查詢單一問卷
 
 ---
+layout: default
+---
 
-# 查詢進行中的問卷 (Active Surveys)
+# SurveyService.java
 
-| 查詢條件 | JPQL 寫法 |
-| --- | --- |
-| 狀態為已發佈 | `s.status = 'PUBLISHED'` |
-| 在有效日期內 | `s.startDate <= :today AND s.endDate >= :today` |
+- Service
+
+<div v-pre>
+
+```java
+/**
+    * [功能] 取得單一問卷詳情 (填寫用)
+    */
+   public AppResponse<SurveyDTO> getSurveyDetails(Long id) {
+       return surveyRepository.findById(id)
+               .map(s -> AppResponse.success(convertToDTO(s)))
+               .orElse(AppResponse.error(RspCode.NOT_FOUND));
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# AdminSurveyController.java
+
+- Controller
+
+<div v-pre>
+
+```java
+@GetMapping("/{id}")
+   public AppResponse<Object> getSurveyById(@PathVariable("id") Long id) {
+       return surveyService.getSurveyDetails(id);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 使用 Postman 測試
+
+1. 取得單一問卷內容
+- Method: GET
+- URL: http://localhost:8080/api/admin/surveys/1
+- 預期結果: code: 200, data: 單一問卷內容
+- 1請替換成對應的問卷ID
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 取得可填寫問卷列表
+
+---
+layout: default
+---
+
+# Repository
+
+- SurveyRepository.java
+
+<div v-pre>
 
 ```java
 public interface SurveyRepository extends JpaRepository<Survey, Long> {
-   @Query("SELECT s FROM Survey s WHERE s.status = 'PUBLISHED' " +
-          "AND s.startDate <= :today AND s.endDate >= :today")
+/**
+    * 自定義查詢 (Query Method)
+    * 這裡使用了 JPQL 來查詢符合「已發佈」且「在有效日期內」的問卷。
+    */
+   @Query("SELECT s FROM Survey s WHERE s.status = 'PUBLISHED' AND s.startDate <= :today AND s.endDate >= :today")
    List<Survey> findActiveSurveys(@Param("today") LocalDate today);
+
 }
 ```
 
-<!--
-我們不希望使用者看到過期的問卷，也不希望看到老闆還在編輯中的草稿。
-所以這裡我們寫了一個過濾器：只有狀態是「PUBLISHED」且今天剛好在「開始」與「結束」日期之間的，才會秀給使用者看。
-這就像是百貨公司的特賣會，只有在活動期間內大門才會開啟。
--->
+</div>
 
 ---
+layout: default
+---
 
-# 作答流程設計：Session 暫存機制
+# SurveyService.java
 
-| 步驟 | 功能描述 | 目的 |
-| --- | --- | --- |
-| **1. 暫存** | `storeInSession` | 使用者填完後點「下一步」，先存在 Session |
-| **2. 預覽** | `getFromSession` | 確認頁從 Session 拿資料顯示，讓使用者校對 |
-| **3. 提交** | `confirmSubmit` | 點擊「確認提交」，從 Session 轉存到資料庫 |
+- Service
+
+<div v-pre>
 
 ```java
-// Service 暫存範例
-public AppResponse<?> saveToSession(ResponseDTO submission, HttpSession session) {
-    session.setAttribute("TEMP_SURVEY_RESPONSE", submission);
-    return AppResponse.success(null);
+/**
+    * [功能] 取得所有進行中的問卷
+    * 【關鍵點】調用 Repository 的自定義查詢，僅回傳符合日期範圍且已發佈的問卷。
+    */
+   public AppResponse<List<SurveyDTO>> getActiveSurveys() {
+       List<Survey> surveys = surveyRepository.findActiveSurveys(LocalDate.now());
+       return AppResponse.success(surveys.stream().map(this::convertToDTO).collect(Collectors.toList()));
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# SurveyController.java
+
+- Controller
+
+<div v-pre>
+
+```java
+@RestController
+@RequestMapping("/api/surveys")
+
+@Autowired
+   SurveyService surveyService;
+
+@GetMapping
+   public AppResponse<Object> getActiveSurveys() {
+       return surveyService.getActiveSurveys();
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 使用 Postman 測試
+
+1. 取得所有可填寫問卷內容
+- Method: GET
+- URL: http://localhost:8080/api/surveys
+- 預期結果: code: 200, data: 所有可填寫問卷內容
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 查詢單一問卷
+
+---
+layout: default
+---
+
+# SurveyController.java
+
+- Controller
+
+<div v-pre>
+
+```java
+/**
+    * [功能] 取得單一問卷詳情
+    * [技術細節] 明確指定 PathVariable 名稱為 "id"。
+    */
+   @GetMapping("/{id}/details")
+   public AppResponse<Object> getSurveyDetails(@PathVariable("id") Long id) {
+       return surveyService.getSurveyDetails(id);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 使用 Postman 測試
+
+1. 取得單一問卷內容
+- Method: GET
+- URL: http://localhost:8080/api/surveys/1/details
+- 預期結果: code: 200, data: 單一問卷內容
+- 1請替換成對應的問卷ID
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 填寫問卷
+
+---
+layout: default
+---
+
+# DTO — 作答傳輸物件
+
+- `AnswerDTO.java` — 單題作答傳輸物件
+- `ResponseDTO.java` — 整份問卷作答傳輸物件
+
+---
+layout: default
+---
+
+# Entity — 作答實體設計
+
+- `SurveyResponse.java` — 填寫紀錄主檔 (保存姓名、電話、信箱、填寫時間)
+- `ResponseAnswer.java` — 作答明細檔 (多對一連結主檔與題目，保存作答文字與選取選項)
+- `User.java` — 會員帳號實體 (JWT 登入認證使用)
+
+---
+layout: default
+---
+
+# Repository
+
+- SurveyResponseRepository.java
+
+<div v-pre>
+
+```java
+public interface SurveyResponseRepository extends JpaRepository<SurveyResponse, Long> {
+   boolean existsBySurveyIdAndEmail(Long surveyId, String email);
 }
 ```
 
-<!--
-為什麼要用 Session？
-因為問卷通常會有一個「確認頁」。我們不希望使用者還沒確認就直接把資料寫入資料庫。
-先存在 Session 就像是先把東西放進購物車，等最後點擊「結帳」時，我們才真正去刷卡（存入資料庫）。
-這樣萬一使用者在確認頁發現寫錯了，點「回上一頁」修改，我們也不會浪費資料庫的 ID 和空間。
--->
+</div>
 
 ---
-
-# 正式提交作答 — 資料持久化
-
-| 處理流程 | 說明 |
-| --- | --- |
-| **驗證** | 從 Session 拿資料，為空則報錯 |
-| **轉換** | 將 DTO 的內容轉換為 Entity (SurveyResponse) |
-| **關聯** | 根據 `questionId` 連結正確的 Question 物件 |
-| **清理** | 儲存成功後，從 Session 移除暫存資料 |
-
-<!--
-結帳時刻到了！
-我們會把 Session 裡的暫存資料撈出來，一個個裝進 Entity 盒子裡。
-這裡的流程重點是：先確認資料存在，再轉成資料庫可以保存的格式，最後清掉 Session。
--->
-
+layout: default
 ---
 
-# 正式提交作答 — 實作
+# SurveyService.java
+
+- Service
+
+<div v-pre>
+
+```java
+@Autowired
+   SurveyResponseRepository responseRepository;
+  
+   private static final String SURVEY_SESSION_KEY = "TEMP_SURVEY_RESPONSE";
+
+public AppResponse<Object> saveToSession(ResponseDTO submission, HttpSession session) {
+       if (responseRepository.existsBySurveyIdAndEmail(submission.getSurveyId(), submission.getEmail())) {
+           return AppResponse.error(RspCode.DUPLICATE_ERROR, "此 Email 已填寫過本問卷。");
+       }
+       session.setAttribute(SURVEY_SESSION_KEY, submission);
+       return AppResponse.success(null);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# SurveyController.java
+
+- Controller
+
+<div v-pre>
+
+```java
+/**
+    * [功能] 1. 暫存作答資料至 Session (進入確認頁前呼叫)
+    */
+   @PostMapping("/session-store")
+   public AppResponse<Object> storeInSession(@RequestBody ResponseDTO submission, HttpSession session) {
+       return surveyService.saveToSession(submission, session);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 使用 Postman 測試 — 提交問卷 (暫存於 Session)
+
+- **Method**: `POST`
+- **URL**: `http://localhost:8080/api/surveys/session-store`
+- **Body (JSON)**:
+
+<div v-pre>
+
+```json
+{
+    "surveyId": 1,
+    "name": "測試人員",
+    "phone": "0912345678",
+    "email": "test@example.com",
+    "age": 25,
+    "answers": [
+        {
+            "questionId": 1,
+            "optionIds": [1],
+            "answerText": null
+        },
+        {
+            "questionId": 2,
+            "optionIds": [4, 5],
+            "answerText": null
+        },
+        {
+            "questionId": 3,
+            "optionIds": [],
+            "answerText": "希望能增加更多實戰練習題，這門課非常有幫助！"
+        }
+    ]
+}
+```
+
+</div>
+
+- **預期結果**: `code: 200`, `data: null`
+
+---
+layout: default
+---
+
+# SurveyService.java
+
+- Service
+
+<div v-pre>
+
+```java
+public AppResponse<ResponseDTO> getFromSession(HttpSession session) {
+       ResponseDTO data = (ResponseDTO) session.getAttribute(SURVEY_SESSION_KEY);
+       if (data == null) return AppResponse.error(RspCode.NOT_FOUND);
+       return AppResponse.success(data);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# SurveyController.java
+
+- Controller
+
+<div v-pre>
+
+```java
+/**
+    * [功能] 2. 從 Session 取得暫存資料 (確認頁唯讀顯示)
+    */
+   @GetMapping("/session-get")
+   public AppResponse<Object> getFromSession(HttpSession session) {
+       return surveyService.getFromSession(session);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 使用 Postman 測試
+
+1. 取得Session中的問卷內容
+- Method: GET
+- URL: http://localhost:8080/api/surveys/session-get
+- 預期結果: code: 200, data: 問卷作答內容
+
+---
+layout: default
+---
+
+# SurveyService.java
+
+- Service
+
+<div v-pre>
 
 ```java
 @Transactional
-public AppResponse<?> commitFromSession(HttpSession session) {
-    ResponseDTO submission = (ResponseDTO) session.getAttribute("TEMP_SURVEY_RESPONSE");
-    if (submission == null) return AppResponse.error(RspCode.NOT_FOUND);
-    
-    // ... 轉換為 Entity 並 save 到 Repository ...
-    
-    session.removeAttribute("TEMP_SURVEY_RESPONSE"); // 記得清空喔！
-    return AppResponse.success(null);
-}
+   public AppResponse<Object> commitFromSession(HttpSession session) {
+       ResponseDTO submission = (ResponseDTO) session.getAttribute(SURVEY_SESSION_KEY);
+       if (submission == null) return AppResponse.error(RspCode.NOT_FOUND);
+       AppResponse<Object> response = submitResponse(submission.getSurveyId(), submission);
+       if (response.getCode() == 200) {
+           session.removeAttribute(SURVEY_SESSION_KEY);
+       }
+       return response;
+   }
 ```
 
-<!--
-這段程式最重要的是處理「選項與問題的連結」，確保使用者的回答能對應到正確的題目。
-存進資料庫後，一定要記得把 Session 清空，不然下次使用者再填別的問卷，可能會看到舊的資料喔！
--->
+</div>
+
+---
+layout: default
+---
+
+# SurveyService.java
+
+- Service
+
+<div v-pre>
+
+```java
+@Transactional
+   public AppResponse<Object> submitResponse(Long surveyId, ResponseDTO submission) {
+       Survey survey = surveyRepository.findById(surveyId).orElse(null);
+       if (survey == null) return AppResponse.error(RspCode.NOT_FOUND);
+       SurveyResponse response = new SurveyResponse();
+       response.setSurvey(survey); response.setSubmittedAt(LocalDateTime.now());
+       response.setName(submission.getName()); response.setPhone(submission.getPhone());
+       response.setEmail(submission.getEmail()); response.setAge(submission.getAge());
+```
+
+</div>
+
+---
+layout: default
+---
+
+# Service
+
+<div v-pre>
+
+```java
+for (AnswerDTO aDto : submission.getAnswers()) {
+       ResponseAnswer answer = new ResponseAnswer();
+       answer.setSurveyResponse(response);
+       Question question = survey.getQuestions().stream() .filter(q -> q.getId().equals(aDto.getQuestionId())).findFirst().orElse(null);
+       if (question == null) continue;
+       answer.setQuestion(question);
+       if (question.getType().equals("TEXT")) {
+           answer.setAnswerText(aDto.getAnswerText());
+       } else {
+           List<Option> selected = question.getOptions().stream()
+                   .filter(o -> aDto.getOptionIds().contains(o.getId())).collect(Collectors.toList());
+           answer.setSelectedOptions(selected);
+           answer.setAnswerText(selected.stream().map(Option::getOptionText).collect(Collectors.joining(";")));
+       }
+       response.getAnswers().add(answer);
+   }
+}
+responseRepository.save(response);
+return AppResponse.success(null);
+```
+
+</div>
+
+---
+layout: default
+---
+
+# SurveyController.java
+
+- Controller
+
+<div v-pre>
+
+```java
+/**
+    * [功能] 3. 正式提交問卷 (從 Session 轉存資料庫)
+    */
+   @PostMapping("/confirm")
+   public AppResponse<Object> confirmSubmit(HttpSession session) {
+       return surveyService.commitFromSession(session);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 使用 Postman 測試
+
+1. 將Session內容儲存到資料庫
+- Method: POST
+- URL: http://localhost:8080/api/surveys/confirm
+- 預期結果: code: 200, data: 單一問卷內容
+- 1請替換成對應的問卷ID
 
 ---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# 第四部分：資料統計與回饋
-
-<!--
-問卷收完了，老闆最想看的是什麼？
-沒錯，就是分析數據！
--->
+# 回饋
 
 ---
+layout: default
+---
 
-# 取得作答統計資料
+# Repository
 
-| 統計邏輯 | 實作方式 |
-| --- | --- |
-| **文字題** | 收集所有填寫內容列表 |
-| **選擇題** | 計算每個選項的 `count` |
-| **百分比** | `(選項次數 * 100.0) / 總填寫次數` |
+- SurveyResponseRepository.java
+
+- List&lt;SurveyResponse&gt; findBySurveyIdOrderByIdDesc(Long surveyId);
+
+---
+layout: default
+---
+
+# SurveyService.java
+
+- Service
+
+<div v-pre>
 
 ```java
-// 統計範例：計算百分比
+public AppResponse<Object> getSurveyResponses(Long id) {
+       List<SurveyResponse> responses = responseRepository.findBySurveyIdOrderByIdDesc(id);
+       return AppResponse.success(responses.stream().map(r -> {
+           Map<String, Object> map = new HashMap<>();
+           map.put("responseId", r.getId());
+           map.put("userName", r.getName());
+           map.put("userEmail", r.getEmail());
+           map.put("submittedAt", r.getSubmittedAt());
+           return map;
+       }).collect(Collectors.toList()));
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# AdminSurveyController.java
+
+- Controller
+
+<div v-pre>
+
+```java
+/**
+    * [功能] 取得該問卷的所有填寫者清單
+    */
+   @GetMapping("/{id}/responses")
+   public AppResponse<Object> getSurveyResponses(@PathVariable("id") Long id) {
+       return surveyService.getSurveyResponses(id);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 使用 Postman 測試
+
+1. 取得該問卷的所有填寫者清單
+- Method: GET
+- URL: http://localhost:8080/api/admin/surveys/1/responses
+- 預期結果: code: 200, data: 單一問卷的所有填寫者清單
+- 1請替換成對應的問卷ID
+
+---
+layout: default
+---
+
+# Service
+
+<div v-pre>
+
+```java
+public AppResponse<Object> getResponseDetail(Long responseId) {
+       SurveyResponse response = responseRepository.findById(responseId).orElse(null);
+       if (response == null) return AppResponse.error(RspCode.NOT_FOUND);
+       Map<String, Object> result = new HashMap<>();
+       result.put("responseId", response.getId());
+       result.put("userName", response.getName());
+       result.put("submittedAt", response.getSubmittedAt());
+       result.put("surveyTitle", response.getSurvey().getTitle());
+       var details = response.getAnswers().stream().map(a -> {
+           Map<String, Object> aMap = new HashMap<>();
+           aMap.put("questionTitle", a.getQuestion().getTitle());
+           aMap.put("type", a.getQuestion().getType());
+           aMap.put("answer", a.getAnswerText()); // 多選題已在存入時串接好
+           return aMap;
+       }).collect(Collectors.toList());
+       result.put("details", details);
+       return AppResponse.success(result);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# AdminSurveyController.java
+
+- Controller
+
+<div v-pre>
+
+```java
+/**
+    * [功能] 取得單一作答詳細內容
+    * [路徑] /api/admin/surveys/response-detail/{responseId}
+    */
+   @GetMapping("/response-detail/{responseId}")
+   public AppResponse<Object> getResponseDetail(@PathVariable("responseId") Long responseId) {
+       return surveyService.getResponseDetail(responseId);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 使用 Postman 測試
+
+1. 取得該問卷單一作答者的作答詳細內容
+- Method: GET
+- URL: http://localhost:8080/api/admin/surveys/response-detail/1
+- 預期結果: code: 200, data: 作答詳細內容
+- 1請替換成對應的回覆ID
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 統計
+
+---
+layout: default
+---
+
+# Repository
+
+- SurveyResponseRepository.java
+
+- List&lt;SurveyResponse&gt; findBySurveyId(Long surveyId);
+
+---
+layout: default
+---
+
+# SurveyService.java
+
+- Service
+
+- public AppResponse&lt;Object&gt; getSurveyStats(Long id) {
+- Survey survey = surveyRepository.findById(id).orElse(null);
+- if (survey == null)
+- return AppResponse.error(RspCode.NOT_FOUND);
+- List&lt;SurveyResponse&gt; responses = responseRepository.findBySurveyId(id);
+- int totalResponses = responses.size();
+- Map&lt;String, Object&gt; stats = new HashMap&lt;&gt;();
+- stats.put("surveyId", survey.getId());
+- stats.put("surveyTitle", survey.getTitle());
+- stats.put("totalResponses", totalResponses);
+- var qStatsList = new ArrayList&lt;&gt;();
+
+---
+layout: default
+---
+
+# SurveyService.java
+
+- Service
+
+<div v-pre>
+
+```java
+for (Question q : survey.getQuestions()) {
+			Map<String, Object> qMap = new HashMap<>();
+			qMap.put("questionId", q.getId());
+			qMap.put("questionTitle", q.getTitle());
+			qMap.put("type", q.getType());
+			if (q.getType().equals("TEXT")) {
+				qMap.put("textAnswers", responses.stream().flatMap(r -> r.getAnswers().stream())
+						.filter(a -> a.getQuestion().getId().equals(q.getId())).map(ResponseAnswer::getAnswerText)
+						.filter(Objects::nonNull).collect(Collectors.toList()));
+			}
+```
+
+</div>
+
+---
+layout: default
+---
+
+# SurveyService.java
+
+- Service
+
+<div v-pre>
+
+```java
+else {
+				Map<Long, Map<String, Object>> optMap = new HashMap<>();
+				for (Option o : q.getOptions()) {
+					Map<String, Object> oData = new HashMap<>();
+					oData.put("optionText", o.getOptionText());
+					oData.put("count", 0);
+					optMap.put(o.getId(), oData);
+				}
+				responses.stream().flatMap(r -> r.getAnswers().stream())
+						.filter(a -> a.getQuestion().getId().equals(q.getId()))
+						.flatMap(a -> a.getSelectedOptions().stream()).forEach(o -> {
+							Map<String, Object> oData = optMap.get(o.getId());
+							if (oData != null)
+								oData.put("count", (int) oData.get("count") + 1);
+						});
+```
+
+</div>
+
+---
+layout: default
+---
+
+# SurveyService.java
+
+- Service
+
+<div v-pre>
+
+```java
 for (Map<String, Object> oData : optMap.values()) {
-    double pct = totalResponses > 0 ? 
-        ((int) oData.get("count") * 100.0 / totalResponses) : 0;
-    oData.put("percentage", Math.round(pct * 10.0) / 10.0);
-}
+					double pct = totalResponses > 0 ? ((int) oData.get("count") * 100.0 / totalResponses) : 0;
+					oData.put("percentage", Math.round(pct * 10.0) / 10.0);
+				}
+				qMap.put("optionStats", optMap);
+			}
+			qStatsList.add(qMap);
+		}
+		stats.put("questionStats", qStatsList);
+		return AppResponse.success(stats);
+	}
 ```
 
-<!--
-統計報表的核心就是「算術」。
-我們把每一題的回答抓出來。如果是文字題，我們就把大家的留言列出來；如果是選擇題，我們就統計每個選項有多少人選。
-最後算出的百分比，我們會四捨五入到小數點第一位，讓報表看起來專業又整齊。
--->
+</div>
+
+---
+layout: default
+---
+
+# AdminSurveyController.java
+
+- Controller
+
+<div v-pre>
+
+```java
+@GetMapping("/{id}/stats")
+	public AppResponse<Object> getSurveyStats(@PathVariable("id") Long id) {
+		return surveyService.getSurveyStats(id);
+	}
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 使用 Postman 測試
+
+1. 作答統計
+- Method: GET
+- URL: http://localhost:8080/api/admin/surveys/1/stats
+- 預期結果: code: 200, data: 單一問卷作答統計內容
+- 1請替換成對應的問卷ID
 
 ---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# 第五部分：會員系統與安全機制
-
-<!--
-最後一塊拼圖：如何區分「管理員」與「一般使用者」。
-我們使用 JWT 來實作登入功能。
--->
+# 新增問卷(Session)
 
 ---
+layout: default
+---
 
-# 會員實體設計 (User Entity)
+# SurveyService.java
 
-| 欄位名稱 | 設定 | 說明 |
-| --- | --- | --- |
-| `email` | `unique = true` | 登入帳號，不可重複 |
-| `password` | `nullable = false` | 密碼，需經過加密存儲 |
-| `role` | `ADMIN` / `USER` | 權限角色 |
+- Service
+
+<div v-pre>
 
 ```java
-@Entity
-@Table(name = "users")
-@Data
+private static final String ADMIN_EDIT_SESSION_KEY = "TEMP_ADMIN_SURVEY";
+/**
+    * [功能] 管理員編輯問卷暫存至 Session
+    */
+   public AppResponse<Object> saveAdminSurveyToSession(SurveyDTO surveyDTO, HttpSession session) {
+       session.setAttribute(ADMIN_EDIT_SESSION_KEY, surveyDTO);
+       return AppResponse.success(null);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# AdminSurveyController.java
+
+- Controller
+
+<div v-pre>
+
+```java
+/**
+    * [功能] 1. 編輯問卷暫存至 Session
+    */
+   @PostMapping("/session-store")
+   public AppResponse<Object> storeSurveyInSession(@RequestBody SurveyDTO surveyDTO, HttpSession session) {
+       return surveyService.saveAdminSurveyToSession(surveyDTO, session);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 使用 Postman 測試
+
+1. 問卷內容(暫存於Session)
+- Method: POST
+- URL: http://localhost:8080/api/admin/surveys/session-store
+- Body (JSON):
+- 參考 https://docs.google.com/document/d/1uNZgv125KTMh1R79wOrQgEq-Y7k-pdBbaHQvxTcnhc0/edit?tab=t.jnrb85fal13u 的新增問卷
+- 預期結果: code: 200, data: null
+
+---
+layout: default
+---
+
+# SurveyService.java
+
+- Service
+
+<div v-pre>
+
+```java
+/**
+    * [功能] 管理員從 Session 取得正在編輯的問卷
+    */
+   public AppResponse<SurveyDTO> getAdminSurveyFromSession(HttpSession session) {
+       SurveyDTO dto = (SurveyDTO) session.getAttribute(ADMIN_EDIT_SESSION_KEY);
+       if (dto == null) return AppResponse.error(RspCode.NOT_FOUND, "找不到編輯中的資料");
+       return AppResponse.success(dto);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# AdminSurveyController.java
+
+- Controller
+
+<div v-pre>
+
+```java
+/**
+    * [功能] 2. 從 Session 取得編輯中的問卷
+    */
+   @GetMapping("/session-get")
+   public AppResponse<Object> getSurveyFromSession(HttpSession session) {
+       return surveyService.getAdminSurveyFromSession(session);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 使用 Postman 測試
+
+1. 取得Session中的問卷內容
+- Method: GET
+- URL: http://localhost:8080/api/admin/surveys/session-get
+- 預期結果: code: 200, data: 問卷內容
+
+---
+layout: default
+---
+
+# Service
+
+<div v-pre>
+
+```java
+/**
+    * [功能] 管理員正式提交問卷並清空 Session
+    * @param isPublish 是否發佈 (true -> PUBLISHED, false -> DRAFT)
+    */
+   @Transactional
+   public AppResponse<SurveyDTO> commitAdminSurveyFromSession(boolean isPublish, HttpSession session) {
+       SurveyDTO dto = (SurveyDTO) session.getAttribute(ADMIN_EDIT_SESSION_KEY);
+       if (dto == null) return AppResponse.error(RspCode.NOT_FOUND);
+       // 根據按鈕決定狀態
+       dto.setStatus(isPublish ? "PUBLISHED" : "DRAFT");
+      
+       AppResponse<SurveyDTO> response = saveSurvey(dto);
+       if (response.getCode() == 200) {
+           session.removeAttribute(ADMIN_EDIT_SESSION_KEY);
+       }
+       return response;
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# AdminSurveyController.java
+
+- Controller
+
+<div v-pre>
+
+```java
+/**
+    * [功能] 3. 確認提交問卷並決定是否發佈
+    */
+   @PostMapping("/confirm-commit")
+   public AppResponse<Object> confirmSurveyCommit(@RequestParam(name = "isPublish") boolean isPublish, HttpSession session) {
+       return surveyService.commitAdminSurveyFromSession(isPublish, session);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 使用 Postman 測試
+
+1. 確認提交問卷並決定是否發佈
+- Method: POST
+- URL: http://localhost:8080/api/admin/surveys/confirm-commit?isPublish=true
+- 預期結果: code: 200, data: 問卷內容
+- isPublish=true表示儲存並發布, false則為僅儲存成草稿
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 註冊
+
+---
+layout: default
+---
+
+# Entity
+
+- import jakarta.persistence.Column;
+- import jakarta.persistence.Entity;
+- import jakarta.persistence.GeneratedValue;
+- import jakarta.persistence.GenerationType;
+- import jakarta.persistence.Id;
+- import jakarta.persistence.Table;
+- import lombok.Data;
+- @Entity
+- @Table(name = "users")
+- @Data
+
+---
+layout: default
+---
+
+# Entity
+
+<div v-pre>
+
+```java
 public class User {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    @Column(nullable = false, unique = true)
-    private String email;
-    @Column(nullable = false)
-    private String password; // 這裡是 BCrypt 加密後的字串
-    private String role;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id; // 使用者ID
+	
+	@Column(nullable = false)
+	private String name; // 使用者名稱
+	
+	@Column(nullable = false, unique = true)
+	private String email; // 使用者電子郵件
+```
+
+</div>
+
+---
+layout: default
+---
+
+# Entity
+
+- @Column(nullable = true)
+- private String phone; // 使用者電話
+- private Integer age; // 使用者年齡
+- @Column(nullable = false)
+- private String password; // 使用者密碼 (實際應該加密存儲)
+- @Column(nullable = false)
+- private String role; // 使用者角色 (例如: "USER", "ADMIN")
+- }
+
+---
+layout: default
+---
+
+# Repository
+
+- UserRepository.java
+
+<div v-pre>
+
+```java
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+   Optional<User> findByEmail(String email);
 }
 ```
 
-<!--
-使用者資料表是系統的根基。
-最關鍵的是 `email` 必須設為 `unique`，這就像身分證字號，不能兩個人共用。
-至於 `password`，切記！我們絕對、絕對不能直接存原始密碼（明文）。
-我們必須先用 `BCrypt` 把它打碎攪爛，存進去的是一串誰也看不懂的亂碼，這才是安全的做法。
--->
+</div>
 
 ---
+layout: default
+---
 
-# 註冊與密碼加密 — Service
+# DTO
 
-| 邏輯步驟 | 實作細節 |
-| --- | --- |
-| **1. 檢查重複** | `findByEmail` 是否已存在 |
-| **2. 密碼加密** | `passwordEncoder.encode(rawPassword)` |
-| **3. 自動授權** | 第一個註冊的人自動成為 ADMIN |
+- RegisterDTO.java
+
+<div v-pre>
+
+```java
+import lombok.Data;
+@Data
+public class RegisterDTO {
+   private String name;
+   private String email;
+   private String password;
+   private String phone;
+   private Integer age;
+}
+```
+
+</div>
+
+---
+layout: default
+---
+
+# DTO
+
+- LoginResponseDTO.java
+
+<div v-pre>
+
+```java
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class LoginResponseDTO {
+   private String token;
+}
+```
+
+</div>
+
+---
+layout: default
+---
+
+# Service - AuthService
+
+<div v-pre>
+
+```java
+@Service
+public class AuthService {
+@Autowired
+   private UserRepository userRepository;
+   @Autowired
+   private PasswordEncoder passwordEncoder;
+}
+```
+
+</div>
+
+---
+layout: default
+---
+
+# Service
+
+<div v-pre>
 
 ```java
 public String register(RegisterDTO registerDTO) {
-    if (userRepository.findByEmail(registerDTO.getEmail()).isPresent()) {
-        throw new RuntimeException("Email address already in use.");
+       if (userRepository.findByEmail(registerDTO.getEmail()).isPresent()) {
+           throw new RuntimeException("Email address already in use.");
+       }
+       User user = new User();
+       user.setName(registerDTO.getName());
+       user.setEmail(registerDTO.getEmail());
+       user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
+       user.setPhone(registerDTO.getPhone());
+       user.setAge(registerDTO.getAge());
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# Service
+
+<div v-pre>
+
+```java
+public String register(RegisterDTO registerDTO) {
+      if (userRepository.count() == 0) {
+            user.setRole("ADMIN");
+        } else {
+            user.setRole("USER");
+        }
+        userRepository.save(user);
+        
+        LoginDTO loginDTO = new LoginDTO();
+        loginDTO.setEmail(registerDTO.getEmail());
+        loginDTO.setPassword(registerDTO.getPassword());
+        return login(loginDTO);
     }
-    User user = new User();
-    user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
-    // ... 設定其他欄位 ...
-    userRepository.save(user);
-    return login(new LoginDTO(user.getEmail(), registerDTO.getPassword()));
+```
+
+</div>
+
+---
+layout: default
+---
+
+# Config — 安全機制設定 (JWT 與權限控管)
+
+### `SecurityConfig.java`
+
+<div v-pre>
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter();
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/surveys/**").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .anyRequest().authenticated()
+            );
+
+        http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+        return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration c) throws Exception {
+        return c.getAuthenticationManager();
+    }
 }
 ```
 
-<!--
-註冊流程就像是去銀行開戶。
-櫃員會先查你有沒有開過戶（檢查 Email）。
-接著幫你的保險箱換上一個新的密碼鎖（加密）。
-我們還設計了一個小彩蛋：第一個註冊的人就是這台系統的老大（ADMIN），後面的都是平民百姓（USER）。
--->
+</div>
 
 ---
+layout: default
+---
 
-# 登入與 JWT 簽發
+# AuthController.java
 
-| 認證流程 | 說明 |
-| --- | --- |
-| **AuthenticationManager** | 驗證帳密是否正確 |
-| **SecurityContextHolder** | 將認證成功的資訊存入當前線程 |
-| **JwtTokenProvider** | 產生一個帶有權限資訊的 Token 字串 |
+- Controller
+
+<div v-pre>
+
+```java
+@RestController
+@RequestMapping("/api/auth")
+public class AuthController {
+   @Autowired
+   private AuthService authService;
+}
+```
+
+</div>
+
+---
+layout: default
+---
+
+# AuthController.java
+
+- Controller
+
+<div v-pre>
+
+```java
+@PostMapping("/register")
+   public AppResponse<LoginResponseDTO> register(@RequestBody RegisterDTO registerDTO) {
+       try {
+           String token = authService.register(registerDTO);
+           return AppResponse.success(new LoginResponseDTO(token));
+       } catch (RuntimeException e) {
+           return AppResponse.error(RspCode.DUPLICATE_ERROR, e.getMessage());
+       } catch (Exception e) {
+           return AppResponse.error(RspCode.INTERNAL_SERVER_ERROR, "Registration failed");
+       }
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 使用 Postman 測試 — 會員註冊
+
+- **Method**: `POST`
+- **URL**: `http://localhost:8080/api/auth/register`
+- **Body (JSON)**:
+
+<div v-pre>
+
+```json
+{
+    "name": "管理員",
+    "email": "admin@example.com",
+    "password": "Password123",
+    "phone": "0912345678",
+    "age": 30
+}
+```
+
+</div>
+
+- **預期結果**: `code: 200`, `data: { "token": "JWT通行證字串" }`
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 登入
+
+---
+layout: default
+---
+
+# DTO
+
+- LoginDTO.java
+
+<div v-pre>
+
+```java
+import lombok.Data;
+@Data
+public class LoginDTO {
+   private String email;
+   private String password;
+}
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 
+
+- Service - CustomUserDetailsService CustomUserDetailsServiceCustomUserDetailsServiceCustomUserDetailsService CustomUserDetailsServiceCustomUserDetailsServiceCustomUserDetailsService
+
+<div v-pre>
+
+```java
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
+   @Autowired
+   private UserRepository userRepository;
+   @Override
+   public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+       User user = userRepository.findByEmail(email)
+               .orElseThrow(() -> new UsernameNotFoundException("User not found with email : " + email));
+       return new org.springframework.security.core.userdetails.User(
+               user.getEmail(),user.getPassword(),
+               Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
+       );
+   }
+}
+```
+
+</div>
+
+---
+layout: default
+---
+
+# JWT — Token 簽發與過濾過濾器
+
+- `JwtTokenProvider.java` — 負責 JWT 的產生、解析與驗證
+- `JwtAuthenticationFilter.java` — 繼承 `OncePerRequestFilter`，在請求前攔截並提取 JWT 進行認證
+
+---
+layout: default
+---
+
+# Service - AuthService
+
+- @Autowired
+- private AuthenticationManager authenticationManager;
+- @Autowired
+- private JwtTokenProvider tokenProvider;
+
+---
+layout: default
+---
+
+# Service - AuthService
+
+<div v-pre>
 
 ```java
 public String login(LoginDTO loginDTO) {
-    Authentication authentication = authenticationManager.authenticate(
-        new UsernamePasswordAuthenticationToken(loginDTO.getEmail(), loginDTO.getPassword())
-    );
-    SecurityContextHolder.getContext().setAuthentication(authentication);
-    return tokenProvider.generateToken(authentication);
+       Authentication authentication = authenticationManager.authenticate(
+               new UsernamePasswordAuthenticationToken(
+                       loginDTO.getEmail(), loginDTO.getPassword()
+               )
+       );
+       SecurityContextHolder.getContext().setAuthentication(authentication);      
+       userRepository.findByEmail(loginDTO.getEmail()).ifPresent(user -> {
+           if (userRepository.count() == 1 && "USER".equals(user.getRole())) {
+               user.setRole("ADMIN"); userRepository.save(user);
+           }
+       });
+       return tokenProvider.generateToken(authentication);
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# AuthController.java
+
+- Controller
+
+<div v-pre>
+
+```java
+@PostMapping("/login")
+   public AppResponse<LoginResponseDTO> login(@RequestBody LoginDTO loginDTO) {
+       try {
+           String token = authService.login(loginDTO);
+           return AppResponse.success(new LoginResponseDTO(token));
+       } catch (Exception e) {
+           return AppResponse.error(RspCode.UNAUTHORIZED, "Invalid email or password");
+       }
+   }
+```
+
+</div>
+
+---
+layout: default
+---
+
+# 使用 Postman 測試 — 會員登入
+
+- **Method**: `POST`
+- **URL**: `http://localhost:8080/api/auth/login`
+- **Body (JSON)**:
+
+<div v-pre>
+
+```json
+{
+    "email": "admin@example.com",
+    "password": "Password123"
 }
 ```
 
-<!--
-登入成功後，伺服器會發給你一張「通行證」（JWT Token）。
-這張通行證就像是 VIP 卡，上面印著你的名字和權限（ADMIN 還是 USER），還有一個伺服器簽名，別人無法仿造。
-以後前端發請求只要帶著這張卡，我們就不用每次都查資料庫確認你是誰了。
--->
+</div>
 
----
-
-# 實戰練習：動態問卷擴充
-
-| 任務名稱 | 任務說明 |
-| --- | --- |
-| **練習 1** | 實作「問卷複製」功能，一鍵產生相同題目但新 ID 的問卷。 |
-| **練習 2** | 在作答統計中，加入「平均年齡」的統計數據。 |
-| **練習 3** | 修改安全設定，讓一般使用者無法存取 `/api/admin/**` 路徑。 |
-
-<!--
-現在輪到大家動動手了！
-試著去擴充這套系統。比如老闆想辦第二場特賣會，能不能直接複製去年的問卷？
-或是想知道填問卷的人平均幾歲？
-還有最核心的：別忘了把後門關起來，確保只有管理員能進到後台喔！
--->
-
----
-
-# 總結
-
-- **完整性**：從 Entity、Repository 到 Controller，每一層都有其職責。
-- **安全性**：密碼加密與 JWT 認證是現代 Web 應用的標配。
-- **互動性**：利用 Session 處理暫存，提升使用者的填寫體驗。
-- **數據價值**：API 不只是存取資料，更是要把原始數據轉化為有意義的統計資訊。
-
-<!--
-恭喜大家完成了動態問卷系統的實戰！
-我們從零開始，一磚一瓦地蓋起了這座城堡。
-學會了如何處理複雜的動態查詢、如何安全地存儲密碼，以及如何利用 Session 打造順暢的互動。
-技術會更新，但這些架構思考與解決問題的方法，會是你最堅實的資產。
-大家辛苦了！下課！
--->
+- **預期結果**: `code: 200`, `data: { "token": "JWT通行證字串" }`
 
 ---
 layout: end

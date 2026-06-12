@@ -215,7 +215,7 @@ Student Entity 包含了資料庫表格的所有欄位，包括 password。
 
 Entity 應該只在 Service 和 Repository 之間流動——從 Repository 查出來的 PO，在 Service 裡轉成 Response DTO，再往上給 Controller。
 
-⚠️ Spring Boot 3.x 的 JPA import 是 `jakarta.persistence.*`，不是 `javax.persistence.*`。
+⚠️ Spring Boot 3.x / 4.x 的 JPA import 是 `jakarta.persistence.*`，不是 `javax.persistence.*`。
 -->
 
 ---
