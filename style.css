@@ -47,10 +47,11 @@
   overflow: visible !important;
   max-height: none !important;
   font-size: 0.88em !important;
-  margin-right: -6rem !important;
+  margin-left: 0 !important;
+  margin-right: -16rem !important;
   padding: 1rem 1.5rem !important;
   border-radius: 8px !important;
-  width: calc(100% + 6rem) !important;
+  width: calc(100% + 16rem) !important;
 }
 
 .slidev-layout pre code,
