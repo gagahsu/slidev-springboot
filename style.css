@@ -42,7 +42,7 @@
   font-feature-settings: "liga" 0, "calt" 0;
 }
 
-/* Code blocks: wider layout, no scrollbars, wrap content for clean PDF export */
+/* Code blocks: fit content, capped at slide width (no overflow), no scrollbars */
 .slidev-layout pre,
 .slidev-layout .shiki,
 .slidev-layout .slidev-code {
@@ -50,10 +50,11 @@
   max-height: none !important;
   font-size: 0.88em !important;
   margin-left: 0 !important;
-  margin-right: -16rem !important;
+  margin-right: 0 !important;
   padding: 1rem 1.5rem !important;
   border-radius: 8px !important;
-  width: calc(100% + 16rem) !important;
+  width: fit-content !important;
+  max-width: 100% !important;
 }
 
 .slidev-layout pre code,
