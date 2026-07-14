@@ -59,7 +59,7 @@ layout: default
 
 # Outline
 
-- **回顧：@Autowired** — 型別匹配機制、補充官方建議的建構子注入、同型別兩個 Bean 會發生什麼事
+- **回顧：@Autowired** — 型別匹配機制、補充建構子注入（多依賴、Lombok）、同型別兩個 Bean 會發生什麼事
 - **@Qualifier — 指定 Bean 名稱** — 定義、用法、與 @Autowired 的搭配方式
 - **完整實作練習** — 兩個 Printer Bean 並存，用 @Qualifier 指定注入哪一個
 - **章節總結** — 掌握 @Qualifier 的時機與用法
@@ -168,7 +168,182 @@ public class MyController {
 
 Spring 建立 MyController 的時候，看到建構子需要一個 Printer，就會去容器裡找 Printer 型別的 Bean 傳進來，效果和欄位注入一樣，但程式碼更安全、更好測試。
 
-今天這章為了和上一章銜接，範例仍然沿用 @Autowired 欄位注入來講 @Qualifier，兩種寫法 @Qualifier 都能搭配使用。接下來我們回到主線：當同型別有兩個 Bean 的時候會發生什麼事？
+那如果一個類別需要注入的不只一個 Bean 呢？下一頁來看多個依賴的寫法。
+-->
+
+---
+
+# 補充：多個依賴的建構子注入
+
+實務上一個類別常常依賴多個 Bean，全部放進**同一個建構子**即可：
+
+```java
+@RestController
+public class MyController {
+
+    private final Printer printer;
+    private final UserService userService;
+    private final MailService mailService;
+
+    public MyController(Printer printer, UserService userService,
+                        MailService mailService) {
+        this.printer = printer;
+        this.userService = userService;
+        this.mailService = mailService;
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>附帶好處：</b> 建構子參數超過 4、5 個時會「看起來很痛」——這是類別責任太多的警訊，提醒你該拆分了。欄位注入看不到這個警訊。
+</div>
+
+<!--
+實務上，一個 Controller 或 Service 很少只依賴一個東西，常常同時需要好幾個 Bean。
+
+寫法很單純：每個依賴都宣告成 private final 欄位，然後全部放進同一個建構子的參數，一一指派。Spring 會根據每個參數的型別，分別去容器裡找對應的 Bean 傳進來。
+
+注意一樣不用加 @Autowired，因為還是只有一個建構子。
+
+這裡有個隱藏的好處：如果你發現建構子參數越來越多，多到五六個，程式碼看起來很擁擠——這其實是好事，它在提醒你「這個類別管太多事了，該拆了」。欄位注入因為每個依賴各自一行，反而看不出這個問題。
+
+不過每個依賴都要寫「宣告欄位＋建構子參數＋指派」三個地方，有點囉嗦。下一頁介紹 Lombok，一個 Annotation 就把建構子全部省掉。
+-->
+
+---
+
+# 補充：用 Lombok 簡化建構子注入
+
+**Lombok** 會在編譯時自動生成樣板程式碼。`@RequiredArgsConstructor` 自動為所有 `final` 欄位生成建構子：
+
+```java
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequiredArgsConstructor
+public class MyController {
+
+    private final Printer printer;
+    private final UserService userService;
+    private final MailService mailService;
+
+    // 不用寫建構子！Lombok 編譯時自動生成
+}
+```
+
+| Annotation | 效果 |
+| --- | --- |
+| `@RequiredArgsConstructor` | 為所有 `final` 欄位生成建構子（建構子注入最常用） |
+| `@AllArgsConstructor` | 為**所有**欄位生成建構子 |
+| `@NoArgsConstructor` | 生成無參數建構子 |
+
+<!--
+Lombok 是 Java 圈非常流行的工具，它的原理是在「編譯的時候」自動幫你生成程式碼——你看不到建構子，但編譯出來的 class 檔裡面有。
+
+@RequiredArgsConstructor 的意思是「為所有 final 欄位生成一個建構子」。搭配建構子注入剛剛好：你只要宣告 private final 欄位，加一個 @RequiredArgsConstructor，建構子完全不用寫，新增依賴時也只要加一行欄位宣告。
+
+這就是為什麼實務上的 Spring Boot 專案，最常見的組合就是「private final 欄位 + @RequiredArgsConstructor」。
+
+下面表格另外兩個是 Lombok 的兄弟 Annotation：@AllArgsConstructor 是全部欄位、@NoArgsConstructor 是無參數建構子，之後學 JPA Entity 的時候會用到。
+
+不過 Lombok 不是 Spring 內建的，要另外安裝，下一頁看安裝流程。
+-->
+
+---
+
+# 補充：Lombok 安裝 — Step 1 加入依賴
+
+在 `build.gradle` 的 `dependencies` 區塊加入兩行（Spring Boot 已管理版本，不用填版本號）：
+
+```groovy
+dependencies {
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+}
+```
+
+（測試程式也要用 Lombok 的話，另加 `testCompileOnly` 與 `testAnnotationProcessor` 兩行）
+
+| 設定 | 作用 |
+| --- | --- |
+| `compileOnly` | 編譯時看得到 Lombok 的 Annotation，但**不打包**進最終的 jar |
+| `annotationProcessor` | 讓 Gradle 編譯時**執行** Lombok，實際生成建構子等程式碼 |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+⚠️ <b>兩行缺一不可：</b> 只加 <code>compileOnly</code> 不會報錯，但建構子<b>不會被生成</b>，執行時才發現找不到方法。
+</div>
+
+<!--
+Lombok 安裝分三個步驟：加依賴、Gradle Refresh、IDE 支援，這頁先講第一步。
+
+在 build.gradle 加兩行：compileOnly 和 annotationProcessor，都指向 org.projectlombok:lombok。Spring Boot 的 dependency management 已經幫你決定好版本，所以不用寫版本號。
+
+為什麼要兩行？作用不一樣。compileOnly 是讓編譯器「看得懂」@RequiredArgsConstructor 這些 Annotation，而且因為 Lombok 只在編譯期有用，執行期不需要，所以不打包進 jar，讓最終產物更乾淨。annotationProcessor 才是真正「幹活」的那行——它讓 Gradle 在編譯時執行 Lombok，把建構子、getter 這些程式碼真正生成出來。
+
+最容易踩的坑：只加了 compileOnly。這樣編譯不會報錯，Annotation 也認得，但程式碼根本沒被生成，等到執行的時候才爆出找不到建構子。所以記住：兩行一組，缺一不可。
+
+如果你的測試程式（src/test）也要用 Lombok，再加 testCompileOnly 和 testAnnotationProcessor 兩行。
+
+依賴加好之後，第二步——Refresh，下一頁。
+-->
+
+---
+
+# 補充：Lombok 安裝 — Step 2 Gradle Refresh
+
+改完 `build.gradle`，**檔案本身不會觸發下載**——必須 Refresh，讓 Gradle 重新讀取設定、下載 Lombok：
+
+| 位置 | 操作 |
+| --- | --- |
+| **IntelliJ IDEA** | 點擊編輯器右上角出現的 Gradle 大象圖示（**Load Gradle Changes**），或 Gradle 面板 → Reload All Gradle Projects |
+| **Eclipse / STS** | 專案按右鍵 → Gradle → **Refresh Gradle Project** |
+| **VS Code** | 存檔時右下角跳出提示 → 點擊同步，或 Gradle 面板 → Reload |
+| **命令列** | `./gradlew build --refresh-dependencies` |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+⚠️ <b>沒做這步的症狀：</b> <code>import lombok.RequiredArgsConstructor;</code> 直接紅字「找不到 package」——依賴根本還沒下載，跟 Lombok 本身無關。
+</div>
+
+<!--
+第二步：Refresh。這是新手最常忘記的動作。
+
+很多人以為 build.gradle 存檔就生效了——不是。改檔案只是改了一份文字，要讓 Gradle 重新讀取設定、真正把 Lombok 從網路上抓下來，必須手動觸發 Refresh。
+
+IntelliJ 最方便：你一改 build.gradle，編輯器右上角就會跳出一隻大象圖示，點它就是 Load Gradle Changes。Eclipse 是專案右鍵 → Gradle → Refresh Gradle Project。命令列派的可以跑 gradlew build --refresh-dependencies。
+
+怎麼知道自己忘了 Refresh？症狀很明確：import lombok 那行直接紅字說「找不到 package」。這跟下一頁要講的 IDE 支援問題不一樣——連 package 都找不到，代表依賴根本沒下載；如果 import 沒問題但建構子紅字，才是 IDE 支援的問題。
+
+Refresh 完成之後，第三步——IDE 支援，下一頁。
+-->
+
+---
+
+# 補充：Lombok 安裝 — Step 3 IDE 支援
+
+Lombok 在**編譯期**才生成程式碼，IDE 打字當下看不到 → 需另外讓 IDE 認得，否則滿屏紅字：
+
+| IDE | 安裝方式 |
+| --- | --- |
+| **IntelliJ IDEA** | 2020.3 之後**內建** Lombok plugin，通常不用裝；確認 Settings → Build, Execution, Deployment → Compiler → Annotation Processors → 勾選 **Enable annotation processing** |
+| **Eclipse / STS** | 到 [projectlombok.org/download](https://projectlombok.org/download) 下載 `lombok.jar` → 執行 `java -jar lombok.jar` → 安裝程式自動偵測 Eclipse 位置 → Install → **重啟 Eclipse** |
+| **VS Code** | 新版 Extension Pack for Java **已內建**支援，通常不用另外裝 |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+⚠️ <b>常見狀況：</b> 依賴加了但 IDE 一片紅字（找不到建構子／getter）→ 通常是 <b>IDE 支援沒裝</b>或<b>沒重啟</b>。<code>gradlew build</code> 會過，只是 IDE 看不懂。
+</div>
+
+<!--
+第三步：IDE 支援。
+
+為什麼需要這一步？因為 Lombok 是「編譯的時候」才生成程式碼，你在 IDE 裡打字的當下，那些建構子和方法根本還不存在，IDE 看不到就會顯示紅字錯誤——但其實編譯是會過的。所以要讓 IDE 也學會「看懂」Lombok。
+
+IntelliJ 新版已經內建 plugin，通常裝好就能用，只要確認 Annotation Processors 的設定有打開。
+
+Eclipse 比較麻煩：去官網下載 lombok.jar，用 java -jar 執行它，這是一個安裝程式，會自動偵測你電腦上的 Eclipse 位置，按 Install，然後一定要重啟 Eclipse 才會生效。
+
+最常見的狀況：build.gradle 加了、gradlew build 也會過，但 IDE 滿屏紅字——九成是 IDE 支援沒裝好或忘了重啟。判斷方式很簡單：命令列編譯過但 IDE 報錯，就是 IDE 的問題，不是程式碼的問題。
+
+好，補充到此結束，回到今天的主線：當同型別有兩個 Bean 的時候會發生什麼事？
 -->
 
 ---

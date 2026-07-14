@@ -20,6 +20,17 @@
   - Outline 對應增列
   - 措辭注意：寫「官方建議」，不寫「不要使用」——`@Autowired` 欄位注入未棄用
 
+### 2. ch06 — 多依賴注入與 Lombok
+
+- **檔案：** `06-component-autowired.md`（或視教材規劃獨立一章）
+- **發現日期：** 2026-07-14
+- **狀態：** `已補充`（已加到 `07-qualifier.md` Part 1 回顧區「補充」五頁：多依賴建構子注入、`@RequiredArgsConstructor`、Lombok 安裝 Step 1 Gradle 依賴、Step 2 Gradle Refresh、Step 3 IDE 支援）
+- **問題：** 課程未涵蓋多個 Bean 同時注入的寫法，也未介紹實務標準組合 `private final` + Lombok `@RequiredArgsConstructor`，以及 Lombok 安裝（Gradle `compileOnly` + `annotationProcessor` 依賴 + IDE 支援）
+- **更新方向：**
+  - 併入 ch06 建構子注入補充之後，或獨立成「Lombok 與注入實務」小節
+  - Lombok 安裝流程含 Eclipse（lombok.jar 安裝器）與 IntelliJ（內建）差異
+  - 提醒常見坑：只加 `compileOnly` 沒加 `annotationProcessor` → 編譯過但程式碼沒生成；依賴加了但 IDE 沒裝支援 → 滿屏紅字但 `gradlew build` 會過
+
 ---
 
 ## 新項目範本
