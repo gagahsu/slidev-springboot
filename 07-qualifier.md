@@ -59,7 +59,7 @@ layout: default
 
 # Outline
 
-- **回顧：@Autowired** — 型別匹配機制，以及同型別兩個 Bean 會發生什麼事
+- **回顧：@Autowired** — 型別匹配機制、補充官方建議的建構子注入、同型別兩個 Bean 會發生什麼事
 - **@Qualifier — 指定 Bean 名稱** — 定義、用法、與 @Autowired 的搭配方式
 - **完整實作練習** — 兩個 Printer Bean 並存，用 @Qualifier 指定注入哪一個
 - **章節總結** — 掌握 @Qualifier 的時機與用法
@@ -100,6 +100,75 @@ class: flex flex-col justify-center items-center text-center
 如果欄位宣告是 `private Printer printer`，Spring 就找「Printer 型別或實作了 Printer 介面的 Bean」。
 
 當容器裡只有一個 Printer Bean（HpPrinter），一切正常。但如果同時存在 HpPrinter 和 CanonPrinter 兩個 Bean，Spring 就不知道要注入哪一個，啟動就會失敗。
+
+複習完 @Autowired 的機制之後，下一頁要補充一個上一章沒提到的重點。
+-->
+
+---
+
+# 補充：官方建議使用建構子注入
+
+上一章我們用 `@Autowired` 欄位注入。Spring 官方（含 Spring Boot 4.x）**建議改用建構子注入（Constructor Injection）**：
+
+| 比較項目 | `@Autowired` 欄位注入 | 建構子注入 |
+| --- | --- | --- |
+| **欄位可否 `final`** | ❌ 不行，注入後仍可被改動 | ✅ 可以，依賴不可變 |
+| **單元測試** | 需靠 Spring 或反射才能塞入依賴 | 直接 `new` 並傳入 mock 即可 |
+| **依賴透明度** | 依賴散落各欄位，不易察覺過多依賴 | 建構子參數一目了然 |
+| **官方態度** | 未棄用，仍完全可用 | **官方建議寫法** |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>注意：</b> <code>@Autowired</code> 欄位注入<b>沒有被棄用</b>，大量既有專案仍在使用，看懂它依然必要；但<b>新專案建議用建構子注入</b>。
+</div>
+
+<!--
+趁著回顧 @Autowired，補充一個上一章沒提到的重點。
+
+上一章我們用 @Autowired 加在欄位上做注入，這種寫法叫「欄位注入」。但 Spring 官方——包含最新的 Spring Boot 4.x——其實建議大家改用「建構子注入」。
+
+三個理由：第一，建構子注入可以把欄位宣告成 final，注入後不會被改動；第二，單元測試時可以直接 new 物件、傳入假的依賴，不需要啟動 Spring；第三，所有依賴都列在建構子參數上，一眼就能看出這個類別依賴了多少東西。
+
+要強調的是：@Autowired 欄位注入沒有被棄用，還是完全可以用，而且大量既有程式碼都是這樣寫的，所以上一章教的內容依然重要。只是你們自己寫新程式時，建議用接下來這頁的寫法。
+-->
+
+---
+
+# 補充：建構子注入寫法
+
+把上一章的 `MyController` 改成建構子注入：
+
+```java
+@RestController
+public class MyController {
+
+    private final Printer printer;
+
+    public MyController(Printer printer) { // 只有一個建構子時，@Autowired 可省略
+        this.printer = printer;
+    }
+
+    @RequestMapping("/test")
+    public String test() {
+        printer.print("Hello World");
+        return "Hello World";
+    }
+}
+```
+
+依賴改由**建構子參數**傳入，欄位可宣告為 `final`，Spring 建立 `MyController` 時會自動傳入 `Printer` Bean。
+
+<!--
+這就是建構子注入的寫法，改動有三個地方。
+
+第一，欄位改成 private final Printer printer——加上 final，代表這個依賴設定好之後就不會變。
+
+第二，新增一個建構子，參數是 Printer，在裡面做 this.printer = printer。
+
+第三，注意建構子上面完全不用加 @Autowired——當類別只有一個建構子時，Spring 會自動用它來注入，這是 Spring 4.3 之後的行為。
+
+Spring 建立 MyController 的時候，看到建構子需要一個 Printer，就會去容器裡找 Printer 型別的 Bean 傳進來，效果和欄位注入一樣，但程式碼更安全、更好測試。
+
+今天這章為了和上一章銜接，範例仍然沿用 @Autowired 欄位注入來講 @Qualifier，兩種寫法 @Qualifier 都能搭配使用。接下來我們回到主線：當同型別有兩個 Bean 的時候會發生什麼事？
 -->
 
 ---
