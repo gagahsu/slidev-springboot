@@ -61,6 +61,7 @@ layout: default
 
 - **回顧：到目前為止的返回數據** — 從回傳字串到回傳 Java 物件的演進
 - **如何將返回值轉換成 JSON？** — Jackson 自動轉換機制、三步驟實作
+- **用 Lombok 省略 Getter/Setter** — `@Data` 一個 Annotation 搞定
 - **@Controller vs @RestController** — 差別、適用情境、現代開發建議
 - **章節總結** — 核心概念整理
 
@@ -106,9 +107,7 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# Part 1
-
-## 如何將 Spring Boot 的返回值轉換成 JSON 格式？
+# 如何將 Spring Boot 的返回值轉換成 JSON 格式？
 
 <!--
 好，進入本章核心。我們要怎麼讓 Spring Boot 的 API 回傳 JSON？
@@ -190,6 +189,10 @@ public void setName(String name) {
 }
 ```
 
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 覺得 Getter/Setter 很囉唆？本章最後的補充會示範用 <b>Lombok</b> 一行 Annotation 全部省掉。
+</div>
+
 <!--
 第二步，為每個欄位加上 getter 和 setter。
 
@@ -266,9 +269,79 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# 補充
+# 用 Lombok 省略 Getter 和 Setter
 
-## @Controller 和 @RestController 的差別在哪裡？
+<!--
+在進入 @Controller 和 @RestController 的差別之前，先補充一個實務上大家都會用的技巧。
+
+剛才 Step 2 我們手寫了四個方法的 getter 和 setter。欄位一多，這種樣板程式碼會非常冗長。
+還記得第七章介紹過的 Lombok 嗎？它也能幫我們解決這個問題。
+-->
+
+---
+
+# 用 Lombok 省略 Getter 和 Setter
+
+第七章安裝過的 **Lombok**，在編譯時自動生成樣板程式碼。加上 `@Data`，Getter/Setter 全部不用寫：
+
+```java
+import lombok.Data;
+
+@Data
+public class Student {
+    private Integer id;
+    private String name;
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>效果完全相同：</b> Lombok 在編譯時生成 <code>getId()</code>、<code>setName()</code> 等方法，Jackson 一樣能透過這些 Getter 讀取欄位值轉成 JSON。
+</div>
+
+<!--
+只要在類別上加一個 @Data，原本手寫的四個方法就全部可以刪掉。
+
+要強調的是：Lombok 不是「跳過」getter，而是在「編譯的時候」自動幫你把 getter 和 setter 生成到 .class 檔裡。
+所以對 Jackson 來說完全沒有差別，它照樣呼叫 getId()、getName() 來讀取欄位值。
+
+原始碼變乾淨了，但編譯出來的結果跟手寫一模一樣。
+
+如果你還沒安裝 Lombok，回去看第七章的安裝流程：加 dependency、再執行 lombok.jar 安裝到 IDE。
+-->
+
+---
+
+# Lombok 常用 Annotation
+
+| Annotation | 生成的內容 |
+| --- | --- |
+| `@Getter` | 所有欄位的 Getter |
+| `@Setter` | 所有欄位的 Setter |
+| `@Data` | Getter + Setter + `toString()` + `equals()` + `hashCode()` |
+| `@NoArgsConstructor` | 無參數建構子 |
+| `@AllArgsConstructor` | 包含所有欄位的建構子 |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>建議：</b> 這種承載資料的類別（POJO / DTO）直接加 <code>@Data</code> 最方便；只需要單一功能時再用 <code>@Getter</code> 或 <code>@Setter</code>。
+</div>
+
+<!--
+Lombok 還有很多常用的 Annotation，這裡列出最常見的幾個。
+
+@Getter 和 @Setter 可以單獨使用，只生成你需要的那一半。
+@Data 是懶人包，一次生成 Getter、Setter、toString、equals、hashCode，資料類別加這個就夠了。
+@NoArgsConstructor 和 @AllArgsConstructor 用來生成建構子，之後串接資料庫時會很常用到。
+
+第七章我們用過 @RequiredArgsConstructor 來簡化建構子注入，這章的 @Data 則是用來簡化資料類別。
+從這章開始，後面章節的範例只要是這種資料類別，我們都會用 Lombok 來寫。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# @Controller 和 @RestController 的差別在哪裡？
 
 <!--
 學完了怎麼回傳 JSON，我們來補充一個很多人會問的問題：@Controller 和 @RestController 有什麼差別？
@@ -307,6 +380,7 @@ class: flex flex-col justify-center items-center text-center
 | 自動轉換機制 | `@RestController` 透過 Jackson 自動將 Java 物件轉成 JSON |
 | 建立步驟 | 定義 Java 類別 → 加 Getter/Setter → Controller 回傳物件 |
 | Getter 的重要性 | Jackson 透過 Getter 讀取欄位值，缺少則欄位不出現在 JSON |
+| Lombok 簡化 | `@Data` 在編譯時自動生成 Getter/Setter，不必手寫 |
 | @Controller vs @RestController | 前者回傳樣板名稱，後者回傳 JSON |
 | 現代建議 | REST API 一律使用 `@RestController` |
 
@@ -316,7 +390,8 @@ class: flex flex-col justify-center items-center text-center
 第一，@RestController 透過 Jackson 自動把 Java 物件轉成 JSON，我們不需要手動處理。
 第二，步驟是：建立 Java 類別、加 Getter/Setter、Controller 回傳物件。
 第三，Getter 是關鍵，Jackson 靠它讀取欄位值。
-第四，@Controller 和 @RestController 有本質差異，現代開發用後者。
+第四，實務上用 Lombok 的 @Data，Getter/Setter 都不用手寫，編譯時自動生成。
+第五，@Controller 和 @RestController 有本質差異，現代開發用後者。
 
 今天的內容是 Spring Boot 開發 REST API 的核心。從這章開始，我們的 API 就能真正回傳結構化的 JSON 資料了！
 -->
