@@ -319,6 +319,42 @@ public class HpPrinter implements Printer {
 如果今天要取消計時功能，只需要把 MyAspect 的程式碼移除或停用，HpPrinter 完全不受影響。
 
 這就是「解耦合」——業務邏輯和橫切邏輯彼此獨立。
+
+接著看攔截它的 MyAspect 完整程式碼。
+-->
+
+---
+
+# 完整範例 — MyAspect 攔截 print() 方法
+
+`MyAspect` 用 `@Before` 攔截 `HpPrinter` 的 `print()` 方法：
+
+```java
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.springframework.stereotype.Component;
+
+@Aspect
+@Component
+public class MyAspect {
+
+    @Before("execution(* com.example.demo.HpPrinter.print(..))")
+    public void before() {
+        System.out.println("I'm before");
+    }
+}
+```
+
+切入點表達式指定到 `print` 方法——只攔截 `print()`，不攔截 `HpPrinter` 的其他方法。
+
+<!--
+這是切面這一側的完整程式碼，包含三個 import：@Aspect 和 @Before 來自 org.aspectj.lang.annotation，@Component 來自 Spring。讓 IDE 自動補 import 即可。
+
+注意這裡的切入點表達式和前面教學時的不一樣：前面用 .*(..) 攔截 HpPrinter 的「所有」方法，這裡改成 .print(..)，精確指定只攔截 print() 方法。這就是補充一會講到的「先精確、再放寬」的寫法。
+
+程式碼結構複習一遍：類別上 @Aspect + @Component 兩個都要；before() 方法上加 @Before，括號裡是切入點表達式。
+
+寫好之後啟動程式，下一頁看執行結果。
 -->
 
 ---
