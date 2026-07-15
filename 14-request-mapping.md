@@ -318,7 +318,7 @@ class: flex flex-col justify-center items-center text-center
 # 在 Spring Boot 中練習 @RequestMapping 的用法
 
 <!--
-概念清楚了，實際動手寫一個有多個路徑的 Controller，用 API Tester 分別測試每個路徑。
+概念清楚了，實際動手寫一個有多個路徑的 Controller，用 Postman 分別測試每個路徑。
 -->
 
 ---
@@ -357,7 +357,7 @@ public class MyController {
 
 # 執行結果
 
-啟動 Spring Boot，用 API Tester 分別存取三個路徑：
+啟動 Spring Boot，用 Postman 分別存取三個路徑：
 
 | 請求 URL | Http Method | 回應 Body |
 | --- | --- | --- |
@@ -376,7 +376,7 @@ public class MyController {
 
 Spring Boot 的運作就是這樣：收到請求 → 看 Path → 找到對應的 @RequestMapping → 執行方法 → 回傳結果。
 
-建議大家做一個小實驗：在 API Tester 裡輸入一個沒有設定的路徑，比如 /abc。你會看到 404 Not Found，這就確認了 @RequestMapping 只會對應你設定的路徑，沒有設定的路徑 Spring Boot 不知道怎麼處理，就回傳 404。
+建議大家做一個小實驗：在 Postman 裡輸入一個沒有設定的路徑，比如 /abc。你會看到 404 Not Found，這就確認了 @RequestMapping 只會對應你設定的路徑，沒有設定的路徑 Spring Boot 不知道怎麼處理，就回傳 404。
 
 這是 Spring Boot 最基礎的請求分派機制，後面不管學多複雜的功能，底層都是這個邏輯。
 -->
@@ -415,7 +415,7 @@ layout: end
 <!--
 大家今天把 URL 的結構和 @RequestMapping 的用法都搞清楚了。
 
-課後建議：在你的 Controller 裡加幾個新的路徑，用 API Tester 測試看看，確認每個路徑都能正確回應，然後試試看存取一個沒有設定的路徑，觀察 404 的回應。
+課後建議：在你的 Controller 裡加幾個新的路徑，用 Postman 測試看看，確認每個路徑都能正確回應，然後試試看存取一個沒有設定的路徑，觀察 404 的回應。
 
 有問題嗎？
 -->
