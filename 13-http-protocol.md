@@ -62,8 +62,7 @@ layout: default
 - **什麼是 Http 協議？** — 前後端為什麼需要共同規範
 - **Http Request 的格式規範** — 請求由哪些部分組成、Http Method 的種類
 - **Http Response 的格式規範** — 回應由哪些部分組成、常見 Status Code
-- **在 API Tester 中練習** — 用工具發起請求、查看完整回應
-- **補充：常見的發起 Http Request 的工具** — Postman、curl 等替代方案
+- **Postman 介紹、安裝與使用** — 用業界最主流的工具發起請求、查看完整回應
 
 <!--
 今天的章節涵蓋的內容比較廣，但每個部分都很直覺。
@@ -328,33 +327,108 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 4
-# 在 API Tester 中練習發起 Http Request
+# 用 Postman 練習發起 Http Request
 
 <!--
 概念都清楚了，現在我們來實際動手，用工具發起一個 Http request，觀察完整的 Request 和 Response 格式。
+
+這個工具就是 Postman——業界最主流的 API 測試工具。
 -->
 
 ---
 
-# API Tester 是什麼？
+# Postman 是什麼？
 
-**API Tester**（Talend API Tester）是一個 Chrome 瀏覽器擴充功能，讓我們能在沒有前端的情況下，直接發起 Http request 測試後端 API：
+**Postman** 是業界最主流的 API 測試工具，讓我們能在沒有前端的情況下，直接發起 Http request 測試後端 API：
 
 | 項目 | 說明 |
 | --- | --- |
 | **用途** | 模擬前端發送 Http request，查看後端的完整 Http response |
-| **安裝方式** | Chrome Web Store 搜尋「Talend API Tester」，免費安裝 |
-| **使用方式** | 選擇 Http Method、填入 URL，點擊 Send 即可發送 |
-| **查看內容** | 可以看到完整的 Response Status Code、Header、Body |
+| **為什麼需要** | 瀏覽器網址列只能發 `GET` 請求，無法測試 `POST`、`PUT`、`DELETE` |
+| **業界地位** | 幾乎每個後端團隊都在用，實際工作中每天都會碰到 |
+| **進階功能** | Collection 管理 API、環境變數（開發/測試/正式）、測試腳本、團隊共享 |
 
 <!--
 在開發後端 API 的時候，我們需要一個方式來測試「這個 API 有沒有正常運作」。
 
-最直覺的方式是用瀏覽器輸入網址——但瀏覽器只能發 GET 請求，沒辦法發 POST、PUT、DELETE。
+最直覺的方式是用瀏覽器輸入網址——但瀏覽器只能發 GET 請求，沒辦法發 POST、PUT、DELETE，也看不到完整的 Status Code 和 Header。
 
-API Tester 就解決了這個問題：它讓我們可以自由選擇 Http Method、填入 URL 和 Body，模擬各種類型的 Http request，然後直接看到後端回傳的完整 Response。
+Postman 就解決了這個問題：自由選擇 Http Method、填入 URL 和 Body，模擬各種類型的 Http request，然後直接看到後端回傳的完整 Response。
 
-這是後端開發時不可或缺的工具，幾乎每個後端工程師都會用到類似的工具。
+選 Postman 的理由很簡單：它是業界最主流的工具，幾乎每個公司都在用。現在學會，之後工作直接無縫接軌。它還有很多進階功能——把 API 整理成 Collection、切換環境、寫測試腳本——這些之後用到再學，今天先掌握最核心的「發請求、看回應」。
+-->
+
+---
+
+# 安裝 Postman
+
+| 步驟 | 操作 |
+| --- | --- |
+| **① 下載** | 到 [postman.com/downloads](https://www.postman.com/downloads/) 下載對應作業系統的版本（Windows / macOS / Linux） |
+| **② 安裝** | 執行安裝程式，依預設選項完成安裝 |
+| **③ 首次開啟** | 會出現登入畫面——可以註冊免費帳號，或選擇不登入直接使用 |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>要不要註冊帳號？</b> 不登入也能發請求（輕量模式）。註冊免費帳號後，Collection 會雲端同步、可跨裝置使用——建議註冊，工作上一定用得到。
+</div>
+
+<!--
+安裝很簡單，三步：官網下載、安裝、開啟。
+
+第一次打開 Postman 會請你登入。這裡很多人卡住——其實可以不登入，選擇輕量模式（lightweight API client）直接用，發請求的核心功能都在。
+
+不過建議大家還是註冊一個免費帳號：註冊之後你整理的 API 請求會同步到雲端，換電腦也能用，之後工作上跟團隊共享 Collection 也需要帳號。免費版對個人使用完全夠用。
+
+裝好之後，下一頁先認識一下介面。
+-->
+
+---
+
+# Postman 介面導覽
+
+<img src="/screenshots/ch13-postman-interface.png" alt="Postman 介面總覽" style="width:100%; max-height:440px; object-fit:contain; margin-top:8px;" />
+
+<p class="text-sm text-gray-500 text-center mt-1">今天會用到的是 <b>Sidebar</b>（儲存的請求）和 <b>Workbench</b>（發請求、看回應的主工作區）</p>
+
+<!--
+這是 Postman 官方的介面總覽圖，五個區域：Sidebar、Header、Workbench、Right Sidebar、Footer。
+
+今天真正會用到的只有兩塊：左邊的 Sidebar 放你儲存過的請求（Collections），中間的 Workbench 是主要工作區——所有「發請求、看回應」的動作都在這裡完成。
+
+看圖中間的 Workbench：最上面 GET 下拉選單選 Method，旁邊填 URL，右邊藍色的 Send 按鈕送出。URL 下方的 Params、Headers、Body 頁籤用來設定請求內容。下半部就是回應區——圖裡可以看到 200 OK 的 Status、耗時 144ms、回傳的 JSON Body。
+
+右邊的 Right Sidebar 是文件和 AI 助手，Footer 有 Console 可以看原始的請求記錄——這些之後用到再說。
+
+下一頁看 Workbench 裡發請求會用到的每個元件。
+-->
+
+---
+
+# Workbench — 發起請求會用到的區域
+
+| 區域 | 位置 | 功能 |
+| --- | --- | --- |
+| **New / +** | 分頁列 | 建立新的請求分頁 |
+| **Method 下拉選單** | URL 列左側 | 選擇 `GET`、`POST`、`PUT`、`DELETE` 等 |
+| **URL 輸入框** | 中間 | 填入請求的目標網址 |
+| **Send 按鈕** | URL 列右側 | 送出請求 |
+| **Params / Headers / Body 頁籤** | URL 列下方 | 設定請求的參數、Header、Body |
+| **Response 區域** | 下半部 | 顯示回應的 Body、Status Code、Header、耗時 |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>對照 Http 協議：</b> 上半部請求區對應 Http Request 的四個組成部分；下半部回應區對應 Http Response 的三個組成部分——介面就是照著協議設計的。
+</div>
+
+<!--
+把 Workbench 拆開來看，發一個請求會用到這幾個元件。
+
+上半部是「請求區」：點 + 開新分頁，左邊下拉選 Method，中間填 URL，右邊按 Send。URL 下方的頁籤可以設定參數、Header、Body——這些後面章節學 @RequestParam、@RequestBody 的時候會大量用到。
+
+下半部是「回應區」：送出請求後，這裡會顯示 Response Body，右上角有 Status Code、耗時、回應大小，切換頁籤可以看 Response Header。
+
+對照一下前面學的格式：請求區的每個欄位對應 Http Request 的四個組成部分，回應區對應 Http Response 的三個組成部分——工具介面就是照著 Http 協議設計的。
+
+下一頁實際發一個請求。
 -->
 
 ---
@@ -375,60 +449,20 @@ public class MyController {
 }
 ```
 
-在 API Tester 中：選擇 `GET`，填入 `http://localhost:8080/test`，點擊 **Send**。
+在 Postman 中：Method 選 `GET`，URL 填 `http://localhost:8080/test`，點擊 **Send**。
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>預期結果：</b> Status Code 顯示 <b>200 OK</b>，Response Body 顯示 <b>Hello World</b>，後端 console 印出 <b>Hi!</b>
+💡 <b>預期結果：</b> Status 顯示 <b>200 OK</b>，Response Body 顯示 <b>Hello World</b>，後端 console 印出 <b>Hi!</b>
 </div>
 
 <!--
-這是我們一直在用的 MyController，現在用 API Tester 來發送請求，可以看到完整的 Http Response。
+這是我們一直在用的 MyController，現在用 Postman 來發送請求，可以看到完整的 Http Response。
 
-操作步驟很簡單：打開 API Tester，左邊選 GET，中間填入 URL，按 Send。
+操作步驟：開新分頁，Method 選 GET，URL 填 http://localhost:8080/test，按 Send。
 
-送出之後，你會在 API Tester 右邊看到：Status Code 是 200 OK，Response Body 是 Hello World，同時後端的 console 也會印出 Hi!。
+送出之後，下半部的回應區會顯示：右上角 Status 是 200 OK，Body 頁籤顯示 Hello World，同時後端的 console 也會印出 Hi!。可以再點 Headers 頁籤，看看 Response Header 裡的 Content-Type。
 
 這次練習的目的是讓大家親眼看到「一個完整的 Http request 和 response 長什麼樣子」。這個直覺建立好了，後面學各種 @RequestParam、@RequestBody 時，你會很清楚它們對應的是 Request 的哪個部分。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# 補充
-# 常見的發起 Http Request 的工具
-
-<!--
-API Tester 只是其中一個選擇。市面上有很多同類型的工具，補充介紹幾個常用的，讓大家知道業界都在用什麼。
--->
-
----
-
-# 常見 Http Request 工具比較
-
-| 工具 | 類型 | 特點 |
-| --- | --- | --- |
-| **Talend API Tester** | Chrome 擴充功能 | 輕量、免安裝 App，適合快速測試 |
-| **Postman** | 獨立應用程式 | 功能最完整，業界最主流，支援 Collection 管理 API |
-| **Insomnia** | 獨立應用程式 | 介面簡潔，適合個人開發 |
-| **Bruno** | 獨立應用程式 | 開源，支援將 API 請求存成檔案版控 |
-| **curl** | 指令列工具 | 不需安裝 GUI，適合在 Server 上直接測試 |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>課程使用：</b> 本課程以 API Tester 示範，方便快速上手。實際工作中 <b>Postman</b> 最為主流，建議課後也熟悉一下。
-</div>
-
-<!--
-工具很多，底層邏輯都一樣——都是幫你發送 Http request，然後顯示 Http response。
-
-Talend API Tester 是 Chrome 擴充功能，不需要另外安裝程式，適合學習階段快速使用。
-
-Postman 是業界最主流的選擇，幾乎每個公司都在用，功能非常完整，支援把 API 整理成 Collection、撰寫測試腳本、模擬各種環境（開發 / 測試 / 正式）。
-
-curl 是指令列工具，在 Server 上測試 API 時非常方便，不需要 GUI。
-
-課程裡用 API Tester 是因為簡單，但課後建議大家去摸一下 Postman，這是後端開發工作裡幾乎每天都會用到的工具。
 -->
 
 ---
@@ -440,7 +474,7 @@ curl 是指令列工具，在 Server 上測試 API 時非常方便，不需要 G
 - **Http Method**：GET 取、POST 增、PUT 改（整體）、PATCH 改（部分）、DELETE 刪
 - **Http Response**：Status Code（結果）+ Header（附加資訊）+ Body（回傳資料）
 - **Status Code**：2xx 成功、4xx 前端問題（401 未登入、403 無權限、404 不存在）、5xx 後端問題
-- **API Tester**：模擬前端發起請求的工具，可查看完整的 Request 和 Response
+- **Postman**：業界最主流的 API 測試工具——選 Method、填 URL、按 Send，即可查看完整的 Response
 
 下一章我們會學 `@RequestMapping` 的詳細用法，深入了解如何在 Spring Boot 中設定 URL 路徑對應。
 
@@ -469,7 +503,7 @@ layout: end
 <!--
 大家今天把 Http 協議的完整格式都搞清楚了。
 
-課後建議：用 API Tester 多發幾次請求，試試看 GET 和 POST 有什麼不同，看看 Status Code 在什麼情況下會出現 404 或 500。
+課後建議：用 Postman 多發幾次請求，試試看 GET 和 POST 有什麼不同，看看 Status Code 在什麼情況下會出現 404 或 500。
 
 動手試過之後，這些格式會記得更清楚。
 
