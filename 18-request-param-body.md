@@ -356,6 +356,137 @@ Spring Boot 的 Jackson 把 JSON 解析成 Student 物件；
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 實作練習
+
+## 會員系統：搜尋與註冊
+
+<!--
+學完了 @RequestParam 和 @RequestBody，我們用一個會員系統的情境來練習。
+-->
+
+---
+
+# 實作題目（1/2）：搜尋會員 API
+
+請實作一個簡單的會員系統，包含兩個 API。第一個是搜尋會員：
+
+| 項目 | 內容 |
+| --- | --- |
+| 請求 | `GET /members/search?keyword=judy&limit=5` |
+| 要求 | 用 `@RequestParam` 接住 `keyword`（字串）和 `limit`（整數） |
+| 回傳 | 字串 `"搜尋關鍵字: judy, 最多回傳 5 筆"` |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>提示：</b> 這次要一次接住<b>兩個</b>參數，想想 @RequestParam 該怎麼寫？
+</div>
+
+<!--
+這個題目模擬真實的會員系統場景，共有兩個 API。
+
+第一個 API 是搜尋，參數放在 URL——注意這次要一次接兩個參數：keyword 和 limit，練習 @RequestParam 同時使用多次。
+
+下一頁是第二個 API 的需求。
+-->
+
+---
+
+# 實作題目（2/2）：註冊會員 API
+
+第二個 API 是註冊會員：
+
+| 項目 | 內容 |
+| --- | --- |
+| 請求 | `POST /members/register`，Body 為 `{"email": "judy@gmail.com", "password": "abc123"}` |
+| 要求 | 建立 `Member` 類別（用 Lombok `@Data`），用 `@RequestBody` 接住 |
+| 回傳 | 字串 `"註冊成功, email: judy@gmail.com"` |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>想一想：</b> 為什麼註冊（帳號密碼）要用 POST 放在 Body，而不是用 GET 放在 URL？
+</div>
+
+<!--
+第二個 API 是註冊，帳號密碼是敏感資訊，所以用 POST 放在 Body 裡，正好呼應上一章「密碼不要放 URL」的觀念。
+
+記得 Member 類別要用 Lombok 的 @Data，別再手寫 Getter/Setter 了。
+大家先動手做，再看下一頁的參考解答。
+-->
+
+---
+
+# 參考解答（1/2）：搜尋會員
+
+一個方法可以同時使用多個 `@RequestParam`：
+
+```java
+@RestController
+public class MemberController {
+
+    @RequestMapping("/members/search")
+    public String search(@RequestParam String keyword,
+                         @RequestParam Integer limit) {
+        return "搜尋關鍵字: " + keyword + ", 最多回傳 " + limit + " 筆";
+    }
+}
+```
+
+| 測試 | 結果 |
+| --- | --- |
+| `GET /members/search?keyword=judy&limit=5` | `搜尋關鍵字: judy, 最多回傳 5 筆` |
+| `GET /members/search?keyword=judy`（少了 limit） | `400 Bad Request` |
+
+<!--
+第一個 API 的解答。
+
+重點是：一個方法可以同時放多個 @RequestParam，每個參數各自對應 URL 裡的一個 key。
+keyword 對應 ?keyword=judy，limit 對應 &limit=5。
+
+注意第二列的測試：因為 @RequestParam 預設必填，少帶了 limit 就會收到 400 Bad Request。
+-->
+
+---
+
+# 參考解答（2/2）：註冊會員
+
+**Step 1：建立 `Member` 類別**
+
+```java
+import lombok.Data;
+
+@Data
+public class Member {
+    private String email;
+    private String password;
+}
+```
+
+**Step 2：用 `@RequestBody` 接住 JSON**
+
+```java
+@RequestMapping("/members/register")
+public String register(@RequestBody Member member) {
+    return "註冊成功, email: " + member.getEmail();
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 測試時記得 Method 選 <code>POST</code>、Body 填入 JSON：<code>{"email": "judy@gmail.com", "password": "abc123"}</code>。
+</div>
+
+<!--
+第二個 API 的解答。
+
+先建立 Member 類別，欄位名稱 email、password 必須和 JSON 的 key 完全一致。用 @Data 讓 Lombok 生成 Getter/Setter，Jackson 才能透過 Setter 把 JSON 的值寫進欄位。
+
+Controller 方法用 @RequestBody Member member 接住整個 JSON 物件，再用 getEmail() 取值組出回應字串。
+
+測試時記得：Method 選 POST，Body 填 JSON。如果收到 400 或 415，先檢查 Content-Type 是不是 application/json。
+-->
+
+---
 layout: end
 ---
 

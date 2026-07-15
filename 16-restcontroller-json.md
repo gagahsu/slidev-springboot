@@ -238,7 +238,7 @@ public class MyController {
 
 # 執行結果
 
-啟動後用 API Tester 呼叫 `GET http://localhost:8080/test`：
+啟動後用 Postman 呼叫 `GET http://localhost:8080/test`：
 
 | 項目 | 內容 |
 | --- | --- |
@@ -255,7 +255,7 @@ public class MyController {
 ```
 
 <!--
-啟動 Spring Boot，打開 API Tester，發送 GET 請求到 /test。
+啟動 Spring Boot，打開 Postman，發送 GET 請求到 /test。
 
 你會看到回應的 body 變成了 JSON 格式！id 和 name 都正確對應到我們在 Student 物件裡設定的值。
 
@@ -394,6 +394,154 @@ class: flex flex-col justify-center items-center text-center
 第五，@Controller 和 @RestController 有本質差異，現代開發用後者。
 
 今天的內容是 Spring Boot 開發 REST API 的核心。從這章開始，我們的 API 就能真正回傳結構化的 JSON 資料了！
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 實作練習
+
+## 打造一個回傳 JSON 的圖書 API
+
+<!--
+學完了本章的內容，我們來動手做一個練習，把今天學到的東西實際應用一次。
+-->
+
+---
+
+# 實作題目：圖書資訊 API
+
+請建立一個 API，讓前端呼叫 `GET http://localhost:8080/book` 時，回傳一本書的 JSON 資料：
+
+```json
+{
+    "id": 1,
+    "name": "Spring Boot 零基礎入門",
+    "price": 550.0,
+    "available": true
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>觀察：</b> 這次的 JSON 包含了四種類型——整數、字串、小數、布林，比課堂範例更完整。
+</div>
+
+<!--
+題目很直接：做一個回傳書籍資料的 API。
+
+注意這次的欄位比課堂範例多了兩種類型：price 是小數、available 是布林值，正好對應第十五章學過的 JSON 數字和布林類型。
+
+下一頁是具體的實作要求。
+-->
+
+---
+
+# 實作題目：具體要求
+
+| # | 要求 |
+| --- | --- |
+| 1 | 建立 `Book` 類別，包含 `id`（整數）、`name`（字串）、`price`（小數）、`available`（布林）四個欄位 |
+| 2 | 使用 **Lombok 的 `@Data`**，不要手寫 Getter/Setter |
+| 3 | 在 Controller 建立 `/book` 路徑，回傳 `Book` 物件 |
+| 4 | 用 Postman 驗證回應的 JSON 與上一頁範例一致 |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>提示：</b> 想一想，JSON 的小數和布林，分別要對應到 Java 的什麼類型？
+</div>
+
+<!--
+四個要求：建 Book 類別、用 @Data、寫 Controller、用 Postman 驗證。
+
+要求使用 Lombok 的 @Data，練習我們剛學的省略 Getter/Setter 技巧。
+
+給大家一個提示：id 對應 Integer、name 對應 String，那 price 和 available 呢？回想一下第十五章 JSON 類型的對應表。
+
+大家先自己動手做做看，做完再看下一頁的參考解答。
+-->
+
+---
+
+# 參考解答（1/3）：建立 Book 類別
+
+用 `@Data` 省略 Getter/Setter：
+
+```java
+import lombok.Data;
+
+@Data
+public class Book {
+    private Integer id;
+    private String name;
+    private Double price;
+    private Boolean available;
+}
+```
+
+<!--
+參考解答的第一步：建立 Book 類別。
+
+四個欄位分別是 Integer、String、Double、Boolean。
+
+加上 @Data 之後，Getter/Setter 都不用寫，Lombok 會在編譯時自動生成。
+
+下一頁我們看類型是怎麼對應的。
+-->
+
+---
+
+# 參考解答（2/3）：JSON 與 Java 的類型對應
+
+| JSON 類型 | 範例值 | Java 類型 |
+| --- | --- | --- |
+| 整數 | `1` | `Integer` |
+| 字串 | `"Spring Boot 零基礎入門"` | `String` |
+| 小數 | `550.0` | `Double` |
+| 布林 | `true` | `Boolean` |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 Jackson 依照欄位的 Java 類型，自動輸出對應的 JSON 類型——不需要任何額外設定。
+</div>
+
+<!--
+類型對應的答案：price 用 Double、available 用 Boolean，對應 JSON 的小數和布林類型。
+
+Jackson 會根據 Java 欄位的類型，自動決定 JSON 輸出的類型：Integer 輸出成整數、String 輸出成帶引號的字串、Double 輸出成小數、Boolean 輸出成 true/false。
+
+我們完全不需要額外設定，這就是第十五章 JSON 類型知識的實際應用。
+-->
+
+---
+
+# 參考解答（3/3）：Controller 回傳 Book 物件
+
+```java
+@RestController
+public class BookController {
+
+    @RequestMapping("/book")
+    public Book getBook() {
+        Book book = new Book();
+        book.setId(1);
+        book.setName("Spring Boot 零基礎入門");
+        book.setPrice(550.0);
+        book.setAvailable(true);
+        return book;
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 雖然沒有手寫 <code>setId()</code>、<code>setPrice()</code>，但 <code>@Data</code> 已在編譯時生成，可以直接呼叫。
+</div>
+
+<!--
+第二步，Controller 的方法回傳類型改成 Book，建立物件、設定欄位值、直接 return。
+
+雖然我們沒有手寫 setId、setPrice 這些方法，但因為有 @Data，這些 setter 在編譯後都存在，可以直接呼叫。
+
+用 Postman 發送 GET /book，就會看到完整的 JSON 回應。四個欄位的類型都由 Jackson 自動對應：整數、字串、小數、布林。
 -->
 
 ---

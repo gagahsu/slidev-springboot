@@ -63,7 +63,7 @@ layout: default
 - **回顧：什麼是 Http Method？** — 五種 Method 與對應的 CRUD 操作
 - **GET 的用法和特性** — 參數放 URL Query String、明信片比喻、適用情境
 - **POST 的用法和特性** — 參數放 Request Body、信封比喻、適用情境
-- **GET 和 POST 的比較** — 差異對照、API Tester 實際操作
+- **GET 和 POST 的比較** — 差異對照、Postman 實際操作
 - **章節總結** — 核心規則整理，下一章預告
 
 <!--
@@ -251,15 +251,15 @@ POST 的參數放在 Request Body，通常以 JSON 格式傳送：
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>補充：</b> 在 API Tester 中，可以在 Body 欄位選擇 <code>JSON</code> 類型，直接輸入 JSON 內容送出。
+💡 <b>補充：</b> 在 Postman 中，於 Body 分頁選擇 <code>raw</code>、格式選 <code>JSON</code>，直接輸入 JSON 內容送出。
 </div>
 
 <!--
 POST 的 Body 通常以 JSON 格式呈現，這也是為什麼我們在第十五章先學 JSON 格式。
 
-用 API Tester 發送 POST 請求時，要在 Body 欄位選擇 JSON 類型，然後填入你要傳送的 JSON 資料。
+用 Postman 發送 POST 請求時，要在 Body 分頁選擇 raw、格式選 JSON，然後填入你要傳送的 JSON 資料。
 
-API Tester 會自動在 Request Header 加上 Content-Type: application/json，告訴後端「我傳的是 JSON 格式」。
+選了 raw + JSON 之後，Postman 會自動在 Request Header 加上 Content-Type: application/json，告訴後端「我傳的是 JSON 格式」。
 -->
 
 ---
@@ -325,24 +325,24 @@ class: flex flex-col justify-center items-center text-center
 
 ---
 
-# 在 API Tester 中測試 GET 和 POST
+# 在 Postman 中測試 GET 和 POST
 
 | 步驟 | GET 請求 | POST 請求 |
 | --- | --- | --- |
 | Method 選擇 | 選 `GET` | 選 `POST` |
 | URL | `http://localhost:8080/users?id=123` | `http://localhost:8080/users` |
-| Body | 不需要填寫 | 填入 JSON：`{"id": 123, "name": "Judy"}` |
-| Content-Type | 不需要設定 | 設為 `application/json` |
+| Body | 不需要填寫 | 選 `raw` + `JSON`，填入 `{"id": 123, "name": "Judy"}` |
+| Content-Type | 不需要設定 | 選了 raw + JSON 後 Postman 自動帶上 `application/json` |
 
 <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
 ⚠️ <b>注意：</b> 用 GET 卻設定了 Body、或用 POST 卻把參數放在 URL，都是常見的初學者錯誤。
 </div>
 
 <!--
-最後來看怎麼在 API Tester 中發送 GET 和 POST 請求。
+最後來看怎麼在 Postman 中發送 GET 和 POST 請求。
 
 GET：選 GET Method，把參數加在 URL 後面的 Query String，Body 留空。
-POST：選 POST Method，URL 不加參數，把 JSON 資料填在 Body 欄位，Content-Type 設為 application/json。
+POST：選 POST Method，URL 不加參數，在 Body 分頁選 raw + JSON 填入資料，Content-Type 由 Postman 自動帶上 application/json。
 
 ⚠️ 初學者最常犯的錯誤是：發 GET 卻去填 Body，或是發 POST 卻把參數放在 URL。
 
@@ -368,6 +368,99 @@ POST：選 POST Method，URL 不加參數，把 JSON 資料填在 Body 欄位，
 第二，GET 像明信片（公開），POST 像信封（密封）。
 第三，Spring Boot 用 method = RequestMethod.GET/POST 來限制接受的 Method。
 第四，下一章我們會學 @RequestParam 和 @RequestBody，就能真正讀取前端傳來的參數了！
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 實作練習
+
+## 同一個路徑，GET 和 POST 各司其職
+
+<!--
+學完了 GET 和 POST，我們來動手練習一次。
+-->
+
+---
+
+# 實作題目：商品 API 的 GET 與 POST
+
+請在同一個路徑 `/products` 上，建立兩個分別接受 GET 和 POST 的 API：
+
+| # | 要求 |
+| --- | --- |
+| 1 | `GET /products` → 回傳字串 `"查詢商品列表"` |
+| 2 | `POST /products` → 回傳字串 `"新增一個商品"` |
+| 3 | 用 Postman 分別發送 GET 和 POST 請求，確認回應正確 |
+| 4 | 用 **PUT** 呼叫 `/products`，觀察 Spring Boot 回傳什麼狀態碼？ |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>提示：</b> 同一個路徑可以寫成兩個不同的方法，只要 <code>method</code> 不同，Spring Boot 就能正確分流。
+</div>
+
+<!--
+這個題目的重點是：同一個 URL 路徑，可以根據 Http Method 的不同，對應到不同的處理方法。
+
+這正是 REST API 的核心精神——URL 代表資源（商品），Method 代表動作（查詢或新增）。
+
+第四小題是個小實驗：用一個我們沒有定義的 Method（PUT）去呼叫，看看 Spring Boot 會怎麼回應。
+大家先自己做做看，再看下一頁的參考解答。
+-->
+
+---
+
+# 參考解答（1/2）：程式碼
+
+同一個路徑寫成兩個方法，`method` 不同即可分流：
+
+```java
+@RestController
+public class ProductController {
+
+    // GET /products → 查詢
+    @RequestMapping(value = "/products", method = RequestMethod.GET)
+    public String getProducts() {
+        return "查詢商品列表";
+    }
+
+    // POST /products → 新增
+    @RequestMapping(value = "/products", method = RequestMethod.POST)
+    public String createProduct() {
+        return "新增一個商品";
+    }
+}
+```
+
+<!--
+參考解答：兩個方法都對應 /products 這個路徑，但 method 一個是 GET、一個是 POST。
+
+Spring Boot 收到請求時，會同時比對「路徑」和「Http Method」，找到對應的方法來執行。
+
+下一頁我們看實際測試的結果。
+-->
+
+---
+
+# 參考解答（2/2）：測試結果
+
+| 測試 | 結果 |
+| --- | --- |
+| `GET /products` | `200 OK`，回應 `查詢商品列表` |
+| `POST /products` | `200 OK`，回應 `新增一個商品` |
+| `PUT /products` | `405 Method Not Allowed`（沒有方法接受 PUT） |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>404 vs 405：</b> 404 是「路徑不存在」；405 是「路徑存在，但不接受這個 Http Method」。
+</div>
+
+<!--
+測試結果：GET 和 POST 各自對應到正確的方法，回傳 200。
+
+第四小題的答案是 405 Method Not Allowed——路徑 /products 存在，但沒有任何方法宣告接受 PUT，所以 Spring Boot 回傳 405，而不是 404。
+
+這個 404 和 405 的差別很值得記住：404 是「路徑不存在」，405 是「路徑存在，但不接受這個 Method」。
 -->
 
 ---

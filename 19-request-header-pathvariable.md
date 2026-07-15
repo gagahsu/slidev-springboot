@@ -133,13 +133,13 @@ public class MyController {
 
 ---
 
-# 在 API Tester 中設定 Request Header
+# 在 Postman 中設定 Request Header
 
 | 步驟 | 操作說明 |
 | --- | --- |
-| 1 | 在 API Tester 找到「Headers」區塊 |
-| 2 | 點擊「Add header」新增一筆 |
-| 3 | Name 填入 `info`（需和方法參數名稱一致） |
+| 1 | 在 Postman 請求頁面切換到「Headers」分頁 |
+| 2 | 在表格中新增一列 |
+| 3 | Key 填入 `info`（需和方法參數名稱一致） |
 | 4 | Value 填入任意值，例如 `hello` |
 | 5 | 發送請求，查看 console 輸出 |
 
@@ -148,11 +148,11 @@ public class MyController {
 </div>
 
 <!--
-要測試 @RequestHeader，需要在 API Tester 的 Headers 區塊手動新增 Header。
+要測試 @RequestHeader，需要在 Postman 的 Headers 分頁手動新增 Header。
 
-步驟很簡單：找到 Headers 區塊，新增一筆，Name 填 info，Value 填任意文字，然後送出請求。
+步驟很簡單：切換到 Headers 分頁，新增一列，Key 填 info，Value 填任意文字，然後送出請求。
 
-⚠️ 特別注意 Header 的 key 是區分大小寫的。如果程式寫 @RequestHeader String info，但 API Tester 送的是 Info（大寫 I），Spring Boot 就接不到值，會回傳 400。
+⚠️ 特別注意 Header 的 key 是區分大小寫的。如果程式寫 @RequestHeader String info，但 Postman 送的是 Info（大寫 I），Spring Boot 就接不到值，會回傳 400。
 -->
 
 ---
@@ -213,7 +213,7 @@ public class MyController {
 
 ⚠️ 大括號裡的名稱 id 和方法參數名稱 id 必須完全一致，否則 Spring Boot 無法對應。
 
-執行後，用 API Tester 發送 GET http://localhost:8080/test4/123，console 就會印出 "id: 123"。
+執行後，用 Postman 發送 GET http://localhost:8080/test4/123，console 就會印出 "id: 123"。
 -->
 
 ---
@@ -361,6 +361,114 @@ class: flex flex-col justify-center items-center text-center
 第五，四個取得參數的 Annotation 現在全部學完了！
 
 下一章我們會進入 RESTful API 的完整介紹，一切都會串聯起來。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 實作練習
+
+## 帶 Token 查詢指定訂單
+
+<!--
+學完了 @RequestHeader 和 @PathVariable，我們用一個查詢訂單的情境，把兩個 Annotation 一次用上。
+-->
+
+---
+
+# 實作題目：帶 Token 查詢指定訂單
+
+請實作一個查詢訂單的 API，同時使用 `@PathVariable` 和 `@RequestHeader`：
+
+| 項目 | 內容 |
+| --- | --- |
+| 請求 | `GET /orders/{orderId}`，例如 `/orders/888` |
+| Header | 需帶 `token`，例如 `token: abc123` |
+| 回傳 | 字串 `"訂單編號: 888, 驗證 token: abc123"` |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>情境：</b> 用 RESTful 風格的 URL 指定某筆訂單，同時用 Header 傳遞驗證用的 token——實務上非常常見的組合。
+</div>
+
+<!--
+這個題目模擬實務上非常常見的場景：用 RESTful 風格的 URL 指定某筆訂單，同時用 Header 傳遞驗證用的 token。
+
+實際的系統裡，後端會先驗證 token 是否合法，才回傳訂單資料——這正是之後會學到的身分驗證的雛形。
+
+下一頁是具體的實作要求。
+-->
+
+---
+
+# 實作題目：具體要求
+
+| # | 要求 |
+| --- | --- |
+| 1 | 用 `@PathVariable` 接住路徑中的 `orderId`（整數） |
+| 2 | 用 `@RequestHeader` 接住 Header 中的 `token`（字串） |
+| 3 | 用 Postman 測試：在 Headers 分頁加上 `token`，發送 `GET /orders/888` |
+| 4 | 試試「不帶 token」和「orderId 填英文字」，各會得到什麼狀態碼？ |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>想一想：</b> 兩個 Annotation 可以出現在同一個方法的參數列表裡嗎？
+</div>
+
+<!--
+四個要求：@PathVariable 接 orderId、@RequestHeader 接 token、用 Postman 驗證、做兩個錯誤實驗。
+
+第四小題請大家做兩個實驗，觀察錯誤時的狀態碼，驗證我們這章學過的規則。
+
+先自己動手做，再看下一頁的參考解答。
+-->
+
+---
+
+# 參考解答（1/2）：程式碼
+
+一個方法可以同時使用 `@PathVariable` 和 `@RequestHeader`：
+
+```java
+@RestController
+public class OrderController {
+
+    @RequestMapping("/orders/{orderId}")
+    public String getOrder(@PathVariable("orderId") Integer orderId,
+                           @RequestHeader String token) {
+        return "訂單編號: " + orderId + ", 驗證 token: " + token;
+    }
+}
+```
+
+<!--
+參考解答：兩個 Annotation 可以同時出現在同一個方法的參數列表裡，各自從 Http Request 的不同部分取值。
+
+@PathVariable 從 URL 路徑取出 888，@RequestHeader 從 Header 取出 abc123。
+
+下一頁我們看實際測試的結果。
+-->
+
+---
+
+# 參考解答（2/2）：測試結果
+
+| 測試 | 結果 |
+| --- | --- |
+| `GET /orders/888` + Header `token: abc123` | `200 OK`，`訂單編號: 888, 驗證 token: abc123` |
+| `GET /orders/888`，**不帶 token** | `400 Bad Request`（@RequestHeader 預設必填） |
+| `GET /orders/abc` + Header `token: abc123` | `400 Bad Request`（`abc` 無法轉成 Integer） |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 四個取得請求參數的 Annotation 到此全部實際操作過了，下一章進入 RESTful API，它們會全部派上用場。
+</div>
+
+<!--
+第四小題的兩個實驗結果：
+不帶 token → 400，因為 @RequestHeader 和 @RequestParam 一樣預設必填。
+orderId 填英文字 abc → 也是 400，因為 abc 沒辦法轉成 Integer 類型。
+
+這樣四個取得請求參數的 Annotation 就全部實際操作過了。下一章進入 RESTful API，這些工具會全部派上用場！
 -->
 
 ---
