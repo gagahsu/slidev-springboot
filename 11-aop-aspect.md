@@ -123,7 +123,7 @@ class: flex flex-col justify-center items-center text-center
 在 `build.gradle` 的 `dependencies` 區塊中加入：
 
 ```groovy
-implementation 'org.springframework.boot:spring-boot-starter-aop'
+implementation 'org.springframework.boot:spring-boot-starter-aspectj'
 ```
 
 | 項目 | 說明 |
@@ -547,7 +547,7 @@ class: flex flex-col justify-center items-center text-center
 # 章節總結
 
 - **@Aspect + @Component**：兩個都要加——@Aspect 宣告切面，@Component 讓它成為 Bean
-- **build.gradle**：需加入 `spring-boot-starter-aop` 依賴
+- **build.gradle**：需加入 `spring-boot-starter-aspectj` 依賴
 - **@Before**：目標方法執行前觸發；**@After**：執行後觸發；**@Around**：前後都能控制
 - **@Around**：需搭配 `ProceedingJoinPoint`，呼叫 `pjp.proceed()` 才會執行目標方法
 - **切入點表達式**：`execution(* package.Class.*(..))` — 指定要攔截哪些方法
