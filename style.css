@@ -42,19 +42,17 @@
   font-feature-settings: "liga" 0, "calt" 0;
 }
 
-/* Code blocks: fit content, capped at slide width (no overflow), no scrollbars */
+/* Code blocks: wider layout, no scrollbars, wrap content for clean PDF export */
 .slidev-layout pre,
 .slidev-layout .shiki,
 .slidev-layout .slidev-code {
   overflow: visible !important;
   max-height: none !important;
   font-size: 0.88em !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
+  margin-right: -6rem !important;
   padding: 1rem 1.5rem !important;
   border-radius: 8px !important;
-  width: fit-content !important;
-  max-width: 100% !important;
+  width: calc(100% + 6rem) !important;
 }
 
 .slidev-layout pre code,
@@ -62,6 +60,15 @@
   white-space: pre-wrap !important;
   word-break: break-all !important;
   overflow: visible !important;
+}
+
+/* Fix double-digit line numbers wrapping (default w-4 = 1rem is too narrow) */
+.slidev-code-line-numbers .slidev-code code .line::before {
+  width: 2rem !important;
+  min-width: 2rem !important;
+  white-space: nowrap !important;
+  word-break: normal !important;
+  flex-shrink: 0 !important;
 }
 
 /* Global scrollbar removal for code blocks */
