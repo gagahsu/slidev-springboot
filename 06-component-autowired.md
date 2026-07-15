@@ -62,6 +62,7 @@ layout: default
 - **@Component — 創建 Bean** — 如何把一個類別交給 Spring 容器管理、Bean 的命名規則
 - **@Autowired — 注入 Bean** — 如何讓 Spring 自動注入所需的 Bean、使用前提與匹配機制
 - **完整實作練習** — 結合 Printer 介面、HpPrinter、MyController，從頭走一遍完整流程
+- **補充：建構子注入** — Spring 官方建議的注入方式、多個依賴的寫法
 - **章節總結** — 掌握兩個 Annotation 的核心用法
 
 <!--
@@ -396,6 +397,112 @@ Spring Boot 啟動的時候，會從 DemoApplication 所在的 package 開始，
 找到 @Component → 建立 Bean 存入容器；找到 @RestController → 也建立 Bean，並且檢查裡面有沒有 @Autowired → 有的話就去容器找對應型別的 Bean 注入進去。
 
 整個流程 Spring 幫我們自動完成，我們只需要加對 Annotation，剩下的交給 Spring。
+
+流程都通了之後，要補充一個重要的實務建議：注入其實還有另一種官方更推薦的寫法。
+-->
+
+---
+
+# 補充：官方建議使用建構子注入
+
+前面我們用 `@Autowired` 欄位注入。Spring 官方（含 Spring Boot 4.x）**建議改用建構子注入（Constructor Injection）**：
+
+| 比較項目 | `@Autowired` 欄位注入 | 建構子注入 |
+| --- | --- | --- |
+| **欄位可否 `final`** | ❌ 不行，注入後仍可被改動 | ✅ 可以，依賴不可變 |
+| **單元測試** | 需靠 Spring 或反射才能塞入依賴 | 直接 `new` 並傳入 mock 即可 |
+| **依賴透明度** | 依賴散落各欄位，不易察覺過多依賴 | 建構子參數一目了然 |
+| **官方態度** | 未棄用，仍完全可用 | **官方建議寫法** |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>注意：</b> <code>@Autowired</code> 欄位注入<b>沒有被棄用</b>，大量既有專案仍在使用，看懂它依然必要；但<b>新專案建議用建構子注入</b>。
+</div>
+
+<!--
+今天教的 @Autowired 加在欄位上的寫法，叫做「欄位注入」。但要跟大家補充：Spring 官方——包含最新的 Spring Boot 4.x——其實建議大家改用「建構子注入」。
+
+三個理由：第一，建構子注入可以把欄位宣告成 final，注入後不會被改動；第二，單元測試時可以直接 new 物件、傳入假的依賴，不需要啟動 Spring；第三，所有依賴都列在建構子參數上，一眼就能看出這個類別依賴了多少東西。
+
+要強調的是：@Autowired 欄位注入沒有被棄用，還是完全可以用，而且大量既有程式碼都是這樣寫的，所以今天教的內容依然重要。只是你們自己寫新程式時，建議用接下來這頁的寫法。
+-->
+
+---
+
+# 補充：建構子注入寫法
+
+把剛剛的 `MyController` 改成建構子注入：
+
+```java
+@RestController
+public class MyController {
+
+    private final Printer printer;
+
+    public MyController(Printer printer) { // 只有一個建構子時，@Autowired 可省略
+        this.printer = printer;
+    }
+
+    @RequestMapping("/test")
+    public String test() {
+        printer.print("Hello World");
+        return "Hello World";
+    }
+}
+```
+
+依賴改由**建構子參數**傳入，欄位可宣告為 `final`，Spring 建立 `MyController` 時會自動傳入 `Printer` Bean。
+
+<!--
+這就是建構子注入的寫法，改動有三個地方。
+
+第一，欄位改成 private final Printer printer——加上 final，代表這個依賴設定好之後就不會變。
+
+第二，新增一個建構子，參數是 Printer，在裡面做 this.printer = printer。
+
+第三，注意建構子上面完全不用加 @Autowired——當類別只有一個建構子時，Spring 會自動用它來注入，這是 Spring 4.3 之後的行為。
+
+Spring 建立 MyController 的時候，看到建構子需要一個 Printer，就會去容器裡找 Printer 型別的 Bean 傳進來，效果和欄位注入一樣，但程式碼更安全、更好測試。
+
+那如果一個類別需要注入的不只一個 Bean 呢？下一頁來看多個依賴的寫法。
+-->
+
+---
+
+# 補充：多個依賴的建構子注入
+
+實務上一個類別常常依賴多個 Bean，全部放進**同一個建構子**即可：
+
+```java
+@RestController
+public class MyController {
+
+    private final Printer printer;
+    private final UserService userService;
+    private final MailService mailService;
+
+    public MyController(Printer printer, UserService userService,
+                        MailService mailService) {
+        this.printer = printer;
+        this.userService = userService;
+        this.mailService = mailService;
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>附帶好處：</b> 建構子參數超過 4、5 個時會「看起來很痛」——這是類別責任太多的警訊，提醒你該拆分了。欄位注入看不到這個警訊。
+</div>
+
+<!--
+實務上，一個 Controller 或 Service 很少只依賴一個東西，常常同時需要好幾個 Bean。
+
+寫法很單純：每個依賴都宣告成 private final 欄位，然後全部放進同一個建構子的參數，一一指派。Spring 會根據每個參數的型別，分別去容器裡找對應的 Bean 傳進來。
+
+注意一樣不用加 @Autowired，因為還是只有一個建構子。
+
+這裡有個隱藏的好處：如果你發現建構子參數越來越多，多到五六個，程式碼看起來很擁擠——這其實是好事，它在提醒你「這個類別管太多事了，該拆了」。欄位注入因為每個依賴各自一行，反而看不出這個問題。
+
+不過每個依賴都要寫「宣告欄位＋建構子參數＋指派」三個地方，有點囉嗦。下一章我們會介紹 Lombok，一個 Annotation 就把建構子全部省掉。
 -->
 
 ---
@@ -407,8 +514,9 @@ Spring Boot 啟動的時候，會從 DemoApplication 所在的 package 開始，
 - **@Autowired**：加在欄位上方，Spring 自動從容器找到型別匹配的 Bean 並注入
 - **兩個前提**：使用 `@Autowired` 的類別本身要是 Bean，被注入的物件也要是 Bean
 - **匹配機制**：根據**變數的型別**尋找 Bean，底層是 Java 多型向上轉型
+- **建構子注入**：Spring 官方建議的注入方式——`private final` 欄位＋建構子參數；`@Autowired` 欄位注入未棄用，讀懂既有程式碼仍必要
 
-下一章我們會介紹 `@Qualifier`，解決「同一型別有多個 Bean 時，要注入哪一個」的問題。
+下一章我們會介紹 `@Qualifier`（解決「同一型別有多個 Bean 時，要注入哪一個」的問題），以及用 Lombok 簡化建構子注入。
 
 <!--
 我們來整理今天學到的東西。

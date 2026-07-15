@@ -12,24 +12,16 @@
 
 - **檔案：** `06-component-autowired.md`
 - **發現日期：** 2026-07-14
-- **狀態：** `已補充`（已加到 `07-qualifier.md` Part 1 回顧區「補充」兩頁，Outline 回顧項目同步更新）
+- **狀態：** `完成`（2026-07-14 已更新 ch06：完整實作練習後加三頁「補充：建構子注入」——官方建議對照表、寫法、多依賴；Outline 與章節總結同步。ch07 的臨時補充頁已移除）
 - **問題：** 全章只教 `@Autowired` 欄位注入，未提 Spring 官方（含 Spring Boot 4.x）建議使用建構子注入
-- **更新方向：**
-  - 在「完整範例 — Step 3：MyController 完整程式碼」之後、「Spring Boot 啟動流程」之前，加 1~2 頁建構子注入補充（可直接沿用 ch07 開頭那兩頁的內容）
-  - 「章節總結」加一條：新專案建議建構子注入，`@Autowired` 欄位注入用於理解既有程式碼
-  - Outline 對應增列
-  - 措辭注意：寫「官方建議」，不寫「不要使用」——`@Autowired` 欄位注入未棄用
+- **備註：** 措辭用「官方建議」，`@Autowired` 欄位注入未棄用
 
-### 2. ch06 — 多依賴注入與 Lombok
+### 2. ch07 — 重組為三部結構＋Lombok 正式內容
 
-- **檔案：** `06-component-autowired.md`（或視教材規劃獨立一章）
+- **檔案：** `07-qualifier.md`
 - **發現日期：** 2026-07-14
-- **狀態：** `已補充`（已加到 `07-qualifier.md` Part 1 回顧區「補充」五頁：多依賴建構子注入、`@RequiredArgsConstructor`、Lombok 安裝 Step 1 Gradle 依賴、Step 2 Gradle Refresh、Step 3 IDE 支援）
-- **問題：** 課程未涵蓋多個 Bean 同時注入的寫法，也未介紹實務標準組合 `private final` + Lombok `@RequiredArgsConstructor`，以及 Lombok 安裝（Gradle `compileOnly` + `annotationProcessor` 依賴 + IDE 支援）
-- **更新方向：**
-  - 併入 ch06 建構子注入補充之後，或獨立成「Lombok 與注入實務」小節
-  - Lombok 安裝流程含 Eclipse（lombok.jar 安裝器）與 IntelliJ（內建）差異
-  - 提醒常見坑：只加 `compileOnly` 沒加 `annotationProcessor` → 編譯過但程式碼沒生成；依賴加了但 IDE 沒裝支援 → 滿屏紅字但 `gradlew build` 會過
+- **狀態：** `完成`（2026-07-14 已重組：Part 1 @Autowired + @Qualifier（原主線）、Part 2 @Qualifier + 建構子注入（參數前位置、多依賴各自指定）、Part 3 Lombok + @Qualifier（@RequiredArgsConstructor、安裝三步、lombok.config `stopBubbling`+`copyableAnnotations`、搭配範例）；「補充」前綴移除，總結改為三種寫法對照）
+- **問題：** 原補充頁堆在 Part 1 回顧區，喧賓奪主；Lombok 內容與 @Qualifier 高度相關，應為正式章節內容
 
 ---
 
