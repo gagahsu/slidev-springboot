@@ -129,29 +129,33 @@ class: flex flex-col justify-center items-center text-center
 | 用途 | 接收 URL Query String 中的參數 |
 | 使用情境 | 搭配 GET 請求（參數放在 URL 後面） |
 | 參數格式 | `?key=value`，多個用 `&` |
-| 命名規則 | 方法參數名稱必須和 URL 的 key **完全一致** |
+| 命名規則 | 用 `@RequestParam("id")` **明確指定**對應 URL 的 key |
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>注意：</b> Spring Boot 3.2 起，只寫 <code>@RequestParam</code> 不指定名稱，需依賴編譯時的 <code>-parameters</code> 參數才能運作，否則會拋出 <code>Name for argument ... not specified</code> 錯誤。<b>建議一律明確寫出名稱</b>。
+</div>
 
 <!--
 @RequestParam 的用途是接收 URL 後面的 Query String 參數。
 
-最重要的規則是：方法參數的名稱必須和 URL 的 key 完全一致。
-例如 URL 是 ?id=123，那方法參數就要叫做 id，不能叫做 studentId 或其他名稱。
+最重要的規則是：在 @RequestParam 的括號裡明確指定要對應 URL 的哪個 key。
+例如 URL 是 ?id=123，就寫 @RequestParam("id")。
 
-不過如果真的名稱不一致，有個方法可以解決，後面會介紹。
+有些教材會只寫 @RequestParam 不加名稱，讓 Spring 用方法參數名稱去對應。但 Spring Boot 3.2（Spring Framework 6.1）之後，這種寫法需要編譯時加上 -parameters 參數保留參數名稱，不然啟動或呼叫時會報錯。用 IDE 直接編譯常常沒有帶這個參數，所以建議大家一律明確寫出名稱，最不容易踩雷。
 -->
 
 ---
 
 # @RequestParam 基本用法
 
-當前端發送 `GET http://localhost:8080/test1?id=123` 時，用 `@RequestParam` 接住 `id`：
+當前端發送 `GET http://localhost:8080/test1?id=123` 時，用 `@RequestParam("id")` 接住 `id`：
 
 ```java
 @RestController
 public class MyController {
 
     @RequestMapping("/test1")
-    public String test1(@RequestParam Integer id) {
+    public String test1(@RequestParam("id") Integer id) {
         System.out.println("id: " + id);
         return "請求成功";
     }
@@ -159,7 +163,7 @@ public class MyController {
 ```
 
 <!--
-看這個例子。我們在方法參數前面加上 @RequestParam，Spring Boot 就會自動把 URL 裡的 id 值塞進這個參數。
+看這個例子。我們在方法參數前面加上 @RequestParam("id")，括號裡的 "id" 告訴 Spring Boot 要去 URL 找名叫 id 的參數，把值塞進這個方法參數。
 
 注意參數類型是 Integer，因為 URL 傳來的 id 是一個整數。
 如果你把類型設成 String 也可以，Spring Boot 會幫你轉換，但如果設成 Integer 就更精確。
@@ -193,26 +197,26 @@ URL 帶了 ?id=123，後端就讀到 123；帶了 ?id=456，就讀到 456。
 
 ---
 
-# @RequestParam：參數名稱不一致時
+# @RequestParam：括號裡的名稱對應 URL 的 key
 
-若 URL 的 key 和方法參數名稱不同，用 `name` 屬性指定對應的 key：
+括號裡的名稱決定去 URL 找哪個 key，方法參數名稱可以不同：
 
-| URL key | 方法參數名稱 | 解法 |
+| URL key | 寫法 | 方法參數名稱 |
 | --- | --- | --- |
-| `id` | `id` | 直接使用，名稱一致 |
-| `myId` | `id` | 加上 `name = "myId"` |
+| `id` | `@RequestParam("id")` | `id`（建議一致，好讀） |
+| `myId` | `@RequestParam("myId")` | `id`（也能運作） |
 
 ```java
 // URL: /test1?myId=123
-@RequestParam(name = "myId") Integer id
+@RequestParam("myId") Integer id
 ```
 
 <!--
-如果 URL 的 key 是 myId，但我們方法裡的參數想叫做 id，怎麼辦？
+括號裡的名稱才是 Spring Boot 對應 URL key 的依據，方法參數叫什麼名字其實不影響。
 
-加上 name 屬性就能解決：@RequestParam(name = "myId")，這樣 Spring Boot 就知道要從 URL 的 myId 這個 key 讀值，然後放進 id 這個方法參數裡。
+例如 URL 的 key 是 myId，寫 @RequestParam("myId")，值就會放進後面的方法參數，即使參數叫 id 也沒問題。
 
-實務上，建議盡量讓 URL key 和參數名稱一致，這樣程式碼更容易讀懂。
+實務上，建議讓括號裡的名稱和方法參數名稱一致，程式碼更容易讀懂。
 -->
 
 ---
@@ -340,18 +344,18 @@ Spring Boot 的 Jackson 把 JSON 解析成 Student 物件；
 | 重點 | 說明 |
 | --- | --- |
 | 四個取得參數的 Annotation | `@RequestParam`、`@RequestBody`、`@RequestHeader`、`@PathVariable` |
-| `@RequestParam` | 接 URL Query String，參數名稱需一致，預設必填 |
+| `@RequestParam` | 接 URL Query String，用 `@RequestParam("xxx")` 明確指定 key，預設必填 |
 | `@RequestBody` | 接 Request Body 的 JSON，需建立對應 Java 類別 |
-| 名稱不一致時 | `@RequestParam(name = "xxx")` 指定對應的 key |
+| 為何要明確指定名稱 | Spring Boot 3.2 起省略名稱需依賴 `-parameters` 編譯參數，容易踩雷 |
 | 下一步 | 學習 `@RequestHeader` 和 `@PathVariable` |
 
 <!--
 今天的重點總結。
 
 第一，Spring Boot 提供四個取得請求參數的 Annotation，分別對應不同的來源。
-第二，@RequestParam 接 URL 後面的 Query String，名稱必須一致。
+第二，@RequestParam 接 URL 後面的 Query String，記得在括號裡明確指定 key 的名稱。
 第三，@RequestBody 接 Request Body 的 JSON，需要建立對應的 Java 類別。
-第四，名稱不一致時，@RequestParam(name = "xxx") 可以手動指定對應關係。
+第四，明確指定名稱是為了避開 Spring Boot 3.2 之後對 -parameters 編譯參數的依賴。
 第五，下一章我們繼續學 @RequestHeader 和 @PathVariable。
 -->
 
@@ -426,8 +430,8 @@ class: flex flex-col justify-center items-center text-center
 public class MemberController {
 
     @RequestMapping("/members/search")
-    public String search(@RequestParam String keyword,
-                         @RequestParam Integer limit) {
+    public String search(@RequestParam("keyword") String keyword,
+                         @RequestParam("limit") Integer limit) {
         return "搜尋關鍵字: " + keyword + ", 最多回傳 " + limit + " 筆";
     }
 }
