@@ -128,7 +128,7 @@ class: flex flex-col justify-center items-center text-center
 # JUnit 5 基礎
 
 <!--
-JUnit 5 是 Java 世界最主流的測試框架，Spring Boot 3.x 預設就整合好了，不需要額外加依賴。
+JUnit 是 Java 世界最主流的測試框架，Spring Boot 預設就整合好了，不需要額外加依賴。Spring Boot 4.x 內建的是 JUnit 6，寫法和 JUnit 5 完全一樣，所以投影片標題沿用大家熟悉的 JUnit 5 名稱。
 
 我們來看最基本的三個 annotation。
 -->
@@ -153,7 +153,7 @@ src/
         └── UserServiceTest.java       ← 測試 UserService
 ```
 
-`spring-boot-starter-test` 已內建 JUnit 5、Mockito、AssertJ，Spring Initializr 預設自動加入，不需手動設定。
+`spring-boot-starter-test` 已內建 JUnit（Spring Boot 4.x 為 JUnit 6，API 與 JUnit 5 相同）、Mockito、AssertJ，Spring Initializr 預設自動加入，不需手動設定。
 
 <!--
 這個結構很重要，很多新手不知道測試檔案要放哪裡。
@@ -194,9 +194,9 @@ class CalculatorTest {
 ```
 
 <!--
-注意這邊我用的是 JUnit 5（Jupiter），不是舊的 JUnit 4。
+注意這邊我用的是 Jupiter API（JUnit 5 / 6 共用），不是舊的 JUnit 4。
 
-Spring Boot 3.x 全面採用 JUnit 5，所以不需要加 @RunWith，那是 JUnit 4 的東西。
+Spring Boot 3.x 採用 JUnit 5、Spring Boot 4.x 升級到 JUnit 6，但 Jupiter API 完全相同，import 都是 org.junit.jupiter。不需要加 @RunWith，那是 JUnit 4 的東西。
 
 測試方法命名我習慣用「方法名_情境_預期結果」，這樣一眼就知道在測什麼。
 -->
@@ -460,7 +460,7 @@ OK 來看 Mockito 怎麼用。
 
 純 Mockito（不啟動 Spring Context）：
 
-<div class="mt-2 mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>注意：</b> Spring Boot 3.x 使用 JUnit 5，<code>@ExtendWith</code> 取代了 JUnit 4 的 <code>@RunWith</code>。網路上舊文章若出現 <code>@RunWith(MockitoJUnitRunner.class)</code>，換成 <code>@ExtendWith(MockitoExtension.class)</code> 即可。</div>
+<div class="mt-2 mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>注意：</b> Spring Boot 3.x / 4.x 使用 JUnit 5 / 6，<code>@ExtendWith</code> 取代了 JUnit 4 的 <code>@RunWith</code>。網路上舊文章若出現 <code>@RunWith(MockitoJUnitRunner.class)</code>，換成 <code>@ExtendWith(MockitoExtension.class)</code> 即可。</div>
 
 ```java
 @ExtendWith(MockitoExtension.class)
@@ -946,7 +946,7 @@ logging.logback.rollingpolicy.max-history=30
 
 | 主題 | 核心要點 |
 |------|----------|
-| JUnit 5 | `@Test`、`@BeforeEach`、`@AfterEach`，Spring Boot 3.x 不再用 `@RunWith` |
+| JUnit 5 / 6 | `@Test`、`@BeforeEach`、`@AfterEach`，Spring Boot 3.x / 4.x 不再用 `@RunWith` |
 | Assertions | `assertEquals`、`assertThrows`、`assertAll`，注意 expected/actual 順序 |
 | Mockito | `@ExtendWith(MockitoExtension.class)`、`@Mock`、`@InjectMocks`、`when().thenReturn()` |
 | @MockitoBean | 需要 Spring Context 時，用 `@MockitoBean` 替換真實 Bean |

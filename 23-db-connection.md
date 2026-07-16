@@ -244,7 +244,7 @@ class: flex flex-col justify-center items-center text-center
 
 ```groovy
 implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-implementation 'com.mysql:mysql-connector-j:8.0.33'
+implementation 'com.mysql:mysql-connector-j'
 ```
 
 | 依賴 | 說明 |
@@ -559,7 +559,7 @@ JAR List 頁面看起來有東西，但那個路徑是壞的。
 
 | 重點 | 說明 |
 | --- | --- |
-| build.gradle 依賴 | `spring-boot-starter-jdbc` + `mysql-connector-j:8.0.33` |
+| build.gradle 依賴 | `spring-boot-starter-jdbc` + `mysql-connector-j` |
 | application.properties | 4 個設定：driver、url、username、password |
 | URL 格式 | `jdbc:mysql://localhost:3306/資料庫名?serverTimezone=Asia/Taipei&characterEncoding=utf-8` |
 | Data Source Explorer | Eclipse 內建視覺化資料庫工具，可瀏覽資料表、執行 SQL |

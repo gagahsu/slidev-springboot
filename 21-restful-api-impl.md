@@ -284,7 +284,7 @@ public String delete(@PathVariable("studentId") Integer studentId) {
 <!--
 PUT /students/{studentId}：用 @PutMapping，同時接收路徑的 studentId 和 Body 的更新資料，對應完整更新操作。
 
-注意 update 方法有兩個參數：@PathVariable Integer studentId 告訴我們要更新哪一筆，@RequestBody Student student 是更新後的內容。
+注意 update 方法有兩個參數：@PathVariable("studentId") 告訴我們要更新哪一筆，@RequestBody Student student 是更新後的內容。
 
 DELETE /students/{studentId}：用 @DeleteMapping，只需要路徑的 studentId，不需要 Body。
 

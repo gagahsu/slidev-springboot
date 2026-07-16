@@ -143,8 +143,8 @@ class: flex flex-col justify-center items-center text-center
 
 ```groovy
 dependencies {
-    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.4'
-    implementation 'com.mysql:mysql-connector-j:8.0.33'
+    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:4.0.1'
+    implementation 'com.mysql:mysql-connector-j'
 }
 
 compileJava {
@@ -154,9 +154,9 @@ compileJava {
 
 | 設定 | 說明 |
 | --- | --- |
-| `mybatis-spring-boot-starter:3.0.4` | MyBatis Starter（3.0.0 與 Spring Boot 3.5+ 不相容） |
-| `mysql-connector-j` | MySQL 驅動程式（與之前相同） |
-| `compileJava -parameters` | Spring Boot 3.2+ 必要，讓 `#{}` 能解析方法參數名稱 |
+| `mybatis-spring-boot-starter:4.0.1` | MyBatis Starter（4.0.x 對應 Spring Boot 4.x；3.0.x 只支援 Boot 3.2–3.5） |
+| `mysql-connector-j` | MySQL 驅動程式，版本由 Spring Boot BOM 管理（與之前相同） |
+| `compileJava -parameters` | Spring Boot 3.2+ / 4.x 必要，讓 `#{}` 能解析方法參數名稱 |
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>加完記得：</b> 右鍵 → <b>Gradle → Refresh Gradle Project</b>，並執行 <code>./gradlew clean bootRun</code> 讓編譯旗標生效。
@@ -165,7 +165,7 @@ compileJava {
 <!--
 MyBatis 的 Gradle 依賴是 mybatis-spring-boot-starter，注意這個不是 Spring 官方提供的，而是 MyBatis 社群維護的 Starter。
 
-版本要選擇 3.x，對應 Spring Boot 3.x。如果用 2.x 版的 Starter，搭配 Spring Boot 3.x 可能會有相容性問題。
+版本要選擇 4.x，對應 Spring Boot 4.x。如果用 3.x 版的 Starter，搭配 Spring Boot 4.x 會有相容性問題。
 
 MySQL 驅動程式和 Spring JDBC 時用的完全一樣。
 -->
@@ -372,7 +372,7 @@ int deleteById(Integer id);
 | 重點 | 說明 |
 | --- | --- |
 | MyBatis 定位 | 介於 Spring JDBC 和 JPA 之間，SQL 自己寫但語法更簡潔 |
-| build.gradle | `mybatis-spring-boot-starter:3.0.4` + `compileJava -parameters` |
+| build.gradle | `mybatis-spring-boot-starter:4.0.1` + `compileJava -parameters` |
 | `@Mapper` | 標記 Mapper 介面，Spring Boot 自動掃描注入 |
 | `@Insert` / `@Update` / `@Delete` | SQL 寫在 Annotation 字串裡 |
 | `#{}` 語法 | 動態參數佔位符，對應方法參數的名稱 |
@@ -382,7 +382,7 @@ int deleteById(Integer id);
 今天的重點總結。
 
 第一，MyBatis 介於 Spring JDBC 和 JPA 之間，需要自己寫 SQL，但語法比 Spring JDBC 簡潔。
-第二，加入 mybatis-spring-boot-starter:3.0.0 依賴。
+第二，加入 mybatis-spring-boot-starter:4.0.1 依賴。
 第三，@Mapper 標記介面，不需要寫實作類別。
 第四，@Insert/@Update/@Delete 把 SQL 寫在 Annotation 裡。
 第五，#{} 是參數佔位符，對應方法參數。

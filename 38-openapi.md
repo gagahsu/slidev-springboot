@@ -119,7 +119,7 @@ class: flex flex-col justify-center items-center text-center
 | 概念 | 說明 |
 | --- | --- |
 | OpenAPI 規範 | 描述 RESTful API 的標準格式（JSON 或 YAML），由 Linux Foundation 維護 |
-| 版本 | 目前主流是 OpenAPI 3.0，springdoc-openapi 2.x 實作此規範 |
+| 版本 | 目前主流是 OpenAPI 3.x，springdoc-openapi 實作此規範 |
 | 優點 | 機器可讀——工具可自動讀取並產生互動式文件、Client SDK、Mock Server |
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
@@ -180,25 +180,25 @@ class: flex flex-col justify-center items-center text-center
 在 `build.gradle` 的 `dependencies` 中加入：
 
 ```groovy
-implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17'
+implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
 ```
 
 | 說明 | 詳情 |
 | --- | --- |
-| `springdoc-openapi-starter-webmvc-ui` | Spring Boot 3.x / 4.x 使用此 artifact（v2.x 系列） |
-| `2.8.17` | 目前最新穩定版，Spring Boot 3.x / 4.x 需搭配 v2.x |
+| `springdoc-openapi-starter-webmvc-ui` | Spring Boot 3.x / 4.x 皆使用此 artifact 名稱 |
+| `3.0.3` | Spring Boot 4.x 需搭配 springdoc v3.x（v2.x 只支援 Boot 3.x） |
 | 零設定啟動 | 加完依賴重新啟動，文件即自動出現 |
 
 <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>版本對應：</b> Spring Boot 2.x 用 <code>springdoc-openapi-ui</code>（v1.x）；Spring Boot 3.x / 4.x 必須用 <code>springdoc-openapi-starter-webmvc-ui</code>（v2.x），兩者不能混用。
+⚠️ <b>版本對應：</b> Spring Boot 2.x 用 <code>springdoc-openapi-ui</code>（v1.x）；Spring Boot 3.x 用 <code>springdoc-openapi-starter-webmvc-ui</code> v2.x；Spring Boot 4.x 必須用 v3.x，三者不能混用。
 </div>
 
 <!--
 只需要在 build.gradle 加上這一行依賴，重新啟動 Spring Boot，Swagger UI 就會自動出現。
 
-特別注意版本：Spring Boot 3.x / 4.x 對應 springdoc-openapi v2.x，如果用 v1.x 的 artifact 名稱會找不到。
+特別注意版本：Spring Boot 4.x 對應 springdoc-openapi v3.x，如果用 v2.x 或 v1.x 會有相容性問題。
 
-記住這個規律：Boot 3 / 4 → springdoc v2 → artifact 名稱要加 -starter-webmvc-ui。
+記住這個規律：Boot 2 → springdoc v1，Boot 3 → v2，Boot 4 → v3；Boot 3 之後 artifact 名稱要加 -starter-webmvc-ui。
 -->
 
 ---
@@ -491,7 +491,7 @@ layout: default
 <!--
 Annotation 的 import 是最容易出錯的地方——IDE 有時候會提示多個同名的 class，要確認選的是 io.swagger.v3.oas.annotations 開頭的。
 
-Swagger UI URL 在 Spring Boot 3.x + springdoc 2.x 是 /swagger-ui/index.html，不是舊版的 /swagger-ui.html（舊版 URL 會自動 redirect，但記住正確路徑比較保險）。
+Swagger UI URL 在 springdoc 2.x / 3.x 都是 /swagger-ui/index.html，不是舊版的 /swagger-ui.html（舊版 URL 會自動 redirect，但記住正確路徑比較保險）。
 -->
 
 ---
@@ -544,7 +544,7 @@ password 的 example 刻意不填，提醒大家：密碼欄位不適合放範�
 | 重點 | 說明 |
 | --- | --- |
 | OpenAPI 是規範 | 描述 RESTful API 的標準格式，機器可讀 |
-| springdoc-openapi 2.x | Spring Boot 3.x 整合工具，加一行依賴即啟用 |
+| springdoc-openapi 3.x | Spring Boot 4.x 整合工具，加一行依賴即啟用（Boot 3.x 用 v2.x） |
 | Swagger UI URL | `http://localhost:8080/swagger-ui/index.html` |
 | `@Tag` / `@Operation` | 為 Controller 和方法加上說明 |
 | `@ApiResponse` / `@Parameter` / `@Schema` | 描述回應、參數、DTO 欄位 |

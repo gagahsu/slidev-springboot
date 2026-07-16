@@ -73,7 +73,7 @@ layout: default
 - **實作練習**
 
 <!--
-這是本章的學習路線圖。我們先從「為什麼需要 JWT」出發，理解 Session 在分散式系統的痛點；接著深入 JWT 的結構與原理；然後實作整套 Spring Boot 3.x 的 JWT 認證流程。
+這是本章的學習路線圖。我們先從「為什麼需要 JWT」出發，理解 Session 在分散式系統的痛點；接著深入 JWT 的結構與原理；然後實作整套 Spring Boot 的 JWT 認證流程。
 -->
 
 ---
@@ -383,7 +383,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 ```
 
 <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>Spring Boot 3.x：</b> import 路徑是 <code>jakarta.servlet.*</code>，不是舊版的 <code>javax.servlet.*</code>。
+⚠️ <b>Spring Boot 3.x / 4.x：</b> import 路徑是 <code>jakarta.servlet.*</code>，不是舊版的 <code>javax.servlet.*</code>。
 </div>
 
 <!--
@@ -562,7 +562,7 @@ public record LoginResponse(
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>Java record：</b> Spring Boot 3.x 原生支援。自動產生 constructor、getter、equals、hashCode，比 Lombok @Data 更簡潔。
+💡 <b>Java record：</b> Spring Boot 3.x / 4.x 原生支援。自動產生 constructor、getter、equals、hashCode，比 Lombok @Data 更簡潔。
 </div>
 
 <!--
@@ -690,7 +690,7 @@ layout: default
 # 練習一：實作完整 JWT 登入 API
 ### 任務說明
 
-建立一個 Spring Boot 3.x 專案，實作 JWT 登入認證：
+建立一個 Spring Boot 專案，實作 JWT 登入認證：
 
 1. 加入 jjwt 0.12.5 三個依賴（api / impl / jackson）
 2. 建立 `JwtUtil` 類別，實作 `generateToken()` 和 `validateToken()`
@@ -729,7 +729,7 @@ public String hello(Authentication authentication) {
 | `AuthenticationManager` Bean 找不到 | 沒宣告此 Bean | 在 SecurityConfig 加 `@Bean AuthenticationManager` |
 
 <!--
-最後一個常見錯誤特別提醒：很多人從網路上複製程式碼，舊版用的是 javax.servlet，Spring Boot 3.x 換成了 jakarta.servlet。這個編譯錯誤很常見，看到就知道怎麼解決了！
+最後一個常見錯誤特別提醒：很多人從網路上複製程式碼，舊版用的是 javax.servlet，Spring Boot 3.x 之後換成了 jakarta.servlet。這個編譯錯誤很常見，看到就知道怎麼解決了！
 -->
 
 ---

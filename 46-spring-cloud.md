@@ -194,7 +194,7 @@ class: flex flex-col justify-center items-center text-center
 | **Resilience4j** | 熔斷、重試、限流 | 📦 函式庫，加進各服務 |
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>版本對應：</b> Spring Cloud 2023.x + Spring Boot 3.x + JDK 17+。版本不匹配是最常見的踩坑來源。
+💡 <b>版本對應：</b> Spring Cloud 2025.1.x（Oakwood）+ Spring Boot 4.x + JDK 17+。版本不匹配是最常見的踩坑來源。
 </div>
 
 <!--
@@ -318,13 +318,13 @@ eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>注意：</b> <code>spring.application.name</code> 非常關鍵——這就是服務的「身份證名字」。其他服務呼叫你時，用的就是這個名字，不是 IP。Spring Boot 3.x 不需要 @EnableEurekaClient。
+💡 <b>注意：</b> <code>spring.application.name</code> 非常關鍵——這就是服務的「身份證名字」。其他服務呼叫你時，用的就是這個名字，不是 IP。Spring Boot 3.x / 4.x 不需要 @EnableEurekaClient。
 </div>
 
 <!--
 spring.application.name 非常關鍵——這就是服務的「身分證名字」。
 其他服務呼叫你時，用的就是這個名字，不是 IP。
-Spring Boot 3.x 不需要 @EnableEurekaClient，加了依賴就會自動啟動。
+Spring Boot 3.x / 4.x 不需要 @EnableEurekaClient，加了依賴就會自動啟動。
 -->
 
 ---
@@ -347,19 +347,23 @@ class: flex flex-col justify-center items-center text-center
 **依賴：**
 
 ```groovy
-implementation 'org.springframework.cloud:spring-cloud-starter-gateway'
+implementation 'org.springframework.cloud:spring-cloud-starter-gateway-server-webflux'
 ```
 
 **application.properties 路由設定：**
 
 ```properties
-spring.cloud.gateway.routes[0].id=order-service
-spring.cloud.gateway.routes[0].uri=lb://order-service
-spring.cloud.gateway.routes[0].predicates[0]=Path=/api/orders/**
-spring.cloud.gateway.routes[1].id=user-service
-spring.cloud.gateway.routes[1].uri=lb://user-service
-spring.cloud.gateway.routes[1].predicates[0]=Path=/api/users/**
+spring.cloud.gateway.server.webflux.routes[0].id=order-service
+spring.cloud.gateway.server.webflux.routes[0].uri=lb://order-service
+spring.cloud.gateway.server.webflux.routes[0].predicates[0]=Path=/api/orders/**
+spring.cloud.gateway.server.webflux.routes[1].id=user-service
+spring.cloud.gateway.server.webflux.routes[1].uri=lb://user-service
+spring.cloud.gateway.server.webflux.routes[1].predicates[0]=Path=/api/users/**
 ```
+
+<div class="mt-2 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ Spring Cloud 2025.x 起，舊的 <code>spring-cloud-starter-gateway</code> 依賴與 <code>spring.cloud.gateway.routes</code> 前綴已棄用，改為 <code>-server-webflux</code> 與 <code>spring.cloud.gateway.server.webflux.*</code>。
+</div>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>lb:// 前綴：</b> 告訴 Gateway 去 Eureka 找這個服務名稱對應的實例，並做負載平衡。不需要寫死 IP。
@@ -395,7 +399,7 @@ OpenFeign 讓你用介面 + annotation 宣告式地定義 HTTP 呼叫。
 @FeignClient(name = "user-service")   // 對應 Eureka 上的服務名稱
 public interface UserClient {
     @GetMapping("/users/{id}")
-    User getUserById(@PathVariable Long id);
+    User getUserById(@PathVariable("id") Long id);
 }
 ```
 
@@ -533,7 +537,7 @@ spring.config.import=optional:configserver:http://localhost:8888
 </div>
 
 <!--
-spring.config.import 是 Spring Boot 3.x 的新寫法，取代舊版的 bootstrap.properties。
+spring.config.import 是 Spring Boot 2.4 之後的新寫法，取代舊版的 bootstrap.properties。
 spring.application.name 決定去 Git 倉庫找哪個檔案。
 -->
 
@@ -697,7 +701,7 @@ layout: default
 ```groovy
 dependencies {
     implementation platform(
-        'org.springframework.cloud:spring-cloud-dependencies:2023.0.3')
+        'org.springframework.cloud:spring-cloud-dependencies:2025.1.2')
     // 其他依賴不需要指定版本，由 BOM 管理
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 }
@@ -753,7 +757,7 @@ layout: default
 @RestController
 public class UserController {
     @GetMapping("/users/{id}")
-    public User getUser(@PathVariable Long id) {
+    public User getUser(@PathVariable("id") Long id) {
         return new User(id, "Alice", "alice@example.com");
     }
 }

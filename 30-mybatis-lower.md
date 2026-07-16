@@ -176,7 +176,7 @@ Student findById(@Param("id") Integer id);
 | 說明 | 詳情 |
 | --- | --- |
 | `WHERE id = #{id}` | `#{id}` 對應方法的 `Integer id` 參數 |
-| `@Param("id")` | Spring Boot 3.2+ 需明確指定，否則參數名稱無法反射取得 |
+| `@Param("id")` | Spring Boot 3.2+ / 4.x 需明確指定，否則參數名稱無法反射取得 |
 | 回傳 `Student` | 查詢單筆時直接回傳物件（非 Optional） |
 | id 不存在時 | 回傳 `null`（不同於 JPA 的 Optional） |
 

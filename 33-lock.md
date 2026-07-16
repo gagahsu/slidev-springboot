@@ -344,7 +344,7 @@ public class TicketService {
 
 ```java
 @PostMapping("/tickets/{id}/buy")
-public ResponseEntity<String> buyTicket(@PathVariable String id) {
+public ResponseEntity<String> buyTicket(@PathVariable("id") String id) {
     try {
         ticketService.buyTicket(id);
         return ResponseEntity.ok("購票成功");

@@ -90,7 +90,7 @@ class: flex flex-col justify-center items-center text-center
 | 用途 | 接收 Http Request Header 中的值 |
 | 常見 Header | `Content-Type`、`Authorization`、自定義 Header |
 | 使用情境 | 讀取驗證 Token、語系設定、自定義傳遞的資訊 |
-| 命名規則 | 方法參數名稱需和 Header 的 key **完全一致** |
+| 命名規則 | 用 `@RequestHeader("key")` **明確指定**對應 Header 的 key |
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>補充：</b> @RequestHeader 可搭配任何 Http Method（GET、POST 等），因為 Header 在每個請求中都存在。
@@ -102,21 +102,21 @@ Http Request 除了 URL 和 Body 之外，還有一個部分叫做 Header。
 Header 是一組 key-value，用來傳遞請求的「元資訊」，例如 Content-Type 告訴後端資料格式是什麼，Authorization 傳遞驗證用的 Token。
 
 @RequestHeader 的用途就是讀取這些 Header 的值。
-命名規則和 @RequestParam 一樣，方法參數名稱需和 Header 的 key 一致。
+命名規則和 @RequestParam 一樣，在括號裡明確指定 Header 的 key。省略名稱的寫法在 Spring Boot 3.2 之後依賴 -parameters 編譯參數，容易踩雷，所以一律寫明名稱。
 -->
 
 ---
 
 # @RequestHeader 基本用法
 
-當前端的 Request Header 帶有 `info` 這個 key 時，用 `@RequestHeader` 接住：
+當前端的 Request Header 帶有 `info` 這個 key 時，用 `@RequestHeader("info")` 接住：
 
 ```java
 @RestController
 public class MyController {
 
     @RequestMapping("/test3")
-    public String test3(@RequestHeader String info) {
+    public String test3(@RequestHeader("info") String info) {
         System.out.println("info: " + info);
         return "請求成功";
     }
@@ -124,11 +124,11 @@ public class MyController {
 ```
 
 <!--
-看這個範例。我們在方法參數前加上 @RequestHeader，Spring Boot 就會去 Request Header 裡找 key 為 info 的值，然後塞進這個參數。
+看這個範例。我們在方法參數前加上 @RequestHeader("info")，括號裡的 "info" 告訴 Spring Boot 去 Request Header 裡找 key 為 info 的值，然後塞進這個參數。
 
 ⚠️ 注意：如果前端沒有帶這個 Header，Spring Boot 預設會回傳 400 Bad Request，行為和 @RequestParam 的必填規則一樣。
 
-這個 Annotation 在實務上最常用來讀取 Authorization Header，例如：@RequestHeader String Authorization，讀取 JWT Token。
+這個 Annotation 在實務上最常用來讀取 Authorization Header，例如：@RequestHeader("Authorization") String authorization，讀取 JWT Token。
 -->
 
 ---
@@ -139,7 +139,7 @@ public class MyController {
 | --- | --- |
 | 1 | 在 Postman 請求頁面切換到「Headers」分頁 |
 | 2 | 在表格中新增一列 |
-| 3 | Key 填入 `info`（需和方法參數名稱一致） |
+| 3 | Key 填入 `info`（需和 `@RequestHeader("info")` 指定的名稱一致） |
 | 4 | Value 填入任意值，例如 `hello` |
 | 5 | 發送請求，查看 console 輸出 |
 
@@ -152,7 +152,7 @@ public class MyController {
 
 步驟很簡單：切換到 Headers 分頁，新增一列，Key 填 info，Value 填任意文字，然後送出請求。
 
-⚠️ 特別注意 Header 的 key 是區分大小寫的。如果程式寫 @RequestHeader String info，但 Postman 送的是 Info（大寫 I），Spring Boot 就接不到值，會回傳 400。
+⚠️ 特別注意 Header 的 key 是區分大小寫的。如果程式寫 @RequestHeader("info")，但 Postman 送的是 Info（大寫 I），Spring Boot 就接不到值，會回傳 400。
 -->
 
 ---
@@ -177,7 +177,7 @@ class: flex flex-col justify-center items-center text-center
 | 用途 | 接收 URL **路徑本身**中嵌入的變數值 |
 | URL 格式 | `/users/{id}`，其中 `{id}` 是路徑變數 |
 | 使用情境 | 指定某個特定資源，例如取得 id=123 的使用者 |
-| 命名規則 | `{placeholder}` 名稱需和方法參數名稱**完全一致** |
+| 命名規則 | 用 `@PathVariable("id")` **明確指定**對應 `{placeholder}` 的名稱 |
 
 <!--
 @PathVariable 和前三個 Annotation 不同——它讀取的值不在 URL 問號後面，也不在 Header 或 Body，而是在 URL 路徑本身裡面。
@@ -209,9 +209,9 @@ public class MyController {
 <!--
 看這個範例。@RequestMapping 的路徑是 "/test4/{id}"，大括號 {} 裡的 id 就是路徑變數的佔位符。
 
-方法參數前加上 @PathVariable，Spring Boot 就會把 URL 路徑對應位置的值讀出來，塞進 id 這個參數。
+方法參數前加上 @PathVariable("id")，括號裡的 "id" 對應路徑裡 {id} 這個佔位符，Spring Boot 就會把 URL 路徑對應位置的值讀出來，塞進 id 這個參數。
 
-⚠️ 大括號裡的名稱 id 和方法參數名稱 id 必須完全一致，否則 Spring Boot 無法對應。
+⚠️ @PathVariable 括號裡的名稱必須和大括號 {} 裡的佔位符名稱完全一致，否則 Spring Boot 無法對應。和 @RequestParam 一樣，建議一律明確寫出名稱，避開 -parameters 編譯參數的依賴。
 
 執行後，用 Postman 發送 GET http://localhost:8080/test4/123，console 就會印出 "id: 123"。
 -->
@@ -345,18 +345,18 @@ class: flex flex-col justify-center items-center text-center
 
 | 重點 | 說明 |
 | --- | --- |
-| `@RequestHeader` | 接 Request Header，命名需一致，預設必填 |
+| `@RequestHeader` | 接 Request Header，用 `@RequestHeader("key")` 明確指定，預設必填 |
 | `@PathVariable` | 接 URL 路徑變數，`@RequestMapping("/path/{var}")` 搭配使用 |
-| 路徑變數命名 | `{placeholder}` 和方法參數名稱必須完全一致 |
+| 路徑變數命名 | `@PathVariable("var")` 和 `{placeholder}` 名稱必須完全一致 |
 | 為何需要 @PathVariable | 支援 RESTful API 設計，URL 代表具體資源 |
 | 四個工具完整組合 | `@RequestParam`、`@RequestBody`、`@RequestHeader`、`@PathVariable` |
 
 <!--
 好，今天的重點總結。
 
-第一，@RequestHeader 接 Request Header 的值，記得 Header 的 key 區分大小寫。
+第一，@RequestHeader 接 Request Header 的值，記得在括號裡明確指定 key，Header 的 key 區分大小寫。
 第二，@PathVariable 接 URL 路徑本身的變數，路徑格式要加 {} 佔位符。
-第三，{} 裡的名稱和方法參數名稱必須完全一致。
+第三，@PathVariable 括號裡的名稱和 {} 裡的佔位符名稱必須完全一致。
 第四，@PathVariable 的設計動機是支援 RESTful API 風格。
 第五，四個取得參數的 Annotation 現在全部學完了！
 
@@ -435,7 +435,7 @@ public class OrderController {
 
     @RequestMapping("/orders/{orderId}")
     public String getOrder(@PathVariable("orderId") Integer orderId,
-                           @RequestHeader String token) {
+                           @RequestHeader("token") String token) {
         return "訂單編號: " + orderId + ", 驗證 token: " + token;
     }
 }

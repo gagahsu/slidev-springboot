@@ -64,7 +64,7 @@ layout: default
 - **認證 vs 授權** — Authentication / Authorization 核心概念
 - **加入 Spring Security 依賴** — pom.xml 設定
 - **預設行為** — Spring Security 開箱即用的保護機制
-- **SecurityFilterChain** — Spring Boot 3.x 的設定方式
+- **SecurityFilterChain** — Spring Boot 3.x / 4.x 的設定方式
 - **路徑授權規則** — `requestMatchers` 與 `hasRole`
 - **InMemoryUserDetailsManager** — 快速測試帳號設定
 - **UserDetailsService** — 從資料庫載入使用者
@@ -141,11 +141,11 @@ implementation 'org.springframework.boot:spring-boot-starter-security'
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>不需要指定版本：</b> Spring Boot 的 BOM 會自動管理版本，Spring Boot 3.x 對應 Spring Security 6.x。
+💡 <b>不需要指定版本：</b> Spring Boot 的 BOM 會自動管理版本，Spring Boot 3.x 對應 Spring Security 6.x、Spring Boot 4.x 對應 Spring Security 7.x。
 </div>
 
 <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>Spring Boot 3.x 版本注意：</b> 不再使用 WebSecurityConfigurerAdapter，改用 SecurityFilterChain Bean + Lambda DSL 風格。
+⚠️ <b>Spring Boot 3.x / 4.x 版本注意：</b> 不再使用 WebSecurityConfigurerAdapter，改用 SecurityFilterChain Bean + Lambda DSL 風格。
 </div>
 
 <!--
@@ -205,11 +205,11 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 4
-## SecurityFilterChain：Spring Boot 3.x 的設定方式
+## SecurityFilterChain：Spring Boot 3.x / 4.x 的設定方式
 
 <!--
 現在我們來看最核心的設定方式。
-Spring Boot 3.x 用的是 SecurityFilterChain Bean + Lambda DSL。
+Spring Boot 3.x / 4.x 用的是 SecurityFilterChain Bean + Lambda DSL。
 這是現代 Spring Security 的標準寫法，一定要學會。
 -->
 
@@ -242,11 +242,11 @@ public class SecurityConfig {
 ```
 
 <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>Spring Boot 3.x 版本注意：</b> 不再使用 WebSecurityConfigurerAdapter，改用 SecurityFilterChain Bean + Lambda DSL 風格。
+⚠️ <b>Spring Boot 3.x / 4.x 版本注意：</b> 不再使用 WebSecurityConfigurerAdapter，改用 SecurityFilterChain Bean + Lambda DSL 風格。
 </div>
 
 <!--
-這就是 Spring Boot 3.x 的標準安全設定寫法。
+這就是 Spring Boot 3.x / 4.x 的標準安全設定寫法。
 
 最重要的三個部分：
 第一，@Configuration + @EnableWebSecurity，告訴 Spring 這是安全設定類。
@@ -634,7 +634,7 @@ layout: default
 - `alice` / `pass123` → `USER` 角色
 - `bob` / `admin456` → `USER` + `ADMIN` 角色
 
-**要求：** 使用 Spring Boot 3.x 的 SecurityFilterChain + Lambda DSL，關閉 CSRF。
+**要求：** 使用 SecurityFilterChain + Lambda DSL，關閉 CSRF。
 
 <!--
 這個練習涵蓋了我們學到的所有基本設定。
@@ -738,7 +738,7 @@ layout: default
 |------|----------|
 | 認證 vs 授權 | 先確認「你是誰」，再決定「你能做什麼」 |
 | 預設行為 | 加入依賴後，所有路徑自動需要登入 |
-| SecurityFilterChain | Spring Boot 3.x 的標準設定方式，Lambda DSL |
+| SecurityFilterChain | Spring Boot 3.x / 4.x 的標準設定方式，Lambda DSL |
 | 路徑授權 | permitAll / authenticated / hasRole / hasAuthority |
 | InMemoryUserDetailsManager | 開發測試用，帳號存在記憶體 |
 | UserDetailsService | 從資料庫載入用戶的標準介面 |
@@ -749,7 +749,7 @@ layout: default
 
 <!--
 今天的三個最重要的事：
-第一，Spring Boot 3.x 要用 SecurityFilterChain，不要用舊的 WebSecurityConfigurerAdapter。
+第一，Spring Boot 3.x / 4.x 要用 SecurityFilterChain，不要用舊的 WebSecurityConfigurerAdapter。
 第二，密碼一定要用 BCrypt 加密，這是不可妥協的基本要求。
 第三，CSRF 的開關要根據應用類型來決定。
 -->

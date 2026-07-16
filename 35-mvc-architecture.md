@@ -248,7 +248,7 @@ public class StudentController {
     private StudentService studentService;
 
     @GetMapping("/students/{studentId}")
-    public Student read(@PathVariable Integer studentId) {
+    public Student read(@PathVariable("studentId") Integer studentId) {
         return studentService.getStudentById(studentId);
     }
 }

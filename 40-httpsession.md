@@ -164,7 +164,7 @@ import org.springframework.web.bind.annotation.*;
 public class SessionController {
 
     @PostMapping("/login")
-    public String login(@RequestParam String username,
+    public String login(@RequestParam("username") String username,
                         HttpSession session) {
         session.setAttribute("username", username);
         return "登入成功，Session ID：" + session.getId();
@@ -352,7 +352,7 @@ layout: default
 
 建立一個 `SessionController`，實作以下三支 API：
 
-1. `POST /session/login`：接收 `@RequestParam String username`，呼叫 `session.setAttribute("username", username)`，回傳登入成功訊息與 Session ID
+1. `POST /session/login`：接收 `@RequestParam("username") String username`，呼叫 `session.setAttribute("username", username)`，回傳登入成功訊息與 Session ID
 2. `GET /session/info`：呼叫 `session.getAttribute("username")`，若為 `null` 回傳「尚未登入」，否則回傳「目前登入：xxx」
 3. 使用 Postman 測試：先呼叫 `/session/login`，再呼叫 `/session/info`，確認第二支 API 能讀到 Session 資料
 

@@ -812,7 +812,7 @@ layout: default
 | 重點 | 說明 |
 | --- | --- |
 | 加入依賴 | `spring-boot-starter-validation`（Spring Boot 預設不包含，需手動加） |
-| 版本注意 | Spring Boot 3.x 用 `jakarta.validation.*`，舊版才是 `javax.validation.*` |
+| 版本注意 | Spring Boot 3.x / 4.x 用 `jakarta.validation.*`，舊版才是 `javax.validation.*` |
 | 標注規則 | 在資料類別欄位上加 `@NotBlank`、`@Email`、`@Min` 等 Annotation |
 | 驗證物件 | `@RequestBody` 搭配 `@Valid`，Spring 自動執行驗證 |
 | 驗證單值 | 類別上加 `@Validated`，才能在 `@PathVariable` 和 `@RequestParam` 加驗證 |

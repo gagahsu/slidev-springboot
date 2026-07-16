@@ -72,7 +72,7 @@ layout: default
 | **會員** | 註冊、登入（JWT）、查看個人填寫紀錄 |
 | **管理員** | 建立 / 編輯 / 刪除問卷、發佈與下架、檢視填寫名單與作答明細、統計圖表 |
 
-- **後端**：Spring Boot 3.2 + Spring Data JPA + Spring Security + JWT + MySQL
+- **後端**：Spring Boot 4.1 + Spring Data JPA + Spring Security + JWT + MySQL
 - **前端**：Angular 18（Standalone）+ Angular Material + PrimeNG + Chart.js + Tailwind
 
 ---
@@ -206,8 +206,8 @@ layout: default
 ```groovy
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.2.2'
-    id 'io.spring.dependency-management' version '1.1.4'
+    id 'org.springframework.boot' version '4.1.0'
+    id 'io.spring.dependency-management' version '1.1.7'
 }
 
 group = 'com.example'
@@ -251,7 +251,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
     // [JWT 介面] 定義 JSON Web Token 的 API 規範
-    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
 
     // [開發利器] 使用註解自動產生 Getter/Setter (編譯時期)
     compileOnly 'org.projectlombok:lombok'
@@ -277,8 +277,8 @@ dependencies {
     runtimeOnly 'com.mysql:mysql-connector-j'
 
     // [JWT 實作] 執行時期所需的 JWT 加密與解析邏輯
-    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
 
     // [Lombok 處理器] 讓編譯器能識別 Lombok 註解並產生代碼
     annotationProcessor 'org.projectlombok:lombok'
@@ -1112,18 +1112,18 @@ public class JwtUtils {
     @Value("${jwt.secret}")     private String jwtSecret;
     @Value("${jwt.expiration}") private int jwtExpirationMs;
 
-    private Key getSigningKey() {
+    private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
-    // 登入成功後產生 Token
+    // 登入成功後產生 Token（jjwt 0.12.x API）
     public String generateJwtToken(Authentication authentication) {
         UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
         return Jwts.builder()
-                .setSubject(userPrincipal.getUsername())              // 主題 = Email
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS512)  // 簽名
+                .subject(userPrincipal.getUsername())                 // 主題 = Email
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
+                .signWith(getSigningKey(), Jwts.SIG.HS512)            // 簽名
                 .compact();
     }
 }
@@ -1140,17 +1140,17 @@ layout: default
 <div v-pre>
 
 ```java
-    // 從 Token 取出帳號 (Email)
+    // 從 Token 取出帳號 (Email)（jjwt 0.12.x API）
     public String getUserNameFromJwtToken(String token) {
-        return Jwts.parserBuilder().setSigningKey(getSigningKey()).build()
-                .parseClaimsJws(token).getBody().getSubject();
+        return Jwts.parser().verifyWith(getSigningKey()).build()
+                .parseSignedClaims(token).getPayload().getSubject();
     }
 
     // 驗證 Token：格式、簽名、是否過期
     public boolean validateJwtToken(String authToken) {
         try {
-            Jwts.parserBuilder().setSigningKey(getSigningKey()).build()
-                .parseClaimsJws(authToken);
+            Jwts.parser().verifyWith(getSigningKey()).build()
+                .parseSignedClaims(authToken);
             return true;
         } catch (SecurityException e)      { logger.error("無效的 JWT 簽名"); }
         catch (MalformedJwtException e)    { logger.error("無效的 JWT 格式"); }
@@ -1164,7 +1164,7 @@ layout: default
 
 </div>
 
-需要的 import：`io.jsonwebtoken.*`、`io.jsonwebtoken.security.Keys`、`org.slf4j.*` 等。
+需要的 import：`io.jsonwebtoken.*`、`io.jsonwebtoken.security.Keys`、`javax.crypto.SecretKey`、`org.slf4j.*` 等。寫法與第 45 章教的 jjwt 0.12.x API 一致（`subject()` / `verifyWith()` / `parseSignedClaims()`）。
 
 ---
 layout: default

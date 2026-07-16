@@ -146,7 +146,7 @@ class: flex flex-col justify-center items-center text-center
 
 ```groovy
 implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-implementation 'com.mysql:mysql-connector-j:8.0.33'
+implementation 'com.mysql:mysql-connector-j'
 ```
 
 | 依賴 | 說明 |
@@ -218,7 +218,7 @@ class: flex flex-col justify-center items-center text-center
 | `GenerationType.IDENTITY` | 資料庫自動遞增（Auto Increment），最常用 |
 
 <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>Spring Boot 3.x 注意：</b> 需使用 <code>jakarta.persistence.*</code>，不是舊版的 <code>javax.persistence.*</code>。
+⚠️ <b>Spring Boot 3.x / 4.x 注意：</b> 需使用 <code>jakarta.persistence.*</code>，不是舊版的 <code>javax.persistence.*</code>。
 </div>
 
 <!--
@@ -227,7 +227,7 @@ class: flex flex-col justify-center items-center text-center
 @Id 標記哪個欄位是主鍵，通常是 id。
 @GeneratedValue(strategy = GenerationType.IDENTITY) 告訴資料庫幫我們自動遞增 id，就像 MySQL 的 AUTO_INCREMENT。
 
-⚠️ 特別注意：Spring Boot 3.x 之後，所有 JPA 相關的 import 都要用 jakarta.persistence，不能用舊版的 javax.persistence。
+⚠️ 特別注意：Spring Boot 3.x 之後（含 4.x），所有 JPA 相關的 import 都要用 jakarta.persistence，不能用舊版的 javax.persistence。
 -->
 
 ---
@@ -253,7 +253,7 @@ public class Student {
 <!--
 看完整的 @Entity 類別範例。
 
-import 使用 jakarta.persistence.*，這是 Spring Boot 3.x 的正確寫法。
+import 使用 jakarta.persistence.*，這是 Spring Boot 3.x / 4.x 的正確寫法。
 
 @Entity 加在類別上，@Id 和 @GeneratedValue 加在 id 欄位上。
 
@@ -507,7 +507,7 @@ saveAll() 是 JpaRepository 內建的批次操作方法。
 | `@Entity` | 標記 Java 類別對應資料庫表格 |
 | `@Id` + `@GeneratedValue` | 標記主鍵 + 設定自動遞增 |
 | `@IdClass` | 複合主鍵：建 ID 類別（實作 Serializable）+ Entity 加 `@IdClass` + 每個 PK 欄位加 `@Id` |
-| Spring Boot 3.x | 使用 `jakarta.persistence.*`，非 `javax.persistence.*` |
+| Spring Boot 3.x / 4.x | 使用 `jakarta.persistence.*`，非 `javax.persistence.*` |
 
 ---
 
@@ -525,7 +525,7 @@ saveAll() 是 JpaRepository 內建的批次操作方法。
 Spring Data JPA 用 ORM 概念，不寫 SQL。
 build.gradle 加 spring-boot-starter-data-jpa。
 @Entity 對應資料表，@Id + @GeneratedValue 處理主鍵。
-Spring Boot 3.x 記得用 jakarta.persistence.*。
+Spring Boot 3.x / 4.x 記得用 jakarta.persistence.*。
 -->
 
 <!--
