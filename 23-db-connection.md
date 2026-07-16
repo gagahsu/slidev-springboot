@@ -61,7 +61,7 @@ layout: default
 
 - **前置準備：建立 Schema 和 Table** — 用 MySQL Workbench 建立資料庫與資料表
 - **回顧：什麼是 Spring JDBC？** — 橋樑角色、JdbcTemplate 工具
-- **設定資料庫連線資訊** — application.properties 設定 URL、帳號、密碼、Driver
+- **設定資料庫連線資訊** — application.properties 設定 URL、帳號、密碼、Driver、SQL logging
 - **Eclipse 資料庫管理工具** — Data Source Explorer 安裝與使用，直接在 IDE 查看資料庫
 - **章節總結** — 連線設定重點整理
 
@@ -316,6 +316,38 @@ serverTimezone=Asia/Taipei 和 characterEncoding=utf-8 這兩個參數幾乎都�
 -->
 
 ---
+
+# 補充設定：讓 SQL 出現在 Console
+
+在 `application.properties` 加上 logging 設定，之後執行 SQL 時就能在 Console 看到：
+
+```properties
+# 印出執行的 SQL
+logging.level.org.springframework.jdbc.core.JdbcTemplate=DEBUG
+# 連參數值也印出（可選）
+logging.level.org.springframework.jdbc.core.StatementCreatorUtils=TRACE
+```
+
+| 設定 | 效果 |
+| --- | --- |
+| `JdbcTemplate=DEBUG` | Console 印出執行的 SQL 語法 |
+| `StatementCreatorUtils=TRACE` | 連同每個參數實際帶入的值一起印出 |
+
+<!--
+連線設定完成後，順便加兩行 logging 設定，方便之後開發除錯。
+
+第一行把 JdbcTemplate 的 log level 調成 DEBUG，之後每次執行 SQL，Console 就會印出 SQL 語法。
+第二行是 TRACE 等級，連參數實際帶入的值都會印出來。
+
+現在還沒執行任何 SQL，所以看不到效果；下一章開始用 update() 執行 INSERT 時，就會在 Console 看到這些 log。
+
+⚠️ 常見誤區：網路上查到的 spring.jpa.show-sql=true 是給 JPA/Hibernate 用的，
+我們用的是 Spring JDBC，設了也沒效果，要用 logging.level 的方式。
+
+這個設定建議只在開發環境開啟，正式環境印出所有 SQL 會影響效能、也可能洩漏資料。
+-->
+
+---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---
@@ -562,6 +594,7 @@ JAR List 頁面看起來有東西，但那個路徑是壞的。
 | build.gradle 依賴 | `spring-boot-starter-jdbc` + `mysql-connector-j` |
 | application.properties | 4 個設定：driver、url、username、password |
 | URL 格式 | `jdbc:mysql://localhost:3306/資料庫名?serverTimezone=Asia/Taipei&characterEncoding=utf-8` |
+| SQL logging | `logging.level.org...JdbcTemplate=DEBUG` 印 SQL；`StatementCreatorUtils=TRACE` 印參數值 |
 | Data Source Explorer | Eclipse 內建視覺化資料庫工具，可瀏覽資料表、執行 SQL |
 | 下一步 | 開始使用 JdbcTemplate 執行 INSERT / SELECT / UPDATE / DELETE |
 
