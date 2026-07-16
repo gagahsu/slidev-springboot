@@ -143,8 +143,8 @@ public class MyController {
 | 4 | Value 填入任意值，例如 `hello` |
 | 5 | 發送請求，查看 console 輸出 |
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>注意：</b> Header 的 key 區分大小寫。<code>info</code> 和 <code>Info</code> 是不同的 Header。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>補充：</b> Header 的 key <b>不分大小寫</b>（HTTP 規範）。送 <code>info</code> 或 <code>Info</code>，<code>@RequestHeader("info")</code> 都接得到；但 <b>value</b> 內容是原樣傳遞的。
 </div>
 
 <!--
@@ -152,7 +152,7 @@ public class MyController {
 
 步驟很簡單：切換到 Headers 分頁，新增一列，Key 填 info，Value 填任意文字，然後送出請求。
 
-⚠️ 特別注意 Header 的 key 是區分大小寫的。如果程式寫 @RequestHeader("info")，但 Postman 送的是 Info（大寫 I），Spring Boot 就接不到值，會回傳 400。
+💡 補充：HTTP 規範中 Header 名稱是不分大小寫的，所以 Postman 送 Info（大寫 I），@RequestHeader("info") 一樣接得到。這點和 @RequestParam 不同——Query String 的 key 是區分大小寫的。
 -->
 
 ---
@@ -354,7 +354,7 @@ class: flex flex-col justify-center items-center text-center
 <!--
 好，今天的重點總結。
 
-第一，@RequestHeader 接 Request Header 的值，記得在括號裡明確指定 key，Header 的 key 區分大小寫。
+第一，@RequestHeader 接 Request Header 的值，記得在括號裡明確指定 key；Header 名稱不分大小寫。
 第二，@PathVariable 接 URL 路徑本身的變數，路徑格式要加 {} 佔位符。
 第三，@PathVariable 括號裡的名稱和 {} 裡的佔位符名稱必須完全一致。
 第四，@PathVariable 的設計動機是支援 RESTful API 風格。
