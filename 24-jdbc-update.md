@@ -64,7 +64,8 @@ layout: default
 - **Part 1：execute() — DDL 操作** — 建立資料表、`CREATE TABLE`、依賴注入三種寫法
 - **Part 2：update() 基本概念** — `NamedParameterJdbcTemplate`、具名參數 vs `?`、四個步驟
 - **Part 3：update() 完整範例** — INSERT / UPDATE / DELETE 範例、回傳值意義
-- **Part 4：批次新增** — `batchUpdate()` 原理與實作
+- **Part 4：串接三層式架構** — Controller + Service + Dao 完整程式碼
+- **Part 5：批次新增** — `batchUpdate()` 原理與實作
 - **章節總結** — 修改類 SQL 完整整理
 
 <!--
@@ -194,23 +195,85 @@ SQL 是固定的 CREATE TABLE 字串，直接丟給 execute() 執行，沒有回
 
 ---
 
-# 如何觸發 createTable()？
+# 如何觸發 createTable()？— 三層式架構
 
-DAO 只是定義方法，需要有人呼叫它。用 Controller 建立 API 來觸發：
+Dao 只是定義方法，程式不會自動執行它。Spring 的標準做法是「三層式架構」：
+
+| 分層 | 註解 | 職責 | 範例類別 |
+| --- | --- | --- | --- |
+| Controller | `@RestController` | 接收 HTTP 請求、回傳結果 | `StudentController` |
+| Service | `@Service` | 商業邏輯（目前先單純轉呼叫） | `StudentService` |
+| Dao | `@Repository` | 操作資料庫、執行 SQL | `StudentDao` |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>呼叫鏈：</b> Postman → Controller → Service → Dao → 資料庫。Controller 不直接呼叫 Dao，中間一定經過 Service。
+</div>
+
+<!--
+寫好 StudentDao 之後，程式不會自己執行 createTable()，必須有人去呼叫它。
+
+Spring 的標準做法是三層式架構：Controller 負責接收 HTTP 請求，Service 負責商業邏輯，Dao 負責操作資料庫。
+
+@Service 和 @Repository 一樣，效果都等同 @Component，會把類別建立成 Bean；差別只在語意——@Service 標記商業邏輯層。
+
+初學時 Service 看起來只是「轉呼叫」Dao，好像多此一舉；但等商業邏輯變複雜（例如檢查資料、計算、跨多個 Dao），Service 的價值就會顯現。從一開始就養成 Controller → Service → Dao 的習慣。
+
+接下來兩頁分別看 Service 和 Controller 的程式碼。
+-->
+
+---
+
+# 觸發 createTable() — Service 層
+
+建立 `StudentService`，注入 `StudentDao`，轉呼叫 Dao 的方法：
+
+```java
+@Service
+public class StudentService {
+
+    private final StudentDao studentDao;
+
+    public StudentService(StudentDao studentDao) {
+        this.studentDao = studentDao;
+    }
+
+    public void createTable() {
+        studentDao.createTable();
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b><code>@Service</code>：</b> 效果同 <code>@Component</code>，會建立成 Bean；語意上標記「商業邏輯層」。目前邏輯只是轉呼叫 Dao，之後章節會在這層加入檢查、計算等邏輯。
+</div>
+
+<!--
+Service 層的寫法：類別加上 @Service，用建構子注入 StudentDao，方法裡呼叫 studentDao.createTable()。
+
+@Service 的效果和 @Component、@Repository 一樣都會建立成 Bean，差別只在語意，標記這是商業邏輯層。
+
+現在 Service 只有一行轉呼叫，看起來很空；但這一層是保留給商業邏輯的位置，之後功能變複雜時就會用到。
+-->
+
+---
+
+# 觸發 createTable() — Controller 層
+
+建立 `StudentController`，注入 `StudentService`，用 API 觸發：
 
 ```java
 @RestController
 public class StudentController {
 
-    private final StudentDao studentDao;
+    private final StudentService studentService;
 
-    public StudentController(StudentDao studentDao) {
-        this.studentDao = studentDao;
+    public StudentController(StudentService studentService) {
+        this.studentService = studentService;
     }
 
     @PostMapping("/students/table")
     public String createTable() {
-        studentDao.createTable();
+        studentService.createTable();
         return "資料表建立成功";
     }
 }
@@ -221,15 +284,14 @@ public class StudentController {
 </div>
 
 <!--
-寫好 StudentDao 之後，程式不會自己執行 createTable()，必須有人去呼叫它。
+最後是 Controller：注入的是 StudentService，不是 StudentDao——Controller 只跟 Service 溝通。
 
-最直接的做法：建立一個 Controller，注入 StudentDao，寫一個 API 來觸發。
-這裡一樣使用建構子注入，把 StudentDao 注入到 Controller 裡。
+@PostMapping 建立一個 API，收到請求時呼叫 studentService.createTable()，Service 再呼叫 Dao，Dao 執行 SQL。
 
 測試流程：啟動 Spring Boot，打開 Postman，發送 POST 請求到 /students/table，
 收到「資料表建立成功」後，再到 MySQL Workbench 確認 student 資料表真的出現了。
 
-注意呼叫鏈：Postman → Controller → DAO → 資料庫，這就是之後會正式介紹的三層式架構的雛形。
+完整呼叫鏈：Postman → Controller → Service → Dao → 資料庫。接下來所有範例都會遵守這個結構。
 -->
 
 ---
@@ -774,6 +836,231 @@ class: flex flex-col justify-center items-center text-center
 
 # Part 4
 
+## 串接三層式架構
+
+<!--
+Dao 的 INSERT、UPDATE、DELETE 都寫好了，但同樣的問題：誰來呼叫它們？
+這一節把 Service 和 Controller 補上，讓前端真的能透過 API 操作資料庫。
+-->
+
+---
+
+# 回顧：三層式架構的呼叫鏈
+
+Dao 寫好了 `createStudent()`、`updateStudent()`、`deleteStudent()`，接著補上 Service 和 Controller：
+
+| 分層 | 類別 | 這一章要做的事 |
+| --- | --- | --- |
+| Controller | `StudentController` | 提供 POST / PUT / DELETE 三個 API |
+| Service | `StudentService` | 轉呼叫 Dao 對應的方法 |
+| Dao | `StudentDao` | 已完成（Part 3 的三個方法） |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>資料的流向：</b> 前端 JSON → Controller 的 <code>@RequestBody</code> 轉成 <code>Student</code> 物件 → 一路傳到 Dao → 值放進 Map → 替換 SQL 的 <code>:paramName</code>。
+</div>
+
+<!--
+Part 3 完成了 Dao 的三個方法，但和 createTable() 一樣，Dao 不會自己執行，要靠 Controller 和 Service 串起來。
+
+這張表整理各層的工作：Controller 開三個 API 對應新增、修改、刪除；Service 轉呼叫 Dao；Dao 已經寫好了。
+
+注意資料流向：前端傳來的 JSON，由 @RequestBody 轉成 Student 物件，經過 Service 傳到 Dao，
+Dao 把物件的值放進 Map，最後替換掉 SQL 裡的具名參數。整條鏈路走完，資料才真正進到資料庫。
+-->
+
+---
+
+# StudentService（1/2）— 注入 Dao、新增與刪除
+
+注入 `StudentDao`，`createStudent()` 和 `deleteStudent()` 單純轉呼叫：
+
+```java
+@Service
+public class StudentService {
+
+    private final StudentDao studentDao;
+
+    public StudentService(StudentDao studentDao) {
+        this.studentDao = studentDao;
+    }
+
+    public void createStudent(Student student) {
+        studentDao.createStudent(student);
+    }
+
+    public void deleteStudent(Integer studentId) {
+        studentDao.deleteStudent(studentId);
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>單純轉呼叫：</b> 新增和刪除目前沒有額外邏輯，Service 直接把參數傳給 Dao 對應的方法。
+</div>
+
+<!--
+StudentService 分兩頁看，這一頁是注入和最單純的兩個方法。
+
+用建構子注入 StudentDao，和前面的寫法完全一樣。
+
+createStudent 和 deleteStudent 就是單純轉呼叫：收到什麼參數，原封不動傳給 Dao。
+現在看起來 Service 好像沒做事，但這一層是保留給商業邏輯的位置——
+之後要加「新增前檢查資料」「刪除前確認資料存在」這類邏輯，就寫在這裡。
+
+下一頁的 updateStudent 就是 Service 開始「做事」的例子。
+-->
+
+---
+
+# StudentService（2/2）— 修改：組裝資料
+
+`updateStudent()` 多做一件事：把 URL 的 id 設回 `student` 物件：
+
+```java
+    public void updateStudent(Integer studentId, Student student) {
+        // 把 URL 收到的 studentId 設回 student 物件
+        student.setId(studentId);
+
+        // Dao 的 updateStudent() 從 student.getId() 取 WHERE 條件的值
+        studentDao.updateStudent(student);
+    }
+```
+
+| 資料 | 來源 | 用途 |
+| --- | --- | --- |
+| `studentId` | URL 路徑（`@PathVariable`） | WHERE 條件——要改「哪一筆」 |
+| `student.name` | Request body（`@RequestBody`） | SET 的新值——要改「成什麼」 |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>RESTful 慣例：</b> 「要改哪一筆」由 URL 決定，「要改成什麼」由 body 決定；Service 負責把兩者組裝成完整的 <code>Student</code> 物件再交給 Dao。
+</div>
+
+<!--
+接續上一頁，updateStudent 是 Service 層開始有「邏輯」的例子。
+
+它多做了一件事：把 URL 路徑收到的 studentId 設回 student 物件。
+為什麼要這樣做？因為 Dao 的 updateStudent() 是從 student.getId() 取得 WHERE 條件的值，
+但前端的 request body 通常只帶要修改的內容（name），不帶 id——id 在 URL 上。
+
+這是 RESTful API 的慣例：「要改哪一筆」由 URL 決定，「要改成什麼」由 body 決定。
+Service 的工作就是把這兩個來源的資料組裝成完整的 Student 物件，再交給 Dao。
+
+這就是 Service 層的價值：不只是轉呼叫，還負責組裝資料、處理商業邏輯。
+-->
+
+---
+
+# StudentController（1/2）— 注入 Service、新增 API
+
+注入 `StudentService`，`POST /students` 接收前端的 JSON 資料：
+
+```java
+@RestController
+public class StudentController {
+
+    private final StudentService studentService;
+
+    public StudentController(StudentService studentService) {
+        this.studentService = studentService;
+    }
+
+    @PostMapping("/students")
+    public String create(@RequestBody Student student) {
+        studentService.createStudent(student);
+        return "新增成功";
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>Controller 只注入 Service：</b> 不直接碰 Dao。前端的 JSON 由 <code>@RequestBody</code> 轉成 <code>Student</code> 物件，交給 Service 處理。
+</div>
+
+<!--
+StudentController 也分兩頁看，這一頁是注入和新增的 API。
+
+注意注入的是 StudentService，不是 StudentDao——Controller 只跟 Service 溝通，這是三層式架構的規矩。
+
+@PostMapping 對應「新增」：RESTful 慣例中，POST 用來建立資料。
+前端傳來的 JSON 放在 request body，用 @RequestBody 自動轉成 Student 物件，再交給 Service。
+
+下一頁是修改和刪除的 API，兩個都需要從 URL 取得 id。
+-->
+
+---
+
+# StudentController（2/2）— 修改與刪除 API
+
+`PUT` 和 `DELETE` 都用 `@PathVariable` 從 URL 取得要操作的 id：
+
+```java
+    @PutMapping("/students/{studentId}")
+    public String update(@PathVariable(name = "studentId") Integer studentId,
+                         @RequestBody Student student) {
+        studentService.updateStudent(studentId, student);
+        return "修改成功";
+    }
+
+    @DeleteMapping("/students/{studentId}")
+    public String delete(@PathVariable(name = "studentId") Integer studentId) {
+        studentService.deleteStudent(studentId);
+        return "刪除成功";
+    }
+```
+
+| API | URL 的 id | Request Body |
+| --- | --- | --- |
+| `PUT`（修改） | 要改哪一筆（WHERE） | 要改成什麼（新的 `name`） |
+| `DELETE`（刪除） | 要刪哪一筆（WHERE） | 不需要 |
+
+<!--
+接續上一頁，修改和刪除的 API。
+
+PUT /students/{studentId} 對應「修改」：要改哪一筆由 URL 的 @PathVariable 決定，
+改成什麼由 body 的 @RequestBody 決定——這正是上一節 Service 的 updateStudent 需要兩個參數的原因。
+
+DELETE /students/{studentId} 對應「刪除」：只需要 URL 的 id，不需要 body。
+
+這也呼應了前面 DELETE 範例的說明：Dao 的 deleteStudent(Integer studentId) 收到的，
+正是這裡 @PathVariable 從 URL 取出的值，一路從 Controller 經過 Service 傳進來。
+-->
+
+---
+
+# 用 Postman 測試三層式架構
+
+啟動 Spring Boot，依序測試三個 API，並到 MySQL 確認資料變化：
+
+| 操作 | HTTP 方法 + URL | Request Body（JSON） | 預期結果 |
+| --- | --- | --- | --- |
+| 新增 | `POST /students` | `{"id": 1, "name": "Judy"}` | 資料表多一筆 Judy |
+| 修改 | `PUT /students/1` | `{"name": "John"}` | id=1 的 name 變成 John |
+| 刪除 | `DELETE /students/1` | 不需要 | id=1 那筆資料消失 |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>驗收方式：</b> 每打完一個 API，就到 MySQL Workbench 執行 <code>SELECT * FROM student</code>，確認資料真的被新增／修改／刪除了。
+</div>
+
+<!--
+最後實際測試整條鏈路。
+
+先用 POST /students 新增一筆 Judy，body 是 JSON 格式，記得 Headers 設 Content-Type: application/json。
+再用 PUT /students/1 把名字改成 John——注意 id 放在 URL，body 只放要改的 name。
+最後用 DELETE /students/1 刪掉這筆資料，DELETE 不需要 body。
+
+每一步都到 MySQL Workbench 下 SELECT 確認，親眼看到資料的變化，才算真正理解了整條呼叫鏈：
+Postman → Controller → Service → Dao → 資料庫。
+
+這就是 Spring 三層式架構的完整寫法，之後所有的功能都會遵守這個結構。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 5
+
 ## 批次新增：batchUpdate()
 
 <!--
@@ -837,7 +1124,7 @@ batchUpdate() 的參數是 SQL + Map 陣列，每個 Map 對應一筆資料的�
 
 ---
 
-# 章節總結
+# 章節總結（1/2）— Spring JDBC 的用法
 
 | 重點 | 說明 |
 | --- | --- |
@@ -846,19 +1133,35 @@ batchUpdate() 的參數是 SQL + Map 陣列，每個 Map 對應一筆資料的�
 | 核心工具 | `NamedParameterJdbcTemplate`，透過建構子注入 |
 | 具名參數 | SQL 用 `:paramName`，比 `?` 更清楚；Map 的 key 需完全一致 |
 | 四個步驟 | 注入 → 寫 SQL → 建立 Map → 呼叫 `update()` |
+
+<!--
+好，今天的重點總結，分兩頁。第一頁是 Spring JDBC 本身的用法。
+
+第一，Spring JDBC 把 SQL 分成三大方法：DDL 用 execute()，修改資料用 update()，查詢用 query()。
+第二，execute() 執行 CREATE TABLE 這類不帶動態參數的 DDL，注入的是 JdbcTemplate。
+第三，修改資料的核心工具是 NamedParameterJdbcTemplate，用建構子注入。
+第四，本課程使用 :paramName 具名參數而非 ? 佔位符，SQL 和 Map 的 key 名稱必須完全一致。
+第五，四個固定步驟：注入、寫 SQL、建 Map、執行 update()。
+-->
+
+---
+
+# 章節總結（2/2）— 注意事項與架構
+
+| 重點 | 說明 |
+| --- | --- |
 | 回傳值 | `update()` 回傳 `int`，代表受影響的資料列數 |
 | 安全注意 | UPDATE 和 DELETE 一定要加 WHERE 條件 |
+| 三層式架構 | Controller（`@RestController`）→ Service（`@Service`）→ Dao（`@Repository`），Controller 不直接呼叫 Dao |
 | `batchUpdate()` | 批次新增用 `Map[]` 傳參數，回傳 `int[]`；效能遠優於逐筆 `update()` |
 
 <!--
-好，今天的重點總結。
+總結第二頁，注意事項和架構。
 
-第一，Spring JDBC 把 SQL 分成修改類和查詢類，今天學的 update() 負責修改類。
-第二，核心工具是 NamedParameterJdbcTemplate，用建構子注入。
-第三，本課程使用 :paramName 具名參數而非 ? 佔位符，SQL 和 Map 的 key 名稱必須完全一致。
-第四，四個固定步驟：注入、寫 SQL、建 Map、執行 update()。
-第五，update() 回傳受影響的列數，可以用來判斷操作是否成功。
-第六，UPDATE 和 DELETE 必須有 WHERE 條件，這是很重要的習慣。
+第一，update() 回傳受影響的列數，可以用來判斷操作是否成功。
+第二，UPDATE 和 DELETE 必須有 WHERE 條件，這是很重要的習慣。
+第三，完整的呼叫鏈是 Controller → Service → Dao，Controller 不直接呼叫 Dao，這是 Spring 三層式架構的標準寫法。
+第四，批次新增用 batchUpdate()，效能遠優於逐筆 update()。
 
 下一章我們學查詢類——用 query() 執行 SELECT，從資料庫讀取資料。
 -->
