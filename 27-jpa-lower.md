@@ -122,21 +122,38 @@ class: flex flex-col justify-center items-center text-center
 
 # findAll() — 查詢所有學生
 
-`findAll()` 自動執行 `SELECT * FROM student`：
+在 `StudentDao` 注入 `StudentRepository`，`findAll()` 自動執行 `SELECT * FROM student`：
 
 ```java
-List<Student> list = studentRepository.findAll();
-return list;
+import java.util.List;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public class StudentDao {
+
+    private final StudentRepository studentRepository;
+
+    public StudentDao(StudentRepository studentRepository) {
+        this.studentRepository = studentRepository;
+    }
+
+    public List<Student> getStudentList() {
+        List<Student> list = studentRepository.findAll();
+        return list;
+    }
+}
 ```
 
 | 說明 | 詳情 |
 | --- | --- |
 | 不需要任何參數 | JPA 自動產生並執行 `SELECT * FROM student` |
-| 回傳值 | `List<Student>`，每個物件對應資料表的一行 |
-| 自動映射 | JPA 自動把欄位值映射到 Student 的欄位，**不需要 RowMapper** |
+| 回傳值 | `List<Student>`，每個物件對應資料表的一行；**不需要 RowMapper** |
 
 <!--
-findAll() 是最簡單的查詢方法，一行搞定。
+findAll() 是最簡單的查詢方法。
+
+Dao 的結構和上一章完全一樣：@Repository + 建構子注入 StudentRepository，
+本章的查詢方法都會寫在這個 StudentDao 裡。
 
 和 Spring JDBC 相比，Spring JDBC 需要：寫 SQL + 建 Map + 建 RowMapper + 呼叫 query()，整整四步。
 Spring Data JPA 只需要一行 findAll()，JPA 自動處理所有細節。
@@ -148,12 +165,17 @@ Spring Data JPA 只需要一行 findAll()，JPA 自動處理所有細節。
 
 # findById() — 查詢單筆學生
 
-`findById()` 根據 id 查詢，回傳 `Optional<Student>`：
+在 `StudentDao` 加上 `getStudentById()`，`findById()` 回傳 `Optional<Student>`：
 
 ```java
-Optional<Student> result = studentRepository.findById(studentId);
-Student student = result.orElse(null);
-return student;
+import java.util.Optional;
+
+    // 接續 StudentDao，新增方法
+    public Student getStudentById(Integer studentId) {
+        Optional<Student> result = studentRepository.findById(studentId);
+        Student student = result.orElse(null);
+        return student;
+    }
 ```
 
 | 說明 | 詳情 |
@@ -274,13 +296,18 @@ Containing 則是框架自動幫你加上前後的 %，更方便。
 `findByXxxIn(Collection)` 支援動態個數的 IN 條件：
 
 ```java
-// Repository 定義
-List<Student> findByNameIn(Collection<String> names);
+// StudentRepository — 宣告方法
+public interface StudentRepository extends JpaRepository<Student, Integer> {
+    List<Student> findByNameIn(Collection<String> names);
+}
+```
 
-// 呼叫
-List<String> names = Arrays.asList("Alice", "Bob", "Carol");
-List<Student> result = studentRepository.findByNameIn(names);
-// → SELECT * FROM student WHERE name IN ('Alice', 'Bob', 'Carol')
+```java
+    // StudentDao — 新增方法呼叫
+    public List<Student> getStudentsByNames(List<String> names) {
+        // names = ["Alice", "Bob"] → SELECT * FROM student WHERE name IN ('Alice', 'Bob')
+        return studentRepository.findByNameIn(names);
+    }
 ```
 
 | 說明 | 詳情 |
@@ -326,23 +353,26 @@ Pageable 是請求的規格；PageRequest 是建立 Pageable 的工具；Page �
 
 # 分頁查詢 — 程式碼範例
 
-**呼叫 JpaRepository 內建的分頁方法：**
+**在 StudentDao 呼叫 JpaRepository 內建的分頁方法：**
 
 ```java
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
-// 第 1 頁（index=0），每頁 4 筆
-Page<Student> result = studentRepository.findAll(PageRequest.of(0, 4));
-List<Student> students = result.getContent();   // 取得本頁資料
-long total = result.getTotalElements();          // 取得總筆數
-int totalPages = result.getTotalPages();         // 取得總頁數
+    // StudentDao — 新增方法
+    public List<Student> getStudentPage(Integer page, Integer size) {
+        Page<Student> result = studentRepository.findAll(PageRequest.of(page, size));
+        List<Student> students = result.getContent();   // 取得本頁資料
+        long total = result.getTotalElements();          // 取得總筆數
+        int totalPages = result.getTotalPages();         // 取得總頁數
+        return students;
+    }
 ```
 
 **自訂查詢也支援分頁（在 Repository 加 Pageable 參數）：**
 
 ```java
-Page<Student> findByCity(String city, Pageable pageable);
+Page<Student> findByName(String name, Pageable pageable);
 ```
 
 <!--
@@ -373,47 +403,38 @@ class: flex flex-col justify-center items-center text-center
 
 ---
 
-# StudentDao — 查詢方法
+# StudentDao — 彙整本章的查詢方法
 
-`@Repository` + 建構子注入 `StudentRepository`，包裝三個查詢：
+前面各節已陸續完成四個方法，補上自訂查詢 `getStudentsByName()`，Dao 就齊了：
 
 ```java
-@Repository
-public class StudentDao {
-
-    private final StudentRepository studentRepository;
-
-    public StudentDao(StudentRepository studentRepository) {
-        this.studentRepository = studentRepository;
-    }
-
-    public List<Student> getStudentList() {
-        return studentRepository.findAll();
-    }
-
-    public Student getStudentById(Integer studentId) {
-        return studentRepository.findById(studentId).orElse(null);
-    }
-
+    // StudentDao — 新增方法
     public List<Student> getStudentsByName(String name) {
         return studentRepository.findByName(name);
     }
-}
 ```
 
-<!--
-Dao 的查詢方法都是本章學過的內容：
+| Dao 方法 | 呼叫的 Repository 方法 | 出處 |
+| --- | --- | --- |
+| `getStudentList()` | `findAll()` | Part 2 |
+| `getStudentById(id)` | `findById(id).orElse(null)` | Part 2 |
+| `getStudentsByName(name)` | `findByName(name)` | 本頁補上 |
+| `getStudentsByNames(names)` | `findByNameIn(names)` | In — 動態多值查詢 |
+| `getStudentPage(page, size)` | `findAll(PageRequest.of(page, size))` | 分頁查詢 |
 
-getStudentList() 轉呼叫 findAll()。
-getStudentById() 呼叫 findById()，用 orElse(null) 從 Optional 取出 Student——這一層負責把 Optional 拆掉，讓上層拿到乾淨的 Student。
-getStudentsByName() 轉呼叫自訂查詢方法 findByName()。
+<!--
+Dao 這一層其實在前面各節就一路寫好了：findAll、findById、findByNameIn、分頁，各自的小節都把方法加進 StudentDao。
+
+這裡再補最後一個：getStudentsByName()，轉呼叫自訂查詢方法 findByName()。
+
+用這張表把五個方法彙整起來——接下來 Service 和 Controller 要把這五個方法全部串出去。
 
 比較 ch25 的 Dao：不用寫 SQL、不用建 Map、不用寫 RowMapper，每個方法一行搞定。
 -->
 
 ---
 
-# StudentService — 轉呼叫
+# StudentService（1/2）— 基本查詢
 
 和 ch25 相同的結構：建構子注入 `StudentDao`，把查詢結果一路 `return` 回去：
 
@@ -446,6 +467,38 @@ Service 層和 ch25 幾乎一模一樣：@Service、建構子注入、轉呼叫�
 
 唯一的差別：getStudentById() 的回傳型別是 Student，不是 List<Student>——
 因為 JPA 的 findById() 本來就是查單筆，不像 Spring JDBC 的 query() 只能回傳 List。
+
+還有 IN 查詢和分頁兩個方法，下一頁補上。
+-->
+
+---
+
+# StudentService（2/2）— IN 查詢與分頁
+
+Dao 的另外兩個方法也補上轉呼叫：
+
+```java
+    public List<Student> getStudentsByNames(List<String> names) {
+        return studentDao.getStudentsByNames(names);
+    }
+
+    public List<Student> getStudentPage(Integer page, Integer size) {
+        return studentDao.getStudentPage(page, size);
+    }
+```
+
+| 方法 | 參數 | 對應 Dao |
+| --- | --- | --- |
+| `getStudentsByNames()` | 多個名字的 `List<String>` | `findByNameIn()` 展開成 `IN (...)` |
+| `getStudentPage()` | `page`（第幾頁）、`size`（每頁幾筆） | `findAll(PageRequest.of(page, size))` |
+
+<!--
+IN 查詢和分頁的 Service 方法一樣是單純轉呼叫。
+
+注意 getStudentPage 的兩個參數：page 和 size 是從前端一路傳進來的——
+前端決定「要看第幾頁、每頁幾筆」，經 Controller、Service 傳到 Dao，最後變成 PageRequest.of(page, size)。
+
+這就是分頁在三層式架構裡的應用方式：分頁參數是「前端的需求」，所以由前端傳入，後端不寫死。
 -->
 
 ---
@@ -521,9 +574,68 @@ GET /students/search?name=Judy 用 @RequestParam 接收搜尋條件——
 
 ---
 
-# 用 Postman 測試查詢 API
+# IN 查詢 — 串接 API
 
-先用上一章的 POST 新增幾筆資料，再測試三個 GET API：
+多個名字放 query string，逗號分隔，`@RequestParam` 自動轉成 `List<String>`：
+
+```java
+    @GetMapping("/students/search-by-names")
+    public List<Student> getStudentsByNames(@RequestParam(name = "names") List<String> names) {
+        return studentService.getStudentsByNames(names);
+    }
+```
+
+| 說明 | 詳情 |
+| --- | --- |
+| URL 範例 | `GET /students/search-by-names?names=Alice,Bob` |
+| 參數轉換 | `?names=Alice,Bob` 逗號分隔 → Spring 自動轉 `List<String>` |
+| 整條鏈路 | Controller → Service → Dao → `findByNameIn()` → `WHERE name IN ('Alice', 'Bob')` |
+
+<!--
+IN 查詢的 API：?names=Alice,Bob 逗號分隔，Spring 自動轉成 List<String>，
+和 ch25 的 ?ids=1,2 是同一招——搜尋條件放 query string。
+
+整條鏈路：names 一路傳到 Dao 的 findByNameIn()，JPA 自動展開成 IN 語法，傳幾個名字就展開幾個佔位符。
+-->
+
+---
+
+# 分頁 — 串接 API
+
+前端在 URL 上決定「第幾頁、每頁幾筆」，一路傳到 `PageRequest.of()`：
+
+```java
+    @GetMapping("/students/page")
+    public List<Student> getStudentPage(@RequestParam(name = "page") Integer page,
+                                        @RequestParam(name = "size") Integer size) {
+        return studentService.getStudentPage(page, size);
+    }
+```
+
+| 說明 | 詳情 |
+| --- | --- |
+| URL 範例 | `GET /students/page?page=0&size=4` — 第 1 頁（從 **0** 開始）、每頁 4 筆 |
+| 整條鏈路 | `?page=0&size=4` → Service → Dao → `PageRequest.of(0, 4)` → JPA 產生 `LIMIT` SQL |
+
+<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>前端要總頁數怎麼辦？</b> Controller 可以直接回傳 <code>Page&lt;Student&gt;</code>，Spring 轉出的 JSON 會包含 <code>content</code>（本頁資料）、<code>totalElements</code>（總筆數）、<code>totalPages</code>（總頁數）。
+</div>
+
+<!--
+這就是分頁的完整應用——分頁參數是「前端的需求」，所以由前端在 URL 上決定：
+?page=0&size=4 → Controller 的 @RequestParam → Service → Dao → PageRequest.of(0, 4) → JPA 產生 LIMIT/OFFSET 的 SQL。
+記得頁碼從 0 開始：第 1 頁是 page=0。
+
+補充：目前回傳 List<Student> 只給了本頁的資料，
+但實務上前端做分頁 UI 還需要總頁數——這時 Controller 直接回傳 Page<Student> 即可，
+Spring 會把 content、totalElements、totalPages 一起轉成 JSON 給前端。
+-->
+
+---
+
+# 用 Postman 測試（1/2）— 基本查詢
+
+先用上一章的 POST 新增幾筆資料，再測試前三個 GET API：
 
 | 操作 | HTTP 方法 + URL | 預期結果 |
 | --- | --- | --- |
@@ -536,12 +648,39 @@ GET /students/search?name=Judy 用 @RequestParam 接收搜尋條件——
 </div>
 
 <!--
-最後用 Postman 驗證整條鏈路。
+先驗證三個基本查詢的鏈路。
 
 查全部和 ch25 一樣回傳 JSON 陣列。
 查單筆注意看：回傳的是 {"id":1,"name":"Judy"}，最外層是大括號不是中括號——這就是回傳型別從 List 改成 Student 的效果。
 條件搜尋打 /students/search?name=Judy，console 會印出 JPA 自動產生的 SQL，
 親眼確認「方法名稱就是 SQL」不是魔法，是框架在啟動時解析方法名稱產生的查詢。
+-->
+
+---
+
+# 用 Postman 測試（2/2）— IN 查詢與分頁
+
+再測試 IN 查詢和分頁，特別觀察分頁的 SQL：
+
+| 操作 | HTTP 方法 + URL | 預期結果 |
+| --- | --- | --- |
+| IN 查詢 | `GET /students/search-by-names?names=Judy,Tom` | `[{"id":1,"name":"Judy"},{"id":2,"name":"Tom"}]` |
+| 分頁 | `GET /students/page?page=0&size=1` | `[{"id":1,"name":"Judy"}]` — 只回第 1 頁的 1 筆 |
+| 分頁（第 2 頁） | `GET /students/page?page=1&size=1` | `[{"id":2,"name":"Tom"}]` — 換 `page` 就換頁 |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>觀察 console 的 SQL：</b> 打分頁 API 時，console 印出的 SQL 結尾有 <code>limit ?, ?</code>——<code>PageRequest.of(page, size)</code> 被 JPA 翻譯成 MySQL 的 <code>LIMIT</code> 語法。
+</div>
+
+<!--
+再驗證 IN 查詢和分頁。
+
+IN 查詢：?names=Judy,Tom 回傳兩筆，console 的 SQL 是 where name in (?, ?)。
+
+分頁最值得玩：同樣的 size=1，page=0 回 Judy、page=1 回 Tom——
+親眼看到「換 page 參數就換頁」的效果。
+console 的 SQL 結尾有 limit ?, ?，這就是 PageRequest 被翻譯成 MySQL LIMIT 語法的證據，
+資料庫只回傳那一頁的資料，而不是全撈回來再切。
 -->
 
 ---
@@ -576,7 +715,7 @@ Spring Data JPA 大部分情況只需要呼叫方法或定義方法名稱，程�
 | 命名規則 | `findBy + 欄位名稱`，支援 And、Or、Between、In、OrderBy 等關鍵字 |
 | 分頁查詢 | `findAll(PageRequest.of(page, size))`，回傳 `Page<T>`，頁碼從 0 開始 |
 | 不需要 RowMapper | JPA 自動把查詢結果映射到 Java 物件 |
-| 三層串接 | `GET /students`、`GET /students/{id}`、`GET /students/search?name=`；單筆查詢回傳 `Student` 物件（不再是 List） |
+| 三層串接 | 五個 GET API：查全部、查單筆（回傳 `Student` 物件）、條件搜尋、IN 查詢、分頁（`?page=0&size=4`） |
 
 <!--
 今天的重點總結。
