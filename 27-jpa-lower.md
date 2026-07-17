@@ -58,10 +58,10 @@ layout: default
 # Outline
 
 - **`findAll()` 和 `findById()`** — 查詢全部與查詢單筆的用法
-- **使用查詢方法操作資料** — 實際整合 Controller 呼叫 JpaRepository
 - **自訂查詢方法** — 方法命名規則自動產生 SQL，Spring Data JPA 最強特色
 - **完整 Keyword 表** — And、Or、Between、Like、In、OrderBy 等常用關鍵字
 - **分頁查詢** — `Page`、`Pageable`、`PageRequest.of()` 用法
+- **串接三層式架構** — Controller + Service + Dao 完整程式碼與 Postman 測試
 - **章節總結** — JPA 查詢完整整理，三種框架比較收尾
 
 <!--
@@ -359,6 +359,192 @@ findAll(Pageable) 是 JpaRepository 內建的方法，不需要額外宣告，�
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 4
+
+## 串接三層式架構
+
+<!--
+查詢方法都會用了，一樣補上 Service 和 Controller，讓前端能透過 GET API 查詢資料。
+-->
+
+---
+
+# StudentDao — 查詢方法
+
+`@Repository` + 建構子注入 `StudentRepository`，包裝三個查詢：
+
+```java
+@Repository
+public class StudentDao {
+
+    private final StudentRepository studentRepository;
+
+    public StudentDao(StudentRepository studentRepository) {
+        this.studentRepository = studentRepository;
+    }
+
+    public List<Student> getStudentList() {
+        return studentRepository.findAll();
+    }
+
+    public Student getStudentById(Integer studentId) {
+        return studentRepository.findById(studentId).orElse(null);
+    }
+
+    public List<Student> getStudentsByName(String name) {
+        return studentRepository.findByName(name);
+    }
+}
+```
+
+<!--
+Dao 的查詢方法都是本章學過的內容：
+
+getStudentList() 轉呼叫 findAll()。
+getStudentById() 呼叫 findById()，用 orElse(null) 從 Optional 取出 Student——這一層負責把 Optional 拆掉，讓上層拿到乾淨的 Student。
+getStudentsByName() 轉呼叫自訂查詢方法 findByName()。
+
+比較 ch25 的 Dao：不用寫 SQL、不用建 Map、不用寫 RowMapper，每個方法一行搞定。
+-->
+
+---
+
+# StudentService — 轉呼叫
+
+和 ch25 相同的結構：建構子注入 `StudentDao`，把查詢結果一路 `return` 回去：
+
+```java
+@Service
+public class StudentService {
+
+    private final StudentDao studentDao;
+
+    public StudentService(StudentDao studentDao) {
+        this.studentDao = studentDao;
+    }
+
+    public List<Student> getStudentList() {
+        return studentDao.getStudentList();
+    }
+
+    public Student getStudentById(Integer studentId) {
+        return studentDao.getStudentById(studentId);
+    }
+
+    public List<Student> getStudentsByName(String name) {
+        return studentDao.getStudentsByName(name);
+    }
+}
+```
+
+<!--
+Service 層和 ch25 幾乎一模一樣：@Service、建構子注入、轉呼叫、return。
+
+唯一的差別：getStudentById() 的回傳型別是 Student，不是 List<Student>——
+因為 JPA 的 findById() 本來就是查單筆，不像 Spring JDBC 的 query() 只能回傳 List。
+-->
+
+---
+
+# StudentController — 查詢 API
+
+三個 GET API，單筆查詢改回傳 `Student`（不再是 List）：
+
+```java
+@RestController
+public class StudentController {
+
+    private final StudentService studentService;
+
+    public StudentController(StudentService studentService) {
+        this.studentService = studentService;
+    }
+
+    @GetMapping("/students")
+    public List<Student> getStudentList() {
+        return studentService.getStudentList();
+    }
+
+    @GetMapping("/students/{studentId}")
+    public Student getStudentById(@PathVariable(name = "studentId") Integer studentId) {
+        return studentService.getStudentById(studentId);
+    }
+}
+```
+
+<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>兌現 ch25 的預告：</b> 單筆查詢的回傳型別是 <code>Student</code>，前端拿到的是 JSON 物件 <code>{ }</code>，不再是包一層的陣列 <code>[ ]</code>。
+</div>
+
+<!--
+Controller 一樣只注入 Service。
+
+GET /students 查全部，回傳 List<Student>，自動轉 JSON 陣列。
+GET /students/{studentId} 查單筆——注意回傳型別是 Student！
+ch25 用 Spring JDBC 時，query() 只能回傳 List，就算查單筆前端也拿到陣列；
+現在 findById() 天生查單筆，前端拿到的就是乾淨的 JSON 物件。
+
+還剩自訂查詢方法 findByName 沒串接，下一頁補上。
+-->
+
+---
+
+# 條件搜尋 — 串接自訂查詢方法
+
+`findByName()` 也開一個 API，用 `@RequestParam` 接收搜尋條件：
+
+```java
+    @GetMapping("/students/search")
+    public List<Student> getStudentsByName(@RequestParam(name = "name") String name) {
+        return studentService.getStudentsByName(name);
+    }
+```
+
+| 說明 | 詳情 |
+| --- | --- |
+| URL | `GET /students/search?name=Judy` |
+| `@RequestParam` | 搜尋條件放 query string（ch25 講過的慣例） |
+| 整條鏈路 | Controller → Service → Dao → `findByName()` → JPA 自動產生 `WHERE name = ?` |
+
+<!--
+最後把自訂查詢方法也串起來。
+
+GET /students/search?name=Judy 用 @RequestParam 接收搜尋條件——
+搜尋、過濾放 query string，用 id 定位單筆才放 path，這是 ch25 講過的 REST 慣例。
+
+整條鏈路走到底，最後一棒是 JPA 從方法名稱 findByName 自動產生的 SQL——全程沒有人寫過一行 SQL。
+-->
+
+---
+
+# 用 Postman 測試查詢 API
+
+先用上一章的 POST 新增幾筆資料，再測試三個 GET API：
+
+| 操作 | HTTP 方法 + URL | 預期結果 |
+| --- | --- | --- |
+| 查全部 | `GET /students` | `[{"id":1,"name":"Judy"},{"id":2,"name":"Tom"}]` |
+| 查單筆 | `GET /students/1` | `{"id":1,"name":"Judy"}` — 單一物件，不是陣列 |
+| 條件搜尋 | `GET /students/search?name=Judy` | `[{"id":1,"name":"Judy"}]` |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>觀察 console 的 SQL：</b> 打 <code>GET /students/search?name=Judy</code> 時，console 會印出 <code>select ... from student where name=?</code>——這條 SQL 是 JPA 從方法名稱 <code>findByName</code> 自動產生的。
+</div>
+
+<!--
+最後用 Postman 驗證整條鏈路。
+
+查全部和 ch25 一樣回傳 JSON 陣列。
+查單筆注意看：回傳的是 {"id":1,"name":"Judy"}，最外層是大括號不是中括號——這就是回傳型別從 List 改成 Student 的效果。
+條件搜尋打 /students/search?name=Judy，console 會印出 JPA 自動產生的 SQL，
+親眼確認「方法名稱就是 SQL」不是魔法，是框架在啟動時解析方法名稱產生的查詢。
+-->
+
+---
 
 # Spring Data JPA vs Spring JDBC — 查詢比較
 
@@ -390,6 +576,7 @@ Spring Data JPA 大部分情況只需要呼叫方法或定義方法名稱，程�
 | 命名規則 | `findBy + 欄位名稱`，支援 And、Or、Between、In、OrderBy 等關鍵字 |
 | 分頁查詢 | `findAll(PageRequest.of(page, size))`，回傳 `Page<T>`，頁碼從 0 開始 |
 | 不需要 RowMapper | JPA 自動把查詢結果映射到 Java 物件 |
+| 三層串接 | `GET /students`、`GET /students/{id}`、`GET /students/search?name=`；單筆查詢回傳 `Student` 物件（不再是 List） |
 
 <!--
 今天的重點總結。

@@ -61,10 +61,11 @@ layout: default
 
 - **什麼是 Spring Data JPA？** — ORM 概念、與 Spring JDBC 的差異
 - **設定 Spring Data JPA** — 依賴加入、application.properties 設定
-- **`@Entity` 定義資料模型** — 把 Java 類別對應到資料庫表格
+- **`@Entity` 定義資料模型** — 把 Java 類別對應到資料庫表格、Entity 為何不用 `@Data`
 - **補充：`@IdClass` 複合主鍵** — 兩個欄位共同作為 Primary Key
 - **`JpaRepository` 執行 CUD** — save()、deleteById() 用法
 - **JpaRepository 完整方法表** — 內建 CRUD 方法一覽
+- **串接三層式架構** — Controller + Service + Dao 完整程式碼與 Postman 測試
 - **章節總結** — 核心概念整理，下一章預告
 
 <!--
@@ -239,16 +240,23 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 @Entity
 public class Student {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     private String name;
-    // 需加上 Getter 和 Setter
 }
 ```
+
+<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>Getter / Setter 用 Lombok 生成：</b> <code>@Getter</code> + <code>@Setter</code> 自動產生所有欄位的 Getter 和 Setter，不用手寫。為什麼不用更方便的 <code>@Data</code>？下一頁說明。
+</div>
 
 <!--
 看完整的 @Entity 類別範例。
@@ -259,7 +267,41 @@ import 使用 jakarta.persistence.*，這是 Spring Boot 3.x / 4.x 的正確寫�
 
 name 欄位不需要加任何 Annotation，JPA 會自動把它映射到資料表的 name 欄位。
 
+Getter 和 Setter 交給 Lombok：@Getter + @Setter 兩個 Annotation 自動生成，程式碼保持乾淨。
+有同學可能想用之前學過的 @Data 一次搞定——技術上可以，但 Entity 上用 @Data 有坑，下一頁詳細說明。
+
 ⚠️ 資料表名稱預設和類別名稱相同（大小寫不敏感），所以 Student 類別對應 student 資料表。如果名稱不同，需要加 @Table(name="自訂表名") Annotation。
+-->
+
+---
+
+# 為什麼 Entity 不建議用 @Data？
+
+`@Data` = `@Getter` + `@Setter` + `@ToString` + `@EqualsAndHashCode` + `@RequiredArgsConstructor`，後面兩個在 Entity 上會出問題：
+
+| 問題 | 原因 |
+| --- | --- |
+| `equals()` / `hashCode()` 用**全部欄位**計算 | 新增前 `id` 是 `null`，`save()` 後 `id` 有值 → `hashCode` 改變，物件放進 `HashSet` / `HashMap` 後會「找不到自己」 |
+| `toString()` 印出**全部欄位** | 之後學到 `@OneToMany` 等關聯欄位（Lazy Loading）時，印 log 會觸發額外查詢，甚至拋出 `LazyInitializationException` |
+
+| 類別 | 建議寫法 |
+| --- | --- |
+| **Entity**（對應資料表） | `@Getter` + `@Setter` ✅ |
+| **DTO / Request / Response**（單純傳資料） | `@Data` 沒問題 ✅ |
+
+<!--
+之前的章節教過 @Data，一個 Annotation 搞定 Getter、Setter、toString、equals、hashCode。
+但在 Entity 上，業界的慣例是「不用 @Data，只用 @Getter + @Setter」，原因有兩個：
+
+第一，equals() 和 hashCode()。@Data 生成的版本用「全部欄位」計算，
+但 Entity 的 id 在新增前是 null、save() 之後才有值——同一個物件的 hashCode 前後不一致，
+一旦放進 HashSet 或 HashMap，就會發生「明明加進去了卻找不到」的詭異 bug。
+
+第二，toString()。@Data 生成的版本印出全部欄位，
+之後學到 @OneToMany 這類延遲載入（Lazy Loading）的關聯欄位時，
+印一行 log 就可能觸發額外的資料庫查詢，甚至在交易結束後拋出 LazyInitializationException。
+
+所以記住這個慣例：Entity 用 @Getter + @Setter；DTO 這種單純傳資料的類別，@Data 隨便用沒問題。
 -->
 
 ---
@@ -276,14 +318,14 @@ name 欄位不需要加任何 Annotation，JPA 會自動把它映射到資料表
 | Repository | 宣告改為 `JpaRepository<Entity, MyId>` |
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>常見場景：</b> 關聯表，例如「小工具-組織」對應表，widgetId + orgId 共同唯一識別一筆資料。
+💡 <b>常見場景：</b> 關聯表，例如「選課表」<code>student_course</code>，studentId + courseId 共同唯一識別「某個學生選了某門課」。
 </div>
 
 <!--
 一般情況下主鍵只有一個欄位，但某些關聯表需要兩個欄位共同才能唯一識別一筆資料。
 
-例如「小工具組織對應表」：同一個 widgetId 可以對應多個組織，同一個 orgId 也可以對應多個小工具。
-不能只用 widgetId 或 orgId 當主鍵，需要用兩者的組合。
+例如「選課表」：同一個學生可以選多門課，同一門課也有多個學生選。
+不能只用 studentId 或 courseId 當主鍵，「哪個學生選了哪門課」要用兩者的組合才能唯一識別。
 
 這就是 @IdClass 的使用時機。
 -->
@@ -295,9 +337,9 @@ name 欄位不需要加任何 Annotation，JPA 會自動把它映射到資料表
 **步驟一：建立 ID 類別（實作 Serializable）**
 
 ```java
-public class WidgetOrgId implements Serializable {
-    private String widgetId;
-    private String orgId;
+public class StudentCourseId implements Serializable {
+    private Integer studentId;
+    private Integer courseId;
     // 需覆寫 equals() 和 hashCode()
 }
 ```
@@ -306,26 +348,26 @@ public class WidgetOrgId implements Serializable {
 
 ```java
 @Entity
-@Table(name = "widget_org")
-@IdClass(value = WidgetOrgId.class)
-public class WidgetOrg {
+@Table(name = "student_course")
+@IdClass(value = StudentCourseId.class)
+public class StudentCourse {
     @Id
-    @Column(name = "widget_id")
-    private String widgetId;
+    @Column(name = "student_id")
+    private Integer studentId;
     @Id
-    @Column(name = "org_id")
-    private String orgId;
+    @Column(name = "course_id")
+    private Integer courseId;
 }
 ```
 
 <!--
-步驟一：建立 WidgetOrgId 類別，實作 Serializable，包含所有 PK 欄位。
+步驟一：建立 StudentCourseId 類別，實作 Serializable，包含所有 PK 欄位。
 一定要覆寫 equals() 和 hashCode()，JPA 用這兩個方法判斷兩個主鍵是否相同。
 
-步驟二：Entity 類別加 @IdClass(WidgetOrgId.class)，然後對每個 PK 欄位各加一個 @Id。
+步驟二：Entity 類別加 @IdClass(StudentCourseId.class)，然後對每個 PK 欄位各加一個 @Id。
 Entity 裡的欄位名稱要和 ID 類別的欄位名稱相同。
 
-⚠️ Repository 宣告要改：JpaRepository<WidgetOrg, WidgetOrgId>，第二個泛型改成 ID 類別。
+⚠️ Repository 宣告要改：JpaRepository<StudentCourse, StudentCourseId>，第二個泛型改成 ID 類別。
 -->
 
 ---
@@ -375,13 +417,16 @@ Spring 在啟動時會自動幫我們建立這個介面的實作類別，我們�
 `save()` 一個方法同時負責新增（INSERT）和更新（UPDATE）：
 
 ```java
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class StudentDao {
-    @Autowired
-    private StudentRepository studentRepository;
+
+    private final StudentRepository studentRepository;
+
+    public StudentDao(StudentRepository studentRepository) {
+        this.studentRepository = studentRepository;
+    }
 
     public void createStudent(String name) {
         Student student = new Student();
@@ -393,6 +438,8 @@ public class StudentDao {
 
 <!--
 save() 是 JpaRepository 最常用的方法。
+
+Dao 的寫法和 Spring JDBC 章節一樣：@Repository + 建構子注入，只是注入的對象從 NamedParameterJdbcTemplate 換成 StudentRepository。
 
 新增時：建立一個新的 Student 物件，不設定 id（讓資料庫自動產生），呼叫 save()。
 JPA 判斷 id 為 null → 執行 INSERT。
@@ -476,12 +523,12 @@ deleteById() 非常簡單：傳入要刪除的 id，JPA 自動產生 DELETE SQL 
 `saveAll()` 一次儲存多筆資料，效能優於迴圈逐筆 `save()`：
 
 ```java
-List<Student> students = Arrays.asList(
-    new Student("Alice"),
-    new Student("Bob"),
-    new Student("Carol")
-);
-studentRepository.saveAll(students);
+Student s1 = new Student();
+s1.setName("Alice");
+Student s2 = new Student();
+s2.setName("Bob");
+
+studentRepository.saveAll(Arrays.asList(s1, s2));
 ```
 
 | 說明 | 詳情 |
@@ -497,6 +544,245 @@ saveAll() 是 JpaRepository 內建的批次操作方法。
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 4
+
+## 串接三層式架構
+
+<!--
+CUD 方法都會用了，和 Spring JDBC 章節一樣的問題：誰來呼叫 Dao？
+這一節補上 Service 和 Controller，讓前端能透過 API 操作資料庫。
+-->
+
+---
+
+# 回顧：三層式架構的呼叫鏈
+
+架構和 Spring JDBC 章節**完全相同**，只有 Dao 的內部實作換了：
+
+| 分層 | 類別 | 這一章的寫法 |
+| --- | --- | --- |
+| Controller | `StudentController` | 和 ch24 一樣：POST / PUT / DELETE 三個 API |
+| Service | `StudentService` | 和 ch24 一樣：轉呼叫 Dao |
+| Dao | `StudentDao` | **不寫 SQL**，改呼叫 `JpaRepository` 的方法 |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>分層的好處：</b> 從 Spring JDBC 換成 JPA，只需要改 Dao 這一層——Controller 和 Service 一行都不用動。
+</div>
+
+<!--
+把 Service 和 Controller 補上，前端才能透過 API 操作資料庫。
+
+重點：三層式架構和 Spring JDBC 章節完全相同，唯一的差別在 Dao 的內部——
+之前是手寫 SQL + NamedParameterJdbcTemplate，現在是呼叫 JpaRepository 的方法。
+
+這正是分層架構的價值：底層技術從 JDBC 換成 JPA，上面的 Controller 和 Service 完全不受影響。
+-->
+
+---
+
+# StudentDao — 補上修改與刪除
+
+`createStudent()` 已經寫好，補上 `updateStudent()` 和 `deleteStudent()`：
+
+```java
+    public void updateStudent(Student student) {
+        // student 的 id 有值 → save() 執行 UPDATE
+        studentRepository.save(student);
+    }
+
+    public void deleteStudent(Integer studentId) {
+        studentRepository.deleteById(studentId);
+    }
+```
+
+| 方法 | 呼叫 | JPA 執行的 SQL |
+| --- | --- | --- |
+| `updateStudent()` | `save(student)`（id 有值） | `UPDATE student SET name = ? WHERE id = ?` |
+| `deleteStudent()` | `deleteById(studentId)` | `DELETE FROM student WHERE id = ?` |
+
+<!--
+Dao 補上另外兩個方法，都是前面學過的內容：
+
+updateStudent()：一樣呼叫 save()，但這次傳進來的 student 物件 id 有值，JPA 判斷後執行 UPDATE。
+deleteStudent()：轉呼叫 deleteById()。
+
+比較 Spring JDBC 的 Dao：每個方法都要寫 SQL 字串 + Map。JPA 的 Dao 每個方法都只有一行。
+-->
+
+---
+
+# StudentService（1/2）— 注入 Dao、新增與刪除
+
+和 ch24 完全相同：`@Service` + 建構子注入，`createStudent()` 和 `deleteStudent()` 單純轉呼叫：
+
+```java
+@Service
+public class StudentService {
+
+    private final StudentDao studentDao;
+
+    public StudentService(StudentDao studentDao) {
+        this.studentDao = studentDao;
+    }
+
+    public void createStudent(Student student) {
+        studentDao.createStudent(student);
+    }
+
+    public void deleteStudent(Integer studentId) {
+        studentDao.deleteStudent(studentId);
+    }
+}
+```
+
+<!--
+Service 層和 ch24 一模一樣，一行都不用改的意思就是這樣——直接看程式碼複習：
+
+createStudent 和 deleteStudent 單純轉呼叫：收到什麼參數，原封不動傳給 Dao。
+
+注意：因為 createStudent 現在收整個 Student 物件，Dao 的 createStudent 簽名也改成收 Student，直接 save。
+
+下一頁的 updateStudent 一樣是 Service「做事」的例子。
+-->
+
+---
+
+# StudentService（2/2）— 修改：組裝資料
+
+`updateStudent()` 一樣負責把 URL 的 id 組回 `student` 物件：
+
+```java
+    public void updateStudent(Integer studentId, Student student) {
+        // URL 的 id 設回 student 物件
+        student.setId(studentId);
+
+        // id 有值 → Dao 的 save() 執行 UPDATE
+        studentDao.updateStudent(student);
+    }
+```
+
+| 資料 | 來源 | 用途 |
+| --- | --- | --- |
+| `studentId` | URL 路徑（`@PathVariable`） | 決定 UPDATE「哪一筆」 |
+| `student.name` | Request body（`@RequestBody`） | 要改「成什麼」 |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>和 ch24 的差別：</b> ch24 設 id 是為了給 SQL 的 <code>WHERE</code> 條件取值；這一章設 id 是讓 <code>save()</code> 判斷「id 有值」而執行 UPDATE——組裝動作相同，背後機制不同。
+</div>
+
+<!--
+updateStudent 和 ch24 一樣負責組裝資料：把 URL 收到的 studentId 設回 student 物件。
+
+但背後的機制不同，值得點出來：
+ch24 設 id，是因為 Dao 的 SQL 要從 student.getId() 取 WHERE 條件的值；
+這一章設 id，是讓 JPA 的 save() 判斷「id 有值」，進而執行 UPDATE 而不是 INSERT。
+
+組裝的動作一模一樣，但一個是給 SQL 用，一個是給 ORM 判斷用——這就是換底層技術時，Service 不用改的原因。
+-->
+
+---
+
+# StudentController（1/2）— 注入 Service、新增 API
+
+和 ch24 完全相同：注入 Service、不直接碰 Dao：
+
+```java
+@RestController
+public class StudentController {
+
+    private final StudentService studentService;
+
+    public StudentController(StudentService studentService) {
+        this.studentService = studentService;
+    }
+
+    @PostMapping("/students")
+    public String create(@RequestBody Student student) {
+        studentService.createStudent(student);
+        return "新增成功";
+    }
+}
+```
+
+<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>差別在 body：</b> ch24 的 POST 要自己帶 id；這一章 id 由 <code>@GeneratedValue</code> 自動產生，body 只需要 <code>{"name": "Judy"}</code>。
+</div>
+
+<!--
+Controller 和 ch24 完全一樣：注入 StudentService，不直接碰 Dao。
+
+POST /students 新增，body 的 JSON 由 @RequestBody 轉成 Student 物件。
+和 ch24 唯一的差別：body 不用帶 id，@GeneratedValue 讓資料庫自動產生。
+-->
+
+---
+
+# StudentController（2/2）— 修改與刪除 API
+
+`PUT` 和 `DELETE` 一樣用 `@PathVariable` 從 URL 取得 id：
+
+```java
+    @PutMapping("/students/{studentId}")
+    public String update(@PathVariable(name = "studentId") Integer studentId,
+                         @RequestBody Student student) {
+        studentService.updateStudent(studentId, student);
+        return "修改成功";
+    }
+
+    @DeleteMapping("/students/{studentId}")
+    public String delete(@PathVariable(name = "studentId") Integer studentId) {
+        studentService.deleteStudent(studentId);
+        return "刪除成功";
+    }
+```
+
+| API | URL 的 id | Request Body |
+| --- | --- | --- |
+| `PUT`（修改） | 要改哪一筆（WHERE） | 要改成什麼（新的 `name`） |
+| `DELETE`（刪除） | 要刪哪一筆（WHERE） | 不需要 |
+
+<!--
+修改和刪除的 API，和 ch24 一模一樣：
+
+PUT /students/{studentId}：「改哪一筆」在 URL、「改成什麼」在 body。
+DELETE /students/{studentId}：只需要 URL 的 id。
+
+Controller 只注入 Service，不直接碰 Dao——三層式架構的規矩不變。
+-->
+
+---
+
+# 用 Postman 測試三層式架構
+
+啟動 Spring Boot，依序測試三個 API，並觀察 console 印出的 SQL：
+
+| 操作 | HTTP 方法 + URL | Request Body（JSON） | 預期結果 |
+| --- | --- | --- | --- |
+| 新增 | `POST /students` | `{"name": "Judy"}` | 資料表多一筆 Judy，id 自動產生 |
+| 修改 | `PUT /students/1` | `{"name": "John"}` | id=1 的 name 變成 John |
+| 刪除 | `DELETE /students/1` | 不需要 | id=1 那筆資料消失 |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>觀察兩件事：</b> ① MySQL Workbench 用 <code>SELECT * FROM student</code> 確認資料變化；② console 因為 <code>spring.jpa.show-sql=true</code>，會印出 JPA 自動產生的 INSERT / UPDATE / DELETE SQL。
+</div>
+
+<!--
+最後實際測試整條鏈路。
+
+和 ch24 的測試幾乎一樣，但有兩個差異值得注意：
+
+第一，POST 的 body 不用帶 id——@GeneratedValue 讓資料庫自動產生，這是和 ch24 手動指定 id 不同的地方。
+
+第二，console 會印出 JPA 產生的 SQL（因為設定了 spring.jpa.show-sql=true）。
+打 POST 會看到 insert into student...，打 PUT 會看到先 select 再 update——
+親眼確認「我們沒寫 SQL，但 JPA 幫我們寫了」。
+-->
+
+---
 
 # 章節總結（一）：設定與資料模型
 
@@ -506,6 +792,7 @@ saveAll() 是 JpaRepository 內建的批次操作方法。
 | build.gradle | `spring-boot-starter-data-jpa` |
 | `@Entity` | 標記 Java 類別對應資料庫表格 |
 | `@Id` + `@GeneratedValue` | 標記主鍵 + 設定自動遞增 |
+| Lombok | Entity 用 `@Getter` + `@Setter`，不用 `@Data`（equals/hashCode 與 toString 有坑） |
 | `@IdClass` | 複合主鍵：建 ID 類別（實作 Serializable）+ Entity 加 `@IdClass` + 每個 PK 欄位加 `@Id` |
 | Spring Boot 3.x / 4.x | 使用 `jakarta.persistence.*`，非 `javax.persistence.*` |
 
@@ -518,6 +805,7 @@ saveAll() 是 JpaRepository 內建的批次操作方法。
 | `JpaRepository` | 繼承後自動擁有所有 CRUD 方法，不需要實作 |
 | `save()` | id 為 null → INSERT；id 有值 → UPDATE |
 | `deleteById()` | 根據 id 執行 DELETE；id 不存在會拋出例外 |
+| 三層式架構 | Controller / Service 和 ch24 完全相同，只有 Dao 從手寫 SQL 換成呼叫 `JpaRepository` |
 
 <!--
 設定與資料模型的重點：
