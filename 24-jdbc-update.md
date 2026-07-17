@@ -65,7 +65,7 @@ layout: default
 - **Part 2：update() 基本概念** — `NamedParameterJdbcTemplate`、具名參數 vs `?`、四個步驟
 - **Part 3：update() 完整範例** — INSERT / UPDATE / DELETE 範例、回傳值意義
 - **Part 4：串接三層式架構** — Controller + Service + Dao 完整程式碼
-- **Part 5：批次新增** — `batchUpdate()` 原理與實作
+- **Part 5：批次新增** — `batchUpdate()` 原理與實作、三層串接與 Postman 測試
 - **章節總結** — 修改類 SQL 完整整理
 
 <!--
@@ -1120,6 +1120,73 @@ public class StudentDao {
 batchUpdate() 的參數是 SQL + Map 陣列，每個 Map 對應一筆資料的參數值。
 回傳 int[]，每個元素代表對應那筆操作影響的行數（成功是 1）。
 和逐筆 update() 相比，SQL 語法完全相同，只是包裝方式不同。
+
+一樣的問題：Dao 寫好了，誰來呼叫？下一頁把 Service 和 Controller 補上。
+-->
+
+---
+
+# batchInsert() — 串接 Service 與 Controller
+
+和 Part 4 相同的結構：Service 轉呼叫，Controller 用 `@RequestBody` 接收 JSON「陣列」：
+
+```java
+// StudentService — 新增方法
+public void batchInsert(List<Student> list) {
+    studentDao.batchInsert(list);
+}
+```
+
+```java
+// StudentController — 新增 API
+@PostMapping("/students/batch")
+public String batchCreate(@RequestBody List<Student> list) {
+    studentService.batchInsert(list);
+    return "批次新增成功";
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>參數是 <code>List&lt;Student&gt;</code>：</b> 前端傳的是 JSON「陣列」，<code>@RequestBody</code> 會自動轉成 <code>List</code>，一路傳到 Dao 的 <code>batchInsert()</code>。
+</div>
+
+<!--
+batchInsert() 的三層串接和 Part 4 的結構完全一樣，只是參數從單一 Student 變成 List<Student>。
+
+Service 一樣是轉呼叫：收到 List，原封不動傳給 Dao。
+
+Controller 開一個新的 API：POST /students/batch。
+注意 @RequestBody 的型別是 List<Student>——前端傳來的 JSON 是「陣列」格式，
+Spring 會自動把陣列裡的每個 JSON 物件轉成一個 Student，組成 List。
+
+呼叫鏈不變：Postman → Controller → Service → Dao → 資料庫，只是這次一趟就寫入多筆資料。
+-->
+
+---
+
+# 用 Postman 測試 batchInsert()
+
+啟動 Spring Boot，發送一個帶 JSON 陣列的 POST 請求：
+
+| 項目 | 內容 |
+| --- | --- |
+| HTTP 方法 + URL | `POST http://localhost:8080/students/batch` |
+| Headers | `Content-Type: application/json` |
+| Request Body | `[{"id": 2, "name": "Tom"}, {"id": 3, "name": "Amy"}]` |
+| 預期結果 | 回應「批次新增成功」，資料表多出 Tom、Amy 兩筆 |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>驗收方式：</b> 到 MySQL Workbench 執行 <code>SELECT * FROM student</code>，確認 Tom 和 Amy 兩筆資料同時出現。
+</div>
+
+<!--
+用 Postman 實測批次新增。
+
+和 Part 4 測 POST /students 的差別只有一個：body 最外層是中括號 [ ]，代表 JSON 陣列，
+裡面放多個學生物件，一次送出。
+
+送出後回應「批次新增成功」，再到 MySQL Workbench 下 SELECT 確認：
+Tom 和 Amy 兩筆資料同時出現，代表 batchUpdate() 一趟就把多筆資料寫進資料庫了。
 -->
 
 ---

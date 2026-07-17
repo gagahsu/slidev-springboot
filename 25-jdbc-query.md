@@ -62,6 +62,7 @@ layout: default
 - **`query()` 方法介紹** — 與 `update()` 的差別、RowMapper 的角色
 - **使用 `query()` 查詢資料** — Step 1 RowMapper、Step 2 查全部、Step 3 帶 WHERE 條件
 - **動態 IN 查詢** — `NamedParameterJdbcTemplate` 原生支援 `Collection` 參數
+- **串接三層式架構** — Service、Controller 完整程式碼與 Postman 測試
 - **章節總結** — CRUD 四個操作全部學齊
 
 <!--
@@ -227,8 +228,10 @@ import java.util.Map;
 
 @Repository
 public class StudentDao {
-    @Autowired
-    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    public StudentDao(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+    }
 
     public List<Student> getStudentList() {
         String sql = "SELECT id, name FROM student";
@@ -242,7 +245,7 @@ public class StudentDao {
 <!--
 第二步，在 StudentDao 裡加上 getStudentList() 方法，呼叫 query() 執行 SELECT。
 
-@Repository 和 @Autowired 的用法和上一章的 createStudent() 完全一樣，不需要重新學習。
+@Repository 和建構子注入的用法和上一章的 createStudent() 完全一樣，不需要重新學習。
 
 唯一的差別是回傳值：update() 回傳 int，這裡 query() 回傳 List<Student>。
 -->
@@ -307,8 +310,10 @@ import java.util.Map;
 
 @Repository
 public class StudentDao {
-    @Autowired
-    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    public StudentDao(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+    }
 
     public List<Student> getStudentById(Integer studentId) {
         String sql = "SELECT id, name FROM student WHERE id = :studentId";
@@ -362,6 +367,209 @@ class: flex flex-col justify-center items-center text-center
 
 # Part 3
 
+## 串接三層式架構
+
+<!--
+Dao 的查詢方法都寫好了，和上一章一樣的問題：誰來呼叫它們？
+這一節補上 Service 和 Controller，讓前端能透過 GET API 查詢資料。
+-->
+
+---
+
+# StudentService — 查詢方法
+
+和上一章相同的結構：建構子注入 `StudentDao`，轉呼叫查詢方法：
+
+```java
+@Service
+public class StudentService {
+
+    private final StudentDao studentDao;
+
+    public StudentService(StudentDao studentDao) {
+        this.studentDao = studentDao;
+    }
+
+    public List<Student> getStudentList() {
+        return studentDao.getStudentList();
+    }
+
+    public List<Student> getStudentById(Integer studentId) {
+        return studentDao.getStudentById(studentId);
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>差別在回傳值：</b> 上一章的方法都是 <code>void</code>；查詢方法要把 Dao 回傳的 <code>List&lt;Student&gt;</code> 一路 <code>return</code> 回去。
+</div>
+
+<!--
+Service 層的寫法和上一章完全一樣：@Service、建構子注入 StudentDao、轉呼叫。
+
+唯一的差別是回傳值：上一章的 createStudent、deleteStudent 都是 void，
+查詢方法則要用 return 把 Dao 查到的 List<Student> 傳回給 Controller。
+
+資料的流向和上一章相反：上一章是前端的資料「流進」資料庫，
+這一章是資料庫的資料「流出」到前端，所以每一層都要 return。
+-->
+
+---
+
+# StudentController — 查詢 API
+
+`GET` 對應「查詢」，回傳 `List<Student>`，@RestController 自動轉成 JSON：
+
+```java
+@RestController
+public class StudentController {
+
+    private final StudentService studentService;
+
+    public StudentController(StudentService studentService) {
+        this.studentService = studentService;
+    }
+
+    @GetMapping("/students")
+    public List<Student> getStudentList() {
+        return studentService.getStudentList();
+    }
+
+    @GetMapping("/students/{studentId}")
+    public List<Student> getStudentById(@PathVariable(name = "studentId") Integer studentId) {
+        return studentService.getStudentById(studentId);
+    }
+}
+```
+
+<!--
+Controller 一樣只注入 StudentService，不直接碰 Dao。
+
+RESTful 慣例中，GET 對應「查詢」：
+GET /students 查全部學生；GET /students/{studentId} 用 @PathVariable 從 URL 取得 id，查特定一筆。
+
+注意這兩個 API 的回傳型別是 List<Student>，不是 String——
+@RestController 會自動把 List 轉成 JSON 陣列回應給前端，這就是前面「執行結果」那一頁看到的效果。
+
+還剩一個動態 IN 查詢的方法沒串接，下一頁補上。
+-->
+
+---
+
+# 動態 IN 查詢 — 串接 Service 與 Controller
+
+`getStudentsByIds()` 也補上 Service 與 Controller，用 `@RequestParam` 接收多個 id：
+
+```java
+// StudentService — 新增方法
+public List<Student> getStudentsByIds(List<Integer> ids) {
+    return studentDao.getStudentsByIds(ids);
+}
+```
+
+```java
+// StudentController — 新增 API
+@GetMapping("/students/search")
+public List<Student> getStudentsByIds(@RequestParam(name = "ids") List<Integer> ids) {
+    return studentService.getStudentsByIds(ids);
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b><code>@RequestParam List&lt;Integer&gt;</code>：</b> URL 上的 <code>?ids=1,3</code>（逗號分隔）會被 Spring 自動轉成 <code>List&lt;Integer&gt;</code>，一路傳到 Dao 展開成 <code>IN (?, ?)</code>。
+</div>
+
+<!--
+最後把動態 IN 查詢也串起來。
+
+Service 一樣是轉呼叫，把 List<Integer> 原封不動傳給 Dao。
+
+Controller 開 GET /students/search，用 @RequestParam 接收 ids——
+多個 id 放在 query string，用逗號分隔（?ids=1,3），Spring 會自動轉成 List<Integer>。
+
+注意 URL 用 /students/search 而不是 /students/{studentId}，
+因為這是「用條件搜尋」而不是「用 id 定位單筆」，兩個 API 的語意不同。
+
+整條鏈路：?ids=1,3 → @RequestParam 轉 List → Service → Dao 的 Map → Spring JDBC 展開成 IN (?, ?)。
+
+有同學可能會問：多個 id 能不能放在 URL 路徑裡，用 @PathVariable 接？下一頁比較這兩種寫法。
+-->
+
+---
+
+# 補充：多個 id 用 @PathVariable 可以嗎？
+
+技術上可行——`@PathVariable` 也能把逗號分隔的路徑轉成 `List<Integer>`：
+
+```java
+// 技術上可行，但不建議：GET /students/ids/1,2,3
+@GetMapping("/students/ids/{ids}")
+public List<Student> getStudentsByIds(@PathVariable(name = "ids") List<Integer> ids) {
+    return studentService.getStudentsByIds(ids);
+}
+```
+
+| 比較 | `@RequestParam`（建議） | `@PathVariable` |
+| --- | --- | --- |
+| REST 語意 | query string = 篩選條件 ✅ | path = 單一資源的身分 |
+| 可變數量參數 | 自然（`?ids=1,2,3`，可省略） | 空集合時 URL 變 `/students/ids/`，404 |
+| 路由衝突 | 完全避開 | `/students/1,2,3` 易與 `/students/{studentId}` 混淆 |
+| 慣例 | 搜尋／過濾的標準寫法 ✅ | 罕見 |
+
+<!--
+補充一個常見的問題：多個 id 一定要用 @RequestParam 嗎？可以放在 URL 路徑用 @PathVariable 接嗎？
+
+技術上完全可行——Spring 的型別轉換對兩者一視同仁，逗號分隔的字串都會自動轉成 List<Integer>，Dao 完全不用改。
+
+但慣例上用 @RequestParam，理由有三個：
+
+第一，REST 語意：path 代表「資源的身分」，例如 /students/1 就是 id 為 1 的那個學生；
+一次查多筆是「搜尋、過濾」，語意上屬於 query string。
+
+第二，可變數量：id 可能是 0 個、1 個、10 個，query param 天生適合可變集合，甚至可以整個省略；
+path variable 一旦是空集合，URL 會變成 /students/ids/，直接 404。
+
+第三，路由衝突：/students/1,2,3 和單筆查詢的 /students/{studentId} pattern 很接近，
+Spring 得靠型別轉換失敗與否來分流，容易出錯；query param 完全避開這個問題。
+
+結論：不是「只能」用 @RequestParam，是「應該」用——搜尋條件放 query string 是業界的標準慣例。
+-->
+
+---
+
+# 用 Postman 測試查詢 API
+
+啟動 Spring Boot，先用上一章的 POST 新增幾筆資料，再測試兩個 GET API：
+
+| 操作 | HTTP 方法 + URL | Request Body | 預期結果 |
+| --- | --- | --- | --- |
+| 查全部 | `GET /students` | 不需要 | `[{"id":1,"name":"Judy"},{"id":2,"name":"Tom"}]` |
+| 查單筆 | `GET /students/1` | 不需要 | `[{"id":1,"name":"Judy"}]` |
+| IN 查詢 | `GET /students/search?ids=1,2` | 不需要 | `[{"id":1,"name":"Judy"},{"id":2,"name":"Tom"}]` |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>查單筆也是陣列：</b> <code>query()</code> 回傳 <code>List</code>，所以就算只查到一筆，JSON 最外層仍是 <code>[ ]</code> 陣列；之後學到 JPA 會改用單一物件回傳。
+</div>
+
+<!--
+最後用 Postman 實測。GET 請求不需要 body，直接送出即可。
+
+GET /students 回傳所有學生的 JSON 陣列；GET /students/1 回傳 id=1 那筆；
+GET /students/search?ids=1,2 用逗號分隔多個 id，回傳符合的所有學生。
+
+注意查單筆的結果最外層還是 [ ] 陣列——因為 Dao 的 getStudentById() 回傳的是 List<Student>，
+就算只查到一筆，也是「只有一個元素的 List」。之後學 JPA 時會改用單一物件的寫法。
+
+完整呼叫鏈：Postman → Controller → Service → Dao → 資料庫，查詢方向的資料流也走通了。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 4
+
 ## 總結
 
 <!--
@@ -391,7 +599,7 @@ INSERT/UPDATE/DELETE 用 update()，SELECT 用 query()。
 
 ---
 
-# 章節總結
+# 章節總結（1/2）— query() 的用法
 
 | 重點 | 說明 |
 | --- | --- |
@@ -400,19 +608,37 @@ INSERT/UPDATE/DELETE 用 update()，SELECT 用 query()。
 | RowMapper | `implements RowMapper<T>`，覆寫 `mapRow()` 方法 |
 | `mapRow()` | 用 `rs.getInt()`/`rs.getString()` 讀取欄位，回傳 Java 物件 |
 | 回傳值 | `List<T>`，每行資料對應一個 Java 物件 |
-| CRUD 完整 | INSERT/UPDATE/DELETE → `update()`；SELECT → `query()` ✅ |
-| 動態 IN 查詢 | `Map.put("ids", list)`，Spring JDBC 自動展開為 `IN (?,?,?)` |
 
 <!--
-好，今天的重點總結。
+好，今天的重點總結，分兩頁。第一頁是 query() 本身的用法。
 
 第一，query() 用來執行 SELECT，讀取資料庫資料。
-第二，三個參數：sql、map、rowMapper。
+第二，三個參數：sql、map、rowMapper，前兩個和上一章的 update() 完全一樣。
 第三，RowMapper 是把 ResultSet 的每一行轉成 Java 物件的工具。
-第四，mapRow() 用 rs.getInt / rs.getString 讀取欄位值。
-第五，query() 回傳 List，@RestController 自動轉成 JSON 陣列。
+第四，mapRow() 用 rs.getInt / rs.getString 讀取欄位值，括號裡是「資料庫欄位名稱」。
+第五，query() 回傳 List，每行資料對應一個 Java 物件。
+-->
 
-學完這一章，CRUD 四種操作全部學完了！接下來要把所有學到的東西整合起來，實作一個完整的三層架構後端系統。
+---
+
+# 章節總結（2/2）— 進階查詢與架構
+
+| 重點 | 說明 |
+| --- | --- |
+| CRUD 完整 | INSERT/UPDATE/DELETE → `update()`；SELECT → `query()` ✅ |
+| 動態 IN 查詢 | `Map.put("ids", list)`，Spring JDBC 自動展開為 `IN (?,?,?)` |
+| 多個 id 的接法 | 搜尋條件用 `@RequestParam`（query string），不用 `@PathVariable` |
+| 三層串接 | `GET /students`、`GET /students/{id}`、`GET /students/search?ids=1,2`，Controller → Service → Dao，回傳 `List<Student>` 自動轉 JSON |
+
+<!--
+總結第二頁，進階查詢和架構。
+
+第一，CRUD 四種操作全部學齊：INSERT、UPDATE、DELETE 用 update()，SELECT 用 query()。
+第二，動態 IN 查詢：把 List 直接放進 Map，Spring JDBC 自動展開成對應數量的佔位符。
+第三，多個 id 這種搜尋條件放 query string 用 @RequestParam 接，不放 URL 路徑。
+第四，三層串接：Controller 開三個 GET API，經 Service 呼叫 Dao，查詢結果一路 return 回前端，@RestController 自動轉成 JSON。
+
+學完這一章，CRUD 四種操作全部學完了，而且每一種都串好了完整的三層式架構！
 -->
 
 ---
