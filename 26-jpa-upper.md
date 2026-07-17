@@ -332,19 +332,42 @@ Getter 和 Setter 交給 Lombok：@Getter + @Setter 兩個 Annotation 自動生�
 
 ---
 
-# 補充：@IdClass — 程式碼範例
+# 補充：@IdClass — 步驟一：建立 ID 類別
 
-**步驟一：建立 ID 類別（實作 Serializable）**
+實作 `Serializable`，equals / hashCode 交給 Lombok：
 
 ```java
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+@EqualsAndHashCode
 public class StudentCourseId implements Serializable {
     private Integer studentId;
     private Integer courseId;
-    // 需覆寫 equals() 和 hashCode()
 }
 ```
 
-**步驟二：Entity 加 @IdClass，每個 PK 欄位加 @Id**
+<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>這裡用 Lombok 的 <code>@EqualsAndHashCode</code> 沒問題：</b> ID 類別是「值物件」——全部欄位就是主鍵本身、建立後不會變，用全部欄位計算正是要的行為，沒有 Entity「id 從 null 變有值」的問題。
+</div>
+
+<!--
+步驟一：建立 StudentCourseId 類別，實作 Serializable，包含所有 PK 欄位。
+一定要覆寫 equals() 和 hashCode()，JPA 用這兩個方法判斷兩個主鍵是否相同——交給 Lombok 的 @EqualsAndHashCode 生成即可。
+
+有同學會問：前面才說 Entity 不能用 @Data 的 equals/hashCode，這裡怎麼又可以用 Lombok？
+關鍵差別：ID 類別是「值物件」，全部欄位就是主鍵本身、建立後不會變，
+用全部欄位算 equals/hashCode 正是我們要的行為——沒有 Entity 那種「id 從 null 變有值」的問題。
+-->
+
+---
+
+# 補充：@IdClass — 步驟二：Entity 掛上 ID 類別
+
+Entity 加 `@IdClass`，每個 PK 欄位各加 `@Id`：
 
 ```java
 @Entity
@@ -360,10 +383,11 @@ public class StudentCourse {
 }
 ```
 
-<!--
-步驟一：建立 StudentCourseId 類別，實作 Serializable，包含所有 PK 欄位。
-一定要覆寫 equals() 和 hashCode()，JPA 用這兩個方法判斷兩個主鍵是否相同。
+<div class="mt-2 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>Repository 宣告要跟著改：</b> <code>JpaRepository&lt;StudentCourse, StudentCourseId&gt;</code>——第二個泛型從單一主鍵類型改成 ID 類別。
+</div>
 
+<!--
 步驟二：Entity 類別加 @IdClass(StudentCourseId.class)，然後對每個 PK 欄位各加一個 @Id。
 Entity 裡的欄位名稱要和 ID 類別的欄位名稱相同。
 
