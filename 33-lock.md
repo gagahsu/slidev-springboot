@@ -168,12 +168,49 @@ class: flex flex-col justify-center items-center text-center
 | T2 B 查詢 | 鎖釋放，B 取得鎖，查詢到最新票數（0） |
 | T2 B 判斷 | 票數 = 0，拒絕購票 |
 
+`FOR UPDATE` 是排他鎖（其他事務不可讀也不可寫）；若只需防止資料被改、但允許他人讀取，用共享鎖 `SELECT ... FOR SHARE`。
+
 <!--
 FOR UPDATE 是 SQL 的加鎖語法，告訴資料庫「我要修改這筆資料，先幫我鎖住」。
+
+FOR SHARE 則是共享鎖，多個事務可以同時持有（都能讀），但只要有人持有就不能被修改——適合「讀取後不打算改，但要求資料在讀的過程中不被別人改掉」的場景。兩者的完整差異下一頁 LockModeType 會細講。
 
 在 Spring Data JPA 裡，我們用 @Lock 來發出這個指令——不需要手寫 SQL。
 
 注意：悲觀鎖必須搭配 @Transactional，因為鎖在事務結束時才釋放。沒有事務，鎖會立刻釋放，完全失去保護效果。
+-->
+
+---
+
+# 悲觀鎖 — `@Lock` 只是 JPA 的語法糖
+
+`@Lock` 是 Spring Data JPA 專屬功能，底層仍是 SQL 的 `FOR UPDATE`：
+
+| 技術 | 悲觀鎖寫法 | 說明 |
+| --- | --- | --- |
+| **JPA** | `@Lock(LockModeType.PESSIMISTIC_WRITE)` | 框架自動組出 `FOR UPDATE`，不用手寫 SQL |
+| **MyBatis** | `SELECT ... FOR UPDATE`（寫在 XML 或 `@Select`） | 沒有對應 annotation，SQL 要自己手寫 |
+| **JDBC** | `SELECT ... FOR UPDATE`（手寫 SQL 字串） | 同樣要自己手寫，並手動控制 transaction |
+
+```xml
+<!-- MyBatis mapper XML -->
+<select id="findTicketForUpdate" resultType="Ticket">
+    SELECT * FROM ticket WHERE id = #{id} FOR UPDATE
+</select>
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>本質：</b>悲觀鎖是 SQL 層級的概念（<code>FOR UPDATE</code> / <code>FOR SHARE</code>），三種技術都適用；差別只在「誰幫你組這句 SQL」。JPA 的 <code>@Lock</code> 只是把接下來要學的語法包裝成 annotation。
+</div>
+
+<!--
+這張投影片很重要，很多人以為 @Lock 是悲觀鎖唯一的實作方式，其實它只是 JPA/Hibernate 提供的封裝。
+
+真正在做事的是資料庫的 FOR UPDATE / FOR SHARE 語法。JPA 幫你自動產生這句 SQL，MyBatis 和純 JDBC 沒有這層封裝，要自己手寫在 SQL 裡。
+
+無論哪種技術，都要記得包在 transaction 裡（JDBC 要手動 setAutoCommit(false)，MyBatis 搭配 Spring @Transactional），鎖才會撐到 commit 才釋放。
+
+接下來我們深入看 JPA 是怎麼把這個概念包裝成 @Lock 的。
 -->
 
 ---
@@ -266,6 +303,49 @@ class: flex flex-col justify-center items-center text-center
 A 和 B 同時讀到 version = 1，A 先提交，把 version 更新成 2。B 接著提交，但 WHERE 條件的 version = 1 已經找不到（version 已是 2），UPDATE 影響 0 筆，JPA 偵測到這個情況，自動拋出 ObjectOptimisticLockingFailureException。
 
 這個流程完全不需要加資料庫鎖，高並發時效能比悲觀鎖好很多。
+-->
+
+---
+
+# 樂觀鎖 — `@Version` 也是 JPA 的語法糖
+
+`@Version` 一樣是 Spring Data JPA 專屬，底層仍是「版本號比對」這個通用概念：
+
+| 技術 | 樂觀鎖寫法 | 說明 |
+| --- | --- | --- |
+| **JPA** | `@Version` 欄位 | 框架自動在 WHERE 加版本比對、UPDATE 後版本 +1，衝突自動拋例外 |
+| **MyBatis** | `UPDATE ... WHERE version = #{version}` 手寫 SQL | 自己判斷 affected rows 是否為 0，自己拋例外 |
+| **JDBC** | `UPDATE ... WHERE version = ?` 手寫 SQL | 自己檢查 `executeUpdate()` 回傳值，自己處理衝突 |
+
+```xml
+<!-- MyBatis mapper XML -->
+<update id="updateTicket">
+    UPDATE ticket
+    SET remain = #{remain}, version = version + 1
+    WHERE id = #{id} AND version = #{version}
+</update>
+```
+
+```java
+// Service 層自行檢查
+int affected = ticketDao.updateTicket(ticket);
+if (affected == 0) {
+    throw new RuntimeException("版本衝突，請重試");
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>本質：</b>樂觀鎖是「WHERE 帶版本號 + 判斷影響筆數」的通用作法；JPA 幫你自動化，MyBatis／JDBC 要自己刻，也沒有 <code>ObjectOptimisticLockingFailureException</code> 可以撿，要自訂例外。接下來看 JPA 怎麼把這個概念包裝成 <code>@Version</code>。
+</div>
+
+<!--
+跟悲觀鎖那張呼應：@Version 不是魔法，只是 JPA 幫你把「WHERE version = ? 然後 version + 1」這件事自動化。
+
+MyBatis 和 JDBC 沒有這層框架支援，必須自己在 SQL 寫版本比對條件，並且自己檢查 UPDATE 影響的筆數——0 筆就代表版本被別人改過，要自己拋例外（不是 Spring 內建的 ObjectOptimisticLockingFailureException，那是 JPA/Hibernate 專屬的例外類別）。
+
+重點：概念（版本號比對）三種技術通用，實作的自動化程度不同。
+
+接下來深入看 JPA 的 @Version 具體怎麼用。
 -->
 
 ---
@@ -432,18 +512,110 @@ layout: default
 
 ---
 
-# 練習：解題提示
-
-1. Entity：`@Version @Column(name = "version") private int version;`
-2. Service：`@Transactional public boolean buyTicket(String id) { ... ticketDao.save(ticket); }`
-3. Controller：
+# 練習：解題提示 — Entity
 
 ```java
-try {
-    ticketService.buyTicket(id);
-    return ResponseEntity.ok("購票成功");
-} catch (ObjectOptimisticLockingFailureException e) {
-    return ResponseEntity.status(409).body("搶購失敗，請重試");
+@Entity
+@Table(name = "ticket")
+public class Ticket {
+
+    @Id
+    @Column(name = "id")
+    private String id;
+
+    @Column(name = "remain")
+    private int remain;
+
+    @Version
+    @Column(name = "version")
+    private int version;     // JPA 自動管理，不需要手動修改
+
+    // getter / setter 省略
+}
+```
+
+<!--
+Entity 只要加上 @Version 欄位，JPA 就會自動處理版本比對——不需要手動讀取或設定 version 的值。
+-->
+
+---
+
+# 練習：解題提示 — Repository
+
+```java
+@Repository
+public interface TicketDao extends JpaRepository<Ticket, String> {
+    // 樂觀鎖不需要 @Lock，findById() 內建即可
+    // save() 時 JPA 自動比對並更新 version
+}
+```
+
+<!--
+不需要額外的 Repository 方法或 @Lock annotation，這點跟悲觀鎖不同（悲觀鎖需要自訂 @Query + @Lock）。JPA 內建的 findById() 和 save() 就足夠。
+-->
+
+---
+
+# 練習：解題提示 — Service
+
+```java
+@Service
+public class TicketService {
+
+    @Autowired
+    private TicketDao ticketDao;
+
+    @Transactional
+    public boolean buyTicket(String ticketId) {
+        Optional<Ticket> opt = ticketDao.findById(ticketId);
+        if (opt.isEmpty()) return false;
+
+        Ticket ticket = opt.get();
+        if (ticket.getRemain() <= 0) return false;
+        try {
+            Thread.sleep(3000);   // 模擬處理耗時，方便觀察版本衝突
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        ticket.setRemain(ticket.getRemain() - 1);
+        ticketDao.save(ticket);   // 版本衝突時拋出例外
+        return true;
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>觀察技巧：</b>樂觀鎖衝突通常瞬間發生，肉眼很難抓到。加一行 <code>Thread.sleep(3000)</code> 拉長「讀到 save 之間」的時間窗，兩個請求幾乎同時發送時，才更容易讓兩者都讀到舊 version，其中一個 save() 時真正觸發 409。正式環境要記得移除。
+</div>
+
+<!--
+@Transactional 包住讀取→修改→save 這組操作，save() 時如果版本衝突就拋出 ObjectOptimisticLockingFailureException，交易自動 Rollback。
+
+Thread.sleep() 只是教學用的觀察手段，故意拉長「讀取到寫入」之間的時間窗，讓兩個並發請求都讀到同一個舊版本、必然觸發衝突，方便驗證「樂觀鎖 = save 時才發現衝突」這個行為。實務上不會這樣寫。
+-->
+
+---
+
+# 練習：解題提示 — Controller
+
+```java
+@RestController
+public class TicketController {
+
+    @Autowired
+    private TicketService ticketService;
+
+    @PostMapping("/tickets/{id}/buy")
+    public ResponseEntity<String> buyTicket(@PathVariable("id") String id) {
+        try {
+            boolean success = ticketService.buyTicket(id);
+            return success
+                ? ResponseEntity.ok("購票成功")
+                : ResponseEntity.status(400).body("已售完或票券不存在");
+        } catch (ObjectOptimisticLockingFailureException e) {
+            return ResponseEntity.status(409).body("搶購失敗，請重試");
+        }
+    }
 }
 ```
 
@@ -452,9 +624,108 @@ try {
 </div>
 
 <!--
-ObjectOptimisticLockingFailureException 的 import 是 org.springframework.orm.ObjectOptimisticLockingFailureException。
+Controller 捕捉 ObjectOptimisticLockingFailureException 轉成 409 Conflict，語意正確的 HTTP Status Code。
+
+import 是 org.springframework.orm.ObjectOptimisticLockingFailureException。
 
 如果想更嚴格測試，可以用 JMeter 或 Postman 的 Collection Runner 模擬並發請求。
+-->
+
+---
+
+# 練習：另解 — 改用悲觀鎖（Repository）
+
+同一個練習也可以改用悲觀鎖實作，Entity **不需要** `@Version`：
+
+```java
+@Repository
+public interface TicketDao extends JpaRepository<Ticket, String> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t from Ticket t where t.id = :id")
+    Optional<Ticket> findTicketById(@Param("id") String id);
+}
+```
+
+<!--
+悲觀鎖版本的差異：Entity 不用加 @Version，改成 Repository 自訂一個帶 @Lock 的查詢方法。
+
+findTicketById() 執行時就會對這筆資料加排他鎖（SELECT ... FOR UPDATE），其他事務必須等待鎖釋放才能查詢同一筆資料。
+-->
+
+---
+
+# 練習：另解 — 改用悲觀鎖（Service）
+
+```java
+@Service
+public class TicketService {
+
+    @Autowired
+    private TicketDao ticketDao;
+
+    @Transactional
+    public boolean buyTicket(String ticketId) {
+        Optional<Ticket> opt = ticketDao.findTicketById(ticketId);
+        if (opt.isEmpty()) return false;
+
+        Ticket ticket = opt.get();
+        if (ticket.getRemain() <= 0) return false;   // 鎖已持有，安全判斷
+        try {
+            Thread.sleep(3000);   // 模擬處理耗時，方便觀察鎖等待
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        ticket.setRemain(ticket.getRemain() - 1);
+        ticketDao.save(ticket);
+        return true;
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>觀察技巧：</b>加一行 <code>Thread.sleep(3000)</code> 故意拉長交易時間，兩個請求幾乎同時發送時，第二個請求會明顯卡住等待 3 秒，才拿到最新資料——比純樂觀鎖（幾乎瞬間完成）更容易肉眼觀察到「排隊等待」的行為。正式環境要記得移除。
+</div>
+
+<!--
+Service 呼叫 findTicketById()（帶 @Lock）而不是 findById()，查詢當下就加鎖。
+
+其他事務此時查詢同一筆資料會被阻擋、排隊等待，直到這個交易 commit 釋放鎖為止。
+
+Thread.sleep() 只是教學用的觀察手段，故意讓鎖持有時間變長，讓 Postman 連點兩次的等待現象看得出來。實務上不會這樣寫，這裡只是方便驗證「悲觀鎖 = 排隊」這個行為。
+-->
+
+---
+
+# 練習：另解 — 改用悲觀鎖（Controller）
+
+```java
+@RestController
+public class TicketController {
+
+    @Autowired
+    private TicketService ticketService;
+
+    @PostMapping("/tickets/{id}/buy")
+    public ResponseEntity<String> buyTicket(@PathVariable("id") String id) {
+        boolean success = ticketService.buyTicket(id);
+        return success
+            ? ResponseEntity.ok("購票成功")
+            : ResponseEntity.status(400).body("已售完或票券不存在");
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>差異：</b>悲觀鎖版本 Controller 不需要捕捉衝突例外——因為查詢時就已排隊等待，不會有 409，B 拿到鎖時票數已是最新值，直接判斷即可。
+</div>
+
+<!--
+不會拋出 ObjectOptimisticLockingFailureException，因為沒有版本衝突這回事——B 是排隊等到鎖釋放後才查詢，看到的一定是最新資料。
+
+Controller 因此不需要 try-catch，邏輯更單純，但代價是 B 要等待 A 的交易結束，並行度較低。
+
+兩版對照，正好呼應 Part 4 的選擇指南：衝突頻繁（搶票這種場景其實很適合悲觀鎖）用悲觀鎖換取安全，衝突少用樂觀鎖換取效能。
 -->
 
 ---
