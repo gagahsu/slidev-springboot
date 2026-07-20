@@ -63,6 +63,7 @@ layout: default
 - **設定 MyBatis** — 依賴加入、application.properties 設定
 - **`@Mapper` 介面定義操作** — 介面即 Dao，不需要實作類別
 - **`@Insert`、`@Update`、`@Delete` 執行 CUD** — SQL 寫在 Annotation 中
+- **串接三層式架構** — Controller + Service + Dao 完整程式碼與 Postman 測試
 - **章節總結** — MyBatis CUD 整理，下一章預告
 
 <!--
@@ -366,6 +367,235 @@ int deleteById(Integer id);
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 4
+
+## 串接三層式架構
+
+<!--
+CUD 方法都會用了，比照 Spring JDBC 和 JPA 章節，把 Service 和 Controller 補上，讓前端能透過 API 操作資料庫。
+-->
+
+---
+
+# 回顧：三層式架構的呼叫鏈
+
+架構和 ch24（Spring JDBC）、ch26（JPA）完全相同，只有 Dao 的內部實作換了：
+
+| 分層 | 類別 | 這一章的寫法 |
+| --- | --- | --- |
+| Controller | `StudentController` | 和 ch24 一樣：POST / PUT / DELETE 三個 API |
+| Service | `StudentService` | 和 ch24 一樣：轉呼叫 Dao |
+| Dao | `StudentDao` | 不寫 SQL 組裝邏輯，改呼叫 `StudentMapper` 的方法 |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>分層的好處：</b> 從 Spring JDBC / JPA 換成 MyBatis，只需要改 Dao 這一層——Controller 和 Service 一行都不用動。
+</div>
+
+<!--
+把 Service 和 Controller 補上，前端才能透過 API 操作資料庫。
+
+重點：三層式架構和前面章節完全相同，唯一的差別在 Dao 的內部——
+現在 Dao 改成注入 StudentMapper，呼叫 insert()、update()、deleteById() 這些方法，SQL 已經寫在 Mapper 的 Annotation 裡。
+
+這正是分層架構的價值：底層技術從 JDBC/JPA 換成 MyBatis，上面的 Controller 和 Service 完全不受影響。
+-->
+
+---
+
+# StudentDao（1/2）— 注入 StudentMapper
+
+和前面章節一樣：`@Repository` + 建構子注入，只是注入的對象換成 `StudentMapper`：
+
+```java
+import org.springframework.stereotype.Repository;
+
+@Repository
+public class StudentDao {
+
+    private final StudentMapper studentMapper;
+
+    public StudentDao(StudentMapper studentMapper) {
+        this.studentMapper = studentMapper;
+    }
+
+    // 三個 CUD 方法，下一頁補上
+}
+```
+
+<!--
+Dao 的寫法和前面章節一樣：@Repository + 建構子注入，只是注入的對象換成 StudentMapper。
+
+先看骨架：建構子把 StudentMapper 存進 final 欄位，接下來三個方法都會用到它。
+-->
+
+---
+
+# StudentDao（2/2）— 三個 CUD 方法
+
+三個方法各自轉呼叫 `StudentMapper` 對應的方法：
+
+```java
+    public void createStudent(Student student) {
+        studentMapper.insert(student);
+    }
+
+    public void updateStudent(Student student) {
+        studentMapper.update(student);
+    }
+
+    public void deleteStudent(Integer studentId) {
+        studentMapper.deleteById(studentId);
+    }
+```
+
+<!--
+三個方法都只是單純轉呼叫，SQL 已經寫在 StudentMapper 介面的 @Insert / @Update / @Delete 裡，Dao 不需要知道細節。
+-->
+
+---
+
+# StudentService（1/2）— 注入 Dao、新增與刪除
+
+和 ch24／ch26 完全相同：`@Service` + 建構子注入，`createStudent()` 和 `deleteStudent()` 單純轉呼叫：
+
+```java
+@Service
+public class StudentService {
+
+    private final StudentDao studentDao;
+
+    public StudentService(StudentDao studentDao) {
+        this.studentDao = studentDao;
+    }
+
+    public void createStudent(Student student) {
+        studentDao.createStudent(student);
+    }
+
+    public void deleteStudent(Integer studentId) {
+        studentDao.deleteStudent(studentId);
+    }
+}
+```
+
+<!--
+Service 層和前面章節一模一樣：@Service + 建構子注入。
+
+createStudent、deleteStudent 單純轉呼叫：收到什麼參數，原封不動傳給 Dao。
+
+下一頁的 updateStudent 多一步組裝動作。
+-->
+
+---
+
+# StudentService（2/2）— 修改：組裝資料
+
+`updateStudent()` 多一步組裝：把 URL 的 id 設回 `student` 物件：
+
+```java
+    public void updateStudent(Integer studentId, Student student) {
+        // URL 的 id 設回 student 物件
+        student.setId(studentId);
+
+        // Dao 轉呼叫 studentMapper.update()，SQL 的 WHERE id = #{id} 從這裡取值
+        studentDao.updateStudent(student);
+    }
+```
+
+<!--
+updateStudent 多一步組裝：把 URL 傳進來的 studentId 設回 student 物件，因為 SQL 裡的 WHERE id = #{id} 要從 student.getId() 取值。
+
+這個組裝動作和 ch26（JPA）一模一樣，只是背後機制不同：JPA 是讓 save() 判斷「id 有值」執行 UPDATE；這裡是讓 XML/Annotation 的 #{id} 佔位符能取到值。
+-->
+
+---
+
+# StudentController（1/2）— 注入 Service、新增 API
+
+和前面章節相同：只注入 Service，不直接碰 Dao：
+
+```java
+@RestController
+public class StudentController {
+
+    private final StudentService studentService;
+
+    public StudentController(StudentService studentService) {
+        this.studentService = studentService;
+    }
+
+    @PostMapping("/students")
+    public String create(@RequestBody Student student) {
+        studentService.createStudent(student);
+        return "新增成功";
+    }
+}
+```
+
+<!--
+Controller 只注入 StudentService，不直接碰 Dao，寫法和前面章節完全相同。
+
+POST /students 新增，body 的 JSON 由 @RequestBody 轉成 Student 物件。
+-->
+
+---
+
+# StudentController（2/2）— 修改與刪除 API
+
+`PUT` 和 `DELETE` 一樣用 `@PathVariable` 從 URL 取得 id：
+
+```java
+    @PutMapping("/students/{studentId}")
+    public String update(@PathVariable(name = "studentId") Integer studentId,
+                         @RequestBody Student student) {
+        studentService.updateStudent(studentId, student);
+        return "修改成功";
+    }
+
+    @DeleteMapping("/students/{studentId}")
+    public String delete(@PathVariable(name = "studentId") Integer studentId) {
+        studentService.deleteStudent(studentId);
+        return "刪除成功";
+    }
+```
+
+| API | URL 的 id | Request Body |
+| --- | --- | --- |
+| `PUT`（修改） | 要改哪一筆（WHERE） | 要改成什麼（新的 `name`） |
+| `DELETE`（刪除） | 要刪哪一筆（WHERE） | 不需要 |
+
+<!--
+修改和刪除的 API，和前面章節一模一樣：
+
+PUT /students/{studentId}：「改哪一筆」在 URL、「改成什麼」在 body。
+DELETE /students/{studentId}：只需要 URL 的 id。
+-->
+
+---
+
+# 用 Postman 測試三層式架構
+
+啟動 Spring Boot，依序測試三個 API：
+
+| 操作 | HTTP 方法 + URL | Request Body（JSON） | 預期結果 |
+| --- | --- | --- | --- |
+| 新增 | `POST /students` | `{"id": 1, "name": "Judy"}` | 資料表多一筆 Judy |
+| 修改 | `PUT /students/1` | `{"name": "John"}` | id=1 的 name 變成 John |
+| 刪除 | `DELETE /students/1` | 不需要 | id=1 那筆資料消失 |
+
+<!--
+最後實際測試整條鏈路。
+
+注意 MyBatis 的 @Insert 沒有像 JPA 的 @GeneratedValue 那樣自動產生主鍵的機制（除非額外設定 useGeneratedKeys），所以這裡示範的 POST body 仍手動帶 id，和 ch24 的 Spring JDBC 相同。
+
+MyBatis 預設不會像 JPA 一樣自動印出 SQL，要觀察執行的 SQL 需要額外設定 logging 等級，這是和前面章節不同的地方。
+-->
+
+---
 
 # 章節總結
 
@@ -377,6 +607,7 @@ int deleteById(Integer id);
 | `@Insert` / `@Update` / `@Delete` | SQL 寫在 Annotation 字串裡 |
 | `#{}` 語法 | 動態參數佔位符，對應方法參數的名稱 |
 | WHERE 提醒 | UPDATE 和 DELETE 一定要加 WHERE 條件 |
+| 三層式架構 | Controller / Service 和 ch24、ch26 完全相同，只有 Dao 改呼叫 `StudentMapper` |
 
 <!--
 今天的重點總結。
@@ -386,6 +617,7 @@ int deleteById(Integer id);
 第三，@Mapper 標記介面，不需要寫實作類別。
 第四，@Insert/@Update/@Delete 把 SQL 寫在 Annotation 裡。
 第五，#{} 是參數佔位符，對應方法參數。
+第六，三層式架構和前面章節相同，只有 Dao 改注入 StudentMapper。
 
 下一章學查詢操作：@Select 和 MyBatis 的自動映射機制。
 -->

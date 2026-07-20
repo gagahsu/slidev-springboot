@@ -67,6 +67,7 @@ layout: default
 - **resultMap** — 解決資料庫欄位和 Java 屬性名稱不一致的問題
 - **動態 SQL** — `<if>`、`<where>`、`<set>`、`<foreach>` IN 查詢、`<foreach>` 批次 INSERT
 - **Annotation vs XML 選擇建議** — 各自適用場景
+- **串接三層式架構** — Controller + Service + Dao 完全不用改，Postman 測試驗證
 - **章節總結** — XML Mapper 核心觀念整理
 
 <!--
@@ -582,6 +583,101 @@ MyBatis 會分別去找對應的 SQL，不會衝突。
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 7
+
+## 串接三層式架構
+
+<!--
+前兩章的 Controller、Service、Dao 都已經寫好了。這一節來看：換成 XML Mapper 之後，這三層要改多少。
+-->
+
+---
+
+# 回顧：三層式架構的呼叫鏈
+
+答案是：**一行都不用改**。原因看 `@Mapper` 介面：
+
+| 分層 | 類別 | 和 ch29／ch30 相比 |
+| --- | --- | --- |
+| Controller | `StudentController` | 完全相同 |
+| Service | `StudentService` | 完全相同 |
+| Dao | `StudentDao` | 完全相同（一樣注入 `StudentMapper`，呼叫一樣的方法名） |
+| `StudentMapper` 介面 | 方法簽名 | 完全相同，只是拿掉 `@Insert`/`@Select` 等 Annotation |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>關鍵原因：</b> Dao 呼叫的是 <code>studentMapper.insert(student)</code> 這個「方法」，不管 SQL 寫在 Annotation 還是 XML，方法簽名不變，呼叫端完全感覺不到差異。
+</div>
+
+<!--
+這是本章最重要的觀念：Annotation 換成 XML，改變的只有「SQL 寫在哪裡」，不影響 @Mapper 介面對外的方法簽名。
+
+Dao 呼叫 studentMapper.insert(student)、findAll()、findById() 這些方法名稱和參數完全沒變，
+所以 Dao、Service、Controller 三層——包含前面章節寫好的建構子注入、@RequestBody、@PathVariable——一行都不用動。
+
+這正是「介面（interface）」的價值：呼叫端只依賴方法簽名，不依賴實作方式。
+-->
+
+---
+
+# 對照：Annotation 版 vs XML 版的 `StudentMapper`
+
+```java
+// ch29／ch30：Annotation 版——SQL 寫在介面上
+@Mapper
+public interface StudentMapper {
+    @Insert("INSERT INTO student(id, name) VALUES (#{id}, #{name})")
+    int insert(Student student);
+
+    @Select("SELECT id, name FROM student")
+    List<Student> findAll();
+}
+```
+
+```java
+// ch31：XML 版——介面只留方法簽名，SQL 搬到 mapper.xml
+@Mapper
+public interface StudentMapper {
+    int insert(Student student);
+    List<Student> findAll();
+}
+```
+
+<!--
+兩份程式碼對照，一眼就能看出差異：方法名稱、參數、回傳型別完全一樣，唯一的差別是 Annotation 版把 SQL 字串寫在方法上，XML 版把 SQL 搬到 mapper.xml 的 `<insert>`、`<select>` 元素裡。
+
+因為介面沒變，Dao 注入這個介面之後，呼叫方式也完全沒變——這就是為什麼 Service、Controller 不用改一行。
+-->
+
+---
+
+# 用 Postman 驗證：API 沒有任何改變
+
+把 `StudentMapper` 的 SQL 改成 XML 版之後，重新啟動 Spring Boot，用**和 ch29／ch30 完全相同**的 API 測試：
+
+| 操作 | HTTP 方法 + URL | 預期結果 |
+| --- | --- | --- |
+| 新增 | `POST /students` | 和 ch29 相同 |
+| 修改 | `PUT /students/1` | 和 ch29 相同 |
+| 刪除 | `DELETE /students/1` | 和 ch29 相同 |
+| 查全部 | `GET /students` | 和 ch30 相同 |
+| 查單筆 | `GET /students/1` | 和 ch30 相同 |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>驗證重點：</b> 前端完全感覺不到後端從 Annotation 換成 XML——這就是三層式架構「上層不受下層實作細節影響」的具體證明。
+</div>
+
+<!--
+最後用 Postman 打和前兩章一模一樣的 API，確認結果完全相同。
+
+這個練習的意義不在於「又測了一次 CRUD」，而在於親眼驗證：資料庫存取的實作方式（Annotation 或 XML）換了，
+但 API 的 URL、Method、Request Body、Response 全部沒有任何改變——這正是三層式架構、以及「面向介面寫程式」的核心價值。
+-->
+
+---
 
 # 章節總結
 
@@ -596,6 +692,7 @@ MyBatis 會分別去找對應的 SQL，不會衝突。
 | `<foreach>` IN | 集合參數放在 WHERE，生成 `IN (?,?,?)` |
 | `<foreach>` 批次 INSERT | 集合參數放在 VALUES 後，生成多行 INSERT |
 | 混搭 | Annotation 和 XML 可在同一個 @Mapper 混搭使用 |
+| 三層式架構 | Controller / Service / Dao 完全不用改，因為 `@Mapper` 介面方法簽名沒變 |
 
 <!--
 今天的重點總結。
@@ -605,6 +702,7 @@ MyBatis 會分別去找對應的 SQL，不會衝突。
 第三，resultMap 解決欄位名稱不一致的問題。
 第四，動態 SQL 三個核心標籤：`<if>` + `<where>` 做動態 WHERE；`<set>` 做動態 UPDATE；`<foreach>` 做 IN 批次查詢。
 第五，Annotation 和 XML 可以混搭，根據 SQL 複雜度選擇最適合的方式。
+第六，三層式架構完全不用改——因為 @Mapper 介面的方法簽名沒變，Dao、Service、Controller 都感覺不到底層 SQL 搬家了。
 
 MyBatis 三章全部學完了！
 -->

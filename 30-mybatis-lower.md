@@ -62,6 +62,7 @@ layout: default
 - **`@Select` 用法介紹** — SQL 寫在 Annotation、自動映射機制說明
 - **使用 `@Select` 查詢資料** — 查全部、查單筆實作
 - **`@Select` 用法總結** — 與 Spring JDBC RowMapper 的差異比較
+- **串接三層式架構** — Controller + Service + Dao 完整程式碼與 Postman 測試
 - **章節總結** — 三種框架 CRUD 全部學齊
 
 <!--
@@ -212,6 +213,10 @@ public class StudentDao {
     public Student getStudentById(Integer studentId) {
         return studentMapper.findById(studentId);
     }
+
+    public Student getStudentByIdAndName(Integer id, String name) {
+        return studentMapper.findByIdAndName(id, name);
+    }
 }
 ```
 
@@ -299,6 +304,149 @@ MyBatis：介於中間，SQL 精確，程式碼比 JDBC 少，比 JPA 靈活。
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 4
+
+## 串接三層式架構
+
+<!--
+查詢方法都會用了，比照 ch27（JPA 查詢）把 Service 和 Controller 補上，讓前端能透過 GET API 查詢資料。
+-->
+
+---
+
+# 回顧：三層式架構的呼叫鏈
+
+架構和 ch27（JPA 查詢）完全相同，只有 Dao 呼叫的對象換成 `StudentMapper`：
+
+| 分層 | 類別 | 這一章的寫法 |
+| --- | --- | --- |
+| Controller | `StudentController` | 和 ch27 一樣：三個 GET API |
+| Service | `StudentService` | 和 ch27 一樣：轉呼叫 Dao |
+| Dao | `StudentDao`（已在 Part 2 完成） | 注入 `StudentMapper`，呼叫 `findAll()`、`findById()`、`findByIdAndName()` |
+
+<!--
+StudentDao 在 Part 2 已經寫好，這裡把 Service 和 Controller 補上，前端才能透過 API 查詢資料。
+
+和前面 CUD 一樣的道理：三層式架構不變，只有 Dao 內部呼叫的物件從 JpaRepository 換成 StudentMapper。
+-->
+
+---
+
+# StudentService — 查詢方法
+
+和 ch27 完全相同：`@Service` + 建構子注入，單純轉呼叫 Dao：
+
+```java
+@Service
+public class StudentService {
+
+    private final StudentDao studentDao;
+
+    public StudentService(StudentDao studentDao) {
+        this.studentDao = studentDao;
+    }
+
+    public List<Student> getStudentList() {
+        return studentDao.getStudentList();
+    }
+
+    public Student getStudentById(Integer studentId) {
+        return studentDao.getStudentById(studentId);
+    }
+
+    public Student getStudentByIdAndName(Integer studentId, String name) {
+        return studentDao.getStudentByIdAndName(studentId, name);
+    }
+}
+```
+
+<!--
+Service 層的寫法和 ch27 一模一樣：注入 Dao，方法內容單純轉呼叫。
+
+getStudentByIdAndName 對應 Part 3 定義的 findByIdAndName 多條件查詢，Dao 需要補上這個轉呼叫方法（呼叫 studentMapper.findByIdAndName）。
+-->
+
+---
+
+# StudentController（1/2）— 注入 Service、基本查詢
+
+和前面章節相同：只注入 Service，不直接碰 Dao：
+
+```java
+@RestController
+public class StudentController {
+
+    private final StudentService studentService;
+
+    public StudentController(StudentService studentService) {
+        this.studentService = studentService;
+    }
+
+    @GetMapping("/students")
+    public List<Student> getStudentList() {
+        return studentService.getStudentList();
+    }
+
+    @GetMapping("/students/{studentId}")
+    public Student getStudentById(@PathVariable(name = "studentId") Integer studentId) {
+        return studentService.getStudentById(studentId);
+    }
+}
+```
+
+<!--
+Controller 只注入 StudentService，不直接碰 Dao，寫法和前面章節完全相同。
+
+查全部、依 id 查單筆兩個 API，和 ch27 的 JPA 版本一模一樣。
+-->
+
+---
+
+# StudentController（2/2）— 多條件搜尋 API
+
+`findByIdAndName` 開一個 API，用 `@RequestParam` 接收兩個搜尋條件：
+
+```java
+    @GetMapping("/students/search")
+    public Student getStudentByIdAndName(@RequestParam(name = "id") Integer id,
+                                         @RequestParam(name = "name") String name) {
+        return studentService.getStudentByIdAndName(id, name);
+    }
+```
+
+<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>REST 慣例：</b> 用 id 定位單筆走 <code>@PathVariable</code>；多條件搜尋走 query string 的 <code>@RequestParam</code>——這是 ch25 講過的慣例，MyBatis 章節依然適用。
+</div>
+
+<!--
+GET /students/search?id=1&name=Judy 對應 findByIdAndName，整條鏈路走到底，SQL 是 StudentMapper 的 @Select Annotation 產生的。
+-->
+
+---
+
+# 用 Postman 測試三層式架構
+
+啟動 Spring Boot，依序測試三個 API：
+
+| 操作 | HTTP 方法 + URL | 預期結果 |
+| --- | --- | --- |
+| 查全部 | `GET /students` | `[{"id":1,"name":"Judy"},{"id":2,"name":"Tom"}]` |
+| 查單筆 | `GET /students/1` | `{"id":1,"name":"Judy"}` — 單一物件，不是陣列 |
+| 多條件查詢 | `GET /students/search?id=1&name=Judy` | `{"id":1,"name":"Judy"}` |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>觀察：</b> 查單筆和多條件查詢都回傳 <code>{ }</code> 物件，不是 <code>[ ]</code> 陣列——因為 `findById()`、`findByIdAndName()` 的回傳型別本來就是單一 `Student`，不需要像 Spring JDBC 那樣包一層 List。
+</div>
+
+<!--
+最後實際測試整條鏈路，重點觀察查單筆和多條件查詢的回傳格式——單一物件而非陣列，這是 findById()、findByIdAndName() 回傳型別本身就是 Student 的緣故，和 ch27 的 JPA findById() 效果一致。
+-->
+
+---
 
 # 章節總結
 
@@ -308,6 +456,7 @@ MyBatis：介於中間，SQL 精確，程式碼比 JDBC 少，比 JPA 靈活。
 | 自動映射 | 欄位名稱和屬性名稱一致時，不需要 RowMapper |
 | 回傳 null | id 不存在時回傳 null（非 Optional） |
 | `@Param` | 多個 primitive 參數時，需用 @Param 指定名稱 |
+| 三層式架構 | Controller / Service 和 ch27 完全相同，只有 Dao 改呼叫 `StudentMapper` |
 | 三框架 CRUD | Spring JDBC / JPA / MyBatis 各有優缺點，可混搭使用 |
 
 <!--
@@ -317,7 +466,8 @@ MyBatis：介於中間，SQL 精確，程式碼比 JDBC 少，比 JPA 靈活。
 第二，欄位名稱和屬性名稱一致時，自動映射不需要 RowMapper。
 第三，查詢不到資料時回傳 null，記得做 null 檢查。
 第四，多個 primitive 參數時需要加 @Param。
-第五，三種框架 CRUD 全部學完，可以根據需求選擇或混搭使用。
+第五，三層式架構和 ch27 相同，只有 Dao 改注入 StudentMapper。
+第六，三種框架 CRUD 全部學完，可以根據需求選擇或混搭使用。
 
 下一章學 MyBatis XML Mapper 的寫法——用 XML 檔管理複雜的 SQL，特別適合多條件動態查詢。
 -->
