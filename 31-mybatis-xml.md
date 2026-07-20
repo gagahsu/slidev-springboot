@@ -67,7 +67,7 @@ layout: default
 - **resultMap** — 解決資料庫欄位和 Java 屬性名稱不一致的問題
 - **動態 SQL** — `<if>`、`<where>`、`<set>`、`<foreach>` IN 查詢、`<foreach>` 批次 INSERT
 - **Annotation vs XML 選擇建議** — 各自適用場景
-- **串接三層式架構** — Controller + Service + Dao 完全不用改，Postman 測試驗證
+- **串接三層式架構** — CUD／查詢完全不用改；動態 SQL 補一個搜尋 API，Postman 測試驗證
 - **章節總結** — XML Mapper 核心觀念整理
 
 <!--
@@ -198,6 +198,10 @@ mybatis.configuration.map-underscore-to-camel-case=true
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.mapper.StudentMapper">
+
+    <select id="findAll" resultType="com.example.model.Student">
+        SELECT id, name FROM student
+    </select>
 
 </mapper>
 ```
@@ -488,11 +492,12 @@ MyBatis 的動態 SQL 標籤讓你直接在 XML 裡寫「如果這個條件有�
 
 ---
 
-# `<foreach>` — IN 條件批次查詢
+# `<foreach>`（1/2）— IN 條件批次查詢
 
 批次查詢多個 id 時，使用 `<foreach>` 產生 IN (?,?,?) 語法：
 
 ```xml
+<!-- @Mapper 方法：List<Student> findByIds(@Param("ids") List<Integer> ids); -->
 <select id="findByIds" resultType="com.example.model.Student">
     SELECT id, name FROM student
     WHERE id IN
@@ -507,14 +512,23 @@ MyBatis 的動態 SQL 標籤讓你直接在 XML 裡寫「如果這個條件有�
 `<foreach>` 用於處理集合參數，最常見的場景就是 IN 條件。
 
 例如前端傳來 ids = [1, 2, 3]，我們要查詢這三個 id 的學生，就需要生成 `WHERE id IN (1, 2, 3)` 這樣的 SQL。
+-->
 
-`<foreach>` 的屬性：
-- `collection`：傳入的集合參數名稱（@Param 指定的名稱）
-- `item`：集合裡每個元素的暫時名稱（在 #{} 裡使用）
-- `open`、`close`：集合的開頭和結尾符號
-- `separator`：元素之間的分隔符號
+---
 
-@Mapper 介面對應的方法：`List<Student> findByIds(@Param("ids") List<Integer> ids);`
+# `<foreach>`（2/2）— 屬性說明
+
+| `<foreach>` 屬性 | 說明 |
+| --- | --- |
+| `collection="ids"` | 對應 `@Param("ids")` 的參數名稱 |
+| `item="id"` | 集合裡每個元素的別名，在 `#{}` 裡使用 |
+| `open` / `close` | 集合的開頭和結尾符號，這裡是 `(` 和 `)` |
+| `separator=","` | 元素之間用逗號分隔 |
+
+<!--
+四個屬性對照剛才的範例：collection 指定 ids 集合，item 給每個元素一個暫時名稱 id，open/close 包住整個 IN 子句，separator 在元素之間加逗號。
+
+組合起來，傳入 [1, 2, 3] 就會產生 IN (1, 2, 3)。
 -->
 
 ---
@@ -654,7 +668,7 @@ public interface StudentMapper {
 
 ---
 
-# 用 Postman 驗證：API 沒有任何改變
+# 用 Postman 驗證：CUD／查詢 API 沒有任何改變
 
 把 `StudentMapper` 的 SQL 改成 XML 版之後，重新啟動 Spring Boot，用**和 ch29／ch30 完全相同**的 API 測試：
 
@@ -671,15 +685,117 @@ public interface StudentMapper {
 </div>
 
 <!--
-最後用 Postman 打和前兩章一模一樣的 API，確認結果完全相同。
+先用 Postman 打和前兩章一模一樣的 API，確認結果完全相同。
 
 這個練習的意義不在於「又測了一次 CRUD」，而在於親眼驗證：資料庫存取的實作方式（Annotation 或 XML）換了，
 但 API 的 URL、Method、Request Body、Response 全部沒有任何改變——這正是三層式架構、以及「面向介面寫程式」的核心價值。
+
+CUD 和基本查詢確認完，接下來把 Part 5 學的動態 SQL 也串成一支真正能呼叫的 API——這是本章唯一需要新增程式碼的地方。
 -->
 
 ---
 
-# 章節總結
+# StudentMapper — 補上動態查詢方法
+
+Part 5 的 `findByCondition` 只存在 XML 裡，`@Mapper` 介面要補上對應的方法簽名：
+
+```java
+@Mapper
+public interface StudentMapper {
+    // 前面 CUD／查詢方法省略
+    List<Student> findByCondition(@Param("id") Integer id, @Param("name") String name);
+}
+```
+
+<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>對照 Part 5：</b> XML 裡 <code>&lt;select id="findByCondition"&gt;</code> 的 <code>id</code>，要對應介面裡一模一樣的方法名稱 <code>findByCondition</code>。
+</div>
+
+<!--
+Part 5 示範動態 SQL 時，只寫了 mapper.xml 的 <select> 元素，還沒有在 @Mapper 介面加上對應的方法——現在補上。
+
+id 和 name 都可能是 null（前端不一定會填），所以參數型別用 Integer、String 這種包裝類別，並用 @Param 明確指定名稱，對應 XML 裡 <if test="name != null">、<if test="id != null"> 的判斷。
+
+回傳型別是 List<Student>：不管符合條件的有幾筆，甚至 0 筆或查全部，統一用 List 回傳最單純。
+-->
+
+---
+
+# StudentDao／StudentService — 補上動態查詢
+
+兩層都是單純轉呼叫，不做任何邏輯判斷：
+
+```java
+    // 接續 StudentDao，新增方法
+    public List<Student> getStudentsByCondition(Integer id, String name) {
+        return studentMapper.findByCondition(id, name);
+    }
+```
+
+```java
+    // 接續 StudentService，新增方法
+    public List<Student> getStudentsByCondition(Integer id, String name) {
+        return studentDao.getStudentsByCondition(id, name);
+    }
+```
+
+<!--
+Dao、Service 都是同樣的模式：單純轉呼叫，id、name 是否為 null 完全不影響這兩層的寫法。
+
+id、name 是否為 null，交給 XML 的 <if> 標籤處理，Dao、Service 都不需要知道細節。
+-->
+
+---
+
+# StudentController — 動態查詢 API
+
+`id`、`name` 都設成非必填，前端可以只填其中一個、都填、或都不填：
+
+```java
+    @GetMapping("/students/search-dynamic")
+    public List<Student> getStudentsByCondition(
+            @RequestParam(name = "id", required = false) Integer id,
+            @RequestParam(name = "name", required = false) String name) {
+        return studentService.getStudentsByCondition(id, name);
+    }
+```
+
+<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>關鍵是 <code>required = false</code>：</b> 不加的話，前端沒帶這個參數會直接噴 400 錯誤；加了之後，沒帶的參數會是 <code>null</code>，交給 XML 的 <code>&lt;if&gt;</code> 判斷要不要加進 WHERE。
+</div>
+
+<!--
+這支 API 是本章動態 SQL 真正派上用場的地方：id、name 都用 @RequestParam(required = false)，
+前端可以只填 name、只填 id、兩者都填、或都不填，四種情況都交給同一支 API、同一段 XML 處理。
+
+和前面 findById、findByIdAndName 這種「參數一定要有」的 API 不同，這裡的 null 是預期中的正常情況。
+-->
+
+---
+
+# 用 Postman 測試動態查詢 API
+
+同一支 `GET /students/search-dynamic`，帶不同的參數組合觀察 SQL 如何變化：
+
+| 帶的參數 | URL | 產生的 SQL |
+| --- | --- | --- |
+| 都不帶 | `GET /students/search-dynamic` | `SELECT id, name FROM student`（查全部） |
+| 只帶 name | `GET /students/search-dynamic?name=Judy` | `... WHERE name = 'Judy'` |
+| 只帶 id | `GET /students/search-dynamic?id=1` | `... WHERE id = 1` |
+| 兩者都帶 | `GET /students/search-dynamic?id=1&name=Judy` | `... WHERE id = 1 AND name = 'Judy'` |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>觀察重點：</b> 同一支 API、同一段 XML，<code>&lt;where&gt;</code> 標籤依照實際帶的參數自動組出正確的 WHERE 條件——不需要為每種組合各寫一支 API。
+</div>
+
+<!--
+這是動態 SQL 最有價值的驗證：四種參數組合打同一支 API，SQL 的 WHERE 子句會跟著變化，
+但 Controller、Service、Dao、Mapper 介面都只有一份程式碼——這就是 Part 5 學的 <if> + <where> 在真實三層式架構裡發揮的效果。
+-->
+
+---
+
+# 章節總結（一）：XML Mapper 與動態 SQL
 
 | 重點 | 說明 |
 | --- | --- |
@@ -691,18 +807,30 @@ public interface StudentMapper {
 | `<set>` | 動態 UPDATE，實作部分更新 |
 | `<foreach>` IN | 集合參數放在 WHERE，生成 `IN (?,?,?)` |
 | `<foreach>` 批次 INSERT | 集合參數放在 VALUES 後，生成多行 INSERT |
-| 混搭 | Annotation 和 XML 可在同一個 @Mapper 混搭使用 |
-| 三層式架構 | Controller / Service / Dao 完全不用改，因為 `@Mapper` 介面方法簽名沒變 |
 
 <!--
-今天的重點總結。
+XML Mapper 與動態 SQL 的重點：
 
 第一，XML Mapper 把 SQL 寫在獨立 XML 檔案，適合複雜查詢和動態條件。
 第二，namespace 和 id 是 XML 和 @Mapper 介面對應的橋樑，兩者必須完全一致。
 第三，resultMap 解決欄位名稱不一致的問題。
 第四，動態 SQL 三個核心標籤：`<if>` + `<where>` 做動態 WHERE；`<set>` 做動態 UPDATE；`<foreach>` 做 IN 批次查詢。
+-->
+
+---
+
+# 章節總結（二）：選擇建議與三層式架構
+
+| 重點 | 說明 |
+| --- | --- |
+| 混搭 | Annotation 和 XML 可在同一個 @Mapper 混搭使用 |
+| 三層式架構 | CUD／基本查詢完全不用改；動態查詢要在 `@Mapper` 補方法簽名，並新增一支 `required = false` 的搜尋 API |
+
+<!--
+選擇建議與三層式架構的重點：
+
 第五，Annotation 和 XML 可以混搭，根據 SQL 複雜度選擇最適合的方式。
-第六，三層式架構完全不用改——因為 @Mapper 介面的方法簽名沒變，Dao、Service、Controller 都感覺不到底層 SQL 搬家了。
+第六，CUD 和基本查詢的三層式架構完全不用改；但動態查詢是全新功能，要在 @Mapper 補方法簽名，並用 @RequestParam(required = false) 開一支能接受任意參數組合的搜尋 API。
 
 MyBatis 三章全部學完了！
 -->

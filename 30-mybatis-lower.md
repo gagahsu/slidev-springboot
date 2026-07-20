@@ -213,10 +213,6 @@ public class StudentDao {
     public Student getStudentById(Integer studentId) {
         return studentMapper.findById(studentId);
     }
-
-    public Student getStudentByIdAndName(Integer id, String name) {
-        return studentMapper.findByIdAndName(id, name);
-    }
 }
 ```
 
@@ -260,6 +256,25 @@ Student findByIdAndName(@Param("id") Integer id, @Param("name") String name);
 不加 @Param 的話，MyBatis 無法判斷 #{id} 對應哪個參數，會出錯。
 
 當方法參數是物件時（如 Student），不需要 @Param，直接用 #{欄位名} 就能對應。
+-->
+
+---
+
+# StudentDao — 補上多條件查詢
+
+回到 `StudentDao`，補上轉呼叫 `findByIdAndName` 的方法：
+
+```java
+    // 接續 StudentDao，新增方法
+    public Student getStudentByIdAndName(Integer id, String name) {
+        return studentMapper.findByIdAndName(id, name);
+    }
+```
+
+<!--
+StudentMapper 的方法定義好了，回到 StudentDao 補上對應的轉呼叫方法。
+
+和前面兩個方法（getStudentList、getStudentById）一樣的模式：Dao 只是薄薄一層轉呼叫，SQL 邏輯全部交給 StudentMapper。
 -->
 
 ---
@@ -326,10 +341,10 @@ class: flex flex-col justify-center items-center text-center
 | --- | --- | --- |
 | Controller | `StudentController` | 和 ch27 一樣：三個 GET API |
 | Service | `StudentService` | 和 ch27 一樣：轉呼叫 Dao |
-| Dao | `StudentDao`（已在 Part 2 完成） | 注入 `StudentMapper`，呼叫 `findAll()`、`findById()`、`findByIdAndName()` |
+| Dao | `StudentDao`（已在 Part 2／Part 3 完成） | 注入 `StudentMapper`，呼叫 `findAll()`、`findById()`、`findByIdAndName()` |
 
 <!--
-StudentDao 在 Part 2 已經寫好，這裡把 Service 和 Controller 補上，前端才能透過 API 查詢資料。
+StudentDao 前面已經寫好，這裡把 Service 和 Controller 補上，前端才能透過 API 查詢資料。
 
 和前面 CUD 一樣的道理：三層式架構不變，只有 Dao 內部呼叫的物件從 JpaRepository 換成 StudentMapper。
 -->
@@ -367,7 +382,7 @@ public class StudentService {
 <!--
 Service 層的寫法和 ch27 一模一樣：注入 Dao，方法內容單純轉呼叫。
 
-getStudentByIdAndName 對應 Part 3 定義的 findByIdAndName 多條件查詢，Dao 需要補上這個轉呼叫方法（呼叫 studentMapper.findByIdAndName）。
+getStudentByIdAndName 對應 Part 3 定義的 findByIdAndName 多條件查詢，Dao 已在 Part 3 補上轉呼叫方法。
 -->
 
 ---
