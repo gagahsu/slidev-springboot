@@ -396,6 +396,68 @@ layout: default
 
 ---
 
+# 補充：用 JPA 建立 penalty 資料表
+
+不想手寫 `CREATE TABLE` SQL？可以用 `@Entity` 類別讓 Hibernate 自動建表：
+
+```properties
+# application.properties
+spring.jpa.hibernate.ddl-auto=update
+```
+
+```java
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+@Entity
+public class Penalty {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+    private Integer studentId;
+    private String reason;
+}
+```
+
+<!--
+這個練習需要一張新的 penalty 資料表，除了手寫 SQL，也可以借用 JPA 的 @Entity 機制來建表。
+
+只要專案有引入 Spring Data JPA 依賴，並在 application.properties 設定 spring.jpa.hibernate.ddl-auto=update，Spring Boot 啟動時就會根據 @Entity 類別自動幫你 CREATE TABLE（或 ALTER TABLE 補欄位）。
+
+這裡的 Penalty 類別只是拿來「產生資料表結構」，欄位命名跟著 Java 屬性走：studentId 對應 student_id、reason 對應 reason。
+-->
+
+---
+
+# 補充：JPA 建表 vs MyBatis 存取，兩者不衝突
+
+`Penalty` 這個 `@Entity` **只負責建表**，實際的新增操作還是走本章的 `PenaltyMapper`：
+
+| 角色 | 用途 |
+| --- | --- |
+| `@Entity class Penalty` | 讓 Hibernate 根據欄位自動建立 `penalty` 資料表結構 |
+| `PenaltyMapper`（MyBatis） | 實際執行 `INSERT INTO penalty ...`，被 `PenaltyDao` 呼叫 |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>不用建立 <code>PenaltyRepository</code>：</b> 這裡沒有用 <code>JpaRepository</code> 存取資料，@Entity 純粹是「建表工具」；資料存取仍統一走 MyBatis 三層架構，維持和 StudentMapper 一致的寫法。
+</div>
+
+<!--
+特別澄清一個容易混淆的地方：加了 @Entity 不代表要改用 JpaRepository 存取資料。
+
+這裡刻意只用 @Entity 產生資料表結構，實際的 INSERT 操作仍然透過 PenaltyMapper（MyBatis）執行，維持和 StudentMapper 相同的存取方式，也才能被同一個 @Transactional 方法一起管理事務。
+
+如果專案還沒手動建過 penalty 表，加上這個 @Entity 類別就能省去手寫 CREATE TABLE 的步驟；已經手動建表的話，這一頁可以跳過。
+-->
+
+---
+
 # 完整程式碼：StudentMapper／PenaltyMapper
 
 `@Mapper` 介面各補一個方法：
@@ -584,9 +646,9 @@ id 從路徑參數拿，points、reason 用 @RequestParam 接收，呼叫 Servic
 | 測試步驟 | 操作 | 預期結果 |
 | --- | --- | --- |
 | 1 | 正常呼叫 `POST /students/1/penalty?points=10&reason=遲到` | 積分扣除，懲戒記錄新增 |
-| 2 | 暫時在 `PenaltyDao.create()` 前加一行 `throw new RuntimeException("測試")` | 呼叫拋出例外 |
+| 2 | 暫時把 `PenaltyDao.create()` 的 `return ...` 整行**改成** `throw new RuntimeException("測試");` | 呼叫拋出例外 |
 | 3 | 查詢資料庫 `student` 表的積分欄位 | 積分**沒有被扣除**——代表 Rollback 成功 |
-| 4 | 移除測試用的 `throw`，恢復正常程式碼 | 功能恢復正常 |
+| 4 | 把 `throw` 改回原本的 `return penaltyMapper.create(studentId, reason);` | 功能恢復正常 |
 
 <div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
 ✅ <b>驗證重點：</b> Step 1（扣分）已經寫入資料庫，但因為 Step 2 拋出例外，整個事務被 Rollback，Step 1 的扣分也一併撤銷——這正是 @Transactional 保護的效果。
