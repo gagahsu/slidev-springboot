@@ -396,6 +396,210 @@ layout: default
 
 ---
 
+# 完整程式碼：StudentMapper／PenaltyMapper
+
+`@Mapper` 介面各補一個方法：
+
+```java
+@Mapper
+public interface StudentMapper {
+    // 其餘方法省略
+    @Update("UPDATE student SET score = score - #{points} WHERE id = #{studentId}")
+    int deductScore(@Param("studentId") Integer studentId, @Param("points") Integer points);
+}
+```
+
+```java
+@Mapper
+public interface PenaltyMapper {
+    @Insert("INSERT INTO penalty(student_id, reason) VALUES (#{studentId}, #{reason})")
+    int create(@Param("studentId") Integer studentId, @Param("reason") String reason);
+}
+```
+
+<!--
+先看 Mapper 層。StudentMapper 補一個 deductScore，用 #{studentId}、#{points} 兩個具名參數扣分。
+
+PenaltyMapper 是新的 Mapper，對應 penalty 資料表，一筆懲戒記錄需要 student_id 和 reason 兩個欄位。
+
+這兩個方法本身沒有事務邏輯，事務要加在呼叫它們的 Service 方法上。
+-->
+
+---
+
+# 完整程式碼：StudentDao
+
+Dao 層單純轉呼叫，不做邏輯判斷：
+
+```java
+@Repository
+public class StudentDao {
+
+    private final StudentMapper studentMapper;
+
+    public StudentDao(StudentMapper studentMapper) {
+        this.studentMapper = studentMapper;
+    }
+
+    // 其餘方法省略
+    public int deductScore(Integer studentId, Integer points) {
+        return studentMapper.deductScore(studentId, points);
+    }
+}
+```
+
+<!--
+Dao 層維持一貫的風格：建構子注入對應的 Mapper，方法內容就是單純轉呼叫，不夾雜任何業務邏輯。
+
+StudentDao 補上 deductScore，包住 StudentMapper 的同名方法。
+-->
+
+---
+
+# 完整程式碼：PenaltyDao
+
+新的 Dao class，對應懲戒記錄：
+
+```java
+@Repository
+public class PenaltyDao {
+
+    private final PenaltyMapper penaltyMapper;
+
+    public PenaltyDao(PenaltyMapper penaltyMapper) {
+        this.penaltyMapper = penaltyMapper;
+    }
+
+    public int create(Integer studentId, String reason) {
+        return penaltyMapper.create(studentId, reason);
+    }
+}
+```
+
+<!--
+PenaltyDao 是全新的 Dao class，記得也要加上 @Repository，讓 Spring 把它註冊成 Bean，Service 才能注入使用。
+
+寫法和 StudentDao 一樣：建構子注入 PenaltyMapper，方法內容單純轉呼叫。
+-->
+
+---
+
+# 完整程式碼：StudentService（建構子注入）
+
+用建構子注入 `StudentDao`、`PenaltyDao`：
+
+```java
+@Service
+public class StudentService {
+
+    private final StudentDao studentDao;
+    private final PenaltyDao penaltyDao;
+
+    public StudentService(StudentDao studentDao, PenaltyDao penaltyDao) {
+        this.studentDao = studentDao;
+        this.penaltyDao = penaltyDao;
+    }
+
+    // 其餘方法省略
+}
+```
+
+<!--
+StudentService 這次要同時注入兩個 Dao：StudentDao 和 PenaltyDao。
+
+延續前面章節的慣例，用建構子注入而不是 @Autowired 欄位注入：兩個依賴都宣告成 private final，建構子把它們指派給欄位。只有一個建構子時，Spring 會自動辨識並注入，不需要額外加 @Autowired。
+-->
+
+---
+
+# 完整程式碼：StudentService（加上 @Transactional）
+
+兩個 Dao 操作包在同一個事務方法裡：
+
+```java
+@Service
+public class StudentService {
+
+    private final StudentDao studentDao;
+    private final PenaltyDao penaltyDao;
+
+    public StudentService(StudentDao studentDao, PenaltyDao penaltyDao) {
+        this.studentDao = studentDao;
+        this.penaltyDao = penaltyDao;
+    }
+    @Transactional(rollbackFor = Exception.class)
+    public void penalizeStudent(Integer studentId, Integer points, String reason) {
+        studentDao.deductScore(studentId, points);   // Step 1：扣除積分
+        penaltyDao.create(studentId, reason);         // Step 2：建立懲戒記錄
+    }
+}
+```
+
+<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>用 <code>rollbackFor = Exception.class</code>：</b> 不只 RuntimeException，任何 Exception 都會讓兩個操作一起 Rollback，符合題目「若任一步驟拋出 Exception，兩個操作都 Rollback」的要求。
+</div>
+
+<!--
+這是本題的核心：penalizeStudent 方法依序呼叫 studentDao.deductScore 和 penaltyDao.create。
+
+加上 @Transactional(rollbackFor = Exception.class)，代表這個方法從開始到結束是同一個事務，只要任何一步拋出 Exception（不管是不是 RuntimeException），Spring 都會把兩個操作一起 Rollback，不會留下「扣分但沒記錄」的中間狀態。
+-->
+
+---
+
+# 完整程式碼：StudentController
+
+新增一支懲戒 API：
+
+```java
+@RestController
+public class StudentController {
+
+    private final StudentService studentService;
+
+    public StudentController(StudentService studentService) {
+        this.studentService = studentService;
+    }
+
+    // 其餘方法省略
+    @PostMapping("/students/{id}/penalty")
+    public void penalizeStudent(@PathVariable("id") Integer id,
+                                 @RequestParam("points") Integer points,
+                                 @RequestParam("reason") String reason) {
+        studentService.penalizeStudent(id, points, reason);
+    }
+}
+```
+
+<!--
+Controller 只負責接收 HTTP 參數，轉呼叫 StudentService.penalizeStudent，不知道也不需要知道事務是怎麼運作的。
+
+id 從路徑參數拿，points、reason 用 @RequestParam 接收，呼叫 Service 方法即可完成整個扣分＋建立懲戒記錄的流程。
+-->
+
+---
+
+# 用 Postman 驗證 Rollback
+
+| 測試步驟 | 操作 | 預期結果 |
+| --- | --- | --- |
+| 1 | 正常呼叫 `POST /students/1/penalty?points=10&reason=遲到` | 積分扣除，懲戒記錄新增 |
+| 2 | 暫時在 `PenaltyDao.create()` 前加一行 `throw new RuntimeException("測試")` | 呼叫拋出例外 |
+| 3 | 查詢資料庫 `student` 表的積分欄位 | 積分**沒有被扣除**——代表 Rollback 成功 |
+| 4 | 移除測試用的 `throw`，恢復正常程式碼 | 功能恢復正常 |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>驗證重點：</b> Step 1（扣分）已經寫入資料庫，但因為 Step 2 拋出例外，整個事務被 Rollback，Step 1 的扣分也一併撤銷——這正是 @Transactional 保護的效果。
+</div>
+
+<!--
+驗證 Rollback 最直接的方式，就是故意在第二步製造例外，然後去查資料庫確認第一步有沒有被還原。
+
+如果拿掉 @Transactional 或用預設設定（沒加 rollbackFor），重新測一次，會發現積分被扣了但沒有被還原——這就是為什麼受檢例外和 RuntimeException 都要考慮清楚要不要 Rollback。
+-->
+
+---
+
 # 章節總結
 
 | 重點 | 說明 |
