@@ -421,12 +421,18 @@ public class OpenApiConfig {
 💡 <b>import 路徑：</b> <code>OpenAPI</code> → <code>io.swagger.v3.oas.models.OpenAPI</code>；<code>Info</code> → <code>io.swagger.v3.oas.models.info.Info</code>（注意是 <code>models</code> 套件，不是 <code>annotations</code>）
 </div>
 
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+📁 <b>放置位置：</b> <code>OpenApiConfig</code> 放在 <code>config/</code> 套件下——<code>src/main/java/com/example/demo/config/OpenApiConfig.java</code>，與其他 <code>@Configuration</code> 類別放一起。
+</div>
+
 <!--
 建立一個 @Configuration 類別，回傳一個 OpenAPI Bean，就可以自訂 Swagger UI 頁面頂部的 API 名稱、版本號和說明文字。
 
 這個設定適合放在正式專案中，讓 API 文件有清楚的識別資訊。
 
 import 路徑有兩組——Annotation 用 io.swagger.v3.oas.annotations，Bean 的類別用 io.swagger.v3.oas.models，容易搞混，IDE 自動 import 時要注意選對。
+
+放置位置：所有 @Configuration 類別慣例集中在 config/ 套件下，和 entity、dto、service 分開，方便一眼找到全域設定類。
 -->
 
 ---

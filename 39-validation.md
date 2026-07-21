@@ -342,7 +342,7 @@ public class StudentController {
     }
 
     @GetMapping("/students/search")
-    public String search(@RequestParam @NotBlank String name) {
+    public String search(@RequestParam("name") @NotBlank String name) {
         return "搜尋學生: " + name;
     }
 }
@@ -422,6 +422,10 @@ public class ValidationExceptionHandler {
 }
 ```
 
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+📁 <b>放置位置：</b> <code>ValidationExceptionHandler</code> 放在 <code>exception/</code> 套件下——<code>src/main/java/com/example/demo/exception/ValidationExceptionHandler.java</code>，與 controller、service、config 分開。
+</div>
+
 <!--
 @ControllerAdvice 讓這個類別成為全域例外處理器——所有 Controller 拋出的例外，都會先經過這裡。
 
@@ -430,6 +434,8 @@ public class ValidationExceptionHandler {
 從例外物件取出所有欄位錯誤（getFieldErrors），整理成我們自訂的 errors 陣列格式回傳。
 
 注意：這個 handler 只能攔截 @RequestBody 的驗證失敗，@PathVariable 和 @RequestParam 的失敗需要另一個 handler，下一頁繼續看。
+
+放置位置：例外處理類別慣例集中在 exception/ 套件下，跟 config/ 一樣是橫跨全專案的基礎設施，不屬於任何單一業務模組。
 -->
 
 ---
