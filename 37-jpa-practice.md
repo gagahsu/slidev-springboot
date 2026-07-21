@@ -722,6 +722,45 @@ POST 和 PUT 的輸入都是 Request DTO（CreateStudentRequest），前端傳�
 -->
 
 ---
+
+# Postman 測試 — GET／DELETE 該帶的參數
+
+| API | URL | Body | 說明 |
+| --- | --- | --- | --- |
+| `GET` | `http://localhost:8080/students` | 無 | 不用帶任何參數 |
+| `GET` | `http://localhost:8080/students/1` | 無 | `1` 是 id，帶在 URL 路徑上 |
+| `DELETE` | `http://localhost:8080/students/1` | 無 | `1` 是 id，帶在 URL 路徑上 |
+
+<!--
+GET 和 DELETE 都不用帶 Body，差別只在 URL。
+
+查全部不帶 id；查單筆、刪除單筆都把 id 放在 URL 路徑最後面，對應 Controller 的 @PathVariable。
+
+這三個 API 在 Postman 裡最簡單——不用切換 Body 分頁，直接送出就好。
+-->
+
+---
+
+# Postman 測試 — POST／PUT 該帶的參數
+
+| API | URL | Body（raw / JSON） | 說明 |
+| --- | --- | --- | --- |
+| `POST` | `http://localhost:8080/students` | `{"name":"Tom","password":"1234","score":85}` | 不含 `id`，由資料庫自動產生 |
+| `PUT` | `http://localhost:8080/students/1` | `{"name":"Tom","password":"1234","score":90}` | id 帶在 URL，Body 不用再帶 id |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>Postman 設定重點：</b> Body → raw → JSON，並在 Headers 確認 <code>Content-Type: application/json</code>。
+</div>
+
+<!--
+POST 新增時，Body 選 raw、格式選 JSON，貼上 name、password、score 三個欄位，不能帶 id，因為 id 是資料庫自動產生的，前端傳了也會被忽略。
+
+PUT 更新時，id 放在 URL 路徑，不是 Body 裡；Body 一樣是 name、password、score 三個欄位，代表更新後的新值。
+
+⚠️ 最容易忘記設定的地方：Postman 的 Headers 要有 Content-Type: application/json，不然 Spring 會讀不到 @RequestBody 的內容。
+-->
+
+---
 layout: default
 ---
 
