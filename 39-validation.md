@@ -723,7 +723,7 @@ layout: default
 # 練習 1：為 CreateCourseRequest 加上驗證
 ### 任務說明
 
-承接第 33 章的課程管理練習，`CreateCourseRequest` 目前沒有任何驗證：
+承接第 37 章的課程管理練習，`CreateCourseRequest` 目前沒有任何驗證：
 
 | 欄位 | 類型 | 驗證規則 |
 | --- | --- | --- |
@@ -761,6 +761,42 @@ layout: default
 用 Postman 傳一個空的 name，應該收到 400 Bad Request，回應裡有 Spring 預設的驗證錯誤訊息。
 
 有沒有成功看到 400 的回應？
+-->
+
+---
+
+# 練習 1：解答程式碼
+
+```java
+public class CreateCourseRequest {
+
+    @NotBlank(message = "課程名稱不能為空")
+    private String name;
+
+    @Min(value = 1, message = "學分至少為 1")
+    @Max(value = 10, message = "學分不超過 10")
+    private Integer credit;
+
+    // Getter 和 Setter
+}
+```
+
+```java
+@RestController
+public class CourseController {
+    @Autowired
+    private CourseService courseService;
+
+    @PostMapping("/courses")
+    public CourseResponse create(
+            @Valid @RequestBody CreateCourseRequest req) {
+        return courseService.createCourse(req);
+    }
+}
+```
+
+<!--
+CreateCourseRequest 兩個欄位各自標上驗證規則，Controller 只需要在 @RequestBody 前面加 @Valid，其餘不用改。
 -->
 
 ---
@@ -809,6 +845,18 @@ layout: default
 做完之後，再用 Postman 試一次驗證失敗——這次回傳的 JSON 格式應該乾淨很多了。
 
 如果想挑戰進階版，可以再加上 ConstraintViolationException 的 handler，讓 @PathVariable 的驗證失敗也有一致的錯誤格式。
+-->
+
+---
+
+# 練習 2：解答參考
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ 程式碼與 <b>Part 5 -「@ControllerAdvice + @ExceptionHandler」</b> 那頁完全相同，攔截的是同一種 <code>MethodArgumentNotValidException</code>，直接沿用即可，不需要改任何邏輯——回去參考那頁的程式碼。
+</div>
+
+<!--
+Course 練習跟 Student 範例攔截的例外類型一樣，Handler 程式碼不需要為了 Course 另外改寫，這就是統一錯誤處理的價值：一次寫好，全專案共用。
 -->
 
 ---

@@ -811,6 +811,164 @@ layout: default
 
 ---
 
+# 練習解答：Entity（PO）
+
+```java
+@Entity
+public class Course {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+    private String name;
+    private Integer credit;
+    private String teacherPassword; // DB 有，不應傳給前端
+    // Getter 和 Setter（省略）
+}
+```
+
+| 說明 | 詳情 |
+| --- | --- |
+| **含 `teacherPassword`** | 敏感欄位，只在 Repository ↔ Service 流動 |
+| **不能直接 return** | 不可讓 Controller 直接回傳這個 PO |
+
+<!--
+Course PO 對應資料庫的 course 表格，包含所有欄位，包括 teacherPassword。這個欄位不能出現在 Controller 回傳給前端的資料裡。
+-->
+
+---
+
+# 練習解答：DTO
+
+```java
+public class CreateCourseRequest {
+    private String name;
+    private Integer credit;
+    // Getter 和 Setter
+}
+```
+
+```java
+public class CourseResponse {
+    private Integer id;
+    private String name;
+    private Integer credit;
+    // Getter 和 Setter（刻意不含 teacherPassword）
+}
+```
+
+<!--
+CreateCourseRequest 不含 id 和 teacherPassword，前端新增課程時只傳 name、credit。
+CourseResponse 不含 teacherPassword，這就是這題的核心考點——PO 裡有的敏感欄位，Response DTO 刻意不複製。
+-->
+
+---
+
+# 練習解答：Repository（DAO）
+
+```java
+@Repository
+public interface CourseRepository
+        extends JpaRepository<Course, Integer> {
+}
+```
+
+<!--
+繼承 JpaRepository 即可，不需要寫任何方法，save()、findAll()、deleteById() 全部內建。
+-->
+
+---
+
+# 練習解答：Service — toResponse 與 createCourse
+
+```java
+@Service
+public class CourseService {
+    @Autowired
+    private CourseRepository courseRepository;
+
+    private CourseResponse toResponse(Course po) {
+        CourseResponse resp = new CourseResponse();
+        resp.setId(po.getId());
+        resp.setName(po.getName());
+        resp.setCredit(po.getCredit());
+        return resp; // 刻意不複製 teacherPassword
+    }
+
+    public CourseResponse createCourse(CreateCourseRequest req) {
+        Course po = new Course();
+        po.setName(req.getName());
+        po.setCredit(req.getCredit());
+        Course saved = courseRepository.save(po);
+        return toResponse(saved);
+    }
+}
+```
+
+<!--
+toResponse() 是安全設計的核心——把 PO 轉成 Response DTO 時，刻意不複製 teacherPassword。
+createCourse 走 Request DTO → PO → save → Response DTO 的標準流程，跟 Student 的 createStudent 結構完全一樣。
+-->
+
+---
+
+# 練習解答：Service — getAllCourses 與 deleteCourse
+
+```java
+public List<CourseResponse> getAllCourses() {
+    List<Course> poList = courseRepository.findAll();
+    List<CourseResponse> result = new ArrayList<>();
+    for (Course po : poList) result.add(toResponse(po));
+    return result;
+}
+
+public void deleteCourse(Integer id) {
+    courseRepository.deleteById(id);
+}
+```
+
+<!--
+getAllCourses：從 Repository 取得 PO List，逐一轉成 Response DTO List，回傳給 Controller。
+deleteCourse：最單純，直接呼叫 deleteById()，不需要轉換任何物件。
+-->
+
+---
+
+# 練習解答：Controller
+
+```java
+@RestController
+public class CourseController {
+    @Autowired
+    private CourseService courseService;
+
+    @GetMapping("/courses")
+    public List<CourseResponse> getAll() {
+        return courseService.getAllCourses();
+    }
+
+    @PostMapping("/courses")
+    public CourseResponse create(
+            @RequestBody CreateCourseRequest req) {
+        return courseService.createCourse(req);
+    }
+
+    @DeleteMapping("/courses/{id}")
+    public void delete(@PathVariable("id") Integer id) {
+        courseService.deleteCourse(id);
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ Controller 全程只接觸 DTO，GET /courses 回傳的 JSON 陣列裡每個物件都沒有 teacherPassword。
+</div>
+
+<!--
+三個 API 全部完成：GET 查全部、POST 新增、DELETE 刪除，Controller 只看得到 DTO，Course PO 的 teacherPassword 全程不外洩。
+-->
+
+---
+
 # 章節總結
 
 | 重點 | 說明 |
