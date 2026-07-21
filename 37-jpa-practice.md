@@ -172,6 +172,51 @@ Service 就是那個把 PO 「過濾」成 Response DTO 的地方。
 -->
 
 ---
+
+# 專案資料夾結構
+
+```
+src/main/java/com/example/demo/
+├── entity/          → Student.java（PO）
+├── repository/      → StudentRepository.java（DAO）
+├── dto/
+│   ├── request/     → CreateStudentRequest.java
+│   └── response/    → StudentResponse.java
+├── vo/              → ScoreVO.java
+├── service/         → StudentService.java
+└── controller/      → StudentController.java
+src/main/resources/
+└── application.properties
+```
+
+<!--
+Java 套件通常依「職責」分資料夾，不是依「功能模組」——這是初學者常見的疑問。
+
+entity 放 PO，repository 放 DAO，dto 底下再依方向分 request 和 response 兩個子資料夾，vo 放值物件，service 和 controller 各自一個資料夾。
+
+application.properties 固定放在 src/main/resources/ 底下，這是 Spring Boot 的規定路徑，啟動時會自動讀取。
+-->
+
+---
+
+# 資料夾與架構層對應
+
+| 資料夾 | 放置檔案類型 | 對應架構層 |
+| --- | --- | --- |
+| `entity/` | `@Entity` 標註的 PO | Repository ↔ Service |
+| `repository/` | `extends JpaRepository` 介面 | DAO 層 |
+| `dto/request/`、`dto/response/` | Request DTO、Response DTO | Controller ↔ Service |
+| `vo/` | 不可變值物件 | Service 層內部使用 |
+| `service/` | `@Service` 商業邏輯與轉換 | 轉換中心 |
+| `controller/` | `@RestController` | 對外 API 入口 |
+
+<!--
+檔案命名和資料夾一一對應：只要看到 CreateStudentRequest 在 dto/request/ 底下，就知道它是 Controller 接收前端資料用的。
+
+這種依職責分資料夾的方式，讓同一層的類別集中在一起，符合今天教的四層架構。
+-->
+
+---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---

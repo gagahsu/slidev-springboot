@@ -172,6 +172,25 @@ PO 只在 Dao 層流動，不應該直接傳給前端。
 
 ---
 
+# PO 在三種框架中的對應
+
+三種框架都有 PO 概念，只是名稱和標註方式不同：
+
+| 技術 | PO 的對應物 | 特徵 |
+| --- | --- | --- |
+| Spring JDBC | RowMapper 映射出的 `Student` | 純 POJO，欄位對應 SQL 查詢結果，無框架標註 |
+| MyBatis | `@Mapper` 方法回傳的 `Student`（常稱 MyBatis PO） | 純 POJO，欄位對應 resultType／resultMap，無框架標註 |
+| Spring Data JPA | `@Entity` 的 `Student` | 帶 `@Entity`、`@Id`、`@Column` 等標註，多了 persistence context 生命週期 |
+
+<!--
+三種框架都有 PO 的概念，只是實作方式不同：
+Spring JDBC 裡，RowMapper 映射出來的 Student 類別就是 PO，是純粹的 POJO，沒有任何框架標註。
+MyBatis 也一樣，@Select／resultMap 映射出來的 Student 類別也是 PO（業界常稱 MyBatis PO），同樣是純 POJO。
+Spring Data JPA 裡，加了 @Entity 的類別才是 PO，而且多了 ORM 的標註（@Id、@Column）和 persistence context 生命週期管理，這是三者中最「重」的一種。
+-->
+
+---
+
 # PO 程式碼範例
 
 PO 包含所有資料庫欄位，包括敏感資料：
