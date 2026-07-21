@@ -321,29 +321,6 @@ Session 的生命週期可以這樣理解：
 -->
 
 ---
-
-# 補充：HttpSession vs @SessionAttributes
-
-| 比較項目 | `HttpSession` | `@SessionAttributes` |
-| --- | --- | --- |
-| 使用方式 | 直接注入，手動操作 | 加在 Controller 類別上，自動同步 Model |
-| 控制粒度 | 細（可自訂任意 key） | 粗（指定 Model attribute 名稱） |
-| 適用場景 | 登入狀態、購物車、跨 Controller 共用狀態 | 多步驟表單、單一 Controller 的暫存資料 |
-| 失效方式 | `session.invalidate()` | `SessionStatus.setComplete()` |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>實務建議：</b> 大多數情境（尤其是 RESTful API）優先使用 <code>HttpSession</code>；<code>@SessionAttributes</code> 較適合 MVC 多步驟表單場景。
-</div>
-
-<!--
-@SessionAttributes 是 Spring MVC 提供的另一個操作 Session 的方式，不過它的使用情境比較特定——主要是配合 Model 物件使用，在多步驟表單中自動把 Model 屬性同步到 Session。
-
-對於我們一般的 RESTful API 開發，直接注入 HttpSession 並手動操作是更常用也更靈活的做法。
-
-了解兩者的差異，遇到相關問題時知道選哪一個就夠了。
--->
-
----
 layout: default
 ---
 
@@ -387,6 +364,59 @@ Postman 預設會自動管理 Cookie，所以跨請求的 Session 追蹤是自�
 -->
 
 ---
+
+# 練習 1：解答程式碼
+
+```java
+import jakarta.servlet.http.HttpSession;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/session")
+public class SessionController {
+
+    @PostMapping("/login")
+    public String login(@RequestParam("username") String username,
+                        HttpSession session) {
+        session.setAttribute("username", username);
+        return "登入成功，Session ID：" + session.getId();
+    }
+
+    @GetMapping("/info")
+    public String getSessionInfo(HttpSession session) {
+        String username = (String) session.getAttribute("username");
+        if (username == null) {
+            return "尚未登入";
+        }
+        return "目前登入：" + username;
+    }
+}
+```
+
+<!--
+login 用 setAttribute 存使用者名稱，info 用 getAttribute 讀回來並做 null 檢查。兩支 API 共用同一個 Session，只要 Postman 的 Cookie 有正確帶上 JSESSIONID 就會串起來。
+-->
+
+---
+
+# 練習 1：Postman 測試
+
+| 步驟 | Method / URL | Body | 預期回應 |
+| --- | --- | --- | --- |
+| 1 | `POST http://localhost:8080/session/login?username=Tom` | 無 | `登入成功，Session ID：xxxxxxxx` |
+| 2 | `GET http://localhost:8080/session/info` | 無 | `目前登入：Tom` |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>設定重點：</b> <code>@RequestParam</code> 對應的是 <b>URL 的 query string</b>，直接把 <code>?username=Tom</code> 接在網址後面，不需要開 Body。
+</div>
+
+<!--
+先送 login，Postman 自動把回應裡的 JSESSIONID Cookie 存起來；接著送 info，Postman 自動帶上同一個 Cookie，Controller 就能從 Session 讀到剛才存的 username。
+
+可以到 Postman 的 Cookies 分頁確認 localhost 底下有一筆 JSESSIONID。
+-->
+
+---
 layout: default
 ---
 
@@ -427,6 +457,79 @@ invalidate() 之後不能再操作這個 Session 物件，這是初學者很常�
 timeout=2m 是縮短時間方便測試，記得測試完改回合理的值（如 30m）。
 
 ResponseEntity 的用法大家在 ch21 已經學過，這裡只是複習一下回傳非 200 狀態碼的寫法。
+-->
+
+---
+
+# 練習 2：解答程式碼 — login 與 info
+
+```java
+@RestController
+@RequestMapping("/session")
+public class SessionController {
+
+    @PostMapping("/login")
+    public String login(@RequestParam("username") String username,
+                        HttpSession session) {
+        session.setAttribute("username", username);
+        return "登入成功，Session ID：" + session.getId();
+    }
+
+    @GetMapping("/info")
+    public ResponseEntity<String> getSessionInfo(HttpSession session) {
+        String username = (String) session.getAttribute("username");
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("尚未登入");
+        }
+        return ResponseEntity.ok("目前登入：" + username);
+    }
+}
+```
+
+<!--
+login 跟練習 1 完全一樣。info 的差異在回傳型別改成 ResponseEntity<String>——沒登入時回傳 401 Unauthorized，而不是原本的普通字串。
+-->
+
+---
+
+# 練習 2：解答程式碼 — logout 與設定
+
+```java
+    @PostMapping("/logout")
+    public String logout(HttpSession session) {
+        session.invalidate();
+        return "已登出";
+    }
+}
+```
+
+```properties
+server.servlet.session.timeout=2m
+```
+
+<!--
+logout 呼叫 invalidate() 徹底清空 Session，屬於同一個 SessionController 類別。timeout 設 2 分鐘方便測試，實務上要記得改回 30m。
+-->
+
+---
+
+# 練習 2：Postman 測試
+
+| 步驟 | Method / URL | 動作 | 預期回應 |
+| --- | --- | --- | --- |
+| 1 | `POST /session/login?username=Tom` | 登入 | `登入成功，Session ID：xxxxxxxx` |
+| 2 | `GET /session/info` | 立即查詢 | `200 OK`，`目前登入：Tom` |
+| 3 | `POST /session/logout` | 登出 | `已登出` |
+| 4 | `GET /session/info` | 登出後查詢 | `401 Unauthorized`，`尚未登入` |
+| 5 | 重新登入後等 2 分鐘，再 `GET /session/info` | 閒置過期 | `401 Unauthorized`，`尚未登入` |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>驗證重點：</b> 步驟 3 之後 Session 已被 <code>invalidate()</code> 主動清除；步驟 5 則是驗證 <code>timeout=2m</code> 的被動過期效果——兩者都應該回傳 401。
+</div>
+
+<!--
+步驟 1–4 驗證主動登出（invalidate）的效果；步驟 5 驗證被動過期（timeout）的效果。兩種情境都要讓學生實際在 Postman 上看到 401，才算真的搞懂過期與失效的差異。
 -->
 
 ---
