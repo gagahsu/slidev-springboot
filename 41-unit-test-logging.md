@@ -60,7 +60,7 @@ layout: default
 # Outline
 
 - **為什麼需要單元測試？** — 測試的核心價值
-- **JUnit 5 基礎** — `@Test`、`@BeforeEach`、`@AfterEach`
+- **JUnit 6 基礎** — `@Test`、`@BeforeEach`、`@AfterEach`
 - **Assertions — 斷言語法** — `assertEquals`、`assertThrows`、`assertAll`
 - **Mockito 與 @MockitoBean** — Mock 依賴、驗證互動行為
 - **@SpringBootTest** — 整合測試與 `@WebMvcTest`、`@DataJpaTest`
@@ -116,7 +116,7 @@ class: flex flex-col justify-center items-center text-center
 
 沒有測試，你就像在黑暗中走路。有測試，你有個手電筒。
 
-OK 那我們開始看 JUnit 5 怎麼用。
+OK 那我們開始看 JUnit 6 怎麼用。
 -->
 
 ---
@@ -125,10 +125,10 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 ## Part 2
-# JUnit 5 基礎
+# JUnit 6 基礎
 
 <!--
-JUnit 是 Java 世界最主流的測試框架，Spring Boot 預設就整合好了，不需要額外加依賴。Spring Boot 4.x 內建的是 JUnit 6，寫法和 JUnit 5 完全一樣，所以投影片標題沿用大家熟悉的 JUnit 5 名稱。
+JUnit 是 Java 世界最主流的測試框架，Spring Boot 預設就整合好了，不需要額外加依賴。Spring Boot 4.x 內建的是 JUnit 6，寫法和 JUnit 5 完全一樣，import 都是 org.junit.jupiter，所以你在 JUnit 5 學到的東西可以無痛沿用。
 
 我們來看最基本的三個 annotation。
 -->
@@ -143,14 +143,14 @@ JUnit 是 Java 世界最主流的測試框架，Spring Boot 預設就整合好�
 src/
 ├── main/java/com/example/demo/
 │   ├── controller/
-│   │   └── UserController.java
+│   │   └── StudentController.java
 │   └── service/
-│       └── UserService.java
+│       └── StudentService.java
 └── test/java/com/example/demo/
     ├── controller/
-    │   └── UserControllerTest.java    ← 測試 UserController
+    │   └── StudentControllerTest.java    ← 測試 StudentController
     └── service/
-        └── UserServiceTest.java       ← 測試 UserService
+        └── StudentServiceTest.java       ← 測試 StudentService
 ```
 
 `spring-boot-starter-test` 已內建 JUnit（Spring Boot 4.x 為 JUnit 6，API 與 JUnit 5 相同）、Mockito、AssertJ，Spring Initializr 預設自動加入，不需手動設定。
@@ -160,12 +160,12 @@ src/
 
 src/test/java 的套件結構要和 src/main/java 完全一致，這樣測試才能存取到 package-private 的成員。
 
-命名慣例是在原類別名稱後面加 Test，例如 UserService 對應 UserServiceTest。
+命名慣例是在原類別名稱後面加 Test，例如 StudentService 對應 StudentServiceTest。
 -->
 
 ---
 
-## JUnit 5 — 測試類別的骨架
+## JUnit 6 — 測試類別的骨架
 
 Spring Boot 測試的 dependency 已內建在 `spring-boot-starter-test` 中。
 
@@ -203,7 +203,7 @@ Spring Boot 3.x 採用 JUnit 5、Spring Boot 4.x 升級到 JUnit 6，但 Jupiter
 
 ---
 
-## JUnit 5 — 生命週期 Annotation
+## JUnit 6 — 生命週期 Annotation
 
 | Annotation | 用途 |
 |------------|------|
@@ -245,18 +245,18 @@ class DatabaseTest {
 }
 ```
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">⚠️ <b>為什麼要 static？</b> JUnit 5 每個 <code>@Test</code> 都會建立一個<b>新的測試類別實例</b>，所以在任何實例存在之前就要執行的 <code>@BeforeAll</code> 只能是 static 方法。<code>@BeforeEach</code> 則不需要，因為它在實例建立後才跑。</div>
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">⚠️ <b>為什麼要 static？</b> JUnit 6 每個 <code>@Test</code> 都會建立一個<b>新的測試類別實例</b>，所以在任何實例存在之前就要執行的 <code>@BeforeAll</code> 只能是 static 方法。<code>@BeforeEach</code> 則不需要，因為它在實例建立後才跑。</div>
 
 <!--
 忘記加 static 是新手最常遇到的編譯錯誤之一。
 
-JUnit 5 預設的 test lifecycle 是 PER_METHOD，也就是每個測試方法建立一個新實例。
+JUnit 6 預設的 test lifecycle 是 PER_METHOD，也就是每個測試方法建立一個新實例。
 如果加上 @TestInstance(TestInstance.Lifecycle.PER_CLASS)，@BeforeAll 就不需要 static 了，但這是進階用法，先記住預設要加 static 就好。
 -->
 
 ---
 
-## JUnit 5 — 進階控制 Annotation
+## JUnit 6 — 進階控制 Annotation
 
 | Annotation | 用途 |
 |------------|------|
@@ -265,16 +265,16 @@ JUnit 5 預設的 test lifecycle 是 PER_METHOD，也就是每個測試方法建
 | `@Nested` | 在類別內再建立巢狀測試群組 |
 
 ```java
-@DisplayName("使用者服務測試")
-class UserServiceTest {
+@DisplayName("學生服務測試")
+class StudentServiceTest {
 
     @Nested
-    @DisplayName("查詢使用者")
-    class FindUser {
+    @DisplayName("查詢學生")
+    class FindStudent {
 
         @Test
         @Disabled("尚未實作此功能")
-        void findByEmail_尚未實作() { }
+        void findByName_尚未實作() { }
     }
 }
 ```
@@ -298,7 +298,7 @@ class: flex flex-col justify-center items-center text-center
 <!--
 測試的核心就是「斷言」：我預期這個值是 X，如果不是就失敗。
 
-JUnit 5 的 Assertions 類別提供了一堆靜態方法，我們來看最常用的幾個。
+JUnit 6 的 Assertions 類別提供了一堆靜態方法，我們來看最常用的幾個。
 -->
 
 ---
@@ -371,76 +371,81 @@ class: flex flex-col justify-center items-center text-center
 
 ---
 
-## 本節範例情境（1/2）：Model 與依賴介面
+## 本節範例情境（1/2）：Model 與 Repository
+
+沿用 ch37 的 `Student` 資料模型與 Repository：
 
 ```java
-// 資料模型（Java 16+ record）
-public record User(Long id, String name) {}
-public record Order(Long id, Long userId, String item) {}
-
-// Repository — 依賴資料庫，測試時要 Mock
-public interface UserRepository extends JpaRepository<User, Long> {}
-
-// EmailService — 會真的寄信，測試時要 Mock
-public interface EmailService {
-    void sendConfirmation(Order order);
+// PO（Entity）— 對應資料庫 student 表格
+@Entity
+public class Student {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+    private String name;
+    private String password; // 不應傳給前端
+    private Integer score;
+    // Getter 和 Setter（省略）
 }
+
+// Repository（DAO）— 依賴資料庫，測試時要 Mock
+public interface StudentRepository
+        extends JpaRepository<Student, Integer> {}
 ```
 
-這三個都是 `OrderService` 的**外部依賴**，單元測試時不應該真正呼叫它們。
+`StudentRepository` 背後需要資料庫連線，是 `StudentService` 的**外部依賴**，單元測試時要 Mock 掉。
 
 <!--
-User 和 Order 用 record 宣告，簡潔不囉嗦。
+這裡直接沿用 ch37 的 Student PO 和 StudentRepository，內容一模一樣。
 
-UserRepository 繼承 JpaRepository，背後需要資料庫連線。
-EmailService 是自訂介面，呼叫後會真的寄出 Email。
+Student 有 id、name、password、score 四個欄位，password 是敏感欄位。
+StudentRepository 繼承 JpaRepository，背後需要資料庫連線。
 
-這兩個依賴就是我們等等要 Mock 掉的目標。
+這個 Repository 就是我們等等要 Mock 掉的目標。
 -->
 
 ---
 
-## 本節範例情境（2/2）：OrderService 實作
+## 本節範例情境（2/2）：StudentService 實作
+
+`StudentService` 是 ch37 的服務層，這裡要測 `getStudentById` 與 `deleteStudent`：
 
 ```java
 @Service
-public class OrderService {
-    private final UserRepository userRepository;
-    private final EmailService emailService;
+public class StudentService {
+    @Autowired
+    private StudentRepository studentRepository;
 
-    public OrderService(UserRepository userRepository,
-                        EmailService emailService) {
-        this.userRepository = userRepository;
-        this.emailService = emailService;
+    public StudentResponse getStudentById(Integer id) {
+        Student po = studentRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Student not found"));
+        return toResponse(po);   // toResponse 定義同 ch37
     }
 
-    public Order createOrder(Long userId, String item) {
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found"));
-        Order order = new Order(1L, userId, item);
-        emailService.sendConfirmation(order);
-        return order;
+    public void deleteStudent(Integer id) {
+        studentRepository.deleteById(id);
     }
 }
 ```
 
 <!--
-OrderService 透過建構子注入依賴，這樣 Mockito 的 @InjectMocks 才能把 Mock 注入進去。
+StudentService 沿用 ch37，@Autowired 注入 StudentRepository，
+@InjectMocks 一樣能把 Mock 注入到欄位裡。
 
-createOrder 內部呼叫了 userRepository 和 emailService，
-所以測試時這兩個都需要 Mock。
+getStudentById 內部呼叫 studentRepository.findById，找不到就拋例外——
+這是 ch37 getStudentById 的變體（原本回傳 null，這裡改成拋例外方便示範 assertThrows）。
+deleteStudent 呼叫 deleteById，是個 void 方法，等等用來示範 verify。
 -->
 
 ---
 
 ## 為什麼需要 Mock？
 
-想像你在測試 `OrderService.createOrder()`，但它內部會呼叫：
+想像你在測試 `StudentService.getStudentById()`，但它內部會呼叫：
 
 | 依賴 | 問題 |
 |------|------|
-| `UserRepository.findById()` | 需要資料庫連線 |
-| `EmailService.sendConfirmation()` | 會真的寄出 Email |
+| `StudentRepository.findById()` | 需要資料庫連線 |
+| `StudentRepository.deleteById()` | 會真的刪除資料庫資料 |
 
 解決方案：**用假物件（Mock）替代真實依賴**，讓 Mock 回傳我們指定的假資料。
 
@@ -464,23 +469,21 @@ OK 來看 Mockito 怎麼用。
 
 ```java
 @ExtendWith(MockitoExtension.class)
-class OrderServiceTest {
+class StudentServiceTest {
 
     @Mock
-    private UserRepository userRepository;  // 假的 Repository
-
-    @Mock
-    private EmailService emailService;      // 假的 EmailService
+    private StudentRepository studentRepository;  // 假的 Repository
 
     @InjectMocks
-    private OrderService orderService;      // 真實的 Service，Mock 自動注入
+    private StudentService studentService;        // 真實的 Service，Mock 自動注入
 }
 ```
 
 <!--
 @Mock 建立假物件，@InjectMocks 建立真實的 Service 並把 Mock 注入進去。
 
-OrderService 有幾個依賴，就要宣告幾個 @Mock，缺一個就是 null。
+StudentService 只依賴 StudentRepository，所以宣告一個 @Mock 即可。
+Service 有幾個依賴，就要宣告幾個 @Mock，缺一個就是 null。
 -->
 
 ---
@@ -489,18 +492,20 @@ OrderService 有幾個依賴，就要宣告幾個 @Mock，缺一個就是 null�
 
 ```java
     @Test
-    void createOrder_使用者存在_建立成功() {
+    void getStudentById_存在的ID_回傳StudentResponse() {
         // Arrange：設定 Mock 行為
-        User fakeUser = new User(1L, "Alice");
-        when(userRepository.findById(1L))
-            .thenReturn(Optional.of(fakeUser));
+        Student po = new Student();
+        po.setId(1); po.setName("Alice"); po.setScore(85);
+        when(studentRepository.findById(1))
+            .thenReturn(Optional.of(po));
 
         // Act：呼叫被測方法
-        Order result = orderService.createOrder(1L, "item-A");
+        StudentResponse result = studentService.getStudentById(1);
 
         // Assert：驗證結果
         assertNotNull(result);
-        verify(emailService, times(1)).sendConfirmation(result);
+        assertEquals("Alice", result.getName());
+        verify(studentRepository, times(1)).findById(1);
     }
 ```
 
@@ -509,7 +514,7 @@ OrderService 有幾個依賴，就要宣告幾個 @Mock，缺一個就是 null�
 <!--
 when(...).thenReturn(...) 告訴 Mock：如果有人呼叫你這個方法，就回傳這個值。
 
-verify 確認 emailService.sendConfirmation 有被呼叫一次，這樣才完整測到 createOrder 的行為。
+verify 確認 studentRepository.findById 有被呼叫一次，這樣才完整測到 getStudentById 的行為。
 
 AAA 是業界標準寫法，養成習慣讓測試更易讀。
 -->
@@ -566,14 +571,14 @@ class: flex flex-col justify-center items-center text-center
 | `@DataJpaTest` | 只啟動 JPA 相關 Bean + H2 | Repository 測試 |
 
 ```java
-@WebMvcTest(UserController.class)
-class UserControllerTest {
+@WebMvcTest(StudentController.class)
+class StudentControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
-    private UserService userService;
+    private StudentService studentService;
 }
 ```
 
@@ -589,38 +594,36 @@ class UserControllerTest {
 
 ---
 
-## 本節範例情境：UserController 層
+## 本節範例情境：StudentController 層
+
+沿用 ch37 的 `StudentController` 與 `StudentResponse`：
 
 ```java
-public record UserDto(Long id, String name) {}
-
 @Service
-public class UserService {
-    public UserDto findById(Long id) {
+public class StudentService {
+    public StudentResponse getStudentById(Integer id) {
         // 實際查詢資料庫，此處簡化
-        return new UserDto(id, "Alice");
+        StudentResponse resp = new StudentResponse();
+        resp.setId(id); resp.setName("Alice"); resp.setScore(85);
+        return resp;
     }
 }
 
 @RestController
-@RequestMapping("/users")
-public class UserController {
-    private final UserService userService;
+public class StudentController {
+    @Autowired
+    private StudentService studentService;
 
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
-
-    @GetMapping("/{id}")
-    public UserDto getUser(@PathVariable("id") Long id) {
-        return userService.findById(id);
+    @GetMapping("/students/{id}")
+    public StudentResponse getById(@PathVariable("id") Integer id) {
+        return studentService.getStudentById(id);
     }
 }
 ```
 
 <!--
-@WebMvcTest 只啟動 Web 層，UserService 不會被建立，
-所以測試中要用 @MockitoBean 提供假的 UserService。
+@WebMvcTest 只啟動 Web 層，StudentService 不會被建立，
+所以測試中要用 @MockitoBean 提供假的 StudentService。
 -->
 
 ---
@@ -628,21 +631,22 @@ public class UserController {
 ## @WebMvcTest — Controller 測試範例
 
 ```java
-@WebMvcTest(UserController.class)
-class UserControllerTest {
+@WebMvcTest(StudentController.class)
+class StudentControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
-    private UserService userService;
+    private StudentService studentService;
 
     @Test
-    void getUser_存在的ID_回傳200() throws Exception {
-        when(userService.findById(1L))
-            .thenReturn(new UserDto(1L, "Alice"));
+    void getById_存在的ID_回傳200() throws Exception {
+        StudentResponse resp = new StudentResponse();
+        resp.setId(1); resp.setName("Alice"); resp.setScore(85);
+        when(studentService.getStudentById(1)).thenReturn(resp);
 
-        mockMvc.perform(get("/users/1"))
+        mockMvc.perform(get("/students/1"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("Alice"));
     }
@@ -724,15 +728,21 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
-public class OrderService {
+public class StudentService {
     private static final Logger log =
-        LoggerFactory.getLogger(OrderService.class);
+        LoggerFactory.getLogger(StudentService.class);
+    @Autowired
+    private StudentRepository studentRepository;
 
-    public Order createOrder(Long userId, String item) {
-        log.debug("建立訂單，userId={}, item={}", userId, item);
-        Order order = new Order(1L, userId, item);
-        log.info("訂單建立成功，orderId={}", order.id());
-        return order;
+    public StudentResponse createStudent(CreateStudentRequest req) {
+        log.debug("建立學生，name={}, score={}",
+            req.getName(), req.getScore());
+        Student po = new Student();
+        po.setName(req.getName());
+        po.setScore(req.getScore());
+        Student saved = studentRepository.save(po);
+        log.info("學生建立成功，id={}", saved.getId());
+        return toResponse(saved);   // toResponse 定義同 ch37
     }
 }
 ```
@@ -845,7 +855,7 @@ class: flex flex-col justify-center items-center text-center
 <!--
 理論說了很多，我們來動手做兩個練習。
 
-第一個練習專注在 JUnit 5 + Mockito，第二個練習專注在日誌設定。
+第一個練習專注在 JUnit 6 + Mockito，第二個練習專注在日誌設定。
 -->
 
 ---
@@ -855,15 +865,15 @@ layout: default
 # 練習一：Service 層測試
 ### 任務說明
 
-**情境：** 你有一個 `UserService`，其中有個方法 `getUserById(Long id)`，它會呼叫 `UserRepository.findById(id)`。
+**情境：** 沿用 ch37 的 `StudentService`，其中的 `getStudentById(Integer id)` 會呼叫 `StudentRepository.findById(id)`，找不到時拋出例外。
 
 **任務：**
 
-1. 建立 `UserServiceTest`，使用 `@ExtendWith(MockitoExtension.class)`
-2. Mock 掉 `UserRepository`
+1. 建立 `StudentServiceTest`，使用 `@ExtendWith(MockitoExtension.class)`
+2. Mock 掉 `StudentRepository`
 3. 撰寫測試方法：
-   - `getUserById_存在的ID_回傳UserDto`：Mock 回傳一個 `User`，驗證 `UserDto` 的欄位
-   - `getUserById_不存在的ID_拋出例外`：Mock 回傳 `Optional.empty()`，驗證 `assertThrows`
+   - `getStudentById_存在的ID_回傳StudentResponse`：Mock 回傳一個 `Student`，驗證 `StudentResponse` 的欄位
+   - `getStudentById_不存在的ID_拋出例外`：Mock 回傳 `Optional.empty()`，驗證 `assertThrows`
 4. 確認兩個測試都是綠燈 ✓
 
 <!--
@@ -879,16 +889,97 @@ layout: default
 # 練習一：解題提示
 ### 提示說明
 
-1. 建立測試類別骨架：`@ExtendWith(MockitoExtension.class)`，`@Mock UserRepository`，`@InjectMocks UserService`
-2. 正常路徑：`when(userRepository.findById(1L)).thenReturn(Optional.of(new User(...)))` → `assertEquals` 驗證欄位
-3. 例外路徑：`when(userRepository.findById(99L)).thenReturn(Optional.empty())` → `assertThrows(UserNotFoundException.class, () -> ...)`
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>提示：</b> 記得 Service 內部要在 id 找不到時拋出 <code>UserNotFoundException</code>，否則 assertThrows 會失敗。</div>
+1. 建立測試類別骨架：`@ExtendWith(MockitoExtension.class)`，`@Mock StudentRepository`，`@InjectMocks StudentService`
+2. 正常路徑：`when(studentRepository.findById(1)).thenReturn(Optional.of(po))` → `assertEquals` 驗證欄位
+3. 例外路徑：`when(studentRepository.findById(99)).thenReturn(Optional.empty())` → `assertThrows(RuntimeException.class, () -> ...)`
 
 <!--
 Step 3 是很多人卡住的地方：Service 要先有拋出例外的邏輯，測試才測得到。
 
 這也是測試驅動開發（TDD）的思路：先寫測試，再寫讓測試通過的實作。
+-->
+
+---
+
+# 練習一：解答程式碼 — Service（沿用 ch37）
+
+```java
+@Service
+public class StudentService {
+    @Autowired
+    private StudentRepository studentRepository;
+
+    public StudentResponse getStudentById(Integer id) {
+        Student po = studentRepository.findById(id)
+            .orElseThrow(() ->
+                new RuntimeException("Student not found: " + id));
+        return toResponse(po);   // toResponse 定義同 ch37
+    }
+}
+```
+
+<!--
+Service 沿用 ch37，找不到就 orElseThrow 拋 RuntimeException——這是測試例外路徑的前提。
+先不引入自訂例外，避免混淆，讓重點留在測試本身。
+toResponse 沿用 ch37，把 Student PO 轉成 StudentResponse，並過濾掉 password。
+-->
+
+---
+
+# 練習一：解答程式碼 — 測試類別
+
+```java
+@ExtendWith(MockitoExtension.class)
+class StudentServiceTest {
+
+    @Mock
+    private StudentRepository studentRepository;
+
+    @InjectMocks
+    private StudentService studentService;
+
+    @Test
+    void getStudentById_存在的ID_回傳StudentResponse() {
+        Student po = new Student();
+        po.setId(1); po.setName("Alice"); po.setScore(85);
+        when(studentRepository.findById(1)).thenReturn(Optional.of(po));
+
+        StudentResponse result = studentService.getStudentById(1);
+
+        assertNotNull(result);
+        assertEquals("Alice", result.getName());
+        assertEquals(85, result.getScore());
+        verify(studentRepository, times(1)).findById(1);
+    }
+}
+```
+
+<!--
+正常路徑：when 設定 Mock 回傳 Optional.of(po)，驗證欄位並 verify findById 被呼叫一次。
+-->
+
+---
+
+# 練習一：解答程式碼 — 例外路徑測試
+
+```java
+    @Test
+    void getStudentById_不存在的ID_拋出例外() {
+        when(studentRepository.findById(99))
+            .thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class,
+            () -> studentService.getStudentById(99));
+
+        verify(studentRepository, times(1)).findById(99);
+    }
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>兩個測試都綠燈：</b> 正常路徑驗證回傳值，例外路徑用 <code>assertThrows</code> 驗證有拋出 <code>RuntimeException</code>。</div>
+
+<!--
+例外路徑：Mock 回傳 Optional.empty()，Service 的 orElseThrow 就會拋例外。
+assertThrows 第一個參數是預期的例外型別，第二個是觸發例外的 lambda。
 -->
 
 ---
@@ -902,12 +993,12 @@ layout: default
 
 **任務：**
 
-1. 在 `OrderService` 的 `createOrder()` 方法中，加入適當的 log：
-   - `DEBUG`：方法進入點，記錄輸入參數
-   - `INFO`：訂單建立成功，記錄訂單 ID
-   - `WARN`：庫存量低於 10，記錄商品 ID
+1. 在 `StudentService` 的 `createStudent()` 方法中，加入適當的 log：
+   - `DEBUG`：方法進入點，記錄輸入參數（name、score）
+   - `INFO`：學生建立成功，記錄學生 ID
+   - `WARN`：分數低於 60（不及格），記錄學生 name
    - `ERROR`：建立失敗（catch 區塊），記錄 exception message
-2. 在 `application.properties` 設定 `com.example.service` 的 level 為 `DEBUG`，輸出到 `logs/app.log`，每檔最大 10MB，保留 30 天
+2. 在 `application.properties` 設定 `com.example.demo.service` 的 level 為 `DEBUG`，輸出到 `logs/app.log`，每檔最大 10MB，保留 30 天
 
 <!--
 這個練習沒有標準答案，但有好的 log 和壞的 log 之分。
@@ -923,12 +1014,12 @@ layout: default
 # 練習二：解題提示
 ### 提示說明
 
-1. 宣告 Logger：`private static final Logger log = LoggerFactory.getLogger(OrderService.class);`
+1. 宣告 Logger：`private static final Logger log = LoggerFactory.getLogger(StudentService.class);`
 2. 各 level 加 log：進入方法用 `debug`，成功用 `info`，低庫存用 `warn`，catch 區塊用 `error`
 3. `log.error("Failed: {}", e.getMessage(), e)` — 最後傳入 `e` 讓 Logback 印出完整 stack trace
 
 ```properties
-logging.level.com.example.service=DEBUG
+logging.level.com.example.demo.service=DEBUG
 logging.file.name=logs/app.log
 logging.logback.rollingpolicy.max-file-size=10MB
 logging.logback.rollingpolicy.max-history=30
@@ -942,11 +1033,95 @@ logging.logback.rollingpolicy.max-history=30
 
 ---
 
+# 練習二：解答程式碼 — Logger 與方法骨架
+
+```java
+@Service
+public class StudentService {
+    private static final Logger log =
+        LoggerFactory.getLogger(StudentService.class);
+    @Autowired
+    private StudentRepository studentRepository;
+
+    public StudentResponse createStudent(CreateStudentRequest req) {
+        log.debug("建立學生，name={}, score={}",   // DEBUG：進入點
+            req.getName(), req.getScore());
+        try {
+            Student po = new Student();
+            po.setName(req.getName());
+            po.setScore(req.getScore());
+            Student saved = studentRepository.save(po);
+            // ↓ WARN / INFO / ERROR 見下一頁
+```
+
+<!--
+先看 Logger 宣告與方法骨架：
+DEBUG 記錄進入點與輸入參數，方便開發時追流程。
+接著 new 一個 Student PO、set 欄位、save 進資料庫。
+WARN、INFO、ERROR 的部分在下一頁。
+-->
+
+---
+
+# 練習二：解答程式碼 — WARN / INFO / ERROR
+
+```java
+            if (saved.getScore() < 60) {
+                log.warn("學生分數不及格，name={}, score={}",   // WARN
+                    saved.getName(), saved.getScore());
+            }
+            log.info("學生建立成功，id={}", saved.getId());     // INFO
+            return toResponse(saved);
+        } catch (Exception e) {
+            log.error("建立學生失敗：{}", e.getMessage(), e);   // ERROR
+            throw e;
+        }
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>四個 level 各司其職：</b>DEBUG 追流程、WARN 標不及格、INFO 記成功、ERROR 在 catch 區塊。<code>log.error</code> 最後傳 <code>e</code>，Logback 才印完整 stack trace。</div>
+
+<!--
+接續上一頁的 try 區塊：
+WARN 記錄不及格（業務上可接受但需注意的狀況）。
+INFO 記錄成功事件與 id。
+ERROR 在 catch 區塊，log.error 最後一個參數傳 e，Logback 才會印出完整 stack trace。
+-->
+
+---
+
+# 練習二：解答設定 — application.properties
+
+```properties
+# service 套件開 DEBUG，方便看到進入點 log
+logging.level.com.example.demo.service=DEBUG
+
+# 全域維持 INFO，避免第三方套件洗版
+logging.level.root=INFO
+
+# 輸出到檔案
+logging.file.name=logs/app.log
+
+# 檔案滾動：每檔最大 10MB，保留 30 天
+logging.logback.rollingpolicy.max-file-size=10MB
+logging.logback.rollingpolicy.max-history=30
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>驗證：</b> 呼叫 <code>createStudent</code> 後，<code>logs/app.log</code> 會出現 DEBUG 進入點、INFO 成功、必要時的 WARN；若丟例外則有 ERROR 加完整 stack trace。</div>
+
+<!--
+root 設 INFO、service 設 DEBUG，只放大自己的套件，第三方套件不會洗版。
+logging.file.name 讓 log 同時寫到檔案，rolling policy 控制檔案大小與保留天數。
+-->
+
+---
+
 # 章節總結
 
 | 主題 | 核心要點 |
 |------|----------|
-| JUnit 5 / 6 | `@Test`、`@BeforeEach`、`@AfterEach`，Spring Boot 3.x / 4.x 不再用 `@RunWith` |
+| JUnit 6 | `@Test`、`@BeforeEach`、`@AfterEach`，Spring Boot 4.x 內建，不再用 `@RunWith` |
 | Assertions | `assertEquals`、`assertThrows`、`assertAll`，注意 expected/actual 順序 |
 | Mockito | `@ExtendWith(MockitoExtension.class)`、`@Mock`、`@InjectMocks`、`when().thenReturn()` |
 | @MockitoBean | 需要 Spring Context 時，用 `@MockitoBean` 替換真實 Bean |
