@@ -645,23 +645,25 @@ Spring 預設的 @Async 執行緒池用的是 SimpleAsyncTaskExecutor，它不�
 layout: default
 ---
 
-# 練習一：定時清理過期 Token
+# 練習一：定期統計不及格學生人數
 ### 任務說明
 
-實作一個 `TokenCleanupScheduler`，功能如下：
+沿用 ch37 的 `StudentRepository`（`extends JpaRepository<Student, Integer>`），實作一個 `FailingStudentReportScheduler`：
 
 - 每天凌晨 **01:30** 自動執行一次
-- 呼叫 `tokenRepository.deleteExpiredTokens()` 清除過期資料
-- 執行前後要印出 log（含時間戳）
-- 排程時間透過 `application.properties` 設定（key: `scheduler.token.cleanup.cron`）
+- 呼叫 `studentRepository.findAll()` 取出所有學生，統計 `score < 60` 的人數
+- 執行前後要印出 log（含時間戳與統計結果）
+- 排程時間透過 `application.properties` 設定（key: `scheduler.failing.report.cron`）
 - 預設值：`0 30 1 * * *`
 
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>不需要新建任何 Repository：</b> 直接注入 ch37 已經寫好的 <code>StudentRepository</code> 即可。</div>
+
 <!--
-這個練習是一個很真實的業務情境：定時清理過期的 Token。
+這個練習不引入任何新的資料存取類別，直接沿用 ch37 的 StudentRepository。
 
-JWT token 或是 refresh token 過期了，就要從資料庫裡刪掉，不然資料庫會越來越肥。
+情境是：每天凌晨統計一次不及格（分數 < 60）的學生人數，方便隔天早上老師掌握狀況。
 
-試試看自己寫，記得幾個要點：類別要加 @Component，要注入 tokenRepository，方法上要加 @Scheduled，cron 要用 ${} 語法。
+試試看自己寫，記得幾個要點：類別要加 @Component，建構子注入 StudentRepository，方法上加 @Scheduled，cron 要用 ${} 語法。
 -->
 
 ---
@@ -671,10 +673,11 @@ layout: default
 # 練習一：解題提示
 ### 提示說明
 
-1. 類別加 `@Component`，用建構子注入 `TokenRepository`
-2. 方法上加 `@Scheduled(cron = "${scheduler.token.cleanup.cron:0 30 1 * * *}")`
-3. 用 SLF4J log 記錄執行前後的時間
-4. `application.properties` 加 `scheduler.token.cleanup.cron=0 30 1 * * *`
+1. 類別加 `@Component`，用建構子注入 `StudentRepository`（沿用 ch37，不用新建）
+2. 方法上加 `@Scheduled(cron = "${scheduler.failing.report.cron:0 30 1 * * *}")`
+3. `studentRepository.findAll()` 取出 `List<Student>`，用 Stream 篩選 `score < 60` 並計數
+4. 用 SLF4J log 記錄執行前後的時間與統計結果
+5. `application.properties` 加 `scheduler.failing.report.cron=0 30 1 * * *`
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>重點：</b> <code>${key:預設值}</code> 的語法確保就算設定檔裡沒有這個 key，程式也不會在啟動時爆炸。</div>
 
@@ -683,24 +686,87 @@ layout: default
 -->
 
 ---
+
+# 練習一：解答程式碼 — 類別骨架與注入
+
+```java
+@Component
+public class FailingStudentReportScheduler {
+
+    private static final Logger log =
+        LoggerFactory.getLogger(FailingStudentReportScheduler.class);
+
+    private final StudentRepository studentRepository;
+
+    public FailingStudentReportScheduler(StudentRepository studentRepository) {
+        this.studentRepository = studentRepository;
+    }
+
+    // countFailingStudents() 見下一頁
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>重點：</b> <code>StudentRepository</code> 就是 ch37 寫好的那個介面，不用重新定義，也不用新增任何 Entity。</div>
+
+<!--
+建構子注入 StudentRepository，跟 ch37 的 Service 注入方式一致，方便寫單元測試時用 Mockito 建立假物件。
+
+先看骨架：@Component 加上去、Logger 宣告好、建構子注入 Repository，下一頁再看排程方法本體。
+-->
+
+---
+
+# 練習一：解答程式碼 — 排程方法
+
+```java
+    @Scheduled(cron = "${scheduler.failing.report.cron:0 30 1 * * *}")
+    public void countFailingStudents() {
+        log.info("開始統計不及格學生，執行時間：{}", LocalDateTime.now());
+
+        long failingCount = studentRepository.findAll().stream()
+            .filter(student -> student.getScore() < 60)
+            .count();
+
+        log.info("統計完成，共 {} 位不及格學生，結束時間：{}",
+            failingCount, LocalDateTime.now());
+    }
+```
+
+```properties
+scheduler.failing.report.cron=0 30 1 * * *
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>重點：</b> 直接用 <code>findAll()</code> + Stream 篩選，不需要另外寫 <code>@Query</code>；資料量大時可改用 <code>countByScoreLessThan(60)</code> 這種衍生查詢方法。</div>
+
+<!--
+log 記錄了執行前後的時間，還有統計出來的不及格人數，這樣以後查 log 才知道排程有沒有正常跑、結果是多少。
+
+這裡用 findAll() 全部撈出來再用 Stream 篩選，資料量小的教學情境沒問題；如果是正式專案、學生數很多，會建議在 StudentRepository 加一個衍生查詢方法 countByScoreLessThan(int score)，讓資料庫直接算，不用把整張表撈進記憶體。
+
+cron 表達式用 ${} 外部化，預設值跟寫死在 properties 裡的值一致，就算忘記設定也不會出錯。
+-->
+
+---
 layout: default
 ---
 
-# 練習二：定期同步匯率資料
+# 練習二：定期匯出學生成績報表
 ### 任務說明
 
-實作一個 `ExchangeRateScheduler`，功能如下：
+沿用 ch37 的 `StudentService`（`getAllStudents()` 回傳 `List<StudentResponse>`），實作一個 `StudentReportExportScheduler`：
 
-1. 每 **30 分鐘**同步一次匯率資料
-2. 呼叫 `exchangeRateService.syncFromExternalApi()` 進行同步
+1. 每 **30 分鐘**匯出一次學生成績報表
+2. 呼叫 `studentService.getAllStudents()` 取得所有學生的 `StudentResponse`
 3. 應用程式啟動後 **20 秒**才開始第一次執行（等待服務初始化完成）
-4. 同步操作要**非同步執行**，不阻塞排程執行緒
-5. 執行間隔透過 `scheduler.exchange.rate.delay` 設定，預設 `1800000`（ms）
+4. 匯出操作要**非同步執行**，不阻塞排程執行緒
+5. 執行間隔透過 `scheduler.report.export.delay` 設定，預設 `1800000`（ms）
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>不需要新建任何 Service：</b> 直接注入 ch37 已經寫好的 <code>StudentService</code> 即可，回傳的是已經過濾 password 的 <code>StudentResponse</code>。</div>
 
 <!--
-第二個練習稍微進階一點，加入了 initialDelay 和 @Async。
+第二個練習稍微進階一點，加入了 initialDelay 和 @Async，但一樣不引入新的業務類別，直接呼叫 ch37 的 StudentService.getAllStudents()。
 
-這是一個定期同步匯率的情境，呼叫外部 API 是一個 IO 密集型操作，所以我們希望它非同步執行。
+情境是：定期把學生成績整理成報表（例如寫成 CSV、丟給報表系統），這種批次整理資料的操作屬於 IO 密集型工作，所以希望非同步執行。
 
 三個關鍵點：fixedDelayString 搭配 ${}、initialDelay 設定啟動延遲、@Async 非同步執行。
 -->
@@ -713,18 +779,19 @@ layout: default
 ### 提示說明
 
 1. 主程式或設定類別加 `@EnableAsync`
-2. 方法同時加 `@Async` 和 `@Scheduled`
+2. 類別用建構子注入 `StudentService`（沿用 ch37，不用新建）
+3. 方法同時加 `@Async` 和 `@Scheduled`
 
 ```java
 @Async
 @Scheduled(
-    fixedDelayString = "${scheduler.exchange.rate.delay:1800000}",
+    fixedDelayString = "${scheduler.report.export.delay:1800000}",
     initialDelay = 20000
 )
-public void syncExchangeRates() {
-    log.info("開始同步匯率，執行緒：{}", Thread.currentThread().getName());
-    exchangeRateService.syncFromExternalApi();
-    log.info("匯率同步完成");
+public void exportStudentReport() {
+    log.info("開始匯出報表，執行緒：{}", Thread.currentThread().getName());
+    List<StudentResponse> students = studentService.getAllStudents();
+    log.info("匯出完成，共 {} 筆", students.size());
 }
 ```
 
@@ -738,6 +805,91 @@ public void syncExchangeRates() {
 第二，@Async 要搭配 @EnableAsync 才有效，別忘了在主程式或設定類別加上去。
 
 第三，在 log 裡印出執行緒名稱，可以確認任務確實在不同執行緒中執行。
+-->
+
+---
+
+# 練習二：解答程式碼 — 類別骨架與注入
+
+```java
+@Component
+public class StudentReportExportScheduler {
+
+    private static final Logger log =
+        LoggerFactory.getLogger(StudentReportExportScheduler.class);
+
+    private final StudentService studentService;
+
+    public StudentReportExportScheduler(StudentService studentService) {
+        this.studentService = studentService;
+    }
+
+    // exportStudentReport() 見下一頁
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>重點：</b> <code>StudentService</code> 就是 ch37 寫好的那個類別，getAllStudents() 回傳的 <code>StudentResponse</code> 已經過濾掉 password，排程完全不需要碰 PO。</div>
+
+<!--
+先看骨架：@Component 加上去、Logger 宣告好、建構子注入 Service，下一頁再看排程方法本體。
+-->
+
+---
+
+# 練習二：解答程式碼 — 排程方法
+
+```java
+    @Async
+    @Scheduled(
+        fixedDelayString = "${scheduler.report.export.delay:1800000}",
+        initialDelay = 20000
+    )
+    public void exportStudentReport() {
+        log.info("開始匯出學生成績報表，執行緒：{}", Thread.currentThread().getName());
+
+        List<StudentResponse> students = studentService.getAllStudents();
+        log.info("本次匯出共 {} 筆學生資料", students.size());
+        // 實際專案中，這裡會把 students 寫入 CSV 或送到報表系統
+
+        log.info("匯出完成，執行緒：{}", Thread.currentThread().getName());
+    }
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>重點：</b> <code>initialDelay</code> 讓排程等應用程式暖機完成後才開始第一次執行；印出執行緒名稱可驗證 <code>@Async</code> 是否生效。</div>
+
+<!--
+@Async 讓每次觸發都丟到獨立執行緒執行，不會卡住排程執行緒。
+
+initialDelay = 20000 表示應用程式啟動後先等 20 秒，讓其他 Bean（例如資料庫連線池）完成初始化，再開始第一次匯出。
+
+真正寫檔案或呼叫報表系統的部分這裡用註解帶過，重點是排程本身怎麼設定，不是報表匯出的實作細節。
+-->
+
+---
+
+# 練習二：解答設定 — @EnableAsync 與 properties
+
+```java
+@SpringBootApplication
+@EnableScheduling
+@EnableAsync
+public class MyApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(MyApplication.class, args);
+    }
+}
+```
+
+```properties
+scheduler.report.export.delay=1800000
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>重點：</b> <code>@EnableAsync</code> 只需要在整個應用程式裡加一次，不用每個排程類別都加。</div>
+
+<!--
+@EnableAsync 只要在主程式或任一 @Configuration 類別加一次就好。
+
+properties 裡的預設值跟程式碼中的預設值一致，兩邊寫一致比較保險，不會因為漏設定而跑出非預期的行為。
 -->
 
 ---
