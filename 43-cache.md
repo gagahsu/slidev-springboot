@@ -288,21 +288,46 @@ class: flex flex-col justify-center items-center text-center
 
 ---
 
-# @Cacheable 基本用法
+# @Cacheable 基本用法 — 程式碼
+
+沿用 ch37 的 `StudentService`，為 `getStudentById()` 加上 `@Cacheable`：
 
 ```java
 @Service
-public class ProductService {
+public class StudentService {
 
-    @Cacheable(value = "products", key = "#id")
-    public Product findById(Long id) {
-        // 這段程式碼只有 Cache Miss 時才會執行
-        return productRepository.findById(id).orElseThrow();
+    private static final Logger log =
+        LoggerFactory.getLogger(StudentService.class);
+
+    @Autowired
+    private StudentRepository studentRepository;
+
+    @Cacheable(value = "students", key = "#id")
+    public StudentResponse getStudentById(Integer id) {
+        // log 只有 Cache Miss 時才會印出來——這是觀察 Cache 有沒有生效最直接的方法
+        log.info("Cache Miss，查詢資料庫，id = {}", id);
+        Student po = studentRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Student not found: " + id));
+        return toResponse(po); // toResponse 沿用 ch37
     }
 }
 ```
 
-**執行流程：**
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>重點：</b> <code>value</code> 是 Cache 的名稱，就像便利貼的標籤；<code>key</code> 是用 SpEL 表達式指定的查詢鍵。加一行 log 在方法開頭，就能從 console 判斷這次呼叫到底有沒有真的打資料庫。</div>
+
+<!--
+value 是 Cache 的名稱，就像便利貼的標籤；key 是用 SpEL 表達式指定的查詢鍵。
+
+這裡刻意加了一行 log.info——因為 Cache Hit 時整個方法本體都不會執行，log 自然也不會印出來。
+第一次呼叫 getStudentById(1) 會看到 log；第二次呼叫同樣的 id，console 完全沒有反應，就代表 Cache 生效了。
+這是驗證 Cache 是否生效最簡單、最直覺的方式，比 debug 斷點方便很多。
+
+下一頁看這個注解實際的執行流程：Cache Hit 和 Cache Miss 分別發生什麼事。
+-->
+
+---
+
+# @Cacheable 基本用法 — 執行流程
 
 | 步驟 | Cache Hit | Cache Miss |
 |---|---|---|
@@ -314,8 +339,6 @@ public class ProductService {
 注意一個很重要的概念：Cache Hit 的時候，方法本體完全不會執行。
 
 這意味著如果你在方法裡面有副作用（例如記錄 log、更新統計），Cache Hit 時這些都不會發生。
-
-value 是 Cache 的名稱，就像便利貼的標籤；key 是用 SpEL 表達式指定的查詢鍵。
 -->
 
 ---
@@ -344,16 +367,16 @@ SpEL 不只用在 Cache，@PreAuthorize、@Value 等 annotation 也用它。
 
 # SpEL — Spring Expression Language（2/2）
 
-對照 `@Cacheable` 的實際用法：
+對照 `@Cacheable` 的實際用法（沿用 ch37 的 `getStudentById`）：
 
 ```java
 @Cacheable(
-    value = "products",
+    value = "students",
     key = "#id",                   // 取參數 id 當 Cache key
     condition = "#id > 0",         // id > 0 才啟用 Cache
     unless = "#result == null"     // 回傳 null 不存進 Cache
 )
-public Product findById(Long id) { ... }
+public StudentResponse getStudentById(Integer id) { ... }
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 SpEL 不只用在 Cache，<code>@PreAuthorize</code>、<code>@Value</code> 等 annotation 也使用相同語法。</div>
@@ -390,12 +413,12 @@ unless = "結果要不要存進 Cache"，在執行後決定
 
 ```java
 @Cacheable(
-    value = "products",   // Cache 名稱
+    value = "students",   // Cache 名稱
     key = "#id",          // 以參數 id 當 key
     condition = "#id > 0",        // id > 0 才使用 Cache
     unless = "#result == null"    // 查出 null 不存入 Cache
 )
-public Product findById(Long id) { ... }
+public StudentResponse getStudentById(Integer id) { ... }
 ```
 
 常見用法：`unless = "#result == null"` — 避免把「查不到資料」這個結果也快取起來，否則之後補資料也不會生效。
@@ -420,9 +443,10 @@ unless = "#result == null" 是實務上必加的保護。
 | `'prefix:' + #id` | 字串串接 |
 
 ```java
-// 多參數組合 key
-@Cacheable(value = "search", key = "#keyword + ':' + #page")
-public Page<Product> search(String keyword, int page) { ... }
+// 多參數組合 key（沿用 ch37 的 updateStudent，id + 新名字組合成 key）
+@CachePut(value = "students", key = "#id + ':' + #req.name")
+public StudentResponse updateStudent(Integer id,
+                                     CreateStudentRequest req) { ... }
 ```
 
 <!--
@@ -430,8 +454,7 @@ SpEL 是 Spring 的表達式語言，在 Cache 的 key 定義上非常好用。
 
 記住一個口訣：「參數直接用 # 開頭，物件屬性用 . 取值，字串要加單引號」。
 
-多參數組合 key 是實務上很常見的需求，例如分頁查詢——同一個關鍵字但不同頁，
-Cache 的 key 當然要不一樣。
+多參數組合 key 是實務上很常見的需求，這裡示範用 ch37 updateStudent 的 id 和 req.name 組成 key。
 -->
 
 ---
@@ -454,13 +477,13 @@ class: flex flex-col justify-center items-center text-center
 # @CacheEvict 基本用法與屬性
 
 ```java
-@CacheEvict(value = "products", key = "#product.id")
-public Product update(Product product) {
-    return productRepository.save(product);
+@CacheEvict(value = "students", key = "#id")
+public void deleteStudent(Integer id) {
+    studentRepository.deleteById(id); // 沿用 ch37
 }
 
-@CacheEvict(value = "products", allEntries = true)
-public void clearAll() { }
+@CacheEvict(value = "students", allEntries = true)
+public void clearAllStudentsCache() { }
 ```
 
 | 屬性 | 說明 |
@@ -498,19 +521,19 @@ allEntries = true 是一個很粗暴但有時候必要的選項，
 # beforeInvocation 的差異（2/2）
 
 ```java
-// 預設（false）：DB 更新成功才清 Cache
-// → 若 save() 拋出例外，Cache 保持原樣（資料仍正確）
-@CacheEvict(value = "products", key = "#product.id")
-public Product update(Product product) {
-    return productRepository.save(product);  // 若這裡炸了，Cache 不會被清
+// 預設（false）：DB 刪除成功才清 Cache
+// → 若 deleteById() 拋出例外，Cache 保持原樣（資料仍正確）
+@CacheEvict(value = "students", key = "#id")
+public void deleteStudent(Integer id) {
+    studentRepository.deleteById(id);  // 若這裡炸了，Cache 不會被清
 }
 
 // beforeInvocation = true：先清 Cache，再執行方法
-// → 就算 save() 拋出例外，Cache 已被清除
-@CacheEvict(value = "products", key = "#product.id",
+// → 就算 deleteById() 拋出例外，Cache 已被清除
+@CacheEvict(value = "students", key = "#id",
             beforeInvocation = true)
-public Product forceUpdate(Product product) {
-    return productRepository.save(product);
+public void forceDeleteStudent(Integer id) {
+    studentRepository.deleteById(id);
 }
 ```
 
@@ -549,9 +572,15 @@ class: flex flex-col justify-center items-center text-center
 | **典型搭配方法** | `findById`, `getXxx` | `update`, `save` |
 
 ```java
-@CachePut(value = "products", key = "#product.id")
-public Product update(Product product) {
-    return productRepository.save(product);
+@CachePut(value = "students", key = "#id")
+public StudentResponse updateStudent(Integer id,
+                                     CreateStudentRequest req) {
+    Student po = new Student();
+    po.setId(id);
+    po.setName(req.getName());
+    po.setPassword(req.getPassword());
+    po.setScore(req.getScore());
+    return toResponse(studentRepository.save(po)); // 沿用 ch37
 }
 ```
 
@@ -568,36 +597,75 @@ public Product update(Product product) {
 
 ---
 
-# 三個注解的組合使用
+# 三個注解的組合使用 — @Cacheable 與 @CachePut
+
+沿用 ch37 的 `StudentService`，三個方法都操作同一個 `"students"` Cache：
 
 ```java
 @Service
-public class ProductService {
+public class StudentService {
 
-    @Cacheable(value = "products", key = "#id")
-    public Product findById(Long id) {
-        return productRepository.findById(id).orElseThrow();
+    private static final Logger log =
+        LoggerFactory.getLogger(StudentService.class);
+
+    @Autowired
+    private StudentRepository studentRepository;
+
+    @Cacheable(value = "students", key = "#id")
+    public StudentResponse getStudentById(Integer id) {
+        log.info("Cache Miss，查詢資料庫，id = {}", id);
+        Student po = studentRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Student not found: " + id));
+        return toResponse(po);
     }
 
-    @CachePut(value = "products", key = "#result.id")
-    public Product update(Product product) {
-        return productRepository.save(product);
+    @CachePut(value = "students", key = "#id")
+    public StudentResponse updateStudent(Integer id,
+                                         CreateStudentRequest req) {
+        log.info("更新學生並寫入 Cache，id = {}", id);
+        Student po = new Student();
+        po.setId(id);
+        po.setName(req.getName());
+        po.setPassword(req.getPassword());
+        po.setScore(req.getScore());
+        return toResponse(studentRepository.save(po));
     }
 
-    @CacheEvict(value = "products", key = "#id")
-    public void deleteById(Long id) {
-        productRepository.deleteById(id);
-    }
+    // @CacheEvict 的 deleteStudent 見下一頁
 }
 ```
 
 <!--
-這是最典型的 CRUD Cache 搭配模式。
+這是最典型的 CRUD Cache 搭配模式的前半段。
 
-注意三個方法的 value 都是 "products"，這樣它們操作的才是同一個 Cache 空間。
+注意兩個方法的 value 都是 "students"，這樣它們操作的才是同一個 Cache 空間。
 
-@CachePut 用了 "#result.id"——因為 key 要用回傳值的 id，
-而不是傳入的 product 物件（雖然通常一樣，但用 result 更精確）。
+跟原本 Product 範例不同的是，ch37 的 updateStudent 本來就把 id 當作方法參數傳進來，
+所以 key 直接寫 "#id" 就好，不需要像 "#result.id" 那樣繞去取回傳值的欄位。
+
+log 一樣加在方法開頭：getStudentById 的 log 只有 Cache Miss 才出現；updateStudent 加 @CachePut 後方法一定會執行，所以 log 每次都會印，這是 @Cacheable 和 @CachePut 行為差異最直接的證據。
+-->
+
+---
+
+# 三個注解的組合使用 — @CacheEvict
+
+```java
+    @CacheEvict(value = "students", key = "#id")
+    public void deleteStudent(Integer id) {
+        log.info("刪除學生並清除 Cache，id = {}", id);
+        studentRepository.deleteById(id);
+    }
+
+    private StudentResponse toResponse(Student po) { ... } // 沿用 ch37
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>重點：</b> 三個方法的 <code>value</code> 都是 <code>"students"</code>，操作的是同一個 Cache 空間；key 都直接用 <code>"#id"</code>，因為 ch37 的方法本來就把 id 當參數傳進來。</div>
+
+<!--
+deleteStudent 用 @CacheEvict 清掉對應 id 的 Cache，跟前一頁的 getStudentById、updateStudent 合起來，就是完整的 CRUD Cache 搭配模式。
+
+驗證方式：呼叫 getStudentById(1) 兩次，第二次沒有 log；接著呼叫 deleteStudent(1)，再呼叫 getStudentById(1)，這次又會看到 log——因為 Cache 已經被清除，重新變成 Cache Miss。
 -->
 
 ---
@@ -669,16 +737,16 @@ implementation 'com.github.ben-manes.caffeine:caffeine'
 ```properties
 spring.cache.type=caffeine
 spring.cache.caffeine.spec=maximumSize=500,expireAfterWrite=10m
-spring.cache.cache-names=products
+spring.cache.cache-names=students
 ```
 
 **Step 3 — 主程式加 @EnableCaching，Service 加注解（與之前完全相同）：**
 ```java
-@Cacheable(value = "products", key = "#id")
-public Product findById(Long id) { ... }
+@Cacheable(value = "students", key = "#id")
+public StudentResponse getStudentById(Integer id) { ... }
 
-@CacheEvict(value = "products", key = "#id")
-public void deleteById(Long id) { ... }
+@CacheEvict(value = "students", key = "#id")
+public void deleteStudent(Integer id) { ... }
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>重點：</b> 換成 Caffeine 後，Service 的 <code>@Cacheable</code> 注解完全不用改，只有設定檔不同。</div>
@@ -773,7 +841,7 @@ Redis 存的是 byte[]，所以物件要轉成 byte 才能存進去。
 
 ---
 
-# Redis Cache 完整使用範例（1/2）
+# Redis Cache 完整使用範例（1/3）
 
 **Step 1 — build.gradle：**
 ```groovy
@@ -800,29 +868,52 @@ public class MyApplication { ... }
 
 ---
 
-# Redis Cache 完整使用範例（2/2）
+# Redis Cache 完整使用範例（2/3）
 
-**Step 4 — Service 注解與 Caffeine 完全相同：**
+**Step 4 — Service 注解與 Caffeine 完全相同（@Cacheable、@CachePut）：**
 ```java
 @Service
-public class ProductService {
+public class StudentService {
+    @Autowired
+    private StudentRepository studentRepository;
 
-    @Cacheable(value = "products", key = "#id",
+    @Cacheable(value = "students", key = "#id",
                unless = "#result == null")
-    public Product findById(Long id) {
-        return productRepository.findById(id).orElseThrow();
+    public StudentResponse getStudentById(Integer id) {
+        Student po = studentRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Student not found: " + id));
+        return toResponse(po);
     }
 
-    @CachePut(value = "products", key = "#result.id")
-    public Product update(Product product) {
-        return productRepository.save(product);
+    @CachePut(value = "students", key = "#id")
+    public StudentResponse updateStudent(Integer id,
+                                         CreateStudentRequest req) {
+        Student po = new Student();
+        po.setId(id);
+        po.setName(req.getName());
+        po.setPassword(req.getPassword());
+        po.setScore(req.getScore());
+        return toResponse(studentRepository.save(po));
     }
 
-    @CacheEvict(value = "products", key = "#id")
-    public void deleteById(Long id) {
-        productRepository.deleteById(id);
-    }
+    // @CacheEvict 的 deleteStudent 見下一頁
 }
+```
+
+<!--
+Step 4 的前半段：@Cacheable 和 @CachePut，跟 Caffeine 版本完全一樣，一行都不用改。
+-->
+
+---
+
+# Redis Cache 完整使用範例（3/3）
+
+**Step 4（續）— @CacheEvict：**
+```java
+    @CacheEvict(value = "students", key = "#id")
+    public void deleteStudent(Integer id) {
+        studentRepository.deleteById(id);
+    }
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>Caffeine → Redis 移轉：</b> Service 的注解一行都不用改，只需換 build.gradle 依賴和 application.properties 設定。</div>
@@ -898,21 +989,21 @@ class: flex flex-col justify-center items-center text-center
 layout: default
 ---
 
-# 練習一：商品查詢 Cache
+# 練習一：學生查詢 Cache
 ### 任務說明
 
-**情境：** 電商平台的商品查詢每秒呼叫上千次，但商品資料幾乎不變。
+**情境：** 學生查詢 API 每秒呼叫上千次，但學生資料幾乎不變。
 
-**任務：**
+**任務：** 沿用 ch37 已經寫好的 `StudentService`（不用新建 Repository 或 Entity）
 
-1. 建立 `ProductService`，為 `findById(Long id)` 加上 `@Cacheable`，Cache 名稱為 `"products"`，key 為商品 id
-2. 為 `update(Product product)` 加上 `@CachePut`，確保更新後 Cache 也是最新的
-3. 為 `deleteById(Long id)` 加上 `@CacheEvict`，刪除時清除對應 Cache
+1. 為 `getStudentById(Integer id)` 加上 `@Cacheable`，Cache 名稱為 `"students"`，key 為學生 id
+2. 為 `updateStudent(Integer id, CreateStudentRequest req)` 加上 `@CachePut`，確保更新後 Cache 也是最新的
+3. 為 `deleteStudent(Integer id)` 加上 `@CacheEvict`，刪除時清除對應 Cache
 4. 在 `application.properties` 加入 Caffeine 設定，TTL 10 分鐘，最多 500 筆
-5. 撰寫測試方法，驗證第二次呼叫 `findById` 時沒有打資料庫（透過 mock 驗證呼叫次數）
+5. 撰寫測試方法，驗證第二次呼叫 `getStudentById` 時沒有打資料庫（透過 mock `studentRepository` 驗證呼叫次數）
 
 <!--
-這個練習涵蓋了今天的核心內容：三個注解 + Caffeine 設定。
+這個練習涵蓋了今天的核心內容：三個注解 + Caffeine 設定，全部套用在 ch37 已經寫好的 StudentService 上，不用新建任何業務類別。
 
 特別強調第 5 點：要驗證 Cache 有真的生效。
 
@@ -926,82 +1017,336 @@ layout: default
 # 練習一：解題提示
 ### 提示說明
 
-1. pom.xml 加 `spring-boot-starter-cache` + `caffeine`；主程式加 `@EnableCaching`
-2. `@Cacheable(value = "products", key = "#id")`
-3. `@CachePut(value = "products", key = "#result.id")`
-4. `@CacheEvict(value = "products", key = "#id")`
+1. build.gradle 加 `spring-boot-starter-cache` + `caffeine`；主程式加 `@EnableCaching`
+2. `@Cacheable(value = "students", key = "#id")`
+3. `@CachePut(value = "students", key = "#id")`
+4. `@CacheEvict(value = "students", key = "#id")`
 
 ```properties
 spring.cache.type=caffeine
 spring.cache.caffeine.spec=maximumSize=500,expireAfterWrite=10m
-spring.cache.cache-names=products
+spring.cache.cache-names=students
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>常見錯誤排查：</b> ① 有 @EnableCaching 嗎？ ② Cache value 名稱一致嗎？ ③ key 的 SpEL 表達式正確嗎？ ④ 是否在同一個 Bean 內自我呼叫？</div>
 
 <!--
 常見錯誤排查清單要記起來，幾乎所有 Cache 不生效的問題都出在這四個地方。
+
+跟原本的 Product 範例不同：ch37 的 updateStudent 本來就把 id 當參數傳進來，
+所以 @CachePut 的 key 直接寫 "#id" 就好，不用像 "#result.id" 那樣去取回傳值的欄位。
+-->
+
+---
+
+# 練習一：解答程式碼 — StudentService（1/3）
+
+```java
+@Service
+public class StudentService {
+
+    private static final Logger log =
+        LoggerFactory.getLogger(StudentService.class);
+
+    @Autowired
+    private StudentRepository studentRepository;
+
+    @Cacheable(value = "students", key = "#id")
+    public StudentResponse getStudentById(Integer id) {
+        log.info("Cache Miss，查詢資料庫，id = {}", id);
+        Student po = studentRepository.findById(id)
+            .orElseThrow(() ->
+                new RuntimeException("Student not found: " + id));
+        return toResponse(po);
+    }
+
+    // updateStudent、deleteStudent、toResponse 見後面兩頁
+}
+```
+
+<!--
+先看 getStudentById：加了 log.info 在方法開頭，方便從 console 觀察 Cache 有沒有生效。
+
+這個 log 只有 Cache Miss 才會印——Cache Hit 時整個方法本體都不執行，log 也就不會印出來。
+-->
+
+---
+
+# 練習一：解答程式碼 — StudentService（2/3）
+
+```java
+    @CachePut(value = "students", key = "#id")
+    public StudentResponse updateStudent(Integer id,
+                                         CreateStudentRequest req) {
+        log.info("更新學生並寫入 Cache，id = {}", id);
+        Student po = new Student();
+        po.setId(id);
+        po.setName(req.getName());
+        po.setPassword(req.getPassword());
+        po.setScore(req.getScore());
+        return toResponse(studentRepository.save(po));
+    }
+
+    // deleteStudent、toResponse 見下一頁
+```
+
+<!--
+updateStudent 因為是 @CachePut，方法一定會執行，log 每次都會印——這跟 getStudentById 的 @Cacheable 行為不同，是很好的對照組。
+-->
+
+---
+
+# 練習一：解答程式碼 — StudentService（3/3）
+
+```java
+    @CacheEvict(value = "students", key = "#id")
+    public void deleteStudent(Integer id) {
+        log.info("刪除學生並清除 Cache，id = {}", id);
+        studentRepository.deleteById(id);
+    }
+
+    private StudentResponse toResponse(Student po) {
+        ScoreVO scoreVO = new ScoreVO(po.getScore());
+        StudentResponse resp = new StudentResponse();
+        resp.setId(po.getId());
+        resp.setName(po.getName());
+        resp.setScore(scoreVO.getValue());
+        resp.setLetterGrade(scoreVO.getLetterGrade());
+        return resp; // 刻意不複製 password，沿用 ch37
+    }
+}
+```
+
+```properties
+spring.cache.type=caffeine
+spring.cache.caffeine.spec=maximumSize=500,expireAfterWrite=10m
+spring.cache.cache-names=students
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>觀察方式：</b> 呼叫 <code>getStudentById(1)</code> 兩次，只有第一次印出 log；呼叫 <code>deleteStudent(1)</code> 後再呼叫一次，log 又出現了——代表 Cache 被清除、重新變成 Miss。</div>
+
+<!--
+deleteStudent 和 toResponse 補完整個 Service。toResponse 沿用 ch37 的寫法，不重複造輪子。
+
+三個注解 + Caffeine 設定到這裡就是完整解答，下一頁補一個 Mockito 測試，直接用程式驗證 Cache 有沒有生效，不用只靠肉眼看 log。
+-->
+
+---
+
+# 練習一：解答程式碼 — 測試驗證
+
+```java
+@SpringBootTest
+class StudentServiceCacheTest {
+
+    @Autowired
+    private StudentService studentService;
+
+    @MockBean
+    private StudentRepository studentRepository;
+
+    @Test
+    void getStudentById_呼叫兩次_只打一次資料庫() {
+        Student po = new Student();
+        po.setId(1); po.setName("Alice"); po.setScore(85);
+        when(studentRepository.findById(1)).thenReturn(Optional.of(po));
+
+        studentService.getStudentById(1);
+        studentService.getStudentById(1);
+
+        verify(studentRepository, times(1)).findById(1);
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>重點：</b> <code>verify(..., times(1))</code> 直接證明第二次呼叫沒有再打資料庫，比看 log 更嚴謹，適合放進 CI。</div>
+
+<!--
+這個測試用 @SpringBootTest 啟動完整 Spring Context，確保 @Cacheable 的 AOP Proxy 真的生效（單純 @ExtendWith(MockitoExtension.class) 不會啟動 Spring AOP，Cache 不會作用）。
+
+呼叫兩次 getStudentById(1)，但 verify 只驗證 findById(1) 被呼叫一次——第二次被 Cache 攔截掉了，這就是「用測試證明 Cache 生效」最直接的寫法。
 -->
 
 ---
 layout: default
 ---
 
-# 練習二：熱門排行榜 Cache + 定時清除
+# 練習二：學生等第查詢 Cache + 定時清除
 ### 任務說明
 
-**情境：** 電商首頁有「熱門商品 Top 10」，每小時更新一次；後台管理員可以手動觸發立即更新。
+**情境：** 老師常常需要查「A 等第的學生有哪些」，這種依字母等第分組的查詢重複度很高；管理員可以在成績重新計算後手動清除 Cache。
 
-**任務：**
+**任務：** 在 ch37 的 `StudentService` 裡新增一個方法，沿用既有的 `getAllStudents()` 與 `StudentResponse.getLetterGrade()`（由 ch37 的 `ScoreVO` 計算）
 
-1. 建立 `RankingService.getTopProducts(String category)` — 加 `@Cacheable`，key 為 category，condition 為「category 不為空字串」
-2. 加 `unless = "#result.isEmpty()"` — 若查詢結果為空，不存入 Cache
-3. 建立 `refreshAll()` 方法 — 加 `@CacheEvict(allEntries = true)` 清除整個排行榜 Cache
-4. 思考題：為什麼這個場景要用 `@CacheEvict` 而不是 `@CachePut`？
+1. 建立 `getStudentsByGrade(String grade)` — 呼叫 `getAllStudents()` 並用 Stream 篩選出 `letterGrade` 等於 `grade` 的學生
+2. 加 `@Cacheable`，Cache 名稱為 `"studentGrades"`，key 為 grade，condition 為「grade 不為空字串」
+3. 加 `unless = "#result.isEmpty()"` — 若查詢結果為空，不存入 Cache
+4. 建立 `refreshGradeCache()` 方法 — 加 `@CacheEvict(allEntries = true)` 清除整個等第 Cache
+5. 思考題：為什麼這個場景要用 `@CacheEvict` 而不是 `@CachePut`？
 
 <!--
-這個練習的重點在兩個地方：
+這個練習不新建任何 Repository 或 Entity，完全建立在 ch37 已有的 getAllStudents() 和 ScoreVO 之上。
+
+重點在兩個地方：
 
 condition 和 unless 的實際應用。
 
 思考題：為什麼用 @CacheEvict 不用 @CachePut？
-因為 refreshAll 只是清除，沒有回傳新資料，@CachePut 要求方法本體回傳要快取的值。
+因為 refreshGradeCache 只是清除，沒有回傳新資料，@CachePut 要求方法本體回傳要快取的值。
 -->
 
 ---
 layout: default
 ---
 
-# 練習二：解題提示
+# 練習二：解題提示 — 查詢方法
 ### 提示說明
 
 ```java
-@Cacheable(
-    value = "rankings",
-    key = "#category",
-    condition = "#category != null && !#category.isEmpty()",
-    unless = "#result.isEmpty()"
-)
-public List<Product> getTopProducts(String category) { ... }
-
-@CacheEvict(value = "rankings", allEntries = true)
-public void refreshAll() { }
+public List<StudentResponse> getStudentsByGrade(String grade) {
+    return getAllStudents().stream()   // 沿用 ch37 的 getAllStudents()
+        .filter(s -> s.getLetterGrade().equals(grade))
+        .collect(Collectors.toList());
+}
 ```
 
-| | `@CacheEvict` | `@CachePut` |
-|---|---|---|
-| refreshAll 情境 | 清空，等下次請求重填 ✅ | 需要回傳新值，但排行榜有多個 category ❌ |
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>重點：</b> <code>letterGrade</code> 是 ch37 的 <code>toResponse()</code> 裡用 <code>ScoreVO.getLetterGrade()</code> 算出來的，這裡直接沿用，不重複造輪子。</div>
 
 <!--
-refreshAll 用 @CacheEvict(allEntries = true) 是最自然的解法。
+先看不加 Cache 注解的原始查詢方法：呼叫 ch37 的 getAllStudents()，用 Stream 篩選出 letterGrade 相符的學生。
 
-清空之後，下一個來查詢的請求會觸發 Cache Miss，重新去資料庫計算最新排行榜，
-然後存進 Cache。這樣的「懶惰載入」策略在排行榜這種情境很常見。
+下一頁再加上 @Cacheable 和 @CacheEvict。
 -->
 
 ---
 
-# 本章總結
+# 練習二：解題提示 — Cache 注解
+### 提示說明
+
+```java
+@Cacheable(
+    value = "studentGrades",
+    key = "#grade",
+    condition = "#grade != null && !#grade.isEmpty()",
+    unless = "#result.isEmpty()"
+)
+public List<StudentResponse> getStudentsByGrade(String grade) { ... }
+
+@CacheEvict(value = "studentGrades", allEntries = true)
+public void refreshGradeCache() { }
+```
+
+| | `@CacheEvict` | `@CachePut` |
+|---|---|---|
+| refreshGradeCache 情境 | 清空，等下次請求重填 ✅ | 需要回傳新值，但等第有 A/B/C/F 多組 ❌ |
+
+<!--
+refreshGradeCache 用 @CacheEvict(allEntries = true) 是最自然的解法。
+
+清空之後，下一個來查詢的請求會觸發 Cache Miss，重新用 getAllStudents() 算出最新的等第分組，
+然後存進 Cache。這樣的「懶惰載入」策略在這種分組查詢情境很常見。
+-->
+
+---
+
+# 練習二：解答程式碼 — getStudentsByGrade
+
+```java
+@Service
+public class StudentService {
+    private static final Logger log =
+        LoggerFactory.getLogger(StudentService.class);
+    @Autowired
+    private StudentRepository studentRepository;
+    // getAllStudents()、toResponse() 沿用 ch37，這裡不重複列出
+    @Cacheable(
+        value = "studentGrades",
+        key = "#grade",
+        condition = "#grade != null && !#grade.isEmpty()",
+        unless = "#result.isEmpty()"
+    )
+    public List<StudentResponse> getStudentsByGrade(String grade) {
+        log.info("Cache Miss，重新計算等第分組，grade = {}", grade);
+        return getAllStudents().stream()
+            .filter(s -> s.getLetterGrade().equals(grade))
+            .collect(Collectors.toList());
+    }
+    // refreshGradeCache 見下一頁
+}
+```
+
+<!--
+getStudentsByGrade 的 log 放在方法開頭，只有 Cache Miss（第一次查某個 grade，或 Cache 被清除後）才會印出來。
+-->
+
+---
+
+# 練習二：解答程式碼 — refreshGradeCache
+
+```java
+    @CacheEvict(value = "studentGrades", allEntries = true)
+    public void refreshGradeCache() {
+        log.info("清除所有等第 Cache");
+    }
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>觀察方式：</b> 連續呼叫 <code>getStudentsByGrade("A")</code> 兩次，只有第一次印出 log；呼叫 <code>refreshGradeCache()</code> 後再呼叫一次，log 又出現了。</div>
+
+<!--
+refreshGradeCache 本身也加了 log，方便確認排程或管理員按鈕真的觸發了清除動作——這跟前面 getStudentsByGrade 的 log 是兩種不同用途：一個是「有沒有打資料庫」，一個是「有沒有清 Cache」。
+-->
+
+---
+
+# 練習二：解答程式碼 — 測試驗證（1/2）
+
+```java
+@SpringBootTest
+class StudentGradeCacheTest {
+
+    @Autowired
+    private StudentService studentService;
+
+    @Test
+    void getStudentsByGrade_連續呼叫_只計算一次() {
+        List<StudentResponse> first = studentService.getStudentsByGrade("A");
+        List<StudentResponse> second = studentService.getStudentsByGrade("A");
+
+        assertEquals(first, second);
+        // 可另外用 Spy 或計數器驗證 Stream 篩選邏輯只跑了一次
+    }
+
+    // refreshGradeCache 的測試見下一頁
+}
+```
+
+<!--
+第一個測試：連續呼叫兩次 getStudentsByGrade("A")，驗證回傳結果一致——搭配 console 的 log 觀察，第二次不會再印出 Cache Miss 的訊息。
+-->
+
+---
+
+# 練習二：解答程式碼 — 測試驗證（2/2）
+
+```java
+    @Test
+    void refreshGradeCache_清除後_下次查詢重新計算() {
+        studentService.getStudentsByGrade("A");
+        studentService.refreshGradeCache();
+        studentService.getStudentsByGrade("A"); // 這次會是 Cache Miss，log 會再印一次
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>重點：</b> 這裡沒有 mock 資料庫（因為底層是記憶體資料，不像練習一有 Repository 可以 verify 呼叫次數），驗證方式改成觀察 console 的 log 有沒有重複出現。</div>
+
+<!--
+跟練習一不同，這裡的資料來源是 getAllStudents() 直接查全部學生，沒有一個乾淨的「呼叫次數」可以 verify，所以測試改用「log 有沒有重複印出來」當作觀察指標，這也是為什麼 Part 4 到 Part 6 的範例都刻意加了 log——沒有 log，Cache 生效與否幾乎沒辦法從外部觀察到。
+-->
+
+---
+
+# 本章總結 — 三個核心注解
 
 | 注解 | 動作 | 典型搭配 |
 |---|---|---|
@@ -1009,7 +1354,20 @@ refreshAll 用 @CacheEvict(allEntries = true) 是最自然的解法。
 | `@CacheEvict` | 清除指定 key 或整個 Cache | `update`, `delete` |
 | `@CachePut` | 永遠執行方法，結果寫入 Cache | `update`（想立即更新 Cache） |
 
-**選擇 Cache 實作：**
+<!--
+先複習三個核心注解的動作與典型搭配方法。
+
+記住那個便利貼的比喻：
+@Cacheable = 查完貼便利貼
+@CacheEvict = 資料改了撕舊便利貼
+@CachePut = 資料改了換新便利貼
+
+下一頁看怎麼選 Cache 實作。
+-->
+
+---
+
+# 本章總結 — 選擇 Cache 實作
 
 | 環境 | 建議 |
 |---|---|
@@ -1023,11 +1381,6 @@ refreshAll 用 @CacheEvict(allEntries = true) 是最自然的解法。
 
 <!--
 來做個收尾。
-
-記住那個便利貼的比喻：
-@Cacheable = 查完貼便利貼
-@CacheEvict = 資料改了撕舊便利貼
-@CachePut = 資料改了換新便利貼
 
 希望今天的內容對大家有幫助，我們下一章見！
 -->
