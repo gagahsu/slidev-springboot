@@ -226,6 +226,13 @@ implementation 'org.springframework.boot:spring-boot-starter-cache'
 implementation 'com.github.ben-manes.caffeine:caffeine'
 ```
 
+**加入 Redis（分散式 Cache）：**
+
+```groovy
+implementation 'org.springframework.boot:spring-boot-starter-cache'
+implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+```
+
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>注意：</b> <code>spring-boot-starter-cache</code> 本身只引入抽象層與 ConcurrentMap 實作。若要使用 Caffeine 或 Redis，需額外加對應依賴，Spring Boot 會自動偵測並配置對應的 CacheManager。
 </div>
@@ -302,7 +309,7 @@ public class StudentService {
     @Autowired
     private StudentRepository studentRepository;
 
-    @Cacheable(value = "students", key = "#id")
+    @Cacheable(value = "students", key = "#p0")
     public StudentResponse getStudentById(Integer id) {
         // log 只有 Cache Miss 時才會印出來——這是觀察 Cache 有沒有生效最直接的方法
         log.info("Cache Miss，查詢資料庫，id = {}", id);
@@ -372,8 +379,8 @@ SpEL 不只用在 Cache，@PreAuthorize、@Value 等 annotation 也用它。
 ```java
 @Cacheable(
     value = "students",
-    key = "#id",                   // 取參數 id 當 Cache key
-    condition = "#id > 0",         // id > 0 才啟用 Cache
+    key = "#p0",                   // 取參數 id 當 Cache key
+    condition = "#p0 > 0",         // id > 0 才啟用 Cache
     unless = "#result == null"     // 回傳 null 不存進 Cache
 )
 public StudentResponse getStudentById(Integer id) { ... }
@@ -414,8 +421,8 @@ unless = "結果要不要存進 Cache"，在執行後決定
 ```java
 @Cacheable(
     value = "students",   // Cache 名稱
-    key = "#id",          // 以參數 id 當 key
-    condition = "#id > 0",        // id > 0 才使用 Cache
+    key = "#p0",          // 以參數 id 當 key
+    condition = "#p0 > 0",        // id > 0 才使用 Cache
     unless = "#result == null"    // 查出 null 不存入 Cache
 )
 public StudentResponse getStudentById(Integer id) { ... }
@@ -432,6 +439,47 @@ unless = "#result == null" 是實務上必加的保護。
 
 ---
 
+# sync = true — 防止 Cache Stampede
+
+**問題：** 熱門 key 剛過期的瞬間，100 個 thread 同時 Cache Miss → 同時打 DB 執行方法本體 → DB 被同一份查詢瞬間打 100 次（快取擊穿）。
+
+```java
+@Cacheable(value = "students", key = "#p0", sync = true)
+public StudentResponse getStudentById(Integer id) { ... }
+```
+
+| | `sync = false`（預設） | `sync = true` |
+|---|---|---|
+| 同 key 並發 Miss | 每個 thread 各自執行方法本體 | 只放**一個** thread 執行，其餘阻塞等待 |
+| DB 壓力 | 瞬間 N 次 | 1 次，其餘讀同一份結果 |
+| 代價 | 無 | 等待的 thread 被 block（同 key 序列化） |
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">⚠️ <b>限制：</b> ① <code>sync = true</code> 時不能同時用 <code>unless</code>（Spring 限制），<code>condition</code> 仍可用。② 只鎖同一個 key，不同 key 互不影響。③ 並非所有 CacheManager 都支援——Caffeine / ConcurrentMap 支援，Redis 的 <code>RedisCacheManager</code> 預設不支援。<b>熱點 key + 方法本體很貴才需要開，一般 CRUD 不用。</b></div>
+
+<!--
+sync 是 @Cacheable 五個屬性裡最少用、但關鍵時刻能救命的一個。
+
+Cache Stampede（快取踩踏 / 快取擊穿）的情境：某個超熱門的 key，剛好 TTL 到期那一瞬間，
+同時湧進 100 個請求，全部 Cache Miss，於是 100 個 thread 一起打 DB 跑同一個慢查詢。
+快取本來是要保護 DB，結果過期瞬間反而變成放大器。
+
+sync = true 的作法：同一個 key，同時只讓一個 thread 進去執行方法本體，
+其他 thread 全部 block 在門外等，等第一個算完寫進 cache，大家直接讀那份。100 次 DB 變 1 次。
+
+代價是等待的 thread 被 block，同一個 key 的並發被序列化了——但這很值得，
+因為換來的是擋掉 DB 的瞬間風暴。
+
+三個限制要記住：
+1. sync = true 不能配 unless，會報錯；condition 還是可以用。
+2. 只鎖同一個 key，不同 key 之間互不干擾。
+3. 不是每個 CacheManager 都支援，Caffeine 和 ConcurrentMap 可以，
+   Redis 的 RedisCacheManager 預設不支援 sync。
+
+什麼時候開？熱點 key 加上方法本體很貴（慢查詢、重運算）才需要，一般 CRUD 不用開。
+-->
+
+---
+
 # @Cacheable SpEL Key 表達式
 
 | SpEL 表達式 | 意義 |
@@ -443,10 +491,9 @@ unless = "#result == null" 是實務上必加的保護。
 | `'prefix:' + #id` | 字串串接 |
 
 ```java
-// 多參數組合 key（沿用 ch37 的 updateStudent，id + 新名字組合成 key）
-@CachePut(value = "students", key = "#id + ':' + #req.name")
-public StudentResponse updateStudent(Integer id,
-                                     CreateStudentRequest req) { ... }
+// 單一 PK：用 #p0 就夠，直接對應那一筆資料
+@Cacheable(value = "students", key = "#p0")
+public StudentResponse getStudentById(Integer id) { ... }
 ```
 
 <!--
@@ -454,7 +501,40 @@ SpEL 是 Spring 的表達式語言，在 Cache 的 key 定義上非常好用。
 
 記住一個口訣：「參數直接用 # 開頭，物件屬性用 . 取值，字串要加單引號」。
 
-多參數組合 key 是實務上很常見的需求，這裡示範用 ch37 updateStudent 的 id 和 req.name 組成 key。
+本章的 StudentService 都是用單一 PK（id）查詢，key 寫 #p0 就夠了，直接對應那一筆資料。
+至於「多個參數要不要組成一個 key」，是另一個獨立主題，下一頁專門說明。
+-->
+
+---
+
+# 什麼時候要組合 key？
+
+**單一 PK 用 `#p0` 就好；沒有單一欄位能唯一識別時，才組合 key：**
+
+```java
+// ✅ 單一 PK：id 本身就唯一，直接 #p0
+@Cacheable(value = "students", key = "#p0")
+public StudentResponse getStudentById(Integer id) { ... }
+
+// ✅ 多條件查詢：grade、year 都不是 PK，兩個合起來才唯一
+@Cacheable(value = "gradeQuery", key = "#p0 + ':' + #p1")
+public List<StudentResponse> getByGradeAndYear(String grade, Integer year) { ... }
+```
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">⚠️ <b>不要對 PK 多此一舉：</b> 若 <code>getStudentById</code> 用 <code>#p0</code> 讀、<code>updateStudent</code> 卻用 <code>#p0 + ':' + #p1.name</code> 寫，兩邊 key 對不上 → <code>@CachePut</code> 寫進去的 entry 永遠讀不到，反而製造 bug。<b>讀寫 key 必須一致。</b></div>
+
+<!--
+這頁專門講「key 要不要組合」。
+
+單一 PK（例如 getStudentById 的 id）用 #p0 就夠了，key 直接對應那一筆資料。
+
+組合 key 只用在「沒有任何單一參數能唯一識別」的查詢，
+例如 getByGradeAndYear：grade 和 year 都不是 PK，兩個合起來才能唯一定位這個查詢的結果，
+這時才用 #p0 + ':' + #p1 把它們接成一個 key。
+
+最容易犯的錯：對本來就是 PK 的 id 硬去組合別的欄位。
+這樣 @Cacheable 用 #p0 讀、@CachePut 用 #p0 + 名字 寫，兩個 key 對不上，
+更新完下次查詢還是讀到舊值——@CachePut 等於白做。記住：讀寫 key 一定要一致。
 -->
 
 ---
@@ -477,7 +557,7 @@ class: flex flex-col justify-center items-center text-center
 # @CacheEvict 基本用法與屬性
 
 ```java
-@CacheEvict(value = "students", key = "#id")
+@CacheEvict(value = "students", key = "#p0")
 public void deleteStudent(Integer id) {
     studentRepository.deleteById(id); // 沿用 ch37
 }
@@ -523,14 +603,14 @@ allEntries = true 是一個很粗暴但有時候必要的選項，
 ```java
 // 預設（false）：DB 刪除成功才清 Cache
 // → 若 deleteById() 拋出例外，Cache 保持原樣（資料仍正確）
-@CacheEvict(value = "students", key = "#id")
+@CacheEvict(value = "students", key = "#p0")
 public void deleteStudent(Integer id) {
     studentRepository.deleteById(id);  // 若這裡炸了，Cache 不會被清
 }
 
 // beforeInvocation = true：先清 Cache，再執行方法
 // → 就算 deleteById() 拋出例外，Cache 已被清除
-@CacheEvict(value = "students", key = "#id",
+@CacheEvict(value = "students", key = "#p0",
             beforeInvocation = true)
 public void forceDeleteStudent(Integer id) {
     studentRepository.deleteById(id);
@@ -572,7 +652,7 @@ class: flex flex-col justify-center items-center text-center
 | **典型搭配方法** | `findById`, `getXxx` | `update`, `save` |
 
 ```java
-@CachePut(value = "students", key = "#id")
+@CachePut(value = "students", key = "#p0")
 public StudentResponse updateStudent(Integer id,
                                      CreateStudentRequest req) {
     Student po = new Student();
@@ -597,9 +677,9 @@ public StudentResponse updateStudent(Integer id,
 
 ---
 
-# 三個注解的組合使用 — @Cacheable 與 @CachePut
+# 三個注解的組合使用 — @Cacheable
 
-沿用 ch37 的 `StudentService`，三個方法都操作同一個 `"students"` Cache：
+沿用 ch37 的 `StudentService`，三個方法都操作同一個 `"students"` Cache。先看讀取：
 
 ```java
 @Service
@@ -611,7 +691,7 @@ public class StudentService {
     @Autowired
     private StudentRepository studentRepository;
 
-    @Cacheable(value = "students", key = "#id")
+    @Cacheable(value = "students", key = "#p0")
     public StudentResponse getStudentById(Integer id) {
         log.info("Cache Miss，查詢資料庫，id = {}", id);
         Student po = studentRepository.findById(id)
@@ -619,7 +699,27 @@ public class StudentService {
         return toResponse(po);
     }
 
-    @CachePut(value = "students", key = "#id")
+    // @CachePut 的 updateStudent 見下一頁，@CacheEvict 的 deleteStudent 見再下一頁
+}
+```
+
+<!--
+這是最典型的 CRUD Cache 搭配模式的第一段：讀取用 @Cacheable。
+
+注意三個方法的 value 都會是 "students"，這樣它們操作的才是同一個 Cache 空間。
+
+getStudentById 的 log 只有 Cache Miss 才出現——Cache Hit 時方法本體不執行，log 也不會印。
+第一次呼叫某個 id 印 log，第二次同一個 id 沒有 log，就代表 Cache 生效了。
+-->
+
+---
+
+# 三個注解的組合使用 — @CachePut
+
+接著是更新：`@CachePut` 更新資料的同時把新值寫回同一個 `"students"` Cache：
+
+```java
+    @CachePut(value = "students", key = "#p0")
     public StudentResponse updateStudent(Integer id,
                                          CreateStudentRequest req) {
         log.info("更新學生並寫入 Cache，id = {}", id);
@@ -632,18 +732,19 @@ public class StudentService {
     }
 
     // @CacheEvict 的 deleteStudent 見下一頁
-}
 ```
 
-<!--
-這是最典型的 CRUD Cache 搭配模式的前半段。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>讀寫 key 必須一致：</b> updateStudent 的 <code>key = "#p0"</code> 跟 getStudentById 完全相同，寫回的才是同一筆 entry，下次查詢才讀得到新值。</div>
 
-注意兩個方法的 value 都是 "students"，這樣它們操作的才是同一個 Cache 空間。
+<!--
+第二段：更新用 @CachePut，key 一定要跟 @Cacheable 的 getStudentById 一樣是 #p0，
+這樣 update 覆蓋的才是同一筆 cache entry，下次查詢直接讀到新值。
+
+跟 getStudentById 不同：updateStudent 加 @CachePut 後方法一定會執行，所以 log 每次都會印，
+這是 @Cacheable（Hit 不執行）和 @CachePut（永遠執行）行為差異最直接的證據。
 
 跟原本 Product 範例不同的是，ch37 的 updateStudent 本來就把 id 當作方法參數傳進來，
-所以 key 直接寫 "#id" 就好，不需要像 "#result.id" 那樣繞去取回傳值的欄位。
-
-log 一樣加在方法開頭：getStudentById 的 log 只有 Cache Miss 才出現；updateStudent 加 @CachePut 後方法一定會執行，所以 log 每次都會印，這是 @Cacheable 和 @CachePut 行為差異最直接的證據。
+所以 key 直接寫 "#p0"（第 0 個參數 id）就好，不需要像 "#result.id" 那樣繞去取回傳值的欄位。
 -->
 
 ---
@@ -651,7 +752,7 @@ log 一樣加在方法開頭：getStudentById 的 log 只有 Cache Miss 才出�
 # 三個注解的組合使用 — @CacheEvict
 
 ```java
-    @CacheEvict(value = "students", key = "#id")
+    @CacheEvict(value = "students", key = "#p0")
     public void deleteStudent(Integer id) {
         log.info("刪除學生並清除 Cache，id = {}", id);
         studentRepository.deleteById(id);
@@ -660,7 +761,7 @@ log 一樣加在方法開頭：getStudentById 的 log 只有 Cache Miss 才出�
     private StudentResponse toResponse(Student po) { ... } // 沿用 ch37
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>重點：</b> 三個方法的 <code>value</code> 都是 <code>"students"</code>，操作的是同一個 Cache 空間；key 都直接用 <code>"#id"</code>，因為 ch37 的方法本來就把 id 當參數傳進來。</div>
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>重點：</b> 三個方法的 <code>value</code> 都是 <code>"students"</code>，操作的是同一個 Cache 空間；key 都直接用 <code>"#p0"</code>（第 0 個參數 id），不依賴編譯器 <code>-parameters</code> 設定。</div>
 
 <!--
 deleteStudent 用 @CacheEvict 清掉對應 id 的 Cache，跟前一頁的 getStudentById、updateStudent 合起來，就是完整的 CRUD Cache 搭配模式。
@@ -742,10 +843,10 @@ spring.cache.cache-names=students
 
 **Step 3 — 主程式加 @EnableCaching，Service 加注解（與之前完全相同）：**
 ```java
-@Cacheable(value = "students", key = "#id")
+@Cacheable(value = "students", key = "#p0")
 public StudentResponse getStudentById(Integer id) { ... }
 
-@CacheEvict(value = "students", key = "#id")
+@CacheEvict(value = "students", key = "#p0")
 public void deleteStudent(Integer id) { ... }
 ```
 
@@ -756,13 +857,43 @@ public void deleteStudent(Integer id) { ... }
 -->
 
 ---
+
+# Caffeine vs ConcurrentMap — 差在哪？
+
+注解寫法**完全一樣**（抽象層把差異藏起來了），差別在底層 CacheManager 的能力：
+
+| 能力 | `ConcurrentMapCacheManager`（預設） | `CaffeineCacheManager` |
+|---|---|---|
+| 底層 | `ConcurrentHashMap` | Window-TinyLFU 演算法 |
+| **TTL 過期** | ❌ 無，存進去永不過期 | ✅ `expireAfterWrite` / `expireAfterAccess` |
+| **容量上限 / 淘汰** | ❌ 無，無限長大 | ✅ `maximumSize`，滿了淘汰最少用的 |
+| 記憶體風險 | ⚠️ 只增不減 → 可能 OOM | 有上限，受控 |
+| 統計（hit/miss） | ❌ | ✅ `recordStats()` |
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">⚠️ <b>致命差異就兩個：ConcurrentMap 沒有 TTL、沒有容量上限。</b> 資料存進去永不過期（只能靠 @CacheEvict 手動清）、且無限增長直到 OOM。所以 ConcurrentMap 只適合開發測試；正式單機請用 Caffeine。</div>
+
+<!--
+這頁收尾 Caffeine 章節，回答一個很常見的疑問：既然注解寫法一模一樣，那 Caffeine 跟預設的 ConcurrentMap 到底差在哪？
+
+答案是：注解一樣，是因為 Spring Cache 抽象層把底層差異藏起來了；真正的差別在 CacheManager 的能力。
+
+最致命的兩個差異：
+1. ConcurrentMap 沒有 TTL——資料存進去永遠不會過期，資料變了 cache 也不會自己失效，只能靠 @CacheEvict 手動清。
+2. ConcurrentMap 沒有容量上限——key 一多就無限增長，最後 OOM。
+
+Caffeine 兩個都有：expireAfterWrite/Access 管過期，maximumSize 管容量，滿了用 Window-TinyLFU 淘汰最少用的（命中率比傳統 LRU 好）。
+
+所以定位很清楚：ConcurrentMap 開箱即用、零依賴，適合開發測試 demo；但不能上正式。正式單機一定要用 Caffeine，才有 TTL 和記憶體控制。
+-->
+
+---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 8
 
-## Redis Cache 補充
+## Redis Cache 補充（概念先行）
 
 <!--
 Caffeine 很好，但它有一個致命的限制：它住在單一 JVM 記憶體裡。
@@ -772,15 +903,43 @@ Caffeine 很好，但它有一個致命的限制：它住在單一 JVM 記憶體
 
 ---
 
-# Redis Cache build.gradle 與設定
+# 前置需求：Redis 需要一台 Server
 
-**加入 Redis Starter：**
+Caffeine 是純 Java library，和 app 同一個 JVM；**Redis 是獨立的外部服務**，app 要透過網路連它。
 
-```groovy
-implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-```
+| | 要跑外部服務？ | 怎麼來 |
+|---|---|---|
+| ConcurrentMap | ❌ | 內建 |
+| Caffeine | ❌（同 JVM） | 加 jar 依賴 |
+| Redis | ✅ **要一台 Redis server** | Docker / 本機安裝 / 雲端託管 |
 
-**application.properties：**
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>本章 Redis 段落先看「概念與設定」就好，實際動手留到 Docker 章節之後。</b> 啟動 Redis 最方便的方式是 Docker：
+<pre class="mt-2"><code>docker run -d -p 6379:6379 redis</code></pre>
+</div>
+
+<!--
+這頁是給學員的重要提醒。
+
+Redis 跟前面的 Caffeine、ConcurrentMap 有個根本差別：它不是一個 Java library，
+而是一台獨立的伺服器，你的 app 要透過網路（預設 localhost:6379）去連它。
+
+所以用 Redis 的前提，是先有一台跑著的 Redis server。最方便的啟動方式是 Docker，
+一行指令 docker run -d -p 6379:6379 redis 就起來了。
+
+但我們現在還沒上 Docker 章節，學員手上也還沒有 Docker 環境，
+所以這一段 Redis 我們先講「觀念」和「設定長什麼樣」，先不實際動手跑。
+
+等之後上完 Docker，大家有能力用一行指令把 Redis 跑起來，我們再回來實作這一段。
+現在只要理解：Redis 的定位是「多台機器（多個 Pod）共享同一份 Cache」，
+這是 Caffeine 這種本地快取做不到的。
+-->
+
+---
+
+# Redis Cache application.properties 設定
+
+依賴已在前面「build.gradle 依賴」頁加入 `spring-boot-starter-data-redis`，這裡只需設定：
 
 ```properties
 spring.cache.type=redis
@@ -841,7 +1000,7 @@ Redis 存的是 byte[]，所以物件要轉成 byte 才能存進去。
 
 ---
 
-# Redis Cache 完整使用範例（1/3）
+# Redis Cache 完整使用範例（1/4）
 
 **Step 1 — build.gradle：**
 ```groovy
@@ -868,16 +1027,16 @@ public class MyApplication { ... }
 
 ---
 
-# Redis Cache 完整使用範例（2/3）
+# Redis Cache 完整使用範例（2/4）
 
-**Step 4 — Service 注解與 Caffeine 完全相同（@Cacheable、@CachePut）：**
+**Step 4 — Service 注解與 Caffeine 完全相同，先看 @Cacheable：**
 ```java
 @Service
 public class StudentService {
     @Autowired
     private StudentRepository studentRepository;
 
-    @Cacheable(value = "students", key = "#id",
+    @Cacheable(value = "students", key = "#p0",
                unless = "#result == null")
     public StudentResponse getStudentById(Integer id) {
         Student po = studentRepository.findById(id)
@@ -885,7 +1044,22 @@ public class StudentService {
         return toResponse(po);
     }
 
-    @CachePut(value = "students", key = "#id")
+    // @CachePut 的 updateStudent 見下一頁，@CacheEvict 的 deleteStudent 見再下一頁
+}
+```
+
+<!--
+Step 4 的第一段：@Cacheable，跟 Caffeine 版本完全一樣，一行都不用改。
+unless = "#result == null" 一樣要加，避免把查不到的 null 也存進 Redis。
+-->
+
+---
+
+# Redis Cache 完整使用範例（3/4）
+
+**Step 4（續）— @CachePut：**
+```java
+    @CachePut(value = "students", key = "#p0")
     public StudentResponse updateStudent(Integer id,
                                          CreateStudentRequest req) {
         Student po = new Student();
@@ -895,22 +1069,20 @@ public class StudentService {
         po.setScore(req.getScore());
         return toResponse(studentRepository.save(po));
     }
-
-    // @CacheEvict 的 deleteStudent 見下一頁
-}
 ```
 
 <!--
-Step 4 的前半段：@Cacheable 和 @CachePut，跟 Caffeine 版本完全一樣，一行都不用改。
+Step 4 的第二段：@CachePut，key 一樣是 #p0，跟 @Cacheable 讀取端一致，
+更新後下次查詢直接從 Redis 讀到新值。這段也跟 Caffeine 版本一字不差。
 -->
 
 ---
 
-# Redis Cache 完整使用範例（3/3）
+# Redis Cache 完整使用範例（4/4）
 
 **Step 4（續）— @CacheEvict：**
 ```java
-    @CacheEvict(value = "students", key = "#id")
+    @CacheEvict(value = "students", key = "#p0")
     public void deleteStudent(Integer id) {
         studentRepository.deleteById(id);
     }
@@ -1018,9 +1190,9 @@ layout: default
 ### 提示說明
 
 1. build.gradle 加 `spring-boot-starter-cache` + `caffeine`；主程式加 `@EnableCaching`
-2. `@Cacheable(value = "students", key = "#id")`
-3. `@CachePut(value = "students", key = "#id")`
-4. `@CacheEvict(value = "students", key = "#id")`
+2. `@Cacheable(value = "students", key = "#p0")`
+3. `@CachePut(value = "students", key = "#p0")`
+4. `@CacheEvict(value = "students", key = "#p0")`
 
 ```properties
 spring.cache.type=caffeine
@@ -1034,7 +1206,7 @@ spring.cache.cache-names=students
 常見錯誤排查清單要記起來，幾乎所有 Cache 不生效的問題都出在這四個地方。
 
 跟原本的 Product 範例不同：ch37 的 updateStudent 本來就把 id 當參數傳進來，
-所以 @CachePut 的 key 直接寫 "#id" 就好，不用像 "#result.id" 那樣去取回傳值的欄位。
+所以 @CachePut 的 key 直接寫 "#p0"（第 0 個參數 id）就好，不用像 "#result.id" 那樣去取回傳值的欄位。
 -->
 
 ---
@@ -1051,7 +1223,7 @@ public class StudentService {
     @Autowired
     private StudentRepository studentRepository;
 
-    @Cacheable(value = "students", key = "#id")
+    @Cacheable(value = "students", key = "#p0")
     public StudentResponse getStudentById(Integer id) {
         log.info("Cache Miss，查詢資料庫，id = {}", id);
         Student po = studentRepository.findById(id)
@@ -1075,7 +1247,7 @@ public class StudentService {
 # 練習一：解答程式碼 — StudentService（2/3）
 
 ```java
-    @CachePut(value = "students", key = "#id")
+    @CachePut(value = "students", key = "#p0")
     public StudentResponse updateStudent(Integer id,
                                          CreateStudentRequest req) {
         log.info("更新學生並寫入 Cache，id = {}", id);
@@ -1099,7 +1271,7 @@ updateStudent 因為是 @CachePut，方法一定會執行，log 每次都會印�
 # 練習一：解答程式碼 — StudentService（3/3）
 
 ```java
-    @CacheEvict(value = "students", key = "#id")
+    @CacheEvict(value = "students", key = "#p0")
     public void deleteStudent(Integer id) {
         log.info("刪除學生並清除 Cache，id = {}", id);
         studentRepository.deleteById(id);
