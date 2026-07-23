@@ -62,7 +62,7 @@ layout: default
 # Outline
 
 - **認證 vs 授權** — Authentication / Authorization 核心概念
-- **加入 Spring Security 依賴** — pom.xml 設定
+- **加入 Spring Security 依賴** — build.gradle 設定
 - **預設行為** — Spring Security 開箱即用的保護機制
 - **SecurityFilterChain** — Spring Boot 3.x / 4.x 的設定方式
 - **路徑授權規則** — `requestMatchers` 與 `hasRole`
@@ -679,6 +679,53 @@ Spring Security 在用戶登入的時候會自動呼叫這個方法，傳入用�
 -->
 
 ---
+style: |
+  pre, code { font-size: 0.82em !important; }
+---
+
+# 改用資料庫後，SecurityConfig 要跟著改
+
+`CustomUserDetailsService` 標了 `@Service`，本身已實作 `UserDetailsService` 介面，Spring 開機會自動偵測、註冊成 Bean。
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {   // 保留，加密要用
+        return new BCryptPasswordEncoder();
+    }
+
+    // Part 6 的 userDetailsService() @Bean 要整段刪掉！
+    // 不刪的話，容器裡會有兩個 UserDetailsService候選：
+    // InMemoryUserDetailsManager 跟 CustomUserDetailsService，
+    // 造成 NoUniqueBeanDefinitionException，應用程式啟動失敗。
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http)
+            throws Exception {
+        // ... 授權規則、httpBasic、csrf 不變
+        return http.build();
+    }
+}
+```
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>InMemoryUserDetailsManager 跟 CustomUserDetailsService 不能並存！</b> 兩個都是 <code>UserDetailsService</code> 型別的 Bean，容器裡只能留一個。改資料庫版時，記得把 Part 6 手動宣告的 <code>userDetailsService()</code> 方法整段刪掉。
+</div>
+
+<!--
+這一頁補上 Part 6 到 Part 7 之間漏掉的銜接：光是寫好 CustomUserDetailsService 類別還不夠，因為 Part 6 已經在 SecurityConfig 裡用 @Bean 宣告了另一個 UserDetailsService（InMemory 版）。
+
+@Service 讓 Spring 自動把 CustomUserDetailsService 註冊成 Bean，這時候容器裡如果還留著 Part 6 的 InMemory Bean，就會有兩個同型別的候選者，Spring 不知道要用哪個，直接啟動失敗，丟 NoUniqueBeanDefinitionException。
+
+解法很單純：刪掉 Part 6 那個手動宣告的 userDetailsService() @Bean method，只留 CustomUserDetailsService 這個 @Service。PasswordEncoder 因為型別不同（不是 UserDetailsService），不受影響，繼續留著給密碼加密跟比對用。
+
+這個銜接邏輯後面練習二的解答也會再示範一次。
+-->
+
+---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---
@@ -1006,22 +1053,25 @@ layout: default
 # 練習二：整合資料庫用戶認證
 ### 任務說明
 
-建立以下元件：
+把練習一的記憶體帳號換成資料庫帳號，**沿用 Part 7 的三件套**：
 
-1. **`Member` Entity** — 包含欄位：`id`, `username`, `password`, `role`（例如 `ROLE_USER`）
-2. **`MemberRepository`** — 繼承 `JpaRepository`，提供 `findByUsername` 方法
-3. **`MemberDetailsService`** — 實作 `UserDetailsService`，從資料庫查詢用戶
-4. **`SecurityConfig`** — 整合 `BCryptPasswordEncoder`，使用 HTTP Basic 認證（`httpBasic`）
-5. **`MemberController`**
+1. **`User` Entity** — Part 7 已經寫好，直接用（`role` 欄位存 `"USER"` / `"ADMIN"`）
+2. **`UserRepository`** — Part 7 已經寫好，提供 `findByUsername`
+3. **`CustomUserDetailsService`** — Part 7 已經寫好，`@Service` 自動註冊成 Bean
+4. **`SecurityConfig`** — 從練習一改造：刪掉 `InMemoryUserDetailsManager` 的 `@Bean`，路徑規則多開一條 `/api/register`
+5. **`UserController`**（新寫）
    - `POST /api/register`（公開，不需登入）— 建立新用戶，密碼要用 `BCryptPasswordEncoder` 加密後再存
    - `GET /api/me` — 回傳當前登入用戶的帳號名稱
 
 **加分項目：** 在 `GET /api/me` 裡透過 `SecurityContextHolder` 取得當前用戶，不要用方法參數注入。
 
 <!--
-這個練習把所有章節的內容串起來了：
-JPA 的 Entity 和 Repository，Spring Security 的 UserDetailsService，
-還有 SecurityContextHolder 的使用。
+這個練習刻意不讓學生重寫 Entity 跟 Service —— Part 7 已經教過了，直接搬過來用。
+練習二真正要練的是「銜接」：把練習一的 InMemory 設定換掉，
+以及補上註冊 / 查詢自己身份的 API。
+
+命名全章一致：User / UserRepository / CustomUserDetailsService，
+下一章 ch45 做 JWT 時會原封不動繼續用同一組類別。
 -->
 
 ---
@@ -1031,18 +1081,26 @@ layout: default
 # 練習二：解題提示
 ### 提示說明
 
-1. `Member` 的 `role` 欄位存完整字串（如 `"ROLE_USER"`），在 `UserDetailsService` 裡用 `.authorities(member.getRole())`，不要用 `.roles()`，避免雙重加 `ROLE_` 前綴
-2. 啟用 HTTP Basic 認證：`http.httpBasic(Customizer.withDefaults())`；Postman 在 Authorization 頁籤選 Basic Auth 填帳密即可測
-3. 取得當前用戶：`SecurityContextHolder.getContext().getAuthentication().getName()`
-4. `POST /api/register` 要記得在 `authorizeHttpRequests` 裡 `permitAll()`，不然新用戶連註冊都要先登入，變成雞生蛋問題
+1. `User` 的 `role` 欄位存**不帶前綴**的字串（`"USER"` / `"ADMIN"`），搭配 `.roles(user.getRole())`，Spring 會自動補上 `ROLE_` 前綴 —— 這樣 `hasRole("ADMIN")` 才比對得到
+2. 練習一手動宣告的 `userDetailsService()` `@Bean` 要**整段刪掉**，否則跟 `CustomUserDetailsService` 撞型別，`NoUniqueBeanDefinitionException` 啟動失敗
+3. 啟用 HTTP Basic 認證：`http.httpBasic(Customizer.withDefaults())`；Postman 在 Authorization 頁籤選 Basic Auth 填帳密即可測
+4. 取得當前用戶：`SecurityContextHolder.getContext().getAuthentication().getName()`
+5. `POST /api/register` 要記得在 `authorizeHttpRequests` 裡 `permitAll()`，不然新用戶連註冊都要先登入，變成雞生蛋問題
+
+<div class="mt-3 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>只能二選一：</b> DB 存 <code>"USER"</code> 就用 <code>.roles()</code>；DB 存 <code>"ROLE_USER"</code> 就要改用 <code>.authorities()</code>。兩者混用會變成 <code>ROLE_ROLE_USER</code>，權限永遠比對不到。本章統一採用前者。
+</div>
 
 <!--
-兩個比較容易搞混的地方：
+三個容易踩的坑：
 
-第一是 roles 跟 authorities 的差異，如果你的資料庫存的是 ROLE_USER 這個完整字串，
-就直接用 authorities 方法，不要用 roles，否則會變成 ROLE_ROLE_USER。
+第一是 roles 跟 authorities 的差異。本章統一：資料庫存 "USER"、"ADMIN" 這種短字串，
+程式用 .roles()，Spring 幫你加 ROLE_ 前綴。
+如果反過來資料庫存 ROLE_USER 又用 .roles()，就會疊成 ROLE_ROLE_USER，全部權限失效。
 
-第二是 /api/register 要記得 permitAll，這是最容易漏掉的地方——
+第二是刪掉練習一的 InMemory Bean，這就是 Part 7 那頁講的銜接問題。
+
+第三是 /api/register 要記得 permitAll，這是最容易漏掉的地方——
 沒開的話新用戶要先登入才能註冊，邏輯上矛盾。
 -->
 
@@ -1051,55 +1109,37 @@ style: |
   pre, code { font-size: 0.82em !important; }
 ---
 
-# 練習二：解答程式碼 — Member Entity
+# 練習二：解答程式碼 — 資料層三件套（直接沿用 Part 7）
+
+這三個類別 **Part 7 已經寫過，一行都不用改**，複製過來即可：
 
 ```java
-@Entity
-@Table(name = "members")
-public class Member {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+@Entity @Table(name = "users")
+public class User {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(nullable = false, unique = true)
-    private String username;
-
-    @Column(nullable = false)
-    private String password;
-
-    @Column(nullable = false)
-    private String role;   // 存完整字串，例如 "ROLE_USER"
-
+    @Column(nullable = false, unique = true) private String username;
+    @Column(nullable = false) private String password;   // BCrypt 密文
+    @Column(nullable = false) private String role;       // "USER" / "ADMIN"，不帶 ROLE_ 前綴
+    private boolean enabled = true;
     // getter / setter 省略
 }
-```
 
-<!--
-role 欄位直接存 "ROLE_USER" 這種完整字串，
-下一頁的 UserDetailsService 就要對應用 authorities()，不能用 roles()。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# 練習二：解答程式碼 — MemberRepository
-
-```java
-public interface MemberRepository extends JpaRepository<Member, Long> {
-    Optional<Member> findByUsername(String username);
+public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByUsername(String username);
 }
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>沿用同一套路：</b> 跟前面 Part 7 的 <code>UserRepository</code> 一樣，繼承 <code>JpaRepository</code>，用方法名衍生查詢，回傳 <code>Optional</code>。
+<div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <code>CustomUserDetailsService</code> 也原封不動沿用 Part 7 的版本（下一頁再看一次重點）。
 </div>
 
 <!--
-findByUsername 回傳 Optional，查無使用者時是空的，
-下一頁的 MemberDetailsService 就能 orElseThrow 丟 UsernameNotFoundException。
+刻意不讓學生重寫一套 Member/MemberRepository —— Part 7 教過的東西就直接用，
+這樣從 Part 7 到練習二、再到下一章 ch45，類別名稱從頭到尾都是同一組，
+學生腦中只需要維護一份心智模型。
+
+再強調一次 role 欄位：存 "USER" 而不是 "ROLE_USER"，因為下一頁用的是 .roles()。
 -->
 
 ---
@@ -1107,38 +1147,40 @@ style: |
   pre, code { font-size: 0.82em !important; }
 ---
 
-# 練習二：解答程式碼 — MemberDetailsService
+# 練習二：解答程式碼 — CustomUserDetailsService（Part 7 原版）
 
 ```java
-@Service
-public class MemberDetailsService implements UserDetailsService {
+@Service   // ← 有這個註解，Spring 自動註冊成 UserDetailsService Bean
+public class CustomUserDetailsService implements UserDetailsService {
 
     @Autowired
-    private MemberRepository memberRepository;
+    private UserRepository userRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username)
             throws UsernameNotFoundException {
-        Member member = memberRepository.findByUsername(username)
+        User user = userRepository.findByUsername(username)
             .orElseThrow(() ->
                 new UsernameNotFoundException("找不到使用者：" + username));
 
         return org.springframework.security.core.userdetails.User
-            .withUsername(member.getUsername())
-            .password(member.getPassword())
-            .authorities(member.getRole())   // 完整字串，不用 roles()
+            .withUsername(user.getUsername())
+            .password(user.getPassword())
+            .roles(user.getRole())   // DB 存 "USER"，Spring 自動補成 ROLE_USER
             .build();
     }
 }
 ```
 
 <!--
-findByUsername 回傳 Optional，查無使用者就 orElseThrow。
-authorities(member.getRole()) 直接吃 "ROLE_USER" 這種完整字串；
-如果改用 roles("USER")，Spring 會自動加 ROLE_ 前綴，跟資料庫的字串疊加變成 ROLE_ROLE_USER。
+跟 Part 7 完全一樣，一行都沒改。
 
-這個 @Service 本身就實作了 UserDetailsService，Spring 開機會自動偵測、
-註冊成 Bean，不需要在 SecurityConfig 裡再手動宣告 userDetailsService()。
+再說一次 roles() 的規則：DB 存 "USER"，roles() 會自動補 ROLE_ 前綴變成 ROLE_USER，
+這樣練習一寫的 hasRole("ADMIN") 才比對得到。
+如果 DB 改存 "ROLE_ADMIN"，就要改用 authorities()，否則會疊成 ROLE_ROLE_ADMIN。
+
+這個 @Service 本身就實作了 UserDetailsService，Spring 開機自動偵測、註冊成 Bean，
+不需要在 SecurityConfig 裡再手動宣告 userDetailsService()。
 -->
 
 ---
@@ -1216,13 +1258,13 @@ style: |
     }
 
     // 不用再宣告 userDetailsService()！
-    // MemberDetailsService（@Service）已經是 UserDetailsService，
+    // CustomUserDetailsService（@Service）已經是 UserDetailsService，
     // Spring 會自動偵測並取代練習一的 InMemory 版本。
 }
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>跟練習一唯一的差異：</b> <code>passwordEncoder()</code> 與路徑授權規則都相同，可以直接沿用；差別只有兩點——多一行 <code>/api/register</code> 的 <code>permitAll()</code>，以及練習一手動宣告的 <code>userDetailsService()</code>（InMemory）要整段刪掉，換成資料庫版的 <code>MemberDetailsService</code>，兩者不能並存。
+💡 <b>跟練習一唯一的差異：</b> <code>passwordEncoder()</code> 與路徑授權規則都相同，可以直接沿用；差別只有兩點——多一行 <code>/api/register</code> 的 <code>permitAll()</code>，以及練習一手動宣告的 <code>userDetailsService()</code>（InMemory）要整段刪掉，換成資料庫版的 <code>CustomUserDetailsService</code>，兩者不能並存。
 </div>
 
 <!--
@@ -1234,34 +1276,39 @@ style: |
   pre, code { font-size: 0.82em !important; }
 ---
 
-# 練習二：解答程式碼 — 註冊 API（POST /api/register）
+# 練習二：解答程式碼 — UserController（1/2）註冊
 
 ```java
 public record RegisterRequest(String username, String password) {}
 
 @RestController
-public class MemberController {
+public class UserController {
 
     @Autowired
-    private MemberRepository memberRepository;
+    private UserRepository userRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
 
     @PostMapping("/api/register")
     public String register(@RequestBody RegisterRequest req) {
-        Member member = new Member();
-        member.setUsername(req.username());
-        member.setPassword(passwordEncoder.encode(req.password()));  // 加密後再存
-        member.setRole("ROLE_USER");
-        memberRepository.save(member);
-        return "註冊成功：" + member.getUsername();
+        User user = new User();                                    // 我們自己的 Entity
+        user.setUsername(req.username());
+        user.setPassword(passwordEncoder.encode(req.password()));  // 加密後再存
+        user.setRole("USER");                                      // 不帶 ROLE_ 前綴
+        userRepository.save(user);
+        return "註冊成功：" + user.getUsername();
     }
 }
 ```
 
 <!--
 密碼一定要先過 passwordEncoder.encode()，不能把明文密碼直接存進資料庫。
-role 這裡固定給 ROLE_USER，實務上通常不開放使用者自己指定角色（避免自己把自己升成 ADMIN）。
+role 固定給 "USER"（不帶 ROLE_ 前綴，跟 CustomUserDetailsService 的 .roles() 對應），
+實務上通常不開放使用者自己指定角色，避免有人把自己升成 ADMIN。
+
+小提醒：這個檔案裡的 User 是我們自己的 Entity，
+不要不小心 import 成 org.springframework.security.core.userdetails.User。
+
 這個端點在上一頁的 SecurityConfig 已設為 permitAll，未登入也能呼叫。
 -->
 
@@ -1270,23 +1317,30 @@ style: |
   pre, code { font-size: 0.82em !important; }
 ---
 
-# 練習二：解答程式碼 — MemberController（GET /api/me）
+# 練習二：解答程式碼 — UserController（2/2）查詢自己
+
+同一個 `UserController` 裡再加一個方法：
 
 ```java
-@RestController
-public class MemberController {
-
     @GetMapping("/api/me")
     public String me() {
         return SecurityContextHolder.getContext()
             .getAuthentication().getName();
     }
-}
 ```
 
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>完整測試流程：</b> ① <code>POST /api/register</code> 註冊 alice ② Postman 選 Basic Auth 填 alice / 密碼 ③ <code>GET /api/me</code> 回傳 <code>alice</code>。
+</div>
+
 <!--
-MemberController 用 SecurityContextHolder 拿目前登入用戶名稱，符合加分項目的要求（不用方法參數注入）。
+注意這是接在上一頁同一個 UserController 裡面的方法，不是新的類別。
+
+用 SecurityContextHolder 拿目前登入用戶名稱，符合加分項目的要求（不用方法參數注入）。
 httpBasic 讓 Postman 能直接測 /api/me，帶 Basic Auth 帳密就能拿到當前登入者名稱。
+
+這整套（User Entity + UserRepository + CustomUserDetailsService + SecurityConfig + UserController）
+下一章 ch45 做 JWT 時會直接接手繼續用，不會再換名字。
 -->
 
 ---
