@@ -29,12 +29,6 @@ style: |
     text-align: center;
     font-family: monospace;
   }
-  .slidev-layout code {
-    font-size: 0.88em !important;
-    line-height: 1.4 !important;
-    white-space: pre !important;
-    word-break: normal !important;
-  }
 ---
 
 <div class="flex flex-col justify-center items-center h-full" style="background: #ffffff;">
@@ -91,7 +85,7 @@ graph TB
     end
     subgraph Backend["後端 Spring Boot (localhost:8080)"]
         direction LR
-        Filter[AuthTokenFilter] --> Controller --> Service --> Repository --> DB[(MySQL)]
+        Filter[JwtAuthFilter] --> Controller --> Service --> Repository --> DB[(MySQL)]
     end
     Frontend -->|HTTP + JSON| Backend
 ```
@@ -107,10 +101,8 @@ layout: default
 
 # 後端專案結構
 
-<div v-pre>
-
 ```text
-backend/src/main/java/com/example/dynamicsurvey/
+backend/src/main/java/com/example/dynamic_survey/
 ├── DynamicSurveyApplication.java   # 進入點
 ├── config/
 │   └── GlobalExceptionHandler.java # 全域例外處理
@@ -133,8 +125,6 @@ backend/src/main/java/com/example/dynamicsurvey/
 ├── vo/                             # 統一回應 (RspCode, AppResponse)
 └── security/                       # JWT 與權限控管
 ```
-
-</div>
 
 ---
 layout: default
@@ -182,15 +172,11 @@ layout: default
 
 啟動 MySQL 後，先手動建立一個空資料庫（資料表會由 JPA 自動建立）：
 
-<div v-pre>
-
 ```sql
 CREATE DATABASE dynamic_survey
   DEFAULT CHARACTER SET utf8mb4
   DEFAULT COLLATE utf8mb4_unicode_ci;
 ```
-
-</div>
 
 - 資料庫名稱 `dynamic_survey` 必須與 `application.properties` 中的設定一致。
 - 因為 `spring.jpa.hibernate.ddl-auto=update`，第一次啟動 Spring Boot 時會**自動建立**所有資料表。
@@ -199,99 +185,41 @@ CREATE DATABASE dynamic_survey
 layout: default
 ---
 
-# build.gradle — 外掛與 Java 版本
+# 用 Spring Initializr 建立專案
 
-<div v-pre>
+**在 [start.spring.io](https://start.spring.io) 建立新專案：**
 
-```groovy
-plugins {
-    id 'java'
-    id 'org.springframework.boot' version '4.1.0'
-    id 'io.spring.dependency-management' version '1.1.7'
-}
-
-group = 'com.example'
-version = '0.0.1-SNAPSHOT'
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
-}
-
-configurations {
-    compileOnly { extendsFrom annotationProcessor }
-}
-
-repositories { mavenCentral() }
-```
-
-</div>
+| 設定項 | 選擇 |
+|------|------|
+| Project | Gradle - Groovy |
+| Spring Boot | 4.1.x |
+| **Artifact** | **`dynamic-survey`** |
+| Java | 17 |
+| Dependencies | **Spring Web**、**Spring Data JPA**、**Spring Security**、**Validation**、**MySQL Driver**、**Lombok**、**Spring Boot DevTools** |
 
 ---
 layout: default
 ---
 
-# build.gradle — 相依套件 (1)
+# 手動補上 JWT 套件
 
-<div v-pre>
+- 按 **Generate** 下載解壓，或直接用 IDE 內建的 Spring Initializr 精靈建立。
+
+<div class="mt-2 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>JWT 套件 Initializr 找不到：</b>下載解壓後，還要手動在 <code>build.gradle</code> 的 <code>dependencies</code> 區塊補上這三行：
+</div>
 
 ```groovy
 dependencies {
-    // [資料庫存取] 提供 JPA 支援與 Hibernate 實作
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    // ... Initializr 已產生的依賴照舊保留
 
-    // [Web 核心] 提供 REST API 開發與 MVC 架構支援
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-
-    // [資料驗證] 提供 @NotBlank, @Size 等 Bean Validation 註解支援
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-
-    // [安全機制] 提供 Spring Security 權限控管與加密支援
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-
-    // [JWT 介面] 定義 JSON Web Token 的 API 規範
     implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
-
-    // [開發利器] 使用註解自動產生 Getter/Setter (編譯時期)
-    compileOnly 'org.projectlombok:lombok'
-}
-```
-
-</div>
-
----
-layout: default
----
-
-# build.gradle — 相依套件 (2)
-
-<div v-pre>
-
-```groovy
-dependencies {
-    // [熱部署] 程式修改後自動重啟伺服器，提升開發效率
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
-
-    // [MySQL 驅動] 程式執行時連結 MySQL 資料庫的驅動程式
-    runtimeOnly 'com.mysql:mysql-connector-j'
-
-    // [JWT 實作] 執行時期所需的 JWT 加密與解析邏輯
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
-
-    // [Lombok 處理器] 讓編譯器能識別 Lombok 註解並產生代碼
-    annotationProcessor 'org.projectlombok:lombok'
-
-    // [單元測試] 提供測試框架與 Security 測試支援
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.security:spring-security-test'
 }
-
-tasks.named('test') { useJUnitPlatform() }
 ```
 
-</div>
+- 補完存檔後記得對專案按右鍵 → **Gradle** → **Refresh Gradle Project**，才會抓到新依賴。
 
 ---
 layout: default
@@ -299,12 +227,7 @@ layout: default
 
 # application.properties
 
-<div v-pre>
-
 ```properties
-# Server Port
-server.port=8080
-
 # Database Configuration (MySQL)
 spring.datasource.url=jdbc:mysql://localhost:3306/dynamic_survey?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
 spring.datasource.username=root
@@ -318,15 +241,16 @@ spring.jpa.properties.hibernate.format_sql=true
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
 
 # Jackson Date Formatting (日期序列化為 yyyy-MM-dd 而非時間戳)
-spring.jackson.serialization.write-dates-as-timestamps=false
+spring.jackson.datatype.datetime.write-dates-as-timestamps=false
 spring.jackson.date-format=yyyy-MM-dd
 
 # JWT Configuration (正式環境密鑰應妥善保管)
-jwt.secret=vW9mK2v6yB?E(G+KbPeShVmYq3t6w9z$C&E)H@McQfTjWnZr4u7x!A%D*G-KaPdS
+jwt.secret=vAK3M9YSw2q1eRE1oJs0JAcUswCqDOBD4l19sdOWoX+qlVzBEfNyUI/A+EogMuaQlAIzzBbrkMWLl0hy+DT96A==
 jwt.expiration=86400000
 ```
 
-</div>
+- `jwt.secret` 必須是 **Base64 編碼**過的隨機亂數（見第 45 章），開發期可用 `openssl rand -base64 64` 產生；正式環境不要寫在 properties 裡，改用環境變數覆蓋。
+- ⚠️ **HS512 演算法要求密鑰長度 ≥ 512 bits（64 bytes）**：`openssl rand -base64 32` 只產生 32 bytes（256 bits），解碼後不夠長會拋 `WeakKeyException` / `Unable to compute HS512 signature`，務必用 `-base64 64`。
 
 ---
 layout: default
@@ -336,10 +260,8 @@ layout: default
 
 ### `DynamicSurveyApplication.java`
 
-<div v-pre>
-
 ```java
-package com.example.dynamicsurvey;
+package com.example.dynamic_survey;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -351,8 +273,6 @@ public class DynamicSurveyApplication {
     }
 }
 ```
-
-</div>
 
 - `@SpringBootApplication` 會自動掃描同套件（含子套件）下的所有元件。
 
@@ -371,10 +291,8 @@ layout: default
 
 ### `vo/RspCode.java` — 列舉常數
 
-<div v-pre>
-
 ```java
-package com.example.dynamicsurvey.vo;
+package com.example.dynamic_survey.vo;
 
 import lombok.Getter;
 
@@ -395,8 +313,6 @@ public enum RspCode {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -404,8 +320,6 @@ layout: default
 # 狀態碼列舉 (2/2)
 
 ### `vo/RspCode.java` — 欄位與建構子
-
-<div v-pre>
 
 ```java
 public enum RspCode {
@@ -421,42 +335,26 @@ public enum RspCode {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # 統一回應物件 (1/2)
 
-### `vo/AppResponse.java` — 欄位與建構子
-
-<div v-pre>
+### `vo/AppResponse.java` — record 欄位
 
 ```java
-package com.example.dynamicsurvey.vo;
-import lombok.Data;
+package com.example.dynamic_survey.vo;
 
 /** 回傳 JSON 結構一致：{ code, message, data } */
-@Data
-public class AppResponse<T> {
-    private int code;
-    private String message;
-    private T data;
-
-    public AppResponse(RspCode rspCode) {
-        this.code = rspCode.getCode();
-        this.message = rspCode.getMessage();
-    }
-    public AppResponse(RspCode rspCode, T data) {
-        this(rspCode);
-        this.data = data;
-    }
+public record AppResponse<T>(int code, String message, T data) {
+    // record 自動產生建構子與 code() / message() / data() 存取方法
     // ... 見下一頁
 }
 ```
 
-</div>
+- record 三個欄位都是唯讀（immutable），不再需要 `@Data` 或 setter。
+- 取值方式從 `getCode()` 變成 `code()`（record 慣例，無 `get` 前綴）。
 
 ---
 layout: default
@@ -466,29 +364,23 @@ layout: default
 
 ### `vo/AppResponse.java` — 靜態工廠方法
 
-<div v-pre>
-
 ```java
-public class AppResponse<T> {
-    // ... 接上一頁
+public record AppResponse<T>(int code, String message, T data) {
 
     public static <T> AppResponse<T> success(T data) {
-        return new AppResponse<>(RspCode.SUCCESS, data);
+        return new AppResponse<>(RspCode.SUCCESS.getCode(), RspCode.SUCCESS.getMessage(), data);
     }
 
     public static <T> AppResponse<T> error(RspCode rspCode) {
-        return new AppResponse<>(rspCode);
+        return new AppResponse<>(rspCode.getCode(), rspCode.getMessage(), null);
     }
 
     public static <T> AppResponse<T> error(RspCode rspCode, String customMessage) {
-        AppResponse<T> response = new AppResponse<>(rspCode);
-        response.setMessage(customMessage); // 覆蓋預設訊息
-        return response;
+        // record 沒有 setter，直接用自訂訊息建立新物件
+        return new AppResponse<>(rspCode.getCode(), customMessage, null);
     }
 }
 ```
-
-</div>
 
 ---
 layout: section
@@ -504,8 +396,6 @@ layout: default
 # Entity — Survey (問卷) (1/2)
 
 ### `entity/Survey.java` — 欄位
-
-<div v-pre>
 
 ```java
 @Entity
@@ -530,8 +420,6 @@ public class Survey {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -539,8 +427,6 @@ layout: default
 # Entity — Survey (問卷) (2/2)
 
 ### `entity/Survey.java` — 一對多關聯
-
-<div v-pre>
 
 ```java
 public class Survey {
@@ -553,8 +439,6 @@ public class Survey {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -562,8 +446,6 @@ layout: default
 # Entity — Question (題目) (1/2)
 
 ### `entity/Question.java` — 欄位與多對一
-
-<div v-pre>
 
 ```java
 @Entity
@@ -587,8 +469,6 @@ public class Question {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -596,8 +476,6 @@ layout: default
 # Entity — Question (題目) (2/2)
 
 ### `entity/Question.java` — 巢狀一對多
-
-<div v-pre>
 
 ```java
 public class Question {
@@ -610,8 +488,6 @@ public class Question {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -619,8 +495,6 @@ layout: default
 # Entity — Option (選項)
 
 ### `entity/Option.java`
-
-<div v-pre>
 
 ```java
 @Entity
@@ -641,8 +515,6 @@ public class Option {
 }
 ```
 
-</div>
-
 別忘了類別上方的 import：`import jakarta.persistence.*; import lombok.Data;`
 
 ---
@@ -652,8 +524,6 @@ layout: default
 # Entity — SurveyResponse (作答紀錄) (1/2)
 
 ### `entity/SurveyResponse.java` — 問卷關聯與作答者資訊
-
-<div v-pre>
 
 ```java
 @Entity
@@ -678,8 +548,6 @@ public class SurveyResponse {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -687,8 +555,6 @@ layout: default
 # Entity — SurveyResponse (作答紀錄) (2/2)
 
 ### `entity/SurveyResponse.java` — 會員關聯與作答明細
-
-<div v-pre>
 
 ```java
 public class SurveyResponse {
@@ -704,8 +570,6 @@ public class SurveyResponse {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -713,8 +577,6 @@ layout: default
 # Entity — ResponseAnswer (作答明細) (1/2)
 
 ### `entity/ResponseAnswer.java` — 多對一關聯
-
-<div v-pre>
 
 ```java
 @Entity
@@ -736,8 +598,6 @@ public class ResponseAnswer {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -745,8 +605,6 @@ layout: default
 # Entity — ResponseAnswer (作答明細) (2/2)
 
 ### `entity/ResponseAnswer.java` — 多對多選項與簡答
-
-<div v-pre>
 
 ```java
 public class ResponseAnswer {
@@ -764,8 +622,6 @@ public class ResponseAnswer {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -773,8 +629,6 @@ layout: default
 # Entity — User (會員) (1/2)
 
 ### `entity/User.java` — 類別註解與認證欄位
-
-<div v-pre>
 
 ```java
 @Entity
@@ -796,8 +650,6 @@ public class User {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -805,8 +657,6 @@ layout: default
 # Entity — User (會員) (2/2)
 
 ### `entity/User.java` — 個資與角色
-
-<div v-pre>
 
 ```java
 public class User {
@@ -821,8 +671,6 @@ public class User {
     private String role; // "USER" or "ADMIN"
 }
 ```
-
-</div>
 
 ---
 layout: section
@@ -839,12 +687,10 @@ layout: default
 
 ### `repository/UserRepository.java`
 
-<div v-pre>
-
 ```java
-package com.example.dynamicsurvey.repository;
+package com.example.dynamic_survey.repository;
 
-import com.example.dynamicsurvey.entity.User;
+import com.example.dynamic_survey.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
@@ -853,8 +699,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
 }
 ```
-
-</div>
 
 - 繼承 `JpaRepository` 即免費取得 CRUD。
 - 依命名規則 `findByEmail` / `existsByEmail`，Spring Data JPA 會自動產生查詢。
@@ -866,8 +710,6 @@ layout: default
 # Repository — SurveyRepository
 
 ### `repository/SurveyRepository.java`
-
-<div v-pre>
 
 ```java
 public interface SurveyRepository extends JpaRepository<Survey, Long> {
@@ -888,8 +730,6 @@ public interface SurveyRepository extends JpaRepository<Survey, Long> {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -897,8 +737,6 @@ layout: default
 # Repository — SurveyResponseRepository
 
 ### `repository/SurveyResponseRepository.java`
-
-<div v-pre>
 
 ```java
 public interface SurveyResponseRepository extends JpaRepository<SurveyResponse, Long> {
@@ -917,8 +755,6 @@ public interface SurveyResponseRepository extends JpaRepository<SurveyResponse, 
 }
 ```
 
-</div>
-
 ---
 layout: section
 class: flex flex-col justify-center items-center text-center
@@ -930,12 +766,11 @@ class: flex flex-col justify-center items-center text-center
 layout: default
 ---
 
-# DTO — 問卷結構 (Option / Question)
+# DTO — 問卷結構 (OptionDTO)
 
-<div v-pre>
+### `dto/OptionDTO.java`
 
 ```java
-// OptionDTO.java
 @Data
 public class OptionDTO {
     private Long id;
@@ -943,8 +778,19 @@ public class OptionDTO {
     private String optionText;
     private int orderIndex;
 }
+```
 
-// QuestionDTO.java
+- 不能改成 record：後續 `SurveyService` 會透過 setter 設定裡面的值，而 record 只有 getter、沒有 setter。
+
+---
+layout: default
+---
+
+# DTO — 問卷結構 (QuestionDTO)
+
+### `dto/QuestionDTO.java`
+
+```java
 @Data
 public class QuestionDTO {
     private Long id;
@@ -955,11 +801,12 @@ public class QuestionDTO {
     private String type;            // SINGLE / MULTI / TEXT
     private boolean required;
     private int orderIndex;
+    @Valid
     private List<OptionDTO> options;
 }
 ```
 
-</div>
+- 不能改成 record：後續 `SurveyService` 會透過 setter 設定裡面的值，而 record 只有 getter、沒有 setter。
 
 ---
 layout: default
@@ -969,26 +816,19 @@ layout: default
 
 ### `dto/SurveyDTO.java`
 
-<div v-pre>
-
 ```java
 @Data
 public class SurveyDTO {
     private Long id;
-
     @NotBlank(message = "問卷標題不可為空")
     @Size(max = 50, message = "標題長度不可超過 50 字")
     private String title;
-
     @Size(max = 300, message = "說明長度不可超過 300 字")
     private String description;
-
     @NotNull(message = "開始日期不可為空") private LocalDate startDate;
     @NotNull(message = "結束日期不可為空") private LocalDate endDate;
     @NotBlank(message = "狀態不可為空")     private String status;
-
     private boolean hasResponses; // 是否已有人作答 (前端判斷可否刪除)
-
     @Valid
     @NotNull(message = "題目列表不可為空")
     @Size(min = 1, message = "至少需包含一個題目")
@@ -996,51 +836,79 @@ public class SurveyDTO {
 }
 ```
 
-</div>
-
-`@Valid` 會讓驗證「往下傳遞」到每個 `QuestionDTO` 與 `OptionDTO`。
+- 不能改成 record：後續 `SurveyService` 會透過 setter 設定裡面的值，而 record 只有 getter、沒有 setter。
 
 ---
 layout: default
 ---
 
-# DTO — 作答 (Answer / Response)
+# @Valid 巢狀驗證的運作方式
 
-<div v-pre>
+驗證的起點只有一個：Controller 那行 `@Valid @RequestBody SurveyDTO dto`。
 
-```java
-// AnswerDTO.java — 單題作答
-@Data
-public class AnswerDTO {
-    private Long questionId;
-    private List<Long> optionIds; // 單/多選的選項 ID
-    private String answerText;     // 簡答內容
-}
-
-// ResponseDTO.java — 整份問卷作答
-@Data
-public class ResponseDTO {
-    private Long surveyId;
-    @NotBlank(message = "姓名不可為空") private String name;
-    @NotBlank(message = "手機不可為空") private String phone;
-    private String email;                       // 選填 (但作為重複檢查依據)
-    @NotNull(message = "年齡不可為空") private Integer age;
-    private List<AnswerDTO> answers;
-}
+```text
+@Valid @RequestBody SurveyDTO dto   ← 驗證起點
+        │
+        │ SurveyDTO.questions 標了 @Valid
+        ▼
+    QuestionDTO（逐一驗證 list 裡每個物件）
+        │
+        │ QuestionDTO.options 標了 @Valid
+        ▼
+    OptionDTO（逐一驗證 list 裡每個物件）
 ```
 
-</div>
+- **沒 `@Valid`** → 驗證器把 `OptionDTO` 物件當黑盒子，只看外層有沒有 null／size 之類問題，內部的 `optionText` 是否為空完全不檢查。
+- **有 `@Valid`** → 驗證器對 list 裡每個 `OptionDTO` 執行完整驗證，`optionText` 上的 `@NotBlank` 才會生效。
 
 ---
 layout: default
 ---
 
-# DTO — 認證請求 (Login / Register)
+# DTO — 作答 (AnswerDTO)
 
-<div v-pre>
+### `dto/AnswerDTO.java`
 
 ```java
-// LoginRequest.java
+public record AnswerDTO(
+    Long questionId,
+    List<Long> optionIds,  // 單/多選的選項 ID
+    String answerText      // 簡答內容
+) {}
+```
+
+- record 只能讀取（`questionId()` / `answerText()` 等），這個 DTO 全程只被讀取（Service 讀值），從未被 setter 修改，天生適合改成 record。
+
+---
+layout: default
+---
+
+# DTO — 作答 (ResponseDTO)
+
+### `dto/ResponseDTO.java`
+
+```java
+public record ResponseDTO(
+    Long surveyId,
+    @NotBlank(message = "姓名不可為空") String name,
+    @NotBlank(message = "手機不可為空") String phone,
+    String email,                                 // 選填 (但作為重複檢查依據)
+    @NotNull(message = "年齡不可為空") Integer age,
+    List<AnswerDTO> answers
+) {}
+```
+
+- 這個 DTO 全程只被讀取（Session 暫存、Jackson 反序列化、Service 讀值），從未被 setter 修改，天生適合改成 record。
+
+---
+layout: default
+---
+
+# DTO — 認證請求 (LoginRequest)
+
+### `dto/LoginRequest.java`
+
+```java
 @Data
 public class LoginRequest {
     @NotBlank(message = "電子郵件不可為空")
@@ -1050,20 +918,30 @@ public class LoginRequest {
     @Size(min = 6, message = "密碼長度需至少 6 位")
     private String password;
 }
-
-// RegisterRequest.java
-@Data
-public class RegisterRequest {
-    @NotBlank(message = "姓名不可為空") private String name;
-    @NotBlank(message = "電子郵件不可為空")
-    @Email(message = "電子郵件格式不正確") private String email;
-    @NotBlank(message = "密碼不可為空")
-    @Size(min = 6, message = "密碼長度需至少 6 位") private String password;
-    private String phone;
-}
 ```
 
-</div>
+- 不能改成 record：`AuthService.registerUser` 內部用 `new LoginRequest()` + setter 建立，維持 `@Data` class。
+
+---
+layout: default
+---
+
+# DTO — 認證請求 (RegisterRequest)
+
+### `dto/RegisterRequest.java`
+
+```java
+public record RegisterRequest(
+    @NotBlank(message = "姓名不可為空") String name,
+    @NotBlank(message = "電子郵件不可為空")
+    @Email(message = "電子郵件格式不正確") String email,
+    @NotBlank(message = "密碼不可為空")
+    @Size(min = 6, message = "密碼長度需至少 6 位") String password,
+    String phone
+) {}
+```
+
+- `RegisterRequest` 全程只被讀取（`registerUser` 只呼叫 getter），從未被 setter 修改，天生適合改成 record。
 
 ---
 layout: section
@@ -1081,40 +959,55 @@ layout: default
 ```mermaid
 sequenceDiagram
     participant C as 前端
-    participant F as AuthTokenFilter
+    participant F as JwtAuthFilter
     participant U as UserDetailsService
     participant Ctrl as Controller
     C->>F: 請求 + Header: Bearer <JWT>
-    F->>F: JwtUtils.validateJwtToken()
+    F->>F: JwtUtil.validateJwtToken()
     F->>U: loadUserByUsername(email)
     U-->>F: UserDetailsImpl (含權限)
     F->>F: 寫入 SecurityContext
     F->>Ctrl: 放行請求
 ```
 
-- **JwtUtils**：簽發 / 解析 / 驗證 Token
-- **AuthTokenFilter**：每個請求攔截、驗證、登記身分
+- **JwtUtil**：簽發 / 解析 / 驗證 Token
+- **JwtAuthFilter**：每個請求攔截、驗證、登記身分
 - **UserDetailsImpl / UserDetailsServiceImpl**：把 `User` 轉成 Security 認得的格式
 
 ---
 layout: default
 ---
 
-# Security — JwtUtils (1) 簽發
+# Security — JwtUtil (1) 欄位與簽名金鑰
 
-### `security/JwtUtils.java`
-
-<div v-pre>
+### `security/JwtUtil.java`
 
 ```java
 @Component
-public class JwtUtils {
+public class JwtUtil {
     @Value("${jwt.secret}")     private String jwtSecret;
     @Value("${jwt.expiration}") private int jwtExpirationMs;
 
+    // jwt.secret 是 Base64 編碼過的亂數，要先解碼還原成位元組
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
+    // ... 見下一頁
+}
+```
+
+- 與第 45 章一致：`jwt.secret` 必須是 **Base64 編碼**過的隨機亂數，`getSigningKey()` 要先用 `Decoders.BASE64.decode()` 還原成位元組，再交給 `Keys.hmacShaKeyFor()`。
+
+---
+layout: default
+---
+
+# Security — JwtUtil (2) 簽發
+
+```java
+public class JwtUtil {
+    // ... 接上一頁
 
     // 登入成功後產生 Token（jjwt 0.12.x API）
     public String generateJwtToken(Authentication authentication) {
@@ -1129,42 +1022,36 @@ public class JwtUtils {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
-# Security — JwtUtils (2) 解析與驗證
-
-<div v-pre>
+# Security — JwtUtil (3) 解析與驗證
 
 ```java
-    // 從 Token 取出帳號 (Email)（jjwt 0.12.x API）
-    public String getUserNameFromJwtToken(String token) {
+    // 解析 Token，驗證簽名，取出 Payload 裡的所有 Claims
+    // 簽名不對或已過期時，parseSignedClaims() 會拋出 JwtException，交給呼叫端 (Filter) 處理
+    public Claims extractAllClaims(String token) {
         return Jwts.parser().verifyWith(getSigningKey()).build()
-                .parseSignedClaims(token).getPayload().getSubject();
+                .parseSignedClaims(token).getPayload();
     }
 
-    // 驗證 Token：格式、簽名、是否過期
-    public boolean validateJwtToken(String authToken) {
-        try {
-            Jwts.parser().verifyWith(getSigningKey()).build()
-                .parseSignedClaims(authToken);
-            return true;
-        } catch (SecurityException e)      { logger.error("無效的 JWT 簽名"); }
-        catch (MalformedJwtException e)    { logger.error("無效的 JWT 格式"); }
-        catch (ExpiredJwtException e)      { logger.error("JWT 已過期"); }
-        catch (UnsupportedJwtException e)  { logger.error("不支援的 JWT 類型"); }
-        catch (IllegalArgumentException e) { logger.error("JWT 內容為空"); }
-        return false;
+    // 從 Token 取出帳號 (Email)
+    public String getUserNameFromJwtToken(String token) {
+        return extractAllClaims(token).getSubject();
+    }
+
+    // 驗證 Token：帳號要對得上，且尚未過期，兩者都成立才算有效
+    public boolean validateJwtToken(String token, String email) {
+        String tokenEmail = getUserNameFromJwtToken(token);
+        boolean expired = extractAllClaims(token).getExpiration().before(new Date());
+        return tokenEmail.equals(email) && !expired;
     }
 }
 ```
 
-</div>
-
-需要的 import：`io.jsonwebtoken.*`、`io.jsonwebtoken.security.Keys`、`javax.crypto.SecretKey`、`org.slf4j.*` 等。寫法與第 45 章教的 jjwt 0.12.x API 一致（`subject()` / `verifyWith()` / `parseSignedClaims()`）。
+- 與第 45 章一致：`JwtUtil` 內部**不做 try-catch**，簽名不對或過期時 `parseSignedClaims()` 直接拋出 `JwtException`，交給 `JwtAuthFilter` 統一接住——這樣才能在 Filter 那層正確回 401，而不是被 `JwtUtil` 吞掉。
+- 需要的 import：`io.jsonwebtoken.*`、`io.jsonwebtoken.security.Keys`、`io.jsonwebtoken.io.Decoders`、`javax.crypto.SecretKey` 等。
 
 ---
 layout: default
@@ -1173,8 +1060,6 @@ layout: default
 # Security — UserDetailsImpl (1/2)
 
 ### `security/UserDetailsImpl.java` — 欄位與工廠方法
-
-<div v-pre>
 
 ```java
 @Data
@@ -1197,8 +1082,6 @@ public class UserDetailsImpl implements UserDetails {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -1206,8 +1089,6 @@ layout: default
 # Security — UserDetailsImpl (2/2)
 
 ### `security/UserDetailsImpl.java` — UserDetails 覆寫
-
-<div v-pre>
 
 ```java
 public class UserDetailsImpl implements UserDetails {
@@ -1221,8 +1102,6 @@ public class UserDetailsImpl implements UserDetails {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -1230,8 +1109,6 @@ layout: default
 # Security — UserDetailsServiceImpl
 
 ### `security/UserDetailsServiceImpl.java`
-
-<div v-pre>
 
 ```java
 @Service
@@ -1253,78 +1130,78 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 }
 ```
 
-</div>
-
 這是資料庫 (JPA) 與 Security 認證機制之間的橋樑。
 
 ---
 layout: default
 ---
 
-# Security — AuthTokenFilter (1) 攔截與驗證
+# Security — JwtAuthFilter (1) 抽取 Token
 
-### `security/AuthTokenFilter.java`
-
-<div v-pre>
+### `security/JwtAuthFilter.java`
 
 ```java
-public class AuthTokenFilter extends OncePerRequestFilter {
-    @Autowired private JwtUtils jwtUtils;
+public class JwtAuthFilter extends OncePerRequestFilter {
+    @Autowired private JwtUtil jwtUtil;
     @Autowired private UserDetailsServiceImpl userDetailsService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
             HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        try {
-            String jwt = parseJwt(request);                 // 1. 取出 JWT
-            if (jwt != null && jwtUtils.validateJwtToken(jwt)) {   // 2. 驗證
-                String username = jwtUtils.getUserNameFromJwtToken(jwt);
-                UserDetails userDetails =
-                    userDetailsService.loadUserByUsername(username); // 3. 載入
-                // ... 見下一頁
+        String jwt = parseJwt(request);        // 1. 取出 JWT
+        String username = null;
+
+        if (jwt != null) {
+            try {
+                username = jwtUtil.getUserNameFromJwtToken(jwt); // 2. 解析
+            } catch (JwtException e) {
+                // Token 過期、簽名不對、格式壞掉 → 當作「沒帶 Token」處理
+                username = null;   // 不要往外拋，否則會變成 500 而不是 401
             }
+        }
         // ... 見下一頁
 ```
 
-</div>
+- 跟第 45 章一致：`try-catch` 只包 `getUserNameFromJwtToken()` 這一行，接住 `JwtUtil` 拋出的 `JwtException`，並把 `username` 設回 `null`，交給後面的 Spring Security 授權機制回 401，而不是讓例外一路衝出去變成 500。
 
 ---
 layout: default
 ---
 
-# Security — AuthTokenFilter (2) 建立認證
-
-<div v-pre>
+# Security — JwtAuthFilter (2) 建立認證
 
 ```java
-            if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
-                // ... 接上一頁 (已載入 userDetails)
+        // username 存在，且目前 SecurityContext 還沒登入過，才需要處理
+        if (username != null &&
+                SecurityContextHolder.getContext().getAuthentication() == null) {
+
+            UserDetails userDetails =
+                userDetailsService.loadUserByUsername(username); // 3. 載入
+
+            // 再次驗證 Token 簽名與是否過期，確保沒被竄改
+            if (jwtUtil.validateJwtToken(jwt, username)) {
                 UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(
                     new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext()
-                    .setAuthentication(authentication);      // 4. 登記身分
+                    .setAuthentication(authentication);          // 4. 登記身分
             }
-        } catch (Exception e) {
-            logger.error("無法設定使用者認證: {}", e.getMessage());
         }
-        filterChain.doFilter(request, response);             // 放行
+        filterChain.doFilter(request, response);                 // 放行
     }
 }
 ```
 
-</div>
+- `SecurityContextHolder.getContext().getAuthentication() == null` 這層檢查避免重複設定；`validateJwtToken(jwt, username)` 二次確認 Token 沒被竄改、沒過期，才建立 `Authentication` 寫入 `SecurityContext`。
 
 ---
 layout: default
 ---
 
-# Security — AuthTokenFilter (3) 解析 Header
-
-<div v-pre>
+# Security — JwtAuthFilter (3) 解析 Header
 
 ```java
     // 解析 Header："Authorization: Bearer <token>"
@@ -1341,28 +1218,24 @@ layout: default
 }
 ```
 
-</div>
-
 `OncePerRequestFilter` 確保同一個請求只會被此過濾器處理一次。
 
 ---
 layout: default
 ---
 
-# Security — WebSecurityConfig (1) Beans
+# Security — SecurityConfig (1) Beans
 
-### `security/WebSecurityConfig.java`
-
-<div v-pre>
+### `security/SecurityConfig.java`
 
 ```java
 @Configuration
 @EnableWebSecurity
-public class WebSecurityConfig {
+public class SecurityConfig {
 
     @Bean
-    public AuthTokenFilter authenticationJwtTokenFilter() {
-        return new AuthTokenFilter();
+    public JwtAuthFilter authenticationJwtTokenFilter() {
+        return new JwtAuthFilter();
     }
 
     @Bean
@@ -1378,17 +1251,13 @@ public class WebSecurityConfig {
 }
 ```
 
-</div>
-
 `BCryptPasswordEncoder` 負責密碼加密；`AuthenticationManager` 是登入驗證的核心。
 
 ---
 layout: default
 ---
 
-# Security — WebSecurityConfig (2) 過濾鏈
-
-<div v-pre>
+# Security — SecurityConfig (2) 過濾鏈
 
 ```java
     @Bean
@@ -1407,17 +1276,13 @@ layout: default
     }
 ```
 
-</div>
-
 > 教學版為求簡單採 `permitAll()`；正式環境應改為 `requestMatchers("/api/admin/**").hasRole("ADMIN")` 等規則。
 
 ---
 layout: default
 ---
 
-# Security — WebSecurityConfig (3) CORS
-
-<div v-pre>
+# Security — SecurityConfig (3) CORS
 
 ```java
     @Bean
@@ -1438,8 +1303,6 @@ layout: default
 }
 ```
 
-</div>
-
 前端跑在 `localhost:4200`、後端在 `localhost:8080`，屬於跨域，必須設定 CORS。
 
 ---
@@ -1449,8 +1312,6 @@ layout: default
 # 全域例外處理 (1/2) — @Valid 驗證
 
 ### `config/GlobalExceptionHandler.java`
-
-<div v-pre>
 
 ```java
 @RestControllerAdvice
@@ -1473,8 +1334,6 @@ public class GlobalExceptionHandler {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -1482,8 +1341,6 @@ layout: default
 # 全域例外處理 (2/2) — 通用例外
 
 ### `config/GlobalExceptionHandler.java`
-
-<div v-pre>
 
 ```java
 public class GlobalExceptionHandler {
@@ -1496,8 +1353,6 @@ public class GlobalExceptionHandler {
     }
 }
 ```
-
-</div>
 
 ---
 layout: section
@@ -1514,25 +1369,21 @@ layout: default
 
 ### `service/AuthService.java`
 
-<div v-pre>
-
 ```java
 @Service
 public class AuthService {
     @Autowired AuthenticationManager authenticationManager;
     @Autowired UserRepository userRepository;
     @Autowired PasswordEncoder encoder;
-    @Autowired JwtUtils jwtUtils;
+    @Autowired JwtUtil jwtUtils;
 
     // ... 以下逐步實作 register / login / profile
 }
 ```
 
-</div>
-
 - `AuthenticationManager`：執行帳密驗證
 - `PasswordEncoder`：加密 / 比對密碼
-- `JwtUtils`：登入成功後簽發 Token
+- `JwtUtil`：登入成功後簽發 Token
 
 ---
 layout: default
@@ -1540,38 +1391,32 @@ layout: default
 
 # AuthService — 註冊
 
-<div v-pre>
-
 ```java
 public AppResponse<?> registerUser(RegisterRequest signUpRequest) {
-    if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+    if (userRepository.existsByEmail(signUpRequest.email())) {
         return AppResponse.error(RspCode.DUPLICATE_ERROR, "錯誤：此電子郵件已被使用！");
     }
     User user = new User();
-    user.setEmail(signUpRequest.getEmail());
-    user.setName(signUpRequest.getName());
-    user.setPassword(encoder.encode(signUpRequest.getPassword())); // BCrypt 加密
-    user.setPhone(signUpRequest.getPhone());
+    user.setEmail(signUpRequest.email());
+    user.setName(signUpRequest.name());
+    user.setPassword(encoder.encode(signUpRequest.password())); // BCrypt 加密
+    user.setPhone(signUpRequest.phone());
     user.setRole("ADMIN"); // 教學版：註冊即為管理員
     userRepository.save(user);
 
     // 註冊完直接幫使用者登入，回傳 Token
     LoginRequest loginReq = new LoginRequest();
-    loginReq.setEmail(signUpRequest.getEmail());
-    loginReq.setPassword(signUpRequest.getPassword());
+    loginReq.setEmail(signUpRequest.email());
+    loginReq.setPassword(signUpRequest.password());
     return authenticateUser(loginReq);
 }
 ```
-
-</div>
 
 ---
 layout: default
 ---
 
 # AuthService — 登入
-
-<div v-pre>
 
 ```java
 public AppResponse<?> authenticateUser(LoginRequest loginRequest) {
@@ -1591,17 +1436,13 @@ public AppResponse<?> authenticateUser(LoginRequest loginRequest) {
 }
 ```
 
-</div>
-
 驗證失敗會丟出例外，由 Controller 攔截後回傳 401。
 
 ---
 layout: default
 ---
 
-# AuthService — 個人資料
-
-<div v-pre>
+# AuthService — 個人資料 (1/2) 查詢
 
 ```java
 public AppResponse<?> getCurrentUser() {
@@ -1613,7 +1454,15 @@ public AppResponse<?> getCurrentUser() {
     if (user == null) return AppResponse.error(RspCode.NOT_FOUND);
     return AppResponse.success(userToMap(user));
 }
+```
 
+---
+layout: default
+---
+
+# AuthService — 個人資料 (2/2) 更新
+
+```java
 public AppResponse<?> updateProfile(Map<String, String> updates) {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
@@ -1628,15 +1477,11 @@ public AppResponse<?> updateProfile(Map<String, String> updates) {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # AuthService — userToMap 輔助方法
-
-<div v-pre>
 
 ```java
 private Map<String, Object> userToMap(User user) {
@@ -1650,8 +1495,6 @@ private Map<String, Object> userToMap(User user) {
 }
 ```
 
-</div>
-
 把 `User` 實體轉成不含密碼的 Map，安全地回傳給前端。
 
 ---
@@ -1661,8 +1504,6 @@ layout: default
 # AuthController
 
 ### `controller/AuthController.java`
-
-<div v-pre>
 
 ```java
 @RestController
@@ -1684,8 +1525,6 @@ public class AuthController {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -1693,8 +1532,6 @@ layout: default
 # UserController
 
 ### `controller/UserController.java`
-
-<div v-pre>
 
 ```java
 @RestController
@@ -1712,8 +1549,6 @@ public class UserController {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -1724,8 +1559,6 @@ layout: default
 - **URL**: `http://localhost:8080/api/auth/register`
 - **Body (JSON)**:
 
-<div v-pre>
-
 ```json
 {
     "name": "管理員",
@@ -1734,8 +1567,6 @@ layout: default
     "phone": "0912345678"
 }
 ```
-
-</div>
 
 - **預期結果**: `code: 200`, `data: { "token": "JWT 字串" }`
 - 後續所有需要登入的 API，請在 Header 加上 `Authorization: Bearer <token>`。
@@ -1750,16 +1581,12 @@ layout: default
 - **URL**: `http://localhost:8080/api/auth/login`
 - **Body (JSON)**:
 
-<div v-pre>
-
 ```json
 {
     "email": "admin@example.com",
     "password": "Password123"
 }
 ```
-
-</div>
 
 - **預期結果**: `code: 200`, `data: { "token": "JWT 字串" }`
 
@@ -1775,8 +1602,6 @@ layout: default
 ---
 
 # SurveyService — 注入與 Session Key
-
-<div v-pre>
 
 ```java
 @Service
@@ -1794,8 +1619,6 @@ public class SurveyService {
 }
 ```
 
-</div>
-
 `SurveyService` 同時負責**前台作答**與**後台管理**，是整個系統最核心的類別。
 
 ---
@@ -1803,8 +1626,6 @@ layout: default
 ---
 
 # SurveyService — Entity 轉 DTO
-
-<div v-pre>
 
 ```java
 private SurveyDTO convertToDTO(Survey s) {
@@ -1829,8 +1650,6 @@ private SurveyDTO convertToDTO(Survey s) {
 }
 ```
 
-</div>
-
 把巢狀的 Entity（Survey→Question→Option）攤平成可安全回傳的 DTO。
 
 ---
@@ -1838,8 +1657,6 @@ layout: default
 ---
 
 # SurveyService — 儲存問卷 (1/2) 設定問卷
-
-<div v-pre>
 
 ```java
 @Transactional
@@ -1857,15 +1674,11 @@ public AppResponse<SurveyDTO> saveSurvey(SurveyDTO dto) {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyService — 儲存問卷 (2/2) 重建題目與選項
-
-<div v-pre>
 
 ```java
     // ... 接上一頁 (survey 已設定，題目已清空)
@@ -1885,15 +1698,11 @@ layout: default
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyService — 後台列表
-
-<div v-pre>
 
 ```java
 // 後台列表 (含篩選，並標記是否已有作答)
@@ -1908,15 +1717,11 @@ public AppResponse<List<SurveyDTO>> getSurveysByAdmin(
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyService — 詳情 / 刪除
-
-<div v-pre>
 
 ```java
 // 單一問卷詳情
@@ -1935,15 +1740,11 @@ public AppResponse<?> deleteSurvey(Long id) {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyService — 後台編輯 Session 流程
-
-<div v-pre>
 
 ```java
 // 1. 暫存編輯中的問卷
@@ -1967,20 +1768,16 @@ public AppResponse<SurveyDTO> commitAdminSurveyFromSession(
     if (dto == null) return AppResponse.error(RspCode.NOT_FOUND);
     dto.setStatus(isPublish ? "PUBLISHED" : "DRAFT");
     AppResponse<SurveyDTO> response = saveSurvey(dto);
-    if (response.getCode() == 200) session.removeAttribute(ADMIN_EDIT_SESSION_KEY);
+    if (response.code() == 200) session.removeAttribute(ADMIN_EDIT_SESSION_KEY);
     return response;
 }
 ```
-
-</div>
 
 ---
 layout: default
 ---
 
 # SurveyService — 填寫名單
-
-<div v-pre>
 
 ```java
 // 某問卷的所有填寫者清單
@@ -1995,15 +1792,11 @@ public AppResponse<?> getSurveyResponses(Long id) {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyService — 作答明細
-
-<div v-pre>
 
 ```java
 // 單一作答者的詳細內容
@@ -2025,15 +1818,11 @@ public AppResponse<?> getResponseDetail(Long responseId) {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyService — 統計 (1) 初始化
-
-<div v-pre>
 
 ```java
 public AppResponse<?> getSurveyStats(Long id) {
@@ -2056,15 +1845,11 @@ public AppResponse<?> getSurveyStats(Long id) {
         // ... 依題型分別統計 (見下頁)
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyService — 統計 (2) 簡答與選項初始化
-
-<div v-pre>
 
 ```java
         if (q.getType().equals("TEXT")) {
@@ -2086,15 +1871,11 @@ layout: default
             // ... 累加計數見下一頁
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyService — 統計 (3) 選項計數累加
-
-<div v-pre>
 
 ```java
             // ... 接上一頁 (optMap 已初始化為 0)
@@ -2108,15 +1889,11 @@ layout: default
                 });
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyService — 統計 (4) 百分比與收尾
-
-<div v-pre>
 
 ```java
             // 計算百分比 (四捨五入到小數第一位)
@@ -2135,8 +1912,6 @@ layout: default
 }
 ```
 
-</div>
-
 統計結果回傳給前端後，會用 Chart.js 畫成圓餅圖。
 
 ---
@@ -2146,8 +1921,6 @@ layout: default
 # AdminSurveyController (1) — 查詢
 
 ### `controller/AdminSurveyController.java`
-
-<div v-pre>
 
 ```java
 @RestController
@@ -2173,15 +1946,11 @@ public class AdminSurveyController {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # AdminSurveyController (2) — 新增 / 更新 / 刪除
-
-<div v-pre>
 
 ```java
 public class AdminSurveyController {
@@ -2206,15 +1975,11 @@ public class AdminSurveyController {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # AdminSurveyController (3) — Session 編輯流程
-
-<div v-pre>
 
 ```java
     // === Session 編輯流程 ===
@@ -2236,15 +2001,11 @@ layout: default
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # AdminSurveyController (4) — 統計與作答明細
-
-<div v-pre>
 
 ```java
 public class AdminSurveyController {
@@ -2266,8 +2027,6 @@ public class AdminSurveyController {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -2275,8 +2034,6 @@ layout: default
 # Postman 測試 — 新增問卷
 
 - **Method**: `POST`  **URL**: `http://localhost:8080/api/admin/surveys`
-
-<div v-pre>
 
 ```json
 {
@@ -2299,8 +2056,6 @@ layout: default
     ]
 }
 ```
-
-</div>
 
 - **預期結果**: `code: 200`, `data: 問卷內容 (含產生的 id)`
 
@@ -2354,8 +2109,6 @@ layout: default
 
 # SurveyService — 前台查詢
 
-<div v-pre>
-
 ```java
 // 取得進行中的問卷 (首頁用)
 public AppResponse<List<SurveyDTO>> getActiveSurveys() {
@@ -2367,7 +2120,7 @@ public AppResponse<List<SurveyDTO>> getActiveSurveys() {
 // 暫存作答至 Session (含重複作答檢查)
 public AppResponse<?> saveToSession(ResponseDTO submission, HttpSession session) {
     if (responseRepository.existsBySurveyIdAndEmail(
-            submission.getSurveyId(), submission.getEmail())) {
+            submission.surveyId(), submission.email())) {
         return AppResponse.error(RspCode.DUPLICATE_ERROR, "此 Email 已填寫過本問卷。");
     }
     session.setAttribute(SURVEY_SESSION_KEY, submission);
@@ -2382,15 +2135,11 @@ public AppResponse<ResponseDTO> getFromSession(HttpSession session) {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyService — 確認提交
-
-<div v-pre>
 
 ```java
 @Transactional
@@ -2399,14 +2148,12 @@ public AppResponse<?> commitFromSession(HttpSession session) {
         (ResponseDTO) session.getAttribute(SURVEY_SESSION_KEY);
     if (submission == null) return AppResponse.error(RspCode.NOT_FOUND);
 
-    AppResponse<?> response = submitResponse(submission.getSurveyId(), submission);
-    if (response.getCode() == 200)
+    AppResponse<?> response = submitResponse(submission.surveyId(), submission);
+    if (response.code() == 200)
         session.removeAttribute(SURVEY_SESSION_KEY); // 成功後清空暫存
     return response;
 }
 ```
-
-</div>
 
 `commitFromSession` 把暫存資料交給 `submitResponse` 真正寫入資料庫。
 
@@ -2415,8 +2162,6 @@ layout: default
 ---
 
 # SurveyService — 寫入作答 (1)
-
-<div v-pre>
 
 ```java
 @Transactional
@@ -2427,8 +2172,8 @@ public AppResponse<?> submitResponse(Long surveyId, ResponseDTO submission) {
     SurveyResponse response = new SurveyResponse();
     response.setSurvey(survey);
     response.setSubmittedAt(LocalDateTime.now());
-    response.setName(submission.getName());   response.setPhone(submission.getPhone());
-    response.setEmail(submission.getEmail()); response.setAge(submission.getAge());
+    response.setName(submission.name());   response.setPhone(submission.phone());
+    response.setEmail(submission.email()); response.setAge(submission.age());
 
     // 若為登入會員，連結帳號 (匿名作答則略過)
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -2440,31 +2185,27 @@ public AppResponse<?> submitResponse(Long surveyId, ResponseDTO submission) {
     // ... 處理每一題作答 (見下頁)
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyService — 寫入作答 (2)
 
-<div v-pre>
-
 ```java
-    for (AnswerDTO aDto : submission.getAnswers()) {
+    for (AnswerDTO aDto : submission.answers()) {
         ResponseAnswer answer = new ResponseAnswer();
         answer.setSurveyResponse(response);
         Question question = survey.getQuestions().stream()
-            .filter(q -> q.getId().equals(aDto.getQuestionId()))
+            .filter(q -> q.getId().equals(aDto.questionId()))
             .findFirst().orElse(null);
         if (question == null) continue;
         answer.setQuestion(question);
 
         if (question.getType().equals("TEXT")) {
-            answer.setAnswerText(aDto.getAnswerText());          // 簡答
+            answer.setAnswerText(aDto.answerText());          // 簡答
         } else {
             List<Option> selected = question.getOptions().stream()
-                .filter(o -> aDto.getOptionIds().contains(o.getId()))
+                .filter(o -> aDto.optionIds().contains(o.getId()))
                 .collect(Collectors.toList());
             answer.setSelectedOptions(selected);                 // 選取的選項
             answer.setAnswerText(selected.stream()               // 同時存文字 (方便顯示)
@@ -2477,15 +2218,11 @@ layout: default
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyService — 個人歷史紀錄
-
-<div v-pre>
 
 ```java
 public AppResponse<?> getUserHistory() {
@@ -2509,8 +2246,6 @@ public AppResponse<?> getUserHistory() {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -2518,8 +2253,6 @@ layout: default
 # SurveyController — 查詢端點
 
 ### `controller/SurveyController.java`
-
-<div v-pre>
 
 ```java
 @RestController
@@ -2539,15 +2272,11 @@ public class SurveyController {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyController — 三步驟作答流程
-
-<div v-pre>
 
 ```java
 public class SurveyController {
@@ -2570,15 +2299,11 @@ public class SurveyController {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyController — 直接提交與個人紀錄
-
-<div v-pre>
 
 ```java
 public class SurveyController {
@@ -2593,8 +2318,6 @@ public class SurveyController {
     public AppResponse<?> getUserHistory() { return surveyService.getUserHistory(); }
 }
 ```
-
-</div>
 
 ---
 layout: default
@@ -2621,8 +2344,6 @@ layout: default
 
 提交 Body 範例（`session-store`）：
 
-<div v-pre>
-
 ```json
 {
   "surveyId": 1, "name": "測試人員", "phone": "0912345678",
@@ -2634,8 +2355,6 @@ layout: default
   ]
 }
 ```
-
-</div>
 
 ---
 layout: section
@@ -2649,8 +2368,6 @@ layout: default
 ---
 
 # 建立 Angular 專案
-
-<div v-pre>
 
 ```bash
 # 安裝 Angular CLI (若尚未安裝)
@@ -2672,8 +2389,6 @@ npm install -D tailwindcss postcss autoprefixer
 npx tailwindcss init
 ```
 
-</div>
-
 啟動：`ng serve` → 開啟 `http://localhost:4200`。
 
 ---
@@ -2683,8 +2398,6 @@ layout: default
 # Tailwind 設定
 
 ### `tailwind.config.js`
-
-<div v-pre>
 
 ```javascript
 /** @type {import('tailwindcss').Config} */
@@ -2702,8 +2415,6 @@ module.exports = {
 }
 ```
 
-</div>
-
 `content` 告訴 Tailwind 要掃描哪些檔案，產生對應的 utility class。
 
 ---
@@ -2713,8 +2424,6 @@ layout: default
 # 全域樣式 — 匯入與變數
 
 ### `src/styles.scss`
-
-<div v-pre>
 
 ```scss
 @tailwind base;
@@ -2731,15 +2440,11 @@ layout: default
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # 全域樣式 — 基底與表單修正
-
-<div v-pre>
 
 ```scss
 html, body {
@@ -2756,8 +2461,6 @@ html, body {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -2765,8 +2468,6 @@ layout: default
 # index.html
 
 ### `src/index.html`
-
-<div v-pre>
 
 ```html
 <!doctype html>
@@ -2787,8 +2488,6 @@ layout: default
 </html>
 ```
 
-</div>
-
 ---
 layout: section
 class: flex flex-col justify-center items-center text-center
@@ -2802,8 +2501,6 @@ layout: default
 
 # main.ts — 啟動點
 
-<div v-pre>
-
 ```typescript
 // main.ts — 啟動點
 import { bootstrapApplication } from '@angular/platform-browser';
@@ -2814,15 +2511,11 @@ bootstrapApplication(AppComponent, appConfig)
   .catch((err) => console.error(err));
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # app.component — 根元件
-
-<div v-pre>
 
 ```typescript
 // app.component.ts — 根元件
@@ -2844,15 +2537,11 @@ export class AppComponent { title = 'frontend'; }
 </main>
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # app.config.ts — 全域 Providers
-
-<div v-pre>
 
 ```typescript
 export const appConfig: ApplicationConfig = {
@@ -2874,8 +2563,6 @@ export const appConfig: ApplicationConfig = {
 };
 ```
 
-</div>
-
 Standalone 模式下，全域服務都在此註冊（取代舊版的 `AppModule`）。
 
 ---
@@ -2883,8 +2570,6 @@ layout: default
 ---
 
 # app.routes.ts — 路由
-
-<div v-pre>
 
 ```typescript
 export const routes: Routes = [
@@ -2903,8 +2588,6 @@ export const routes: Routes = [
 ];
 ```
 
-</div>
-
 `loadComponent` 採用 **lazy loading**，每個頁面才需要時才載入。
 
 ---
@@ -2919,8 +2602,6 @@ layout: default
 ---
 
 # Models — 資料結構
-
-<div v-pre>
 
 ```typescript
 // models/auth.model.ts
@@ -2947,8 +2628,6 @@ export interface Survey {
 }
 ```
 
-</div>
-
 TypeScript 的 `interface` 必須與後端 DTO 結構一一對應。
 
 ---
@@ -2958,8 +2637,6 @@ layout: default
 # Models — 統計結構
 
 ### `models/survey-stats.model.ts`
-
-<div v-pre>
 
 ```typescript
 export interface OptionStats {
@@ -2984,8 +2661,6 @@ export interface SurveyStats {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -2993,8 +2668,6 @@ layout: default
 # Interceptor — 自動帶上 JWT
 
 ### `interceptors/auth.interceptor.ts`
-
-<div v-pre>
 
 ```typescript
 import { HttpInterceptorFn } from '@angular/common/http';
@@ -3015,8 +2688,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 };
 ```
 
-</div>
-
 每個 HTTP 請求都會經過此攔截器，自動附加 JWT，前端各處就不必重複處理。
 
 ---
@@ -3033,8 +2704,6 @@ layout: default
 # AuthService (1) — 欄位與建構子
 
 ### `services/auth.service.ts`
-
-<div v-pre>
 
 ```typescript
 @Injectable({ providedIn: 'root' })
@@ -3057,15 +2726,11 @@ export class AuthService {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # AuthService (2) — 登入 / 註冊
-
-<div v-pre>
 
 ```typescript
 export class AuthService {
@@ -3086,15 +2751,11 @@ export class AuthService {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # AuthService (3) — 登出與授權處理
-
-<div v-pre>
 
 ```typescript
 export class AuthService {
@@ -3119,15 +2780,11 @@ export class AuthService {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # AuthService (4) — 取得個人資料
-
-<div v-pre>
 
 ```typescript
 export class AuthService {
@@ -3146,8 +2803,6 @@ export class AuthService {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -3155,8 +2810,6 @@ layout: default
 # SurveyService (1) — 查詢
 
 ### `services/survey.service.ts`
-
-<div v-pre>
 
 ```typescript
 @Injectable({ providedIn: 'root' })
@@ -3182,15 +2835,11 @@ export class SurveyService {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyService (2) — 統計與紀錄
-
-<div v-pre>
 
 ```typescript
 export class SurveyService {
@@ -3205,15 +2854,11 @@ export class SurveyService {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyService (3) — Session
-
-<div v-pre>
 
 ```typescript
 export class SurveyService {
@@ -3238,15 +2883,11 @@ export class SurveyService {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # SurveyService (4) — 基本 CRUD
-
-<div v-pre>
 
 ```typescript
 export class SurveyService {
@@ -3263,8 +2904,6 @@ export class SurveyService {
   }
 ```
 
-</div>
-
 ---
 layout: section
 class: flex flex-col justify-center items-center text-center
@@ -3278,8 +2917,6 @@ layout: default
 
 # Navbar — Component
 
-<div v-pre>
-
 ```typescript
 @Component({
   selector: 'app-navbar', standalone: true,
@@ -3292,8 +2929,6 @@ export class NavbarComponent {
   logout() { this.authService.logout(); }
 }
 ```
-
-</div>
 
 ---
 layout: default
@@ -3333,8 +2968,6 @@ layout: default
 
 ### `pages/login/login.component.ts`
 
-<div v-pre>
-
 ```typescript
 @Component({
   selector: 'app-login', standalone: true,
@@ -3355,15 +2988,11 @@ export class LoginComponent {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # 登入頁 — 提交邏輯
-
-<div v-pre>
 
 ```typescript
 export class LoginComponent {
@@ -3379,8 +3008,6 @@ export class LoginComponent {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -3388,8 +3015,6 @@ layout: default
 # 登入頁 — Template (卡片與 Email)
 
 ### `pages/login/login.component.html`
-
-<div v-pre>
 
 ```html
 <div class="flex justify-center items-center min-h-[80vh]">
@@ -3412,15 +3037,11 @@ layout: default
 </div>
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # 登入頁 — Template (密碼與按鈕)
-
-<div v-pre>
 
 ```html
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
@@ -3442,8 +3063,6 @@ layout: default
 </div>
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -3451,8 +3070,6 @@ layout: default
 # 註冊頁 — Component
 
 ### `pages/register/register.component.ts`
-
-<div v-pre>
 
 ```typescript
 export class RegisterComponent {
@@ -3471,15 +3088,11 @@ export class RegisterComponent {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # 註冊頁 — 提交邏輯
-
-<div v-pre>
 
 ```typescript
 export class RegisterComponent {
@@ -3498,8 +3111,6 @@ export class RegisterComponent {
 }
 ```
 
-</div>
-
 註冊成功後，導頁邏輯由 `AuthService.handleAuthSuccess` 統一處理。
 
 ---
@@ -3507,8 +3118,6 @@ layout: default
 ---
 
 # 註冊頁 — Template (姓名與 Email)
-
-<div v-pre>
 
 ```html
 <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
@@ -3527,15 +3136,11 @@ layout: default
 </form>
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # 註冊頁 — Template (密碼/電話與按鈕)
-
-<div v-pre>
 
 ```html
 <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
@@ -3555,8 +3160,6 @@ layout: default
 </form>
 ```
 
-</div>
-
 ---
 layout: section
 class: flex flex-col justify-center items-center text-center
@@ -3571,8 +3174,6 @@ layout: default
 # 首頁 — 進行中的問卷
 
 ### `pages/home/home.component.ts`
-
-<div v-pre>
 
 ```typescript
 @Component({
@@ -3592,8 +3193,6 @@ export class HomeComponent implements OnInit {
   }
 }
 ```
-
-</div>
 
 `ngOnInit` 是元件初始化時的生命週期掛鉤，常用來載入初始資料。
 
@@ -3633,8 +3232,6 @@ layout: default
 
 # 首頁 — Template (動作與空狀態)
 
-<div v-pre>
-
 ```html
 <!-- ... 接上一頁：mat-card 內動作按鈕 -->
 <mat-card-actions class="p-4 flex justify-end">
@@ -3651,8 +3248,6 @@ layout: default
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -3660,8 +3255,6 @@ layout: default
 # 填寫頁 — 狀態與表單建立
 
 ### `pages/survey-fill/survey-fill.component.ts` (1)
-
-<div v-pre>
 
 ```typescript
 export class SurveyFillComponent implements OnInit {
@@ -3679,8 +3272,6 @@ export class SurveyFillComponent implements OnInit {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -3688,8 +3279,6 @@ layout: default
 # 填寫頁 — 載入問卷
 
 ### `survey-fill.component.ts` (1a)
-
-<div v-pre>
 
 ```typescript
 export class SurveyFillComponent {
@@ -3709,8 +3298,6 @@ export class SurveyFillComponent {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -3718,8 +3305,6 @@ layout: default
 # 填寫頁 — 動態建立表單
 
 ### `survey-fill.component.ts` (1b)
-
-<div v-pre>
 
 ```typescript
 export class SurveyFillComponent {
@@ -3741,8 +3326,6 @@ export class SurveyFillComponent {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -3750,8 +3333,6 @@ layout: default
 # 填寫頁 — 多選題維護
 
 ### `survey-fill.component.ts` (2a)
-
-<div v-pre>
 
 ```typescript
 export class SurveyFillComponent {
@@ -3766,8 +3347,6 @@ export class SurveyFillComponent {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -3775,8 +3354,6 @@ layout: default
 # 填寫頁 — 送出 Session
 
 ### `survey-fill.component.ts` (2b)
-
-<div v-pre>
 
 ```typescript
 export class SurveyFillComponent {
@@ -3801,8 +3378,6 @@ export class SurveyFillComponent {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -3810,8 +3385,6 @@ layout: default
 # 填寫頁 — 確認提交
 
 ### `survey-fill.component.ts` (3a)
-
-<div v-pre>
 
 ```typescript
 export class SurveyFillComponent {
@@ -3833,8 +3406,6 @@ export class SurveyFillComponent {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -3842,8 +3413,6 @@ layout: default
 # 填寫頁 — 格式化 (基本欄位)
 
 ### `survey-fill.component.ts` (3b)
-
-<div v-pre>
 
 ```typescript
 export class SurveyFillComponent {
@@ -3860,8 +3429,6 @@ export class SurveyFillComponent {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -3869,8 +3436,6 @@ layout: default
 # 填寫頁 — 格式化 (題目作答)
 
 ### `survey-fill.component.ts` (3c)
-
-<div v-pre>
 
 ```typescript
   // 將各題作答轉為後端格式
@@ -3888,8 +3453,6 @@ layout: default
       });
   }
 ```
-
-</div>
 
 ---
 layout: default
@@ -4021,8 +3584,6 @@ layout: default
 
 # 我的紀錄 — Component
 
-<div v-pre>
-
 ```typescript
 export class UserHistoryComponent implements OnInit {
   private surveyService = inject(SurveyService);
@@ -4037,8 +3598,6 @@ export class UserHistoryComponent implements OnInit {
   }
 }
 ```
-
-</div>
 
 ---
 layout: default
@@ -4081,8 +3640,6 @@ layout: default
 
 ### `pages/admin/survey-list/survey-list.component.ts`
 
-<div v-pre>
-
 ```typescript
 export class SurveyListComponent implements OnInit {
   private surveyService = inject(SurveyService);
@@ -4105,15 +3662,11 @@ export class SurveyListComponent implements OnInit {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # 問卷列表 — 操作方法
-
-<div v-pre>
 
 ```typescript
 export class SurveyListComponent {
@@ -4139,8 +3692,6 @@ export class SurveyListComponent {
   }
 }
 ```
-
-</div>
 
 ---
 layout: default
@@ -4211,8 +3762,6 @@ layout: default
 
 ### `survey-editor.component.ts` (1)
 
-<div v-pre>
-
 ```typescript
 export class SurveyEditorComponent implements OnInit {
   private fb = inject(FormBuilder);
@@ -4234,8 +3783,6 @@ export class SurveyEditorComponent implements OnInit {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -4243,8 +3790,6 @@ layout: default
 # 問卷編輯器 — 建構表單
 
 ### `survey-editor.component.ts` (1b)
-
-<div v-pre>
 
 ```typescript
 export class SurveyEditorComponent {
@@ -4263,8 +3808,6 @@ export class SurveyEditorComponent {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -4272,8 +3815,6 @@ layout: default
 # 問卷編輯器 — 初始化與 getter
 
 ### `survey-editor.component.ts` (1c)
-
-<div v-pre>
 
 ```typescript
 export class SurveyEditorComponent {
@@ -4289,8 +3830,6 @@ export class SurveyEditorComponent {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -4298,8 +3837,6 @@ layout: default
 # 問卷編輯器 — 動態題目
 
 ### `survey-editor.component.ts` (2a)
-
-<div v-pre>
 
 ```typescript
 export class SurveyEditorComponent {
@@ -4321,8 +3858,6 @@ export class SurveyEditorComponent {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -4330,8 +3865,6 @@ layout: default
 # 問卷編輯器 — 動態選項
 
 ### `survey-editor.component.ts` (2b)
-
-<div v-pre>
 
 ```typescript
 export class SurveyEditorComponent {
@@ -4349,8 +3882,6 @@ export class SurveyEditorComponent {
   }
 ```
 
-</div>
-
 `FormArray` 讓「題目數」「選項數」可動態增減，是動態問卷的核心。
 
 ---
@@ -4360,8 +3891,6 @@ layout: default
 # 問卷編輯器 — 暫存至 Session
 
 ### `survey-editor.component.ts` (3a)
-
-<div v-pre>
 
 ```typescript
 export class SurveyEditorComponent {
@@ -4388,8 +3917,6 @@ export class SurveyEditorComponent {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -4397,8 +3924,6 @@ layout: default
 # 問卷編輯器 — 最終提交
 
 ### `survey-editor.component.ts` (3b)
-
-<div v-pre>
 
 ```typescript
 export class SurveyEditorComponent {
@@ -4415,8 +3940,6 @@ export class SurveyEditorComponent {
   }
 ```
 
-</div>
-
 ---
 layout: default
 ---
@@ -4424,8 +3947,6 @@ layout: default
 # 問卷編輯器 — 載入既有問卷 (編輯模式)
 
 ### `survey-editor.component.ts` (4)
-
-<div v-pre>
 
 ```typescript
   loadSurvey(id: number) {
@@ -4450,8 +3971,6 @@ layout: default
   }
 }
 ```
-
-</div>
 
 編輯模式時，把後端資料 `patchValue` 回填，並重建題目 / 選項 FormArray。
 
@@ -4492,8 +4011,6 @@ layout: default
 
 # 問卷編輯器 — Template：選項區
 
-<div v-pre>
-
 ```html
 <!-- 接上一頁：題目卡片內 (q.type 非 TEXT 時顯示) -->
       @if (q.get('type')?.value !== 'TEXT') {
@@ -4513,8 +4030,6 @@ layout: default
   <button pButton label="新增題目" (click)="addQuestion()" class="p-button-outlined"></button>
 </div>
 ```
-
-</div>
 
 ---
 layout: default
@@ -4562,8 +4077,6 @@ layout: default
 
 ### `pages/admin/survey-stats/survey-stats.component.ts`
 
-<div v-pre>
-
 ```typescript
 @Component({
   selector: 'app-survey-stats', standalone: true,
@@ -4587,15 +4100,11 @@ export class SurveyStatsComponent implements OnInit {
 }
 ```
 
-</div>
-
 ---
 layout: default
 ---
 
 # 統計頁 — 圖表資料
-
-<div v-pre>
 
 ```typescript
 export class SurveyStatsComponent {
@@ -4616,8 +4125,6 @@ export class SurveyStatsComponent {
   };
 }
 ```
-
-</div>
 
 ---
 layout: default
@@ -4711,8 +4218,6 @@ layout: default
 
 # 完整啟動流程
 
-<div v-pre>
-
 ```bash
 # 1. 啟動 MySQL，並建立資料庫 dynamic_survey
 
@@ -4723,8 +4228,6 @@ layout: default
 npm install                 # 第一次需安裝套件
 ng serve                    # → http://localhost:4200
 ```
-
-</div>
 
 操作順序建議：
 
@@ -4741,7 +4244,7 @@ layout: default
 
 | 症狀 | 可能原因 | 解法 |
 | --- | --- | --- |
-| 前端 CORS 錯誤 | 後端未允許來源 | 確認 `WebSecurityConfig` 的 `allowedOrigins` 含 `4200` |
+| 前端 CORS 錯誤 | 後端未允許來源 | 確認 `SecurityConfig` 的 `allowedOrigins` 含 `4200` |
 | 401 / 一直要登入 | Token 遺失或過期 | 檢查 `localStorage` 的 `token`、攔截器是否生效 |
 | 確認頁拿不到資料 | Session 未帶 Cookie | 攔截器需 `withCredentials: true` + 後端 `allowCredentials` |
 | 啟動即報資料表錯誤 | DB 未建立 | 先 `CREATE DATABASE dynamic_survey` |
