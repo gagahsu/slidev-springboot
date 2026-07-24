@@ -1372,16 +1372,12 @@ Eureka 上註冊，這是最快的排查起點。
 | Spring Cloud Config | Git 倉庫存設定，所有服務動態讀取 |
 | Resilience4j | `@CircuitBreaker` + fallback，防止雪崩效應 |
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>下一步：</b> 先把 Eureka + OpenFeign 練熟，再逐步加入 Gateway 和 Resilience4j。每個元件都值得單獨深入學習。
-</div>
-
 <!--
 我們一起回顧整章的故事線：從 Part 1 單體的痛點開始，
 到 Part 2 的四大挑戰，再到 Part 3 到 Part 8 一個一個工具對應解法，
 最後收斂成這張表。這是一條完整的故事線，不是七八個獨立主題硬拼起來。
 
-💡 「下一步」提示框的路徑值得再說一次：先熟 Eureka + OpenFeign，
+💡 下一步的建議可以口頭跟大家說：先熟 Eureka + OpenFeign，
 這是打通服務間溝通的最小組合，跑通這個核心、有了成就感，
 再逐步加入 Gateway 和 Resilience4j，比一開始就想六個全部到位，
 學習曲線會平緩很多。
