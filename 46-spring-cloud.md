@@ -310,8 +310,8 @@ class: flex flex-col justify-center items-center text-center
 ┌─────────────┐  ┌─────────────┐
 │ user-service│  │order-service│  ← 各業務服務（獨立專案）
 │  port 8081  │  │  port 8082  │     Eureka Client
-└─────────────┘  └──────┬──────┘     OpenFeign（order 呼叫 user）
-                        │ OpenFeign  Resilience4j
+└─────────────┘  └──────┬──────┘     OpenFeign
+                        │ Resilience4j
                         ▼
                  user-service
 
@@ -325,10 +325,19 @@ class: flex flex-col justify-center items-center text-center
 這張圖是全章的骨架，我們一起走一遍完整的請求路徑，之後每個 Part
 其實都是在放大這張圖裡的某一塊。
 
+這章從頭到尾會建立五個全新的 Spring Boot 專案：eureka-server、
+api-gateway、config-server 三個基礎設施，加上 user-service、
+order-service 兩個業務服務。全部都是乾淨的新專案，用 Spring
+Initializr 一個一個建立，不會動到大家前面章節寫的任何東西。
+
+情境很單純：user-service 管使用者資料，order-service 管訂單資料，
+但 order-service 查訂單明細時需要附上使用者名字，所以要跨服務
+呼叫 user-service——這是微服務教學裡最經典的組合範例。
+
 外部請求先打到 api-gateway（8080），這是唯一對外開放的入口，
 前端、Postman、手機 App 都只需要記住這一個位址。
-Gateway 查 Eureka，知道 user-service、order-service 各自的實際 IP:port，
-用 lb:// 做負載平衡轉發——這是 Part 5 的內容。
+Gateway 查 Eureka，知道 user-service、order-service 各自的實際
+IP:port，用 lb:// 做負載平衡轉發——這是 Part 5 的內容。
 如果請求進了 order-service，而它需要用戶資料，就會透過 OpenFeign
 用「服務名稱」呼叫 user-service，底層一樣經過 Eureka 解析位址——
 這是 Part 6 的內容。這條呼叫外面還包了一層 Resilience4j，
@@ -349,17 +358,16 @@ class: flex flex-col justify-center items-center text-center
 ## Eureka：服務登記處
 
 <div class="mt-6 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left" style="max-width: 640px; margin-left: auto; margin-right: auto;">
-💡 <b>先說明專案結構：</b> Eureka Server 和 Eureka Client 是<b>兩個完全獨立的 Spring Boot 專案</b>，不能塞在同一個專案裡。如果你前面章節已經有一個大專案（Controller、Security、JPA 都在裡面），那個專案只要加 <code>eureka-client</code> 依賴，就能變成一個「業務服務」向 Eureka 註冊；<b>另外再開一個全新的乾淨專案</b>，只加 <code>eureka-server</code> 依賴，專門當電話簿。
+💡 <b>先說明專案結構：</b> Eureka Server 和 Eureka Client 是<b>兩個完全獨立的 Spring Boot 專案</b>，不能塞在同一個專案裡。這章接下來會建立好幾個全新專案（eureka-server、user-service、order-service……），每一個都是各自獨立的 Spring Boot 專案，用 Spring Initializr 一個一個建。
 </div>
 
 <!--
 在進細節之前，先講清楚一個很多人會誤會的地方：Eureka Server 和
 Eureka Client 是兩個完全獨立的 Spring Boot 專案，不是同一包程式碼
-裡加兩個依賴就好。如果大家前面章節已經有一個大專案，那個專案只要
-加 eureka-client 依賴，就能變成一個業務服務去註冊；Server 那邊
-一定要另外開一個全新、乾淨的專案，只放 eureka-server 依賴，
-專門當電話簿，不要跟業務邏輯混在一起。這個結構觀念要先建立好，
-不然後面看到「加依賴」的投影片會誤以為兩個都加在同一個專案裡就好。
+裡加兩個依賴就好。接下來每個要建的服務都是全新、乾淨的專案，
+互相之間不會共用程式碼，只透過網路呼叫溝通。這個結構觀念要先
+建立好，不然後面看到「加依賴」的投影片會誤以為是加在同一個
+專案裡就好。
 
 Eureka 是 Netflix 開源、Spring Cloud 整合的服務發現元件，
 分成 Server（登記處本身）和 Client（來登記的服務）兩個角色。
@@ -384,8 +392,8 @@ Eureka Client 就是「每個部門打電話跟總機說：我在幾號分機、
 | 設定項 | 選擇 |
 |------|------|
 | Project | Gradle - Groovy |
-| Language | Java |
 | Spring Boot | 4.1.x |
+| **Artifact** | **`eureka-server`** |
 | Java | 17 |
 | Dependencies | **Eureka Server**（Spring Cloud Discovery 分類底下） |
 
@@ -401,15 +409,10 @@ build.gradle——好處是 Initializr 知道你選的 Spring Boot 版本，
 也不用手動寫 dependencyManagement 那段，少一個踩坑點。
 
 操作示範：打開 start.spring.io，選 Gradle - Groovy、Java、
-Spring Boot 4.1.x、Java 17，在 Dependencies 搜尋欄打 Eureka，
-勾選 Eureka Server，按 Generate 下載解壓，或直接用 IDE
-（IntelliJ 有內建 Spring Initializr 精靈）建立。
-
-⚠️ 提醒一下：這是「建立一個全新專案」的流程，只適用於一開始就要
-另開的獨立專案（像 eureka-server、api-gateway、config-server）。
-如果是要在既有專案裡加依賴（像後面的 OpenFeign、Resilience4j），
-既有專案已經有 build.gradle 了，就不能重新跑一次 Initializr，
-還是要手動加依賴。
+Spring Boot 4.1.x、Java 17，Artifact 欄位填 eureka-server，
+在 Dependencies 搜尋欄打 Eureka，勾選 Eureka Server，
+按 Generate 下載解壓，或直接用 IDE（IntelliJ 有內建 Spring
+Initializr 精靈）建立。
 
 專案建好之後，下一頁我們先把設定檔寫好，最後才加 annotation 啟用。
 -->
@@ -420,7 +423,6 @@ Spring Boot 4.1.x、Java 17，在 Dependencies 搜尋欄打 Eureka，
 
 ```properties
 server.port=8761
-spring.application.name=eureka-server
 eureka.client.register-with-eureka=false
 eureka.client.fetch-registry=false
 eureka.instance.hostname=localhost
@@ -433,6 +435,11 @@ eureka.instance.hostname=localhost
 <!--
 這頁是 Eureka Server 的設定檔，帶大家看關鍵的兩行：
 register-with-eureka: false 和 fetch-registry: false。
+
+順便提醒一下：spring.application.name 不用手動加，Spring Initializr
+新版預設就會在 application.properties 裡自動寫好
+spring.application.name=eureka-server，跟 Artifact 名稱一致，
+少一行要打的設定。
 
 為什麼要先設定、再啟用 annotation？因為 Eureka Server 本身也內建了
 一份 Eureka Client 的邏輯，如果不關掉，它啟動時會覺得「我是不是也該
@@ -483,44 +490,46 @@ ORDER-SERVICE，這是一個很有成就感的畫面回饋。
 
 ---
 
-# Eureka Client（1/2）：建立或改造業務服務專案
+# Eureka Client（1/2）：用 Spring Initializr 建立業務服務
 
-**情境 A — 全新的業務服務：用 Spring Initializr 建立，Dependencies 勾選 Eureka Discovery Client**
+**這章要建立兩個業務服務，各自跑一次 Initializr（以 order-service 為例）：**
 
-**情境 B — 你前面章節已經有的大專案：先補 BOM，再加依賴**
+| 設定項 | 選擇 |
+|------|------|
+| Project | Gradle - Groovy |
+| Spring Boot | 4.1.x |
+| **Artifact** | **`order-service`**（另一個服務就填 `user-service`） |
+| Java | 17 |
+| Dependencies | **Eureka Discovery Client**、**Spring Web** |
 
-```groovy
-ext {
-    set('springCloudVersion', "2025.1.2")
-}
-
-dependencyManagement {
-    imports {
-        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
-    }
-}
-
-dependencies {
-    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
-}
-```
+<div class="mt-2 p-2 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 兩個業務服務要各自跑一次 Initializr、各自下載成獨立的資料夾，Artifact 分別填 <code>user-service</code>、<code>order-service</code>，跟前面 eureka-server 完全一樣的流程，只是勾的依賴不同。
+</div>
 
 <div class="mt-2 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ 情境 B 因為是「加進既有專案」，不是重新跑 Initializr，Initializr 不會幫你補這段。少了 <code>dependencyManagement</code> 這段 BOM，<code>eureka-client</code> 依賴會因為找不到版本號而報錯。
+⚠️ 這裡一定要記得多勾 <b>Spring Web</b>。eureka-server 自己會帶 <code>spring-boot-starter-web</code>，但業務服務不會自動有——之後這兩個服務都要寫 <code>@RestController</code>，OpenFeign 內部也需要 HTTP 訊息轉換器，沒加 Spring Web 會在啟動時噴 <code>ClassNotFoundException</code>。
 </div>
 
 <!--
-這頁範例的目的是讓一個服務自己去 Eureka 報到，先分清楚兩種情境：
-如果是全新開的業務服務，一樣用 Spring Initializr，Dependencies 搜尋
-Eureka，勾選 Eureka Discovery Client，Initializr 一樣會自動幫忙配好
-BOM，跟上一頁 eureka-server 的做法一致，不用寫這頁情境 B 的程式碼。
+這頁範例的目的是讓一個業務服務自己去 Eureka 報到。跟上一頁
+eureka-server 完全同一套流程，一樣用 Spring Initializr，
+Dependencies 搜尋 Eureka，勾選 Eureka Discovery Client，
+Initializr 一樣會自動幫忙配好 BOM。
 
-但如果是大家前面章節已經在用的那個大專案（Controller、Security、
-JPA 都在裡面），那個專案已經存在了，不能重新跑一次 Initializr
-蓋掉既有程式碼，只能手動在既有的 build.gradle 裡補這兩段：
-先是 ext + dependencyManagement 匯入 BOM，再是 dependencies 裡
-加 eureka-client 依賴。這是 Initializr 幫不上忙的地方，
-BOM 這段一定要自己手動加，不是加了依賴就好。
+這章要建兩個業務服務——user-service 和 order-service，各自跑一次
+Initializr，Artifact 分別填對應的名字。這裡先用 order-service
+示範一次完整流程，user-service 照同樣的步驟做一次即可，練習一
+會讓大家兩個都動手建一次。
+
+⚠️ 這裡務必強調 Spring Web 這個依賴不能漏。eureka-server 因為要跑
+Dashboard 網頁，starter 本身就帶了 spring-boot-starter-web，但
+Eureka Discovery Client 這個依賴不會自動帶進來——業務服務通常都要
+寫 @RestController 對外提供 API，OpenFeign 底層也依賴 HTTP 訊息
+轉換器（HttpMessageConverters）才能運作，這些都來自 spring-web。
+漏勾這個依賴，最常見的症狀是啟動時噴一串 ClassNotFoundException，
+錯誤訊息通常會指向某個 spring-boot-autoconfigure 底下的 http
+converter 相關 class，第一次遇到很難聯想到「原來是少了 Spring Web」，
+先在這裡把依賴補齊，後面才不會卡在這個問題上。
 
 依賴確定抓得到之後，下一頁我們加設定檔，讓這個服務知道要向哪個
 Eureka Server 報到、要用什麼名字報到。
@@ -530,31 +539,45 @@ Eureka Server 報到、要用什麼名字報到。
 
 # Eureka Client（2/2）：設定檔指定服務名稱
 
-**設定檔指定服務名稱與 Eureka Server 位址：**
+**`order-service` 的 `application.properties`：**
 
 ```properties
-spring.application.name=order-service
+server.port=8082
+eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
+```
+
+**`user-service` 的 `application.properties`：**
+
+```properties
+server.port=8081
 eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>注意：</b> <code>spring.application.name</code> 非常關鍵——這就是服務的「身份證名字」。其他服務呼叫你時，用的就是這個名字，不是 IP。Spring Boot 3.x / 4.x 不需要 @EnableEurekaClient。
+💡 <b>注意：</b> <code>spring.application.name</code> 非常關鍵——這就是服務的「身份證名字」，其他服務呼叫你時用的就是這個名字，不是 IP。跟前面 Eureka Server 一樣，Initializr 已經依 Artifact 自動幫兩個專案寫好這行，不用手動加。Spring Boot 3.x / 4.x 也不需要 @EnableEurekaClient。
 </div>
 
 <!--
-帶大家看關鍵行：spring.application.name。
+這頁分別列出兩個業務服務的設定檔，port 不一樣（8081 / 8082），
+其餘設定一樣。spring.application.name 這行沒寫在程式碼裡，
+是因為 Initializr 已經依 Artifact（order-service / user-service）
+自動產生好了，這是回收前面 Eureka Server 那頁講過的邏輯。
 
 這就是回收剛剛「總機報名字」的比喻——這個欄位就是分機打給總機時報的名字，
-非常關鍵，因為其他服務呼叫你時，用的就是這個名字，不是 IP。
+非常關鍵，因為其他服務呼叫你時，用的就是這個名字，不是 IP。雖然這頁
+沒有秀出這行程式碼，但概念還是要講清楚，因為之後 Gateway、OpenFeign
+都要靠這個名字去找對應的服務。
 
 ⚠️ 易錯點提醒：如果兩個服務不小心設成同一個名字，Eureka 會把它們當成
 「同一個服務的兩個實例」，流量會在它們之間分流。這在正式環境是刻意用來
 做水平擴展的機制，但如果是不小心撞名，就會變成兩個不同服務互搶流量，
-是新手常見的踩坑點。
+是新手常見的踩坑點。由於現在是 Initializr 自動生成，撞名的機率變低了
+（因為對應到 Artifact，不太會手滑打錯），但如果之後手動改設定檔，
+還是要注意這一點。
 
 也順便解釋一下：Spring Boot 3.x / 4.x 不需要 @EnableEurekaClient，
 只要 classpath 上看得到 eureka-client 的依賴，Spring Boot 就會自動裝配好，
-這跟這幾年「約定優於設定」的走向是一致的，不用像上一頁 eureka-server
+這跟這幾年「約定優於設定」的走向是一致的，不用像 Eureka Server
 那樣還要另外加 annotation。
 -->
 
@@ -583,11 +606,7 @@ CORS、認證留給大家有興趣自己延伸閱讀）。
 
 ---
 
-# Spring Cloud Gateway（1/3）：又是一個獨立專案
-
-<div class="mt-1 mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>又是一個獨立專案：</b> 跟 eureka-server、config-server 一樣，api-gateway 要另外開一個全新的 Spring Boot 專案，不要塞進業務服務裡。
-</div>
+# Spring Cloud Gateway（1/2）：又是一個獨立專案
 
 **在 [start.spring.io](https://start.spring.io) 建立一個全新專案：**
 
@@ -595,8 +614,13 @@ CORS、認證留給大家有興趣自己延伸閱讀）。
 |------|------|
 | Project | Gradle - Groovy |
 | Spring Boot | 4.1.x |
+| **Artifact** | **`api-gateway`** |
 | Java | 17 |
-| Dependencies | **Gateway**、**Eureka Discovery Client** |
+| Dependencies | **Reactive Gateway**、**Eureka Discovery Client** |
+
+<div class="mt-2 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ 搜尋 gateway 有兩個選項，別選錯——一定要選 <b>Reactive Gateway</b>，不是 Gateway。
+</div>
 
 <!--
 生活化比喻：Gateway 就像連鎖集團的「總客服窗口」，不管你要找哪個部門，
@@ -604,52 +628,37 @@ CORS、認證留給大家有興趣自己延伸閱讀）。
 
 先講清楚結構：這是又一個獨立的 Spring Boot 專案，跟前面的
 eureka-server 一樣要另外開，不要塞進業務服務，一樣用 Spring Initializr
-建立。Dependencies 要勾兩個：Gateway，還有 Eureka Discovery Client——
-Gateway 要靠 Eureka Discovery Client 才能去問 Eureka「這個服務名稱
-對應的實例在哪」，沒勾這個，下一頁的 lb:// 就無法運作，兩個都不能漏。
+建立，Artifact 填 api-gateway。Dependencies 要勾兩個：Reactive
+Gateway，還有 Eureka Discovery Client——Gateway 要靠 Eureka
+Discovery Client 才能去問 Eureka「這個服務名稱對應的實例在哪」，
+沒勾這個，下一頁的 lb:// 就無法運作，兩個都不能漏。
 
-專案建好之後，下一頁我們看 Initializr 幫我們產生的依賴長什麼樣子，
-以及一個查資料常會踩到的舊寫法陷阱。
+⚠️ 特別提醒：Initializr 搜尋 gateway 會跳出兩個長得很像的選項——
+「Gateway」跟「Reactive Gateway」。前者是 Servlet-based 版本，
+對應的依賴是 spring-cloud-starter-gateway-server-webmvc；後者才是
+reactive 版本，對應 spring-cloud-starter-gateway-server-webflux。
+這門課下一頁教的路由設定，property key 開頭是
+spring.cloud.gateway.server.webflux.*，一定要選 Reactive Gateway，
+選錯成普通的 Gateway，key 前綴會變成 server.webmvc，整組設定
+會完全對不上、路由失效，是很多人第一次用 Initializr 建 Gateway
+時會踩的坑。
+
+專案建好之後，下一頁我們設定實際的路由規則。
 -->
 
 ---
 
-# Spring Cloud Gateway（2/3）：Initializr 產生的依賴
-
-```groovy
-implementation 'org.springframework.cloud:spring-cloud-starter-gateway-server-webflux'
-implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
-```
-
-<div class="mt-2 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ Spring Cloud 2025.x 起，舊的 <code>spring-cloud-starter-gateway</code> 依賴已棄用，改為 <code>-server-webflux</code>。網路上舊教學文章常還是寫舊名稱，Initializr 產生的已經是新版，照它產生的用即可，不用自己改。
-</div>
-
-<!--
-帶大家看 Initializr 幫我們產生的這兩行依賴，跟前一頁勾選的
-Gateway、Eureka Discovery Client 是對應的，不用自己手動輸入。
-
-⚠️ 易錯點提醒：Spring Cloud 2025.x 起，舊的 spring-cloud-starter-gateway
-依賴已經棄用，改成 -server-webflux 版本。這個提醒主要是給大家之後
-自己查資料用的——如果查到的教學文章寫的是舊的 artifact 名稱，
-要知道那是舊版寫法，不要照抄，跟著 Initializr 產生的版本走就對了。
-
-依賴到位之後，下一頁我們設定實際的路由規則。
--->
-
----
-
-# Spring Cloud Gateway（3/3）：路由設定
+# Spring Cloud Gateway（2/2）：路由設定
 
 **application.properties 路由設定：**
 
 ```properties
 spring.cloud.gateway.server.webflux.routes[0].id=order-service
 spring.cloud.gateway.server.webflux.routes[0].uri=lb://order-service
-spring.cloud.gateway.server.webflux.routes[0].predicates[0]=Path=/api/orders/**
+spring.cloud.gateway.server.webflux.routes[0].predicates[0]=Path=/orders/**
 spring.cloud.gateway.server.webflux.routes[1].id=user-service
 spring.cloud.gateway.server.webflux.routes[1].uri=lb://user-service
-spring.cloud.gateway.server.webflux.routes[1].predicates[0]=Path=/api/users/**
+spring.cloud.gateway.server.webflux.routes[1].predicates[0]=Path=/users/**
 ```
 
 <div class="mt-2 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
@@ -666,8 +675,14 @@ spring.cloud.gateway.server.webflux.routes[1].predicates[0]=Path=/api/users/**
 id 是這條路由的名字，純粹給人看、給 log 追蹤用；
 uri（lb://order-service）是目的地，lb 前綴告訴 Gateway 別直接打這個位址，
 去 Eureka 查 order-service 有哪些實例，再做負載平衡；
-predicates（Path=/api/orders/**）是判斷條件，符合什麼 URL 才走這條路由，
-可以類比成前面章節寫過的 @RequestMapping 路徑比對。
+predicates（Path=/orders/**）是判斷條件，符合什麼 URL 才走這條路由，
+可以類比成前面章節寫過的 @RequestMapping 路徑比對。第二條路由同樣的
+邏輯轉發給 user-service。
+
+⚠️ 易錯點提醒：這裡的路徑要對到 order-service、user-service
+Controller 真正的路徑（/orders/**、/users/**），不是隨便自己取一個
+前綴——如果 predicate 寫的路徑跟 Controller 的 @GetMapping 對不起來，
+Gateway 會直接回 404，因為它根本不知道要轉發給誰。
 
 ⚠️ 易錯點提醒：uri 如果寫死成 http://localhost:8082，就完全喪失了
 服務發現的意義，lb:// 這個前綴不能省略，也不能換成 http://。
@@ -682,23 +697,133 @@ class: flex flex-col justify-center items-center text-center
 ## OpenFeign：讓服務間呼叫像本地方法一樣
 
 <!--
-微服務之間互相呼叫是很常見的場景，先問問大家：如果沒有 OpenFeign，
-order-service 想呼叫 user-service，要怎麼寫？
+微服務之間互相呼叫是很常見的場景，下一頁會用一個具體情境
+（order-service 查訂單要附上使用者名字）帶大家理解為什麼需要
+OpenFeign，這裡先簡單破題就好，細節留到下一頁講。
+-->
+
+---
+
+# OpenFeign（1/5）：為什麼需要它？
+
+**情境：`order-service` 查訂單明細時，要附上下單者的名字，但使用者資料放在另一個服務 `user-service` 裡。**
+
+```
+order-service                       user-service
+    │                                   │
+    │   查訂單 #1，需要下單者名字          │
+    │   ── GET /users/{id} ──────────▶  │
+    │                                   │
+    │  ◀───── { id, name, email } ───── │
+    │   組成 OrderDetail 回傳            │
+```
+
+<div class="mt-2 p-2 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 order-service 自己的資料庫沒有使用者資料，唯一辦法是發 HTTP 請求去 user-service 要。手動用 RestTemplate / WebClient 也做得到，但要自己組 URL、處理序列化；OpenFeign 讓這件事變成宣告式，看起來就像呼叫本地方法。
+</div>
+
+<!--
+在看程式碼之前，先把「為什麼需要 OpenFeign」講清楚，不然學生只會看到
+一堆 annotation，不知道這是要幹嘛。
+
+情境很單純：order-service 要查「訂單明細」，這個明細需要附上下單者
+的名字，但使用者資料住在另一個服務 user-service 裡，不在
+order-service 自己的資料庫裡。order-service 沒有別的辦法，只能
+發一個 HTTP 請求去問 user-service：「這個 userId 對應的名字是什麼」。
+
+先問問大家：如果沒有 OpenFeign，要怎麼做這件事？
 （通常會有人提到 RestTemplate 或 WebClient——手動組 URL 字串、
 手動處理序列化跟例外，這些程式碼寫多了會很雷同、很囉唆。）
 
 OpenFeign 的核心賣點就是「宣告式」：只要寫一個介面，描述「我要呼叫的
 API 長什麼樣子」，Feign 會在背後自動生成實作，把方法呼叫轉成真正的
-HTTP 請求，我們完全不用自己組 URL。
+HTTP 請求，我們完全不用自己組 URL。這跟前面學過的 Spring Data JPA
+Repository 介面思路是一樣的——都是「我們寫介面宣告意圖，框架幫我們
+生成實作」，可以直接拿來類比，會比較好理解。
 
-這跟前面學過的 Spring Data JPA Repository 介面思路是一樣的——
-都是「我們寫介面宣告意圖，框架幫我們生成實作」，可以直接拿來類比，
-會比較好理解。
+接下來三頁的順序：先加依賴 → 定義資料模型 → 定義 FeignClient 介面 →
+在 Service 裡注入使用，一步一步把這個情境實作出來。
 -->
 
 ---
 
-# OpenFeign（1/2）：定義與啟用
+# OpenFeign（2/5）：加入依賴
+
+**回到 order-service 專案（前面 Part 4 用 Initializr 建立的那個），加這兩個依賴：**
+
+```groovy
+dependencies {
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+}
+```
+
+<div class="mt-2 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ OpenFeign 不是 Spring Boot 內建功能，一定要加 <code>spring-cloud-starter-openfeign</code>，<code>@FeignClient</code>、<code>@EnableFeignClients</code> 才 import 得到。另外因為 order-service 是這章 Part 4 才新建的乾淨專案，還沒加過 Lombok，後面要用到 <code>@RequiredArgsConstructor</code>，這裡要一併補上，不然編譯會直接失敗。
+</div>
+
+<!--
+先講清楚：OpenFeign 也是要裝依賴才能用的，不是 Spring Boot 內建功能。
+這是回到 order-service 這個專案，不是建立新專案——Part 4 已經用
+Spring Initializr 建立過它、Artifact 填的是 order-service，
+BOM 也已經匯入好了，這裡只是回來多加依賴。
+
+⚠️ 特別提醒 Lombok：大家前面章節的大專案通常一開始就加過 Lombok，
+但 order-service 是這章才新建的乾淨專案，Part 4 建立時只勾了
+Eureka Discovery Client，沒有 Lombok。等一下最後一頁的 OrderService
+會用到 @RequiredArgsConstructor，這個 annotation 是 Lombok 提供的，
+沒加這個依賴會直接編譯錯誤，是很多人重建新專案時會忘記的地方。
+
+依賴到位之後，下一頁我們先定義資料模型，再定義 FeignClient 介面。
+-->
+
+---
+
+# OpenFeign（3/5）：資料模型
+
+**`User.java`（Feign 拿到的回應要反序列化成這個型別）**
+
+```java
+public record User(Long id, String name, String email) {
+}
+```
+
+**`OrderDetail.java`（組合訂單與使用者名字後，回傳給呼叫端的型別）**
+
+```java
+public record OrderDetail(Long orderId, String userName) {
+}
+```
+
+<div class="mt-2 p-2 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 這兩個型別都是不可變的資料載體，用 <code>record</code> 比 Lombok <code>@Data</code> 更精簡——一行就有建構子、欄位存取方法（<code>user.name()</code>，不是 <code>getName()</code>）、<code>equals</code>/<code>toString</code>，不用額外依賴。
+</div>
+
+<!--
+在定義 FeignClient 之前，先把兩個資料模型準備好，這頁純粹是
+資料載體，跟前面章節寫過的 Entity / DTO 是同樣的概念，只是這裡
+不需要 JPA 的 @Entity，單純拿來裝資料。
+
+User 對應的是 user-service 回傳的 JSON 結構（id、name、email），
+Feign 收到 JSON 後就是用這個型別反序列化；OrderDetail 是
+order-service 自己要回傳給呼叫端的型別，把 orderId 跟拿到的
+user.name() 組合起來。
+
+⚠️ 提醒一下：record 的存取方法沒有 get 前綴，是 user.name()、
+user.email()，不是 user.getName()，這跟大家習慣的 Lombok/JavaBean
+寫法不一樣，等一下第五頁的 OrderService 會看到這個寫法。
+
+Jackson 反序列化 record 需要編譯時保留參數名稱（-parameters 編譯
+選項），大家 build.gradle 裡的 compileJava 區塊如果已經有加這個
+選項（前面章節設定過），這裡直接能用，不用再另外處理。
+
+兩個型別準備好之後，下一頁定義真正的 FeignClient 介面。
+-->
+
+---
+
+# OpenFeign（4/5）：定義與啟用
 
 **① `UserClient.java`（在 order-service 中定義）**
 
@@ -727,6 +852,10 @@ public class OrderServiceApplication {
 @FeignClient(name = "user-service")，這個 name 對應的是 Eureka 上的
 spring.application.name，不是 IP。
 
+回到 Part 6 開場講的情境：order-service 定義一個 UserClient 介面，
+宣告「我要呼叫 user-service 的 GET /users/{id}」，之後就能像呼叫
+本地方法一樣拿到上一頁定義的 User 物件。
+
 大家注意一個很反直覺的地方：UserClient 只是一個 interface，
 裡面的方法沒有寫任何實作內容。沒寫實作，怎麼會動？先賣個關子，
 答案下一頁揭曉。
@@ -735,16 +864,16 @@ spring.application.name，不是 IP。
 是同一個 annotation，只是方向反過來——Controller 上是「宣告我要接收
 這個路徑的請求」，這裡是「宣告我要發送到這個路徑的請求」。
 
-⚠️ 別忘了啟動類要加 @EnableFeignClients，這跟前面看過的
-@EnableJpaRepositories 是同一個模式，告訴 Spring 去掃描所有
-標了 @FeignClient 的介面，逐一生成 Bean。
+⚠️ 別忘了 OrderServiceApplication 這個啟動類要加 @EnableFeignClients，
+這跟前面看過的 @EnableJpaRepositories 是同一個模式，告訴 Spring
+去掃描所有標了 @FeignClient 的介面，逐一生成 Bean。
 -->
 
 ---
 
-# OpenFeign（2/2）：注入與使用
+# OpenFeign（5/5）：注入與使用
 
-**③ `OrderService.java`（注入 UserClient，直接呼叫）**
+**③ `OrderService.java`（order-service 內部，注入 UserClient，直接呼叫）**
 
 ```java
 @Service
@@ -755,7 +884,7 @@ public class OrderService {
 
     public OrderDetail getOrderDetail(Long orderId, Long userId) {
         User user = userClient.getUserById(userId);  // 實際發出 HTTP GET 到 user-service
-        return new OrderDetail(orderId, user.getName());
+        return new OrderDetail(orderId, user.name());
     }
 }
 ```
@@ -770,10 +899,15 @@ public class OrderService {
 UserClient，其實是 Feign 生成的代理物件，不是我們自己寫的類別
 （如果大家學過 Java 動態代理，或看過 MyBatis 的 Mapper 介面，可以直接類比）。
 
-帶大家走一次完整呼叫鏈：OrderService 呼叫 userClient.getUserById(userId)
-（看起來像本地方法呼叫）→ Feign 代理物件攔截，組出 GET /users/{id} 請求
+@RequiredArgsConstructor 這裡也回收一下前面補的 Lombok 依賴——
+它會自動幫 final 欄位（userClient）產生建構子，Spring 用建構子注入
+把 Feign 生成的代理物件塞進來，我們完全不用自己寫 constructor。
+
+帶大家走一次完整呼叫鏈：OrderService 呼叫
+userClient.getUserById(userId)（看起來像本地方法呼叫）
+→ Feign 代理物件攔截，組出 GET /users/{id} 請求
 → 向 Eureka 查 user-service 有哪些實例 → LoadBalancer 選一個 →
-真正發出 HTTP 請求 → 收到 JSON，反序列化成 User 物件回傳。
+真正發出 HTTP 請求 → 收到 JSON，反序列化成上一頁定義的 User 物件回傳。
 
 💡 這整條路徑對呼叫者完全透明，它看到的就是一個普通方法呼叫，
 這就是宣告式的威力，也是 Feign 這麼受歡迎的原因。
@@ -813,41 +947,60 @@ application-prod.properties 用 profile 切換），Config Server 可以看成
 | Config Server | 橋接 Git 倉庫與各微服務 |
 | 各微服務（Config Client） | 從 Config Server 拉取自己的設定 |
 
-**用 Spring Initializr 建立一個全新專案（Dependencies 勾選 Config Server），得到：**
-
-```groovy
-implementation 'org.springframework.cloud:spring-cloud-config-server'
-```
-
-```java
-@SpringBootApplication
-@EnableConfigServer
-public class ConfigServerApplication { ... }
-```
-
 <!--
 這頁講架構：Config Server 從 Git 倉庫讀取設定，各服務再從 Config Server
 拉取自己的設定。為什麼選 Git 而不是資料庫？因為 Git 天生就有版本紀錄、
 有 diff，設定變更也能像程式碼一樣被追蹤「誰在什麼時候改了什麼」，
 出問題甚至可以直接 revert 回上一版，這是把版本控制的紀律套用到設定上。
 
-範例目的：建一個獨立的 Config Server 專案，跟前面 eureka-server、
-api-gateway 一樣，用 Spring Initializr 建立，Dependencies 搜尋
-Config Server 勾選即可，Initializr 一樣會幫我們配好對應的
-spring-cloud-config-server 依賴和相容的 BOM 版本。
+先講觀念、不看程式碼——大家看這張表，記住三個角色各自的職責：
+Git 倉庫負責存放，Config Server 負責橋接，各微服務負責拉取。
+下一頁我們才動手用 Spring Initializr 建立 Config Server 這個
+獨立專案。
+-->
 
-帶大家看關鍵行：@EnableConfigServer——這跟前面看過的
-@EnableEurekaServer 是同一個模式，一個獨立的 Spring Boot 專案，
-加一個 annotation，就變成特化的基礎設施服務。大家會發現
-Spring Cloud 的元件大多長這樣，抓到這個規律之後，
-接下來看到新元件也比較好上手。
+---
+
+# Spring Cloud Config：建立專案
+
+**在 [start.spring.io](https://start.spring.io) 建立一個全新專案：**
+
+| 設定項 | 選擇 |
+|------|------|
+| Project | Gradle - Groovy |
+| Spring Boot | 4.1.x |
+| **Artifact** | **`config-server`** |
+| Java | 17 |
+| Dependencies | **Config Server** |
+
+<!--
+範例目的：建一個獨立的 Config Server 專案，跟前面 eureka-server、
+api-gateway 完全一樣的流程——用 Spring Initializr 建立，Artifact
+填 config-server，Dependencies 搜尋 Config Server 勾選即可，
+Initializr 一樣會幫我們配好對應的 spring-cloud-config-server
+依賴和相容的 BOM 版本，不用自己手動加。
+
+專案建好之後，下一頁我們加上 annotation 啟用它，再把 Git 倉庫和
+Config Server 串起來。
 -->
 
 ---
 
 # Spring Cloud Config：完整使用流程（1/2）
 
-**① Git 倉庫放設定檔**（`.properties` 格式，檔名 = 服務名稱）
+**① 啟動類加上 `@EnableConfigServer`：**
+
+```java
+@SpringBootApplication
+@EnableConfigServer
+public class ConfigServerApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(ConfigServerApplication.class, args);
+    }
+}
+```
+
+**② Git 倉庫放設定檔**（`.properties` 格式，檔名 = 服務名稱）
 
 ```
 config-repo/
@@ -855,18 +1008,48 @@ config-repo/
 └── user-service.properties    # user-service 專用設定
 ```
 
-**② Config Server 的 `application.properties`**
+<!--
+帶大家看關鍵行：@EnableConfigServer——這跟前面看過的
+@EnableEurekaServer 是同一個模式，一個獨立的 Spring Boot 專案，
+加一個 annotation，就變成特化的基礎設施服務。大家會發現
+Spring Cloud 的元件大多長這樣，抓到這個規律之後，
+接下來看到新元件也比較好上手。
+
+Git 倉庫的檔名約定也在這頁先看一次：「檔名 = 服務名稱」，
+下一頁講 Config Server 自己的設定時會再細講這個約定怎麼運作。
+-->
+
+---
+
+# Spring Cloud Config：完整使用流程（2/2）
+
+**③ Config Server 的 `application.properties`**
 
 ```properties
 server.port=8888
-spring.cloud.config.server.git.uri=https://github.com/your-org/config-repo
+spring.cloud.config.server.git.uri=https://github.com/gagahsu/config-repo.git
 ```
 
+**④ 各微服務（Config Client）的 `application.properties`**
+
+```properties
+spring.application.name=order-service
+spring.config.import=optional:configserver:http://localhost:8888
+```
+
+<div class="mt-2 p-2 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>運作原理：</b> 服務啟動時，先向 Config Server 拉取 <code>order-service.properties</code> 的內容，再繼續啟動。Git 設定更新後，呼叫 <code>/actuator/refresh</code> 即可動態重新載入，不需重啟。
+</div>
+
+<div class="mt-2 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <code>optional:</code> 前綴表示 Config Server 不在線時服務仍可啟動（用本地設定），適合開發環境。
+</div>
+
 <!--
-這頁的目的是把 Git 倉庫和 Config Server 串起來，帶大家看關鍵約定：
-「檔名 = 服務名稱」。Config Server 收到 order-service 的請求時，
-會去 Git 倉庫找 order-service.properties 這個檔案，
-就是純粹的字串比對，沒有魔法。
+這頁的目的是把 Git 倉庫、Config Server、業務服務三者串起來，
+帶大家看關鍵約定：「檔名 = 服務名稱」。Config Server 收到
+order-service 的請求時，會去 Git 倉庫找 order-service.properties
+這個檔案，就是純粹的字串比對，沒有魔法。
 
 這也再一次呼應 spring.application.name 這個欄位有多關鍵——
 它同時是 Eureka 上的身分證名字，也是 Config Server 對應設定檔的檔名，
@@ -874,28 +1057,7 @@ spring.cloud.config.server.git.uri=https://github.com/your-org/config-repo
 
 ⚠️ 提醒一下：spring.cloud.config.server.git.uri 實務上通常會指向
 公司內部的 Git，不會是公開的 GitHub repo，因為設定檔裡常有敏感資訊。
--->
 
----
-
-# Spring Cloud Config：完整使用流程（2/2）
-
-**③ 各微服務（Config Client）的 `application.properties`**
-
-```properties
-spring.application.name=order-service
-spring.config.import=optional:configserver:http://localhost:8888
-```
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>運作原理：</b> 服務啟動時，先向 Config Server 拉取 <code>order-service.properties</code> 的內容，再繼續啟動。Git 設定更新後，呼叫 <code>/actuator/refresh</code> 即可動態重新載入，不需重啟。
-</div>
-
-<div class="mt-2 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <code>optional:</code> 前綴表示 Config Server 不在線時服務仍可啟動（用本地設定），適合開發環境。
-</div>
-
-<!--
 這頁是業務服務那邊的設定，帶大家看關鍵行 spring.config.import。
 
 我們完整走一次啟動流程：order-service 啟動 → 讀到 spring.config.import
@@ -938,26 +1100,16 @@ class: flex flex-col justify-center items-center text-center
 
 # Resilience4j：加入依賴
 
-**加進既有的業務服務專案（例如 order-service），先確認 BOM 已匯入：**
+**一樣回到 order-service 專案，多加一行依賴（BOM 在 Part 4 建立時已經匯入過了）：**
 
 ```groovy
-ext {
-    set('springCloudVersion', "2025.1.2")
-}
-
-dependencyManagement {
-    imports {
-        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
-    }
-}
-
 dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j'
 }
 ```
 
 <div class="mt-2 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ 熔斷器不是 Spring Boot 內建功能，一定要加這個依賴，<code>@CircuitBreaker</code> 才 import 得到。這個依賴一樣沒寫版本號，一樣靠 BOM 管理版本——跟前面 Eureka Client「情境 B」加進既有專案的邏輯一模一樣。
+⚠️ 熔斷器不是 Spring Boot 內建功能，一定要加這個依賴，<code>@CircuitBreaker</code> 才 import 得到。
 </div>
 
 <!--
@@ -966,9 +1118,10 @@ dependencies {
 只是幫忙包一層 starter 讓它跟 Spring Boot 整合，一定要加這個依賴，
 不加的話 @CircuitBreaker 這個 annotation 根本不存在，import 就會紅字。
 
-這個依賴通常是加進「既有的業務服務」，不是另開新專案，所以流程
-跟前面 Eureka Client 的情境 B 一樣——要確認這個專案的 build.gradle
-已經匯入 Spring Cloud BOM，沒匯入的話一樣會找不到版本號而報錯。
+這裡跟前面 OpenFeign 一樣，是回到 order-service 這個 Part 4 已經
+用 Initializr 建立好的專案，單純多加一行依賴，BOM 已經有了，
+不用重複匯入。如果大家是在自己既有的、不是這章 Initializr 建立的
+專案上做練習，才需要回頭確認 BOM 有沒有補上。
 
 依賴加好之後，下一頁我們看它實際運作的原理。
 -->
@@ -980,7 +1133,7 @@ dependencies {
 `@CircuitBreaker` 透過 **AOP 攔截**每一次方法呼叫，自動追蹤成功/失敗：
 
 ```
-你呼叫 checkInventory()
+你呼叫 getOrderDetail()
          ↓
   Resilience4j 攔截
          ↓
@@ -989,8 +1142,8 @@ dependencies {
   Closed        Open
     ↓              ↓
 執行真實程式碼   直接呼叫 fallback()
-inventoryClient    不碰下游服務
-  .check()
+userClient         不碰下游服務
+  .getUserById()
     ↓
 記錄結果（成功 or 失敗）
 失敗率 > 50% → 切換成 Open
@@ -1008,7 +1161,7 @@ inventoryClient    不碰下游服務
 是同一套原理——Spring 在背後用動態代理包住方法，在執行前後插入額外邏輯，
 業務程式碼完全不需要知道這件事發生了。@CircuitBreaker 也是這樣：
 不是在程式碼裡插入 if-else 判斷狀態，是在方法外面包一層攔截，
-checkInventory() 本身乾乾淨淨，這是關注點分離的好例子。
+getOrderDetail() 本身乾乾淨淨，這是關注點分離的好例子。
 
 這張流程圖搭配下一頁的三狀態表一起看會更清楚。
 「你負責 / Resilience4j 負責」這張對照表值得停下來看：
@@ -1047,25 +1200,46 @@ Half-Open（黃燈）：小心翼翼放幾台車過去探路，看路況是不�
 
 # 熔斷器：誰在判斷要不要跳開？
 
-**Resilience4j 內部有一個「狀態機」，根據設定檔的門檻值自動追蹤、自動切換，不是 Spring、也不是我們的程式碼在判斷：**
-
-```properties
-resilience4j.circuitbreaker.instances.inventoryService.sliding-window-size=10
-resilience4j.circuitbreaker.instances.inventoryService.failure-rate-threshold=50
-resilience4j.circuitbreaker.instances.inventoryService.wait-duration-in-open-state=10s
-resilience4j.circuitbreaker.instances.inventoryService.permitted-number-of-calls-in-half-open-state=3
-```
+**Resilience4j 內部有一個「狀態機」，根據門檻值自動追蹤、自動切換，不是 Spring、也不是我們的程式碼在判斷：**
 
 <div class="mt-2 p-2 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <code>inventoryService</code> 這個名字要跟 <code>@CircuitBreaker(name = "inventoryService", ...)</code> 對上，Resilience4j 才知道這組門檻值是設給哪一個熔斷器用的。
+💡 <b>不設也能用：</b> 這組門檻值全部是可選的，Resilience4j 有內建預設值（sliding-window-size 預設 100、failure-rate-threshold 預設 50、wait-duration-in-open-state 預設 60s）。不寫的話就吃預設值，不會啟動失敗。
+</div>
+
+**如果想自己測試熔斷效果，可以調小數值，比較容易在課堂上短時間觸發：**
+
+```properties
+resilience4j.circuitbreaker.instances.userService.sliding-window-size=10
+resilience4j.circuitbreaker.instances.userService.failure-rate-threshold=50
+resilience4j.circuitbreaker.instances.userService.wait-duration-in-open-state=10s
+resilience4j.circuitbreaker.instances.userService.permitted-number-of-calls-in-half-open-state=3
+```
+
+<div class="mt-2 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <code>userService</code> 這個名字要跟 <code>@CircuitBreaker(name = "userService", ...)</code> 對上，Resilience4j 才知道這組門檻值是設給哪一個熔斷器用的。這組設定寫在 <b>order-service</b> 的 application.properties——order-service 是發起呼叫的那一方，user-service 完全不用知道這件事。
 </div>
 
 <!--
 這頁補上前面漏掉的一塊拼圖：到底是誰在算「失敗率有沒有超過 50%」、
 誰決定要不要跳到 Open？答案不是 Spring，也不是我們自己寫的程式碼，
 是 Resilience4j 函式庫內部維護的一個狀態機（CircuitBreakerStateMachine），
-它會根據這頁的設定檔門檻值，自動記錄每次呼叫的成功失敗，自動判斷、
-自動切換狀態，全程我們看不到、也不用手動介入。
+它會根據門檻值，自動記錄每次呼叫的成功失敗，自動判斷、自動切換狀態，
+全程我們看不到、也不用手動介入。
+
+⚠️ 先講清楚一個常見誤解：這組設定不是必填的。Resilience4j 本身有
+一整套內建預設值——sliding-window-size 預設看最近 100 次呼叫、
+minimum-number-of-calls 預設要湊滿 100 次才開始評估、
+failure-rate-threshold 預設 50%、wait-duration-in-open-state
+預設冷卻 60 秒、permitted-number-of-calls-in-half-open-state
+預設放行 10 次試探。不寫這頁的任何一行，@CircuitBreaker 一樣能動，
+只是用預設門檻。
+
+投影片這組數字（sliding-window-size 從 100 降到 10、
+wait-duration-in-open-state 從 60s 降到 10s）是刻意調小，純粹是
+教學上想在課堂短時間內就看到熔斷器跳開，不用打 100 次請求、
+等 60 秒才能驗證效果。實務上這個窗口大小要看真實流量規模來調，
+流量小的服務通常會調低，不然永遠測不出熔斷有沒有生效；
+流量大的服務反而希望窗口大一點，避免暫時性的抖動就誤判熔斷。
 
 逐行解釋這四個設定：sliding-window-size=10 表示看「最近 10 次呼叫」
 的結果來算失敗率；failure-rate-threshold=50 表示失敗率超過 50%
@@ -1074,65 +1248,88 @@ resilience4j.circuitbreaker.instances.inventoryService.permitted-number-of-calls
 permitted-number-of-calls-in-half-open-state=3 表示 Half-Open
 只放行 3 次請求試探，這 3 次的結果決定要跳回 Closed 還是打回 Open。
 
-⚠️ 重點提醒：這組設定的 key 是 inventoryService，一定要跟下一頁
-@CircuitBreaker(name = "inventoryService", ...) 的 name 完全對上，
+⚠️ 重點提醒：這組設定的 key 是 userService，一定要跟下一頁
+@CircuitBreaker(name = "userService", ...) 的 name 完全對上，
 Resilience4j 才知道要用這組門檻值來管這個熔斷器，名字對不上，
-Resilience4j 會用預設值，門檻可能不是你想要的。
+Resilience4j 會用預設值，門檻可能不是你想要的。這組設定要寫在
+「發起呼叫的那一方」——order-service 呼叫 user-service，
+就寫在 order-service，user-service 完全不用知道這件事。
 -->
 
 ---
 
-# 熔斷器：狀態與程式碼的對應（1/2）
+# 熔斷器：狀態與程式碼的對應（1/3）
+
+**直接在前面 OpenFeign 章節的 `OrderService` 上加 `@CircuitBreaker`：**
 
 ```java
-@CircuitBreaker(name = "inventoryService",
-                fallbackMethod = "inventoryFallback")
-public InventoryResponse checkInventory(String productCode) {
+@CircuitBreaker(name = "userService",
+                fallbackMethod = "getOrderDetailFallback")
+public OrderDetail getOrderDetail(Long orderId, Long userId) {
     // 這段本身不知道自己在 Closed 還是 Half-Open，只管正常呼叫下游
-    return inventoryClient.check(productCode);
+    User user = userClient.getUserById(userId);
+    return new OrderDetail(orderId, user.name());
 }
 
-public InventoryResponse inventoryFallback(String productCode,
-                                            Exception e) {
+public OrderDetail getOrderDetailFallback(Long orderId, Long userId,
+                                           Exception e) {
     // Open 狀態時，Resilience4j 直接跳過上面，改執行這裡
-    return new InventoryResponse(productCode, false);
+    return new OrderDetail(orderId, "未知用戶");
 }
 ```
 
-| 狀態 | 誰觸發 | 實際執行哪段 |
-|------|--------|------------|
-| Closed | 上一頁狀態機判定失敗率未超標 | `checkInventory()`，正常呼叫下游 |
-| Open | 狀態機判定失敗率超過門檻 | 直接跳到 `inventoryFallback()`，`checkInventory()` 完全不會被呼叫 |
-| Half-Open | 狀態機判定冷卻時間已到 | 一樣呼叫 `checkInventory()`，用結果決定跳回 Closed 或 Open |
-
 <!--
-這頁範例的目的是把上一頁的狀態機設定，對照到真正的程式碼上。
-先強調一次：checkInventory() 和 inventoryFallback() 這兩個方法
+這頁直接在 OpenFeign 章節寫過的 OrderService.getOrderDetail() 上加
+@CircuitBreaker，不用另外想新情境——大家已經知道這個方法在做什麼：
+呼叫 userClient.getUserById() 取得使用者資料。現在幫它加上熔斷保護，
+如果 user-service 忽然變慢或掛掉，不會拖累 order-service。
+
+先強調一次：getOrderDetail() 和 getOrderDetailFallback() 這兩個方法
 「本身」都不知道現在是什麼狀態、也不做任何判斷，判斷跟切換
 全部是上一頁的 Resilience4j 狀態機在背後做的，這兩個方法只是
 「狀態機決定執行誰之後」被呼叫到的兩個候選人。
 
-帶大家看關鍵行：name = "inventoryService" 是這個熔斷器的識別名稱，
-要跟上一頁設定檔的 key 對上；fallbackMethod = "inventoryFallback"
+帶大家看關鍵行：name = "userService" 是這個熔斷器的識別名稱，
+要跟上一頁設定檔的 key 對上；fallbackMethod = "getOrderDetailFallback"
 指定備案方法。同一個服務可以有多個熔斷器，各自對應不同的
-name、各自獨立追蹤狀態（例如 inventory 一個、payment 又是另一個）。
+name、各自獨立追蹤狀態（例如這裡查 user-service 一個，
+之後如果還有查 payment-service 又是另一個）。
 
 ⚠️ 易錯點提醒：fallback 方法的簽章要跟原方法對齊——參數要一樣，
 多一個 Exception 參數放在最後，這是新手很容易漏掉、導致啟動時噴錯的地方。
+
+下一頁我們把這段程式碼對照回三種狀態各自執行哪段。
+-->
+
+---
+
+# 熔斷器：狀態與程式碼的對應（2/3）
+
+| 狀態 | 誰觸發 | 實際執行哪段 |
+|------|--------|------------|
+| Closed | 上一頁狀態機判定失敗率未超標 | `getOrderDetail()`，正常呼叫 user-service |
+| Open | 狀態機判定失敗率超過門檻 | 直接跳到 `getOrderDetailFallback()`，`getOrderDetail()` 完全不會被呼叫 |
+| Half-Open | 狀態機判定冷卻時間已到 | 一樣呼叫 `getOrderDetail()`，用結果決定跳回 Closed 或 Open |
+
+<!--
+這頁範例的目的是把上一頁的程式碼，對照回三種狀態各自執行哪段，
+搭配前面「熔斷器三種狀態」那頁一起複習：Closed 正常跑、Open 直接
+跳過真正邏輯改走 fallback、Half-Open 一樣呼叫真正邏輯只是拿結果
+來試探要不要恢復。
 
 下一頁我們討論 fallback 方法設計本身該注意什麼。
 -->
 
 ---
 
-# 熔斷器：fallback 該回傳什麼（2/2）
+# 熔斷器：fallback 該回傳什麼（3/3）
 
-**這裡的範例回傳 `false`（庫存不足），是保守但合理的預設值：**
+**這裡的範例回傳 `"未知用戶"`，是保守但合理的預設值：**
 
 ```java
-public InventoryResponse inventoryFallback(String productCode,
-                                            Exception e) {
-    return new InventoryResponse(productCode, false);
+public OrderDetail getOrderDetailFallback(Long orderId, Long userId,
+                                           Exception e) {
+    return new OrderDetail(orderId, "未知用戶");
 }
 ```
 
@@ -1141,14 +1338,16 @@ public InventoryResponse inventoryFallback(String productCode,
 </div>
 
 <!--
-fallback 方法設計的關鍵：這裡回傳 false（庫存不足）是保守但合理的
-預設值，「fallback 應該回傳什麼」沒有標準答案，取決於業務場景——
-查詢類 API 或許能回傳快取舊資料，下單類 API 可能要直接告訴使用者
-稍後再試，而不是假裝成功，這個留給大家自己判斷，是這章少數
-沒有標準答案的地方。
+fallback 方法設計的關鍵：這裡回傳「未知用戶」是保守但合理的
+預設值，讓訂單明細還能顯示，只是使用者名字暫時看不到，而不是
+整支 API 直接報錯。「fallback 應該回傳什麼」沒有標準答案，
+取決於業務場景——查詢類 API 或許能回傳快取舊資料，下單類 API
+可能要直接告訴使用者稍後再試，而不是假裝成功，這個留給大家
+自己判斷，是這章少數沒有標準答案的地方。
 
-可以現場問問大家：如果這是訂單結帳的 fallback，你會回傳什麼？
-讓大家練習用業務角度想，而不是只把它當成一段填空程式碼。
+可以現場問問大家：如果 user-service 掛掉，你會希望 order-service
+回傳「未知用戶」，還是乾脆整支 API 報錯？讓大家練習用業務角度想，
+而不是只把它當成一段填空程式碼。
 -->
 
 ---
@@ -1203,19 +1402,17 @@ Resilience4j 是電路保護裝置，呼應雪崩效應和交通號誌。
 layout: default
 ---
 
-# 練習一：搭建 Eureka 服務發現環境
+# 練習一：搭建 Eureka 服務發現環境（1/2）
 ### 任務說明
 
-建立三個 Spring Boot 專案，讓它們透過 Eureka 相互感知：
+用 Spring Initializr 建立三個全新的 Spring Boot 專案，讓它們透過 Eureka 相互感知：
 
-| 任務 | 要求 |
-|------|------|
-| 建立 `eureka-server` | Port 8761，加上 `@EnableEurekaServer` |
-| 建立 `user-service` | Port 8081，`spring.application.name=user-service` |
-| 建立 `order-service` | Port 8082，`spring.application.name=order-service` |
-| 驗證 | 啟動三個服務後，開啟 `http://localhost:8761`，確認兩個服務出現在 Dashboard |
-
-**成功標準：** Eureka Dashboard 顯示 `USER-SERVICE` 和 `ORDER-SERVICE` 均為 `UP` 狀態。
+| 任務 | Artifact | 要求 |
+|------|----------|------|
+| 建立 `eureka-server` | `eureka-server` | Port 8761，加上 `@EnableEurekaServer` |
+| 建立 `user-service` | `user-service` | Port 8081，`spring.application.name=user-service` |
+| 建立 `order-service` | `order-service` | Port 8082，`spring.application.name=order-service` |
+| 驗證 | — | 啟動三個服務後，開啟 `http://localhost:8761`，確認兩個服務出現在 Dashboard |
 
 <!--
 回顧一下：我們剛剛學了 Eureka Server 怎麼建、Eureka Client 怎麼註冊，
@@ -1226,9 +1423,31 @@ user-service、order-service 啟動時要向它註冊，如果順序反了，
 Client 端 log 會出現連線失敗的重試訊息，別慌，這跟前面 Eureka Server
 自己註冊自己是類似性質的問題，不影響最終結果。
 
-⚠️ 提醒一下：這是三個完全獨立的 Spring Boot 專案，各自要有自己的
-build.gradle，各自能單獨執行，不要為了省事全部塞進同一個專案，
-親手體會「開三個專案」的成本，正是這個練習隱藏的重點。
+⚠️ 提醒一下：這是三個完全獨立的 Spring Boot 專案，各自用 Spring
+Initializr 建立、各自的 Artifact 填對應名字，各自能單獨執行，
+不要為了省事全部塞進同一個專案，親手體會「開三個專案」的成本，
+正是這個練習隱藏的重點。
+
+下一頁看成功標準跟完成後的畫面長怎樣。
+-->
+
+---
+layout: default
+---
+
+# 練習一：搭建 Eureka 服務發現環境（2/2）
+### 成功標準
+
+**成功標準：** Eureka Dashboard 顯示 `USER-SERVICE` 和 `ORDER-SERVICE` 均為 `UP` 狀態。
+
+<img src="/screenshots/ch46-01-eureka-dashboard-up.png" alt="Eureka Dashboard 顯示 ORDER-SERVICE 與 USER-SERVICE 皆為 UP" style="width:100%; max-height:320px; object-fit:contain; margin-top:8px;" />
+
+<!--
+這頁附的截圖就是完成的畫面：ORDER-SERVICE、USER-SERVICE
+都顯示 UP，這就是這個練習的終點。截圖裡那段紅字警告
+（EMERGENCY! EUREKA MAY BE...）是 Eureka 的自我保護模式，
+本機開發只有一兩個服務時很常見，不代表練習失敗，可以順便跟
+大家說明一下，不然容易被紅字嚇到。
 
 引導思考：如果時間夠，大家可以試試把某個服務關掉，重整 Dashboard 頁面，
 觀察狀態什麼時候才會變化——猜猜看，服務發現是不是即時的？
@@ -1238,36 +1457,46 @@ build.gradle，各自能單獨執行，不要為了省事全部塞進同一個�
 layout: default
 ---
 
-# 練習一：解題提示
+# 練習一：解題提示（1/2）
 ### 提示說明
 
-**用 Spring Initializr 建三個專案：eureka-server 勾 Eureka Server；
-user-service、order-service 各自勾 Eureka Discovery Client。**
+**三個專案都用 Spring Initializr 建立：**
 
-<div class="mt-2 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ 如果是手動改既有的 <code>build.gradle</code>（不是重新跑 Initializr），記得依賴沒寫版本號，要自己補上 BOM：<code>implementation platform('org.springframework.cloud:spring-cloud-dependencies:2025.1.2')</code>，否則 Gradle 會找不到版本而報錯。
+| 專案 | Artifact | Dependencies |
+|------|----------|--------------|
+| eureka-server | `eureka-server` | Eureka Server |
+| user-service | `user-service` | Eureka Discovery Client、Spring Web |
+| order-service | `order-service` | Eureka Discovery Client、Spring Web |
+
+<div class="mt-2 p-2 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 三個都用 Initializr 建立，BOM 都會自動配好，不用手動寫 dependencyManagement。
 </div>
 
-**常見問題排查：**
+<!--
+先讓大家卡關個幾分鐘再看這頁提示，效果比一開始就給答案好。
+
+這個練習三個專案都用 Spring Initializr 建立，Initializr 會自動
+幫忙配好 Spring Cloud BOM，比手動寫 build.gradle 更不容易踩版本坑，
+Artifact 分別填 eureka-server、user-service、order-service，
+跟 Eureka 上看到的服務名稱可以直接對上，方便記憶跟排查。
+
+下一頁是常見問題排查，大家先卡關卡到動不了再看。
+-->
+
+---
+layout: default
+---
+
+# 練習一：解題提示（2/2）
+### 常見問題排查
 
 | 問題 | 可能原因 |
 |------|---------|
 | Dashboard 看不到服務 | `eureka.client.service-url.defaultZone` 設定錯誤 |
 | 服務狀態一直是 DOWN | 心跳設定問題，服務啟動後要等 30 秒才會更新 |
-| 找不到 @EnableEurekaServer | 沒用 Initializr 勾對 Eureka Server 依賴，或手動加的依賴版本衝突 |
+| 找不到 @EnableEurekaServer | Initializr 沒勾對 Eureka Server 依賴 |
 
 <!--
-先讓大家卡關個幾分鐘再看這頁提示，效果比一開始就給答案好。
-
-這個練習建議三個專案都用 Spring Initializr 建立，Initializr 會自動
-幫忙配好 Spring Cloud BOM，比手動寫 build.gradle 更不容易踩版本坑。
-
-⚠️ 但還是要提醒：如果大家是拿既有專案手動改 build.gradle（不是重新
-建立），BOM 就要自己手動補上，這是 Initializr 幫不上忙的地方——
-BOM 本身不是一個依賴，是一份版本清單，告訴 Gradle「Spring Cloud
-這個生態系底下所有子專案，統一用這個版本組合」，可以類比成前面
-看過的 Spring Boot 本身的 dependency management 機制。
-
 三個常見問題大家可以自己重現一次：故意把 defaultZone 打錯字，
 看 log 出現什麼；心跳預設是 30 秒更新一次，所以服務啟動後要等一下
 才會在 Dashboard 出現，先別急著以為失敗了。
@@ -1280,25 +1509,28 @@ layout: default
 # 練習二：用 OpenFeign 跨服務查詢資料
 ### 任務說明
 
-在練習一的基礎上，讓 `order-service` 呼叫 `user-service` 取得用戶資料：
+在練習一的基礎上，讓 `order-service` 呼叫 `user-service`，組出一份完整的訂單明細：
 
 | 任務 | 要求 |
 |------|------|
-| `user-service` 提供 API | `GET /users/{id}` 回傳 `User` 物件（id, name, email） |
-| `order-service` 定義 FeignClient | `@FeignClient(name = "user-service")` |
-| 建立 `OrderController` | `GET /orders/{orderId}/user` → 呼叫 Feign 取得用戶資料後一起回傳 |
+| `user-service` API | `GET /users/{id}` 回傳 `User` |
+| FeignClient | `@FeignClient(name = "user-service")`（同 Part 6 `UserClient`） |
+| `OrderService` | `getOrderDetail()` 呼叫 Feign，組成 `OrderDetail` |
+| `OrderController` | `GET /orders/{orderId}/user/{userId}` |
 | 開啟 Feign | 啟動類加 `@EnableFeignClients` |
 
-**成功標準：** 呼叫 `http://localhost:8082/orders/1/user` 能取得 `user-service` 回傳的用戶資料。
+**成功標準：** 呼叫 `/orders/1/user/1`，能拿到 `OrderDetail` JSON。
 
 <!--
-回顧一下：練習一已經讓三個服務在 Eureka 上互相看得到了，
-這次要在這個基礎上，讓 order-service 真的透過 OpenFeign 呼叫 user-service，
-親手感受一次「不用知道對方 IP 也能呼叫」的威力。
+回顧一下：練習一已經讓三個服務在 Eureka 上互相看得到了，Part 6
+也已經帶大家把 UserClient、User、OrderDetail、OrderService 都寫過
+一次，這個練習就是把那些片段自己重新組裝一次，加上最後一塊拼圖——
+一個真正對外的 OrderController。
 
-任務鋪陳：不用重開一套新環境，就在剛剛跑起來的三個服務上，
-多加一個 FeignClient 介面、多加一個 Controller，系統馬上就有跨服務
-查詢能力，這種累加式的開發過程比較貼近真實工作情境。
+任務鋪陳：不是憑空發明新東西，是照著 Part 6 教過的結構，自己動手
+再做一次：user-service 提供資料，order-service 用 UserClient 拿資料，
+用 OrderService 組合成 OrderDetail，最後 OrderController 把它
+暴露成一支真正的 API 讓外部呼叫。
 
 ⚠️ 驗證小技巧：測試前先確認 Eureka Dashboard 上 USER-SERVICE 是
 UP 狀態，再去打 order-service 的 API，不然會拿到連線失敗的例外。
@@ -1312,8 +1544,7 @@ order-service 的 API，看看會發生什麼——這就是我們前面 Part 8
 layout: default
 ---
 
-# 練習二：解題提示
-### 提示說明
+# 練習二：解題提示（1/3）
 
 **`user-service` 側：**
 
@@ -1327,7 +1558,7 @@ public class UserController {
 }
 ```
 
-**`order-service` 側的 FeignClient 介面：**
+**`order-service` 側的 FeignClient：**
 
 ```java
 @FeignClient(name = "user-service")
@@ -1337,25 +1568,156 @@ public interface UserClient {
 }
 ```
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+<div class="mt-2 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
 ⚠️ <b>常見踩坑：</b> @PathVariable 的 name 屬性在 Feign 介面中必須明確指定，不能省略，否則會出現 IllegalStateException。
 </div>
 
 <!--
+這頁先解決「拿資料」這一半：user-service 提供 API，order-service
+用 UserClient 宣告要怎麼呼叫它，這兩塊都是 Part 6 教過的內容，
+原封不動搬過來就是答案。
+
 ⚠️ 易錯點提醒：@PathVariable 的 name 屬性在 Feign 介面中必須明確指定，
 不能省略。一般 Controller 裡有時候可以省略是因為 Spring MVC 能透過
 編譯時保留的參數名稱資訊自動對應，但 Feign 介面產生 HTTP 請求的機制
 不太一樣，缺少明確指定容易對應失敗，養成一律明確寫出 name 的習慣，
 可以少踩很多坑。
 
-另一個提醒：兩邊的 User 類別欄位要一致，否則反序列化會出問題——
+另一個提醒：兩邊的 User 型別欄位要一致，否則反序列化會出問題——
 這其實是微服務的一種隱性耦合，user-service 改了欄位名稱，
 order-service 沒同步改，不會在編譯期報錯，只會在執行期悄悄變成 null，
 是比較難排查的一種 bug。如果呼叫失敗，先確認 user-service 有成功在
 Eureka 上註冊，這是最快的排查起點。
 
+下一頁我們把這兩塊組裝成真正對外的 API。
+-->
+
+---
+layout: default
+---
+
+# 練習二：解題提示（2/3）
+
+**`order-service` 側的 `OrderService`：**
+
+```java
+@Service
+@RequiredArgsConstructor
+public class OrderService {
+    private final UserClient userClient;
+
+    public OrderDetail getOrderDetail(Long orderId, Long userId) {
+        User user = userClient.getUserById(userId);
+        return new OrderDetail(orderId, user.name());
+    }
+}
+```
+
+<!--
+這頁把上一頁的 UserClient 組裝進 OrderService——跟 Part 6 教過的
+一模一樣，把呼叫 user-service 拿到的 User 組成 OrderDetail 回傳。
+下一頁我們把它暴露成真正的 HTTP API。
+-->
+
+---
+layout: default
+---
+
+# 練習二：解題提示（3/3）
+
+**`order-service` 側的 `OrderController`：**
+
+```java
+@RestController
+@RequiredArgsConstructor
+public class OrderController {
+    private final OrderService orderService;
+
+    @GetMapping("/orders/{orderId}/user/{userId}")
+    public OrderDetail getOrderDetail(@PathVariable Long orderId,
+                                       @PathVariable Long userId) {
+        return orderService.getOrderDetail(orderId, userId);
+    }
+}
+```
+
+<!--
+這頁補上最後一塊：用 OrderController 把 OrderService 暴露成真正的
+HTTP API——這一步是 Part 6 沒寫到的，Part 6 只寫到 OrderService
+為止，這個練習補上最後一步。
+
 引導思考：如果 order-service 呼叫 user-service 失敗，大家會怎麼處理？
 這個問題我們前面 Part 8 用熔斷器回答過了，可以回頭複習一下。
+-->
+
+---
+layout: default
+---
+
+# 練習三：加上 Gateway 統一入口
+### 任務說明
+
+在練習二的基礎上，建立 `api-gateway`，讓外部不用直接打 order-service / user-service 的 port：
+
+| 任務 | 要求 |
+|------|------|
+| 建立 `api-gateway` | Initializr 建立，Artifact `api-gateway`，勾 Reactive Gateway + Eureka Discovery Client |
+| 設定路由 | `/orders/**` → `lb://order-service`；`/users/**` → `lb://user-service` |
+| 驗證 | 改打 Gateway 的 8080，而不是 order-service 的 8082 |
+
+**成功標準：** 呼叫 `http://localhost:8080/orders/1/user/1`（注意是 8080，不是 8082），一樣能拿到 `OrderDetail`。
+
+<!--
+回顧一下：練習二已經讓 order-service、user-service 兩個業務服務
+能互相溝通，但外部呼叫者還是得知道 order-service 確切的 port
+（8082）。這個練習加上 Gateway，讓外部呼叫者只需要記住 8080
+這一個入口，實際請求要轉給哪個服務由 Gateway 決定。
+
+任務鋪陳：跟 Part 5 教的路由設定完全一樣，直接照抄就好——
+/orders/**、/users/** 剛好對應到 order-service、user-service
+實際的 Controller 路徑，這不是巧合，是刻意設計成一致的，
+路由 predicate 一定要對應到「真正存在的路徑」，不是憑空定義的。
+
+⚠️ 驗證重點：練習二打的是 order-service 自己的 8082，這次要改打
+Gateway 的 8080，如果還是打 8082 也會通（因為 order-service 本身
+還是活著），但那樣就沒有真的走到 Gateway，驗證不出這個練習的重點。
+
+引導思考：如果同時開兩個 order-service 實例（例如一個 8082、一個
+8083，spring.application.name 一樣是 order-service），Gateway
+還是只打一個固定 port 嗎？這個問題可以帶回 Part 3 講過的
+Spring Cloud LoadBalancer 概念。
+-->
+
+---
+layout: default
+---
+
+# 練習三：解題提示（Gateway）
+
+**`api-gateway` 的 `application.properties`：**
+
+```properties
+server.port=8080
+spring.cloud.gateway.server.webflux.routes[0].id=order-service
+spring.cloud.gateway.server.webflux.routes[0].uri=lb://order-service
+spring.cloud.gateway.server.webflux.routes[0].predicates[0]=Path=/orders/**
+spring.cloud.gateway.server.webflux.routes[1].id=user-service
+spring.cloud.gateway.server.webflux.routes[1].uri=lb://user-service
+spring.cloud.gateway.server.webflux.routes[1].predicates[0]=Path=/users/**
+```
+
+<div class="mt-2 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <code>eureka.client.service-url.defaultZone</code> 這行也別忘了加（跟 order-service、user-service 一樣要指向 8761），沒加的話 Gateway 找不到 Eureka，<code>lb://</code> 完全無法解析。
+</div>
+
+<!--
+這頁提示跟 Part 5 教的路由設定幾乎一模一樣，只是 predicates 換成
+真正的路徑 /orders/**、/users/**。
+
+⚠️ 常見漏掉的地方：Gateway 專案本身也要加 eureka-client 依賴、
+也要設定 eureka.client.service-url.defaultZone，才能查到
+order-service、user-service 註冊在哪。這頁的 properties 只列了
+路由相關的部分，Eureka 的連線設定記得一起補上。
 -->
 
 ---
