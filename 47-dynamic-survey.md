@@ -2082,7 +2082,7 @@ public AppResponse<?> deleteSurvey(Long id) {
 layout: default
 ---
 
-# SurveyService — 後台編輯 Session 流程
+# SurveyService — 後台編輯 Session 流程 (1/2) 暫存與取回
 
 ```java
 // 1. 暫存編輯中的問卷
@@ -2098,6 +2098,22 @@ public AppResponse<SurveyDTO> getAdminSurveyFromSession(HttpSession session) {
     return AppResponse.success(dto);
 }
 
+// 3. 確認提交見下一頁
+```
+
+<!--
+管理員編輯問卷時，先把編輯中的 SurveyDTO 暫存到 Session（用 ADMIN_EDIT_SESSION_KEY 這個 Key），切到預覽頁時再從 Session 讀回顯示，這樣預覽頁不用重新拿一次完整的問卷資料，也能避免使用者填到一半誤觸提交。
+-->
+
+---
+layout: default
+---
+
+# SurveyService — 後台編輯 Session 流程 (2/2) 確認提交
+
+```java
+// ... 接上一頁 (dto 已暫存於 Session)
+
 // 3. 確認提交，依按鈕決定發佈或草稿，並清空 Session
 @Transactional
 public AppResponse<SurveyDTO> commitAdminSurveyFromSession(
@@ -2112,7 +2128,7 @@ public AppResponse<SurveyDTO> commitAdminSurveyFromSession(
 ```
 
 <!--
-這頁一次看三個方法，組成一個完整的「暫存 → 取回 → 確認提交」流程：管理員編輯問卷時先暫存到 Session，切到預覽頁再從 Session 讀回顯示，確認無誤送出時才真正呼叫 saveSurvey 寫入資料庫並清空 Session。這種先暫存再確認的設計，可以避免使用者填到一半誤觸提交，也讓「預覽頁」可以直接複用暫存的資料，不用再打一次完整的問卷資料傳過去。
+確認提交時從 Session 取出暫存的 dto，依按鈕決定 isPublish 是 true 還是 false，設定對應的 status 後呼叫 saveSurvey 真正寫入資料庫，成功才清空 Session。這種「成功才清空」的順序要注意——如果寫入失敗，Session 裡的暫存資料還在，使用者可以重試而不會遺失剛剛編輯的內容。
 -->
 
 ---
@@ -2285,7 +2301,7 @@ layout: default
 layout: default
 ---
 
-# AdminSurveyController (1) — 查詢
+# AdminSurveyController (1/2) — 查詢問卷列表
 
 ### `controller/AdminSurveyController.java`
 
@@ -2304,24 +2320,40 @@ public class AdminSurveyController {
             @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return surveyService.getSurveysByAdmin(title, startDate, endDate);
     }
-
-    @GetMapping("/{id}")
-    public AppResponse<?> getSurveyById(@PathVariable("id") Long id) {
-        return surveyService.getSurveyDetails(id);
-    }
-    // ... 寫入端點見下一頁
+    // ... 問卷詳情端點見下一頁
 }
 ```
 
 <!--
-AdminSurveyController 掛在 /api/admin/surveys 路徑下，這頁先看查詢相關的兩個端點。帶大家留意 getSurveys 的參數用 @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) 明確指定日期格式，這是因為 URL 上的日期參數是字串，需要告訴 Spring 怎麼把它轉成 LocalDate，這是處理日期型別 Query Parameter 的標準寫法。
+AdminSurveyController 掛在 /api/admin/surveys 路徑下，這頁先看列表查詢端點。帶大家留意 getSurveys 的參數用 @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) 明確指定日期格式，這是因為 URL 上的日期參數是字串，需要告訴 Spring 怎麼把它轉成 LocalDate，這是處理日期型別 Query Parameter 的標準寫法。
 -->
 
 ---
 layout: default
 ---
 
-# AdminSurveyController (2) — 新增 / 更新 / 刪除
+# AdminSurveyController (2/2) — 查詢問卷詳情
+
+```java
+public class AdminSurveyController {
+    // ... 接上一頁
+
+    @GetMapping("/{id}")
+    public AppResponse<?> getSurveyById(@PathVariable("id") Long id) {
+        return surveyService.getSurveyDetails(id);
+    }
+}
+```
+
+<!--
+getSurveyById 用路徑參數 id 取得單一問卷的完整詳情，通常是後台點進某張問卷編輯頁時呼叫的第一支 API。
+-->
+
+---
+layout: default
+---
+
+# AdminSurveyController (3) — 新增 / 更新 / 刪除
 
 ```java
 public class AdminSurveyController {
@@ -2354,7 +2386,7 @@ public class AdminSurveyController {
 layout: default
 ---
 
-# AdminSurveyController (3) — Session 編輯流程
+# AdminSurveyController (4) — Session 編輯流程
 
 ```java
     // === Session 編輯流程 ===
@@ -2384,7 +2416,7 @@ layout: default
 layout: default
 ---
 
-# AdminSurveyController (4) — 統計與作答明細
+# AdminSurveyController (5) — 統計與作答明細
 
 ```java
 public class AdminSurveyController {
@@ -2414,7 +2446,7 @@ public class AdminSurveyController {
 layout: default
 ---
 
-# Postman 測試 — 新增問卷
+# Postman 測試 — 新增問卷 (1/2) 基本欄位與 SINGLE/MULTI 題
 
 - **Method**: `POST`  **URL**: `http://localhost:8080/api/admin/surveys`
 
@@ -2433,7 +2465,27 @@ layout: default
           "required": true, "orderIndex": 1, "options": [
             { "optionText": "網頁前端", "orderIndex": 0 },
             { "optionText": "網頁後端", "orderIndex": 1 },
-            { "optionText": "手機 App", "orderIndex": 2 } ] },
+            { "optionText": "手機 App", "orderIndex": 2 } ] }
+        // ... TEXT 題與預期結果見下一頁
+    ]
+}
+```
+
+<!--
+這頁先看新增問卷請求的基本欄位跟前兩題：SINGLE 是單選、MULTI 是多選，兩者都需要 options 陣列列出可選項目，並用 orderIndex 控制顯示順序，這是 SurveyDTO 巢狀欄位最常見的兩種題型長相。
+-->
+
+---
+layout: default
+---
+
+# Postman 測試 — 新增問卷 (2/2) TEXT 題與預期結果
+
+```json
+{
+    // ... 接上一頁
+    "questions": [
+        // ... SINGLE、MULTI 題
         { "title": "對本課程有什麼建議嗎？", "type": "TEXT",
           "required": false, "orderIndex": 2, "options": [] }
     ]
@@ -2443,7 +2495,7 @@ layout: default
 - **預期結果**: `code: 200`, `data: 問卷內容 (含產生的 id)`
 
 <!--
-這頁示範一個完整的新增問卷請求，帶大家看 Body 結構怎麼對應到 SurveyDTO 的巢狀欄位：questions 陣列裡每一題又有自己的 options 陣列，型別分別示範了 SINGLE、MULTI、TEXT 三種題型的資料長相，方便同學之後自己測試時直接參考複製。預期結果會拿到剛剛建立的問卷內容，並附上資料庫自動產生的 id。
+TEXT 題型不需要 options，因為是自由填寫的簡答題，options 給空陣列即可。送出後預期拿到剛剛建立的問卷內容，並附上資料庫自動產生的 id，方便同學之後串接更新、刪除等 API 時直接複製這個 id 使用。
 -->
 
 ---
