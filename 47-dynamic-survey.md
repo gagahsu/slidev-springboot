@@ -1068,8 +1068,8 @@ public record ResponseDTO(
     Long surveyId,
     @NotBlank(message = "姓名不可為空") String name,
     @NotBlank(message = "手機不可為空") String phone,
-    String email,                                 // 選填 (但作為重複檢查依據)
-    @NotNull(message = "年齡不可為空") Integer age,
+    @NotBlank(message = "Email 不可為空") String email,  // 必填 (亦作為重複檢查依據)
+    Integer age,                                          // 選填
     List<AnswerDTO> answers
 ) {}
 ```
