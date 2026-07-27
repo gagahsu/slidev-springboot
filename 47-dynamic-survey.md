@@ -2454,7 +2454,7 @@ layout: default
 {
     "title": "2026 程式語言喜好大調查",
     "description": "為了瞭解開發者趨勢，請花一分鐘填寫此問卷。",
-    "startDate": "2026-03-01", "endDate": "2026-03-31", "status": "PUBLISHED",
+    "startDate": "2026-07-01", "endDate": "2026-08-31", "status": "PUBLISHED",
     "questions": [
         { "title": "您最常使用的程式語言是？", "type": "SINGLE",
           "required": true, "orderIndex": 0, "options": [
@@ -2496,6 +2496,81 @@ layout: default
 
 <!--
 TEXT 題型不需要 options，因為是自由填寫的簡答題，options 給空陣列即可。送出後預期拿到剛剛建立的問卷內容，並附上資料庫自動產生的 id，方便同學之後串接更新、刪除等 API 時直接複製這個 id 使用。
+-->
+
+---
+layout: default
+---
+
+# Postman 測試 — 更新剛剛的問卷 (1/3) 基本欄位
+
+- **Method**: `PUT`  **URL**: `http://localhost:8080/api/admin/surveys/1`
+- `1` 請替換成上一頁回傳的實際 id
+
+```json
+{
+    "title": "2026 程式語言喜好大調查 (更新版)",
+    "description": "為了瞭解開發者趨勢，請花一分鐘填寫此問卷。",
+    "startDate": "2026-07-01", "endDate": "2026-08-31", "status": "PUBLISHED"
+    // ... questions 見下一頁
+}
+```
+
+<!--
+PUT 請求示範更新剛剛新增的問卷：Body 結構跟新增時一樣，但 URL 路徑帶上 id，對應 AdminSurveyController.updateSurvey 裡 dto.setId(id) 那行邏輯。這裡先看基本欄位，title 加上「(更新版)」方便同學辨識這是更新後的結果。
+-->
+
+---
+layout: default
+---
+
+# Postman 測試 — 更新剛剛的問卷 (2/3) SINGLE/MULTI 題
+
+```json
+{
+    // ... 接上一頁
+    "questions": [
+        { "title": "您最常使用的程式語言是？", "type": "SINGLE",
+          "required": true, "orderIndex": 0, "options": [
+            { "optionText": "Java", "orderIndex": 0 },
+            { "optionText": "TypeScript", "orderIndex": 1 },
+            { "optionText": "Python", "orderIndex": 2 },
+            { "optionText": "Go", "orderIndex": 3 } ] },
+        { "title": "您的開發領域有？(可多選)", "type": "MULTI",
+          "required": true, "orderIndex": 1, "options": [
+            { "optionText": "網頁前端", "orderIndex": 0 },
+            { "optionText": "網頁後端", "orderIndex": 1 },
+            { "optionText": "手機 App", "orderIndex": 2 } ] }
+        // ... TEXT 題與預期結果見下一頁
+    ]
+}
+```
+
+<!--
+這裡示範在 SINGLE 題多加一個 Go 選項，帶大家注意因為 saveSurvey 是「先清空、再重建」的策略，題目跟選項會整批被新的內容取代，不是差異更新，測試時可以順便觀察資料庫裡舊的 Question / Option 是不是真的被清掉重建了。
+-->
+
+---
+layout: default
+---
+
+# Postman 測試 — 更新剛剛的問卷 (3/3) TEXT 題與預期結果
+
+```json
+{
+    // ... 接上一頁
+    "questions": [
+        // ... SINGLE、MULTI 題
+        { "title": "對本課程有什麼建議嗎？", "type": "TEXT",
+          "required": false, "orderIndex": 2, "options": [] }
+    ]
+}
+```
+
+- **預期結果**: `code: 200`, `data: 更新後的問卷內容`
+
+<!--
+更新後的預期結果會拿到最新的問卷內容，資料庫裡舊的 Question / Option 已被整批清空重建，可以順便去資料庫確認一下，驗證「先清空、再重建」策略真的有生效。
 -->
 
 ---
@@ -2559,7 +2634,7 @@ graph LR
 layout: default
 ---
 
-# SurveyService — 前台查詢
+# SurveyService — 前台查詢 (1/2) 進行中問卷
 
 ```java
 // 取得進行中的問卷 (首頁用)
@@ -2568,7 +2643,20 @@ public AppResponse<List<SurveyDTO>> getActiveSurveys() {
     return AppResponse.success(
         surveys.stream().map(this::convertToDTO).collect(Collectors.toList()));
 }
+// ... 作答暫存見下一頁
+```
 
+<!--
+getActiveSurveys 撈出目前進行中的問卷清單給首頁顯示，篩選邏輯（開始日期已到、結束日期未過）封裝在 surveyRepository.findActiveSurveys() 裡，Service 只負責轉成 DTO 回傳。
+-->
+
+---
+layout: default
+---
+
+# SurveyService — 前台查詢 (2/2) 作答暫存
+
+```java
 // 暫存作答至 Session (含重複作答檢查)
 public AppResponse<?> saveToSession(ResponseDTO submission, HttpSession session) {
     if (responseRepository.existsBySurveyIdAndEmail(
@@ -2588,7 +2676,7 @@ public AppResponse<ResponseDTO> getFromSession(HttpSession session) {
 ```
 
 <!--
-這頁三個方法組成前台查詢跟暫存的基礎：getActiveSurveys 撈出進行中的問卷（首頁用）、saveToSession 暫存作答並檢查重複、getFromSession 從 Session 取回暫存資料給確認頁顯示。
+saveToSession 暫存作答並檢查重複、getFromSession 從 Session 取回暫存資料給確認頁顯示，這一組是前台填寫流程的核心。
 ⚠️ 易錯點：saveToSession 裡的重複作答檢查用的是 Email，這代表同一個人如果換不同 Email 就能重複填寫，這是教學版簡化的設計，正式產品可能會需要更嚴謹的身分驗證機制。
 -->
 
@@ -2622,7 +2710,7 @@ commitFromSession 從 Session 取出剛剛暫存的作答，交給 submitRespons
 layout: default
 ---
 
-# SurveyService — 寫入作答 (1)
+# SurveyService — 寫入作答 (1/3)
 
 ```java
 @Transactional
@@ -2654,7 +2742,7 @@ submitResponse 開始真正把作答寫進資料庫，這頁先建立 SurveyResp
 layout: default
 ---
 
-# SurveyService — 寫入作答 (2)
+# SurveyService — 寫入作答 (2/3) 找出對應題目
 
 ```java
     for (AnswerDTO aDto : submission.answers()) {
@@ -2665,7 +2753,22 @@ layout: default
             .findFirst().orElse(null);
         if (question == null) continue;
         answer.setQuestion(question);
+        // ... 依題型分流見下一頁
+    }
+```
 
+<!--
+for 迴圈逐一處理每一筆作答，先用 questionId 從 survey 裡找出對應的 Question 物件——找不到就 continue 跳過（防禦性寫法，避免前端傳來無效的 questionId 讓程式炸掉）。找到後先把 question 掛到 answer 上，接下來才依題型決定怎麼存值。
+-->
+
+---
+layout: default
+---
+
+# SurveyService — 寫入作答 (3/3) 依題型分流並儲存
+
+```java
+        // ... 接上一頁 (question 已找到)
         if (question.getType().equals("TEXT")) {
             answer.setAnswerText(aDto.answerText());          // 簡答
         } else {
@@ -2684,7 +2787,7 @@ layout: default
 ```
 
 <!--
-這頁接續處理每一題的作答，for 迴圈裡先用 questionId 找出對應的 Question，再依題型分流：TEXT 直接存文字，選擇題則從 options 裡篩出被選中的那些，同時存進 selectedOptions（供統計用）跟 answerText（同時存文字方便直接顯示，不用每次都要 join 選項文字）。最後 responseRepository.save(response) 因為 cascade 設定，會把所有作答明細一併存入，跟前面儲存問卷的寫法是同一個套路。
+依題型分流：TEXT 直接存文字，選擇題則從 options 裡篩出被選中的那些，同時存進 selectedOptions（供統計用）跟 answerText（同時存文字方便直接顯示，不用每次都要 join 選項文字）。最後 responseRepository.save(response) 因為 cascade 設定，會把所有作答明細一併存入，跟前面儲存問卷的寫法是同一個套路。
 -->
 
 ---
