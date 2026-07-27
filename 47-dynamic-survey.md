@@ -1175,15 +1175,40 @@ sequenceDiagram
 layout: default
 ---
 
-# Security — JwtUtil (1) 欄位與簽名金鑰
+# Security — JwtUtil (1a) 欄位與建構子
 
 ### `security/JwtUtil.java`
 
 ```java
 @Component
 public class JwtUtil {
-    @Value("${jwt.secret}")     private String jwtSecret;
-    @Value("${jwt.expiration}") private int jwtExpirationMs;
+    private final String jwtSecret;
+    private final int jwtExpirationMs;
+
+    public JwtUtil(@Value("${jwt.secret}") String jwtSecret,
+                   @Value("${jwt.expiration}") int jwtExpirationMs) {
+        this.jwtSecret = jwtSecret;
+        this.jwtExpirationMs = jwtExpirationMs;
+    }
+    // ... 簽名金鑰見下一頁
+}
+```
+
+- 改成**建構子注入**：`@Value` 一樣可以標在建構子參數上，欄位改成 `private final`，好處是這兩個值一旦建構完成就不能再被改動。
+
+<!--
+JwtUtil 是整個認證機制的核心工具類別，這頁先看欄位跟建構子：改成建構子注入後，@Value 標在建構子參數上，jwtSecret、jwtExpirationMs 都是 private final，一旦建構完成就不能再被改動。
+-->
+
+---
+layout: default
+---
+
+# Security — JwtUtil (1b) 簽名金鑰
+
+```java
+public class JwtUtil {
+    // ... 接上一頁
 
     // jwt.secret 是 Base64 編碼過的亂數，要先解碼還原成位元組
     private SecretKey getSigningKey() {
@@ -1197,7 +1222,7 @@ public class JwtUtil {
 - 與第 45 章一致：`jwt.secret` 必須是 **Base64 編碼**過的隨機亂數，`getSigningKey()` 要先用 `Decoders.BASE64.decode()` 還原成位元組，再交給 `Keys.hmacShaKeyFor()`。
 
 <!--
-JwtUtil 是整個認證機制的核心工具類別，先看 getSigningKey 這個方法——因為 jwt.secret 是 Base64 編碼過的字串，要先用 Decoders.BASE64.decode() 還原成位元組，才能交給 Keys.hmacShaKeyFor() 產生真正用來簽章的金鑰物件。
+這頁看 getSigningKey 這個方法——因為 jwt.secret 是 Base64 編碼過的字串，要先用 Decoders.BASE64.decode() 還原成位元組，才能交給 Keys.hmacShaKeyFor() 產生真正用來簽章的金鑰物件。
 ⚠️ 易錯點：這個解碼步驟很容易被忽略，如果直接把字串當位元組用，簽出來的 Token 驗證時就會失敗。
 -->
 
@@ -1232,7 +1257,7 @@ generateJwtToken 負責在登入成功後產生 Token，用 jjwt 0.12.x 的鏈�
 layout: default
 ---
 
-# Security — JwtUtil (3) 解析與驗證
+# Security — JwtUtil (3a) 解析 Claims
 
 ```java
     // 解析 Token，驗證簽名，取出 Payload 裡的所有 Claims
@@ -1246,6 +1271,24 @@ layout: default
     public String getUserNameFromJwtToken(String token) {
         return extractAllClaims(token).getSubject();
     }
+    // ... 驗證見下一頁
+```
+
+- 需要的 import：`io.jsonwebtoken.*`、`io.jsonwebtoken.security.Keys`、`io.jsonwebtoken.io.Decoders`、`javax.crypto.SecretKey` 等。
+
+<!--
+這頁看 extractAllClaims 跟 getUserNameFromJwtToken：前者解析 Token 拿出所有 Claims，簽名不對或過期時 parseSignedClaims() 會直接拋出 JwtException；後者從 Claims 裡取出 subject 欄位當帳號。
+-->
+
+---
+layout: default
+---
+
+# Security — JwtUtil (3b) 驗證 Token
+
+```java
+public class JwtUtil {
+    // ... 接上一頁
 
     // 驗證 Token：帳號要對得上，且尚未過期，兩者都成立才算有效
     public boolean validateJwtToken(String token, String email) {
@@ -1257,7 +1300,6 @@ layout: default
 ```
 
 - 與第 45 章一致：`JwtUtil` 內部**不做 try-catch**，簽名不對或過期時 `parseSignedClaims()` 直接拋出 `JwtException`，交給 `JwtAuthFilter` 統一接住——這樣才能在 Filter 那層正確回 401，而不是被 `JwtUtil` 吞掉。
-- 需要的 import：`io.jsonwebtoken.*`、`io.jsonwebtoken.security.Keys`、`io.jsonwebtoken.io.Decoders`、`javax.crypto.SecretKey` 等。
 
 <!--
 這頁的重點是 validateJwtToken：要帳號對得上、而且沒有過期，兩個條件同時成立才算驗證通過。
@@ -1359,16 +1401,39 @@ UserDetailsServiceImpl 是資料庫（JPA）跟 Spring Security 認證機制之�
 layout: default
 ---
 
-# Security — JwtAuthFilter (1) 抽取 Token
+# Security — JwtAuthFilter (1a) 類別宣告
 
 ### `security/JwtAuthFilter.java`
 
 ```java
+@Component
+@RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
-    @Autowired private JwtUtil jwtUtil;
-    @Autowired private UserDetailsServiceImpl userDetailsService;
+    private final JwtUtil jwtUtil;
+    private final UserDetailsServiceImpl userDetailsService;
 
     @Override
+    protected void doFilterInternal(HttpServletRequest request,
+            HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        // ... 抽取 Token 見下一頁
+    }
+}
+```
+
+- 改成**建構子注入**：加上 `@Component` + `@RequiredArgsConstructor`（Lombok 自動產生建構子），`jwtUtil`、`userDetailsService` 都改成 `private final`，這樣 SecurityConfig 就能直接把這個 Bean 當方法參數注入，不用再手動 `new`（見下面 SecurityConfig 頁面）。
+
+<!--
+JwtAuthFilter 繼承 OncePerRequestFilter，是每個 HTTP 請求進來後第一個攔截點。這裡改成建構子注入：加上 @Component、@RequiredArgsConstructor，欄位改成 private final，之後 SecurityConfig 就能直接把它當方法參數注入，不用再手動 new 一個出來。
+-->
+
+---
+layout: default
+---
+
+# Security — JwtAuthFilter (1b) 抽取 Token
+
+```java
     protected void doFilterInternal(HttpServletRequest request,
             HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -1389,7 +1454,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 - 跟第 45 章一致：`try-catch` 只包 `getUserNameFromJwtToken()` 這一行，接住 `JwtUtil` 拋出的 `JwtException`，並把 `username` 設回 `null`，交給後面的 Spring Security 授權機制回 401，而不是讓例外一路衝出去變成 500。
 
 <!--
-JwtAuthFilter 繼承 OncePerRequestFilter，是每個 HTTP 請求進來後第一個攔截點。這頁先看解析 Token 的部分：parseJwt() 從 Header 拿出 Token 之後，try-catch 只包住 getUserNameFromJwtToken() 這一行。
+這頁先看解析 Token 的部分：parseJwt() 從 Header 拿出 Token 之後，try-catch 只包住 getUserNameFromJwtToken() 這一行。
 ⚠️ 易錯點：捕捉到 JwtException 時故意把 username 設回 null，而不是把例外往外丟，這樣後面才會被 Spring Security 的授權機制正確擋成 401，而不是意外變成一個 500 系統錯誤。
 -->
 
@@ -1397,7 +1462,7 @@ JwtAuthFilter 繼承 OncePerRequestFilter，是每個 HTTP 請求進來後第一
 layout: default
 ---
 
-# Security — JwtAuthFilter (2) 建立認證
+# Security — JwtAuthFilter (2a) 載入使用者
 
 ```java
         // username 存在，且目前 SecurityContext 還沒登入過，才需要處理
@@ -1406,7 +1471,23 @@ layout: default
 
             UserDetails userDetails =
                 userDetailsService.loadUserByUsername(username); // 3. 載入
+            // ... 建立 Authentication 見下一頁
+        }
+```
 
+- `SecurityContextHolder.getContext().getAuthentication() == null` 這層檢查避免重複設定，確認目前還沒有登入紀錄才需要往下處理。
+
+<!--
+這頁先看第一層防護：確認 SecurityContext 目前還沒有登入紀錄，避免重複設定，才呼叫 userDetailsService.loadUserByUsername() 載入使用者資料。
+-->
+
+---
+layout: default
+---
+
+# Security — JwtAuthFilter (2b) 建立認證
+
+```java
             // 再次驗證 Token 簽名與是否過期，確保沒被竄改
             if (jwtUtil.validateJwtToken(jwt, username)) {
                 UsernamePasswordAuthenticationToken authentication =
@@ -1423,10 +1504,10 @@ layout: default
 }
 ```
 
-- `SecurityContextHolder.getContext().getAuthentication() == null` 這層檢查避免重複設定；`validateJwtToken(jwt, username)` 二次確認 Token 沒被竄改、沒過期，才建立 `Authentication` 寫入 `SecurityContext`。
+- `validateJwtToken(jwt, username)` 二次確認 Token 沒被竄改、沒過期，才建立 `Authentication` 寫入 `SecurityContext`。
 
 <!--
-這頁接續建立真正的 Authentication 物件並寫入 SecurityContext。帶大家看兩層防護：先確認 SecurityContext 目前還沒有登入紀錄，避免重複設定；再呼叫 validateJwtToken() 二次確認簽名跟過期時間都沒問題，才真正建立身分並放行。這種「雙重檢查」的寫法在安全機制的程式碼裡很常見，寧可多判斷一次也不要有漏洞。
+這頁接續建立真正的 Authentication 物件並寫入 SecurityContext。呼叫 validateJwtToken() 二次確認簽名跟過期時間都沒問題，才真正建立身分並放行。這種「雙重檢查」的寫法在安全機制的程式碼裡很常見，寧可多判斷一次也不要有漏洞。
 -->
 
 ---
@@ -1461,24 +1542,41 @@ layout: default
 layout: default
 ---
 
-# Security — SecurityConfig (1) Beans
+# Security — SecurityConfig (1a) 注入與密碼編碼
 
 ### `security/SecurityConfig.java`
 
 ```java
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Bean
-    public JwtAuthFilter authenticationJwtTokenFilter() {
-        return new JwtAuthFilter();
-    }
+    private final JwtAuthFilter jwtAuthFilter; // @Component 自動注入，不用手動 new
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+    // ... AuthenticationManager 見下一頁
+}
+```
+
+`BCryptPasswordEncoder` 負責密碼加密。
+
+<!--
+SecurityConfig 是整個 Security 機制的組態中心。JwtAuthFilter 現在改成 @Component + 建構子注入，不再需要在這裡用 @Bean 手動 new 一個出來，直接用 @RequiredArgsConstructor 的建構子注入拿到 Spring 容器裡現成的那個 Bean。這頁先看密碼編碼用的 BCryptPasswordEncoder Bean。
+-->
+
+---
+layout: default
+---
+
+# Security — SecurityConfig (1b) AuthenticationManager
+
+```java
+public class SecurityConfig {
+    // ... 接上一頁
 
     @Bean
     public AuthenticationManager authenticationManager(
@@ -1488,10 +1586,10 @@ public class SecurityConfig {
 }
 ```
 
-`BCryptPasswordEncoder` 負責密碼加密；`AuthenticationManager` 是登入驗證的核心。
+`AuthenticationManager` 是登入驗證的核心，接下來的頁面會看到 jwtAuthFilter 怎麼被組裝進過濾鏈。
 
 <!--
-SecurityConfig 是整個 Security 機制的組態中心，這頁先看它註冊的三個 Bean：JwtAuthFilter 本身、負責密碼加密比對的 BCryptPasswordEncoder，以及登入驗證用的 AuthenticationManager。這三個 Bean 分別對應到「擋門的警衛」「密碼保險箱」跟「核對身分的櫃檯」，接下來的頁面會看到它們怎麼被組裝進過濾鏈。
+這頁補上 AuthenticationManager 這個 Bean，透過 AuthenticationConfiguration 拿到 Spring Security 內部組好的驗證管理器，登入流程（AuthService）會依賴它來核對帳號密碼。
 -->
 
 ---
@@ -1511,7 +1609,7 @@ layout: default
             .authorizeHttpRequests(auth -> auth
                 .anyRequest().permitAll());                            // 開發環境全公開
 
-        http.addFilterBefore(authenticationJwtTokenFilter(),
+        http.addFilterBefore(jwtAuthFilter,
                 UsernamePasswordAuthenticationFilter.class);           // 掛上 JWT filter
         return http.build();
     }
@@ -1520,7 +1618,7 @@ layout: default
 > 教學版為求簡單採 `permitAll()`；正式環境應改為 `requestMatchers("/api/admin/**").hasRole("ADMIN")` 等規則。
 
 <!--
-filterChain 這個 Bean 定義了整個請求要經過的安全規則：關閉 CSRF（因為是 REST API 不是傳統表單）、開啟 CORS、設定 Session 政策支援確認頁暫存，最後把我們自己的 JwtAuthFilter 掛在 UsernamePasswordAuthenticationFilter 之前。
+filterChain 這個 Bean 定義了整個請求要經過的安全規則：關閉 CSRF（因為是 REST API 不是傳統表單）、開啟 CORS、設定 Session 政策支援確認頁暫存，最後把建構子注入拿到的 jwtAuthFilter 掛在 UsernamePasswordAuthenticationFilter 之前——跟原本 authenticationJwtTokenFilter() 效果一樣，只是不用再手動呼叫方法拿 Bean。
 ⚠️ 易錯點：投影片特別用引用區塊提醒，教學版為求簡單用了 permitAll() 開放所有請求，正式環境一定要改成針對 /api/admin/** 這類路徑加上 hasRole("ADMIN") 等實際的權限規則，不然管理員 API 誰都能呼叫。
 -->
 
@@ -3490,7 +3588,7 @@ fetchUserProfile 呼叫後端取得目前登入者的資料，並用 tap 把結�
 layout: default
 ---
 
-# SurveyService (1) — 查詢
+# SurveyService (1a) — 查詢：清單
 
 ### `services/survey.service.ts`
 
@@ -3507,6 +3605,24 @@ export class SurveyService {
   getAllSurveys(): Observable<Survey[]> {
     return this.http.get<any>(this.ADMIN_API_URL).pipe(map(res => res.data));
   }
+  // ... 單筆查詢見下一頁
+}
+```
+
+<!--
+前端 SurveyService 封裝所有跟問卷相關的 API 呼叫，先看查詢相關的方法。ADMIN_API_URL 跟 PUBLIC_API_URL 分別對應後台跟前台兩組端點，getActiveSurveys 打前台拿進行中的問卷、getAllSurveys 打後台拿全部問卷，帶大家注意每個方法都用 .pipe(map(res => res.data)) 把後端統一回應格式（AppResponse）裡的 data 欄位取出來，這樣元件拿到的就是乾淨的資料本身，不用每次都自己寫 res.data.data 這種重複的解包邏輯。
+-->
+
+---
+layout: default
+---
+
+# SurveyService (1b) — 查詢：單筆
+
+```typescript
+export class SurveyService {
+  // ... 接上一頁
+
   getAdminSurveyById(id: number): Observable<Survey> {
     return this.http.get<any>(`${this.ADMIN_API_URL}/${id}`).pipe(map(res => res.data));
   }
@@ -3519,7 +3635,7 @@ export class SurveyService {
 ```
 
 <!--
-前端 SurveyService 封裝所有跟問卷相關的 API 呼叫，先看查詢相關的方法。帶大家注意每個方法都用 .pipe(map(res => res.data)) 把後端統一回應格式（AppResponse）裡的 data 欄位取出來，這樣元件拿到的就是乾淨的資料本身，不用每次都自己寫 res.data.data 這種重複的解包邏輯。
+單筆查詢分成後台跟前台兩個方法：getAdminSurveyById 給後台編輯用，回傳完整資料；getSurveyById 打 /details 端點，是前台受訪者填答前看到的問卷詳情。兩者路徑不同（ADMIN_API_URL vs PUBLIC_API_URL），對應到後端 Controller 分開驗證權限的設計。
 -->
 
 ---
@@ -3732,7 +3848,7 @@ onSubmit 先檢查 loginForm.valid 才會真正呼叫 API，避免把不合法�
 layout: default
 ---
 
-# 登入頁 — Template (卡片與 Email)
+# 登入頁 — Template (卡片外殼)
 
 ### `pages/login/login.component.html`
 
@@ -3744,6 +3860,26 @@ layout: default
     </mat-card-header>
     <mat-card-content>
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+        <!-- ... Email 欄位見下一頁 -->
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>
+```
+
+<!--
+這頁是登入表單的外層 HTML 結構，用 Angular Material 的 mat-card 組出卡片式登入畫面，裡面包一個綁定 loginForm 的 form 元素，(ngSubmit) 綁定 onSubmit()，之後的欄位都會放進這個 form 裡。
+-->
+
+---
+layout: default
+---
+
+# 登入頁 — Template (Email 欄位)
+
+```html
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+        <!-- ... 接上一頁 -->
         <mat-form-field appearance="outline">
           <mat-label>電子郵件 (Email)</mat-label>
           <input matInput formControlName="email" type="email">
@@ -3752,13 +3888,10 @@ layout: default
         </mat-form-field>
         <!-- ... 密碼與按鈕見下一頁 -->
       </form>
-    </mat-card-content>
-  </mat-card>
-</div>
 ```
 
 <!--
-這頁是登入表單的 HTML 結構，用 Angular Material 的 mat-card、mat-form-field 組出卡片式登入畫面。帶大家看 Email 欄位怎麼依照不同的驗證錯誤類型（required、email）顯示不同的錯誤訊息，這種「每種錯誤各自對應一句提示文字」的寫法，能讓使用者更清楚知道自己哪裡填錯了，而不是只顯示一句籠統的格式錯誤。
+Email 欄位用 mat-form-field 包住 input，帶大家看怎麼依照不同的驗證錯誤類型（required、email）顯示不同的錯誤訊息，這種「每種錯誤各自對應一句提示文字」的寫法，能讓使用者更清楚知道自己哪裡填錯了，而不是只顯示一句籠統的格式錯誤。
 -->
 
 ---
@@ -4130,7 +4263,7 @@ export class SurveyFillComponent {
 layout: default
 ---
 
-# 填寫頁 — 送出 Session
+# 填寫頁 — 送出 Session (驗證與格式化)
 
 ### `survey-fill.component.ts` (2b)
 
@@ -4143,6 +4276,26 @@ export class SurveyFillComponent {
       this.snackBar.open('請填寫所有必填欄位', '關閉', { duration: 3000 }); return;
     }
     const submission = this.formatSubmission(this.fillForm.value);
+    // ... Session 暫存與畫面切換見下一頁
+  }
+}
+```
+
+<!--
+onGoToConfirm 是使用者按下「下一步」時觸發的方法，這頁先看前半段：檢查表單合法性，不合法就彈出提示並中止；合法才把表單值格式化成後端要的格式，準備送去暫存。
+-->
+
+---
+layout: default
+---
+
+# 填寫頁 — 送出 Session (暫存與切換確認頁)
+
+```typescript
+export class SurveyFillComponent {
+  // ... 接上一頁
+  onGoToConfirm() {
+    // ... 接上一頁：表單驗證與 formatSubmission
     this.surveyService.saveToSession(submission).subscribe({
       next: (res) => {
         if (res.code === 200) {
@@ -4158,7 +4311,7 @@ export class SurveyFillComponent {
 ```
 
 <!--
-onGoToConfirm 是使用者按下「下一步」時觸發的方法：先檢查表單合法性，再把表單值格式化成後端要的格式，暫存到 Session，成功後才切換到確認頁並捲動回頁面頂部（window.scrollTo）。
+後半段呼叫 surveyService.saveToSession 把格式化後的答案暫存到後端 Session，成功後才切換到確認頁並捲動回頁面頂部（window.scrollTo）。
 ⚠️ 易錯點：window.scrollTo(0, 0) 這種細節很容易被忽略，如果不加，使用者停留在填寫表單底部的位置，切到確認頁時可能看不到頁面已經切換，體驗會很奇怪。
 -->
 
@@ -4495,7 +4648,7 @@ SurveyListComponent 跟前面看過的元件結構類似，ngOnInit 時載入問
 layout: default
 ---
 
-# 問卷列表 — 操作方法
+# 問卷列表 — 操作方法 (編輯與切換狀態)
 
 ```typescript
 export class SurveyListComponent {
@@ -4510,7 +4663,23 @@ export class SurveyListComponent {
       error: () => this.snackBar.open('狀態更新失敗', '關閉', { duration: 3000 })
     });
   }
+  // ... 刪除見下一頁
+}
+```
 
+<!--
+onEdit 導頁到編輯頁；toggleStatus 切換發佈/草稿狀態，帶大家留意這個寫法——用展開運算子 { ...survey, status: newStatus } 建立一個複製自原問卷、只改狀態欄位的新物件再送出，這是前端處理「部分欄位更新」時常見且乾淨的寫法。
+-->
+
+---
+layout: default
+---
+
+# 問卷列表 — 操作方法 (刪除)
+
+```typescript
+export class SurveyListComponent {
+  // ... 接上一頁
   onDelete(id: number) {
     if (confirm('確定要刪除這份問卷嗎？')) {
       this.surveyService.deleteSurvey(id).subscribe({
@@ -4523,7 +4692,7 @@ export class SurveyListComponent {
 ```
 
 <!--
-這頁看三個操作方法：onEdit 導頁到編輯頁、toggleStatus 切換發佈/草稿狀態、onDelete 刪除問卷。帶大家留意 toggleStatus 的寫法——用展開運算子 { ...survey, status: newStatus } 建立一個複製自原問卷、只改狀態欄位的新物件再送出，這是前端處理「部分欄位更新」時常見且乾淨的寫法。onDelete 一樣先用 confirm() 二次確認才執行刪除。
+onDelete 一樣先用 confirm() 二次確認才執行刪除，成功後呼叫 loadSurveys() 刷新列表，這跟 toggleStatus 的成功處理邏輯是一致的模式。
 -->
 
 ---
@@ -4750,7 +4919,7 @@ export class SurveyEditorComponent {
 layout: default
 ---
 
-# 問卷編輯器 — 暫存至 Session
+# 問卷編輯器 — 暫存至 Session (驗證與整理 DTO)
 
 ### `survey-editor.component.ts` (3a)
 
@@ -4771,6 +4940,27 @@ export class SurveyEditorComponent {
         options: q.options.map((o: any, j: number) => ({ ...o, orderIndex: j }))
       }))
     };
+    // ... Session 暫存與切換步驟見下一頁
+  }
+}
+```
+
+<!--
+goToConfirm 是進入預覽步驟前的整理動作，這頁看前半段：先驗證表單合法性，不合法就跳警告訊息並中止；合法才把資料重新整理成後端 DTO 格式，補上 orderIndex 這種前端表單沒有、但後端需要的欄位。
+⚠️ 易錯點：orderIndex 用陣列的索引 i、j 重新計算，而不是沿用舊值，這樣使用者調整題目順序或刪除中間題目後，順序編號才會保持正確連續。
+-->
+
+---
+layout: default
+---
+
+# 問卷編輯器 — 暫存至 Session (存入並切換步驟)
+
+```typescript
+export class SurveyEditorComponent {
+  // ... 接上一頁
+  goToConfirm() {
+    // ... 接上一頁：表單驗證與 surveyData 整理
     this.surveyService.saveAdminSurveyToSession(surveyData).subscribe(() => {
       this.activeStep.set(2); window.scrollTo(0, 0);
     });
@@ -4780,8 +4970,7 @@ export class SurveyEditorComponent {
 ```
 
 <!--
-goToConfirm 是進入預覽步驟前的整理動作：先驗證表單合法性，再把資料重新整理成後端 DTO 格式（補上 orderIndex 這種前端表單沒有、但後端需要的欄位），暫存到 Session 後才切換到步驟 2。
-⚠️ 易錯點：orderIndex 用陣列的索引 i、j 重新計算，而不是沿用舊值，這樣使用者調整題目順序或刪除中間題目後，順序編號才會保持正確連續。
+後半段呼叫 surveyService.saveAdminSurveyToSession 把整理好的 DTO 暫存到後端 Session，成功後才把 activeStep 切到 2（確認頁）並捲動回頁面頂部。
 -->
 
 ---
@@ -4951,10 +5140,8 @@ layout: default
 
 </div>
 
-三步驟（基本資料 → 題目 → 預覽）由 `activeStep` Signal 控制顯示。
-
 <!--
-這頁把三個步驟的畫面用 @if / @else if / @else 依照 activeStep() 的值切換顯示，是一個典型的「多步驟表單精靈（Wizard）」UI 模式。帶大家留意最後一步的按鈕組合——返回修改、僅儲存草稿、儲存並發佈，剛好對應前面看過的 goToConfirm 跟 onFinalSubmit 兩個方法，把整個編輯器的邏輯跟畫面串成完整的一條線。
+這頁把三個步驟的畫面用 @if / @else if / @else 依照 activeStep() 的值切換顯示，三步驟（基本資料 → 題目 → 預覽）由 `activeStep` Signal 控制顯示，是一個典型的「多步驟表單精靈（Wizard）」UI 模式。帶大家留意最後一步的按鈕組合——返回修改、僅儲存草稿、儲存並發佈，剛好對應前面看過的 goToConfirm 跟 onFinalSubmit 兩個方法，把整個編輯器的邏輯跟畫面串成完整的一條線。
 -->
 
 ---
