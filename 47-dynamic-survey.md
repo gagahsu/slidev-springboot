@@ -75,7 +75,7 @@ layout: default
 | **管理員** | 建立 / 編輯 / 刪除問卷、發佈與下架、檢視填寫名單與作答明細、統計圖表 |
 
 - **後端**：Spring Boot 4.1 + Spring Data JPA + Spring Security + JWT + MySQL
-- **前端**：Angular 18（Standalone）+ Angular Material + PrimeNG + Chart.js + Tailwind
+- **前端**：Angular 19（Standalone）+ Angular Material + Chart.js + 原生 CSS
 
 <!--
 這頁的重點是先定調整個專案的範圍：訪客、會員、管理員三種角色各自能做什麼事，直接對應到之後 Controller 要開放的 API。可以把它想像成蓋房子前的「使用需求訪談」——業主（訪客、會員、管理員）想要什麼功能，我們才知道要蓋幾間房間。實務上這種角色權限表，通常就是需求規格書的第一頁，值得養成習慣先畫出來再寫程式。
@@ -2908,6 +2908,7 @@ public AppResponse<?> getUserHistory() {
 
     return AppResponse.success(history.stream().map(r -> {
         Map<String, Object> map = new HashMap<>();
+        map.put("responseId", r.getId());
         map.put("surveyId", r.getSurvey().getId());
         map.put("surveyTitle", r.getSurvey().getTitle());
         map.put("submittedAt", r.getSubmittedAt());
@@ -2918,6 +2919,7 @@ public AppResponse<?> getUserHistory() {
 
 <!--
 getUserHistory 撈出目前登入會員填過的所有問卷紀錄，一樣要先判斷是否為匿名使用者，未登入就直接回傳 401。這個功能只有登入會員才能使用，也呼應了 SurveyResponse 那個可選的 user 關聯——只有當初填答時有登入、有連結帳號的紀錄，才會出現在這裡。
+⚠️ 易錯點：這裡一定要多帶一個 responseId（就是這筆 SurveyResponse 自己的主鍵），不是只回傳 surveyId。前端「我的紀錄」點進去要看的是「這一筆作答」的內容，不是「這份問卷」本身——用 surveyId 導到 /fill/:id 只會重新打開一份空白問卷，不會顯示當初填的答案；要顯示當初填的答案，必須用 responseId 呼叫 getResponseDetail(responseId) 這支 API。
 -->
 
 ---
@@ -3068,105 +3070,102 @@ layout: default
 # 建立 Angular 專案
 
 ```bash
-# 安裝 Angular CLI (若尚未安裝)
-npm install -g @angular/cli
+# 安裝 Angular CLI 19 (若尚未安裝，本專案固定用 v19)
+npm install -g @angular/cli@19
 
-# 建立 standalone + routing + scss 專案
-ng new frontend --standalone --routing --style=scss
+# 建立 routing + scss 專案（standalone 為 Angular 17+ 預設，--ssr=false 略過 SSR 互動提示）
+ng new frontend --routing --style=scss --ssr=false
 cd frontend
 
 # UI 套件
-ng add @angular/material                 # Angular Material (前台 / 後台列表)
-npm install primeng @primeng/themes primeicons primeflex  # PrimeNG (問卷編輯器)
+ng add @angular/material                 # Angular Material (全站表單、表格、按鈕、對話框)
 
 # 圖表 (統計頁)
-npm install chart.js ng2-charts
-
-# Tailwind CSS
-npm install -D tailwindcss postcss autoprefixer
-npx tailwindcss init
+npm install chart.js ng2-charts@6   # ng2-charts@10 需 @angular/cdk >=21，Angular 19 專案改裝 v6
 ```
 
 啟動：`ng serve` → 開啟 `http://localhost:4200`。
 
 <!--
-這頁的指令一次把整個前端專案骨架跟需要的套件都裝好：Angular CLI 建立 standalone 專案、Angular Material 跟 PrimeNG 兩套 UI 元件庫（後面會看到分別用在不同頁面）、Chart.js 畫統計圖表、Tailwind CSS 做版面樣式。
-⚠️ 易錯點：這裡混用了 Angular Material 跟 PrimeNG 兩套 UI 框架，同學要留意元件命名跟樣式不要互相搞混，通常後台問卷編輯器用 PrimeNG、其他大部分頁面用 Angular Material。預期結果：指令跑完之後，執行 ng serve 應該就能在 localhost:4200 看到 Angular 預設歡迎頁。
+這頁的指令一次把整個前端專案骨架跟需要的套件都裝好：Angular CLI 建立 standalone 專案、Angular Material UI 元件庫（後面各頁面統一用它）、Chart.js 畫統計圖表。版面樣式全部用原生 CSS（scoped 在各元件的 styleUrl，或共用樣式放進 styles.scss），不額外引入第三方 CSS 框架。
+預期結果：指令跑完之後，執行 ng serve 應該就能在 localhost:4200 看到 Angular 預設歡迎頁。
 -->
 
 ---
 layout: default
 ---
 
-# Tailwind 設定
-
-### `tailwind.config.js`
-
-```javascript
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: ["./src/**/*.{html,ts}"],
-  theme: {
-    extend: {
-      colors: {
-        primary: '#8D6E63',   // 大地色系棕
-        secondary: '#D7CCC8', // 米色
-      }
-    },
-  },
-  plugins: [],
-}
-```
-
-`content` 告訴 Tailwind 要掃描哪些檔案，產生對應的 utility class。
-
-<!--
-tailwind.config.js 裡最重要的是 content 這個欄位，它告訴 Tailwind 要去掃描哪些檔案裡用到的 class，才能只產生真正用到的樣式（避免整包 CSS 過大）。這裡也順便自訂了 primary、secondary 兩個顏色變數，之後在各頁面可以直接用 bg-primary 這種語意化的 class，不用每次都寫死色碼。
--->
-
----
-layout: default
----
-
-# 全域樣式 — 匯入與變數
+# 全域樣式 — 匯入與變數 (1)
 
 ### `src/styles.scss`
 
 ```scss
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+// Custom Theming for Angular Material
+@use '@angular/material' as mat;
 
-@import "primeflex/primeflex.css";
-@import "primeicons/primeicons.css";
-
-:root {
-    color-scheme: light;        /* 強制亮色，避免系統深色模式造成文字反白 */
-    --primary-color: #8D6E63;
-    --bg-beige: #F5F1EE;
+html {
+  @include mat.theme((
+    color: (
+      theme-type: light,
+      primary: mat.$cyan-palette,
+      tertiary: mat.$orange-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
 }
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 ```
 
 <!--
-styles.scss 是整個前端的全域樣式入口，先匯入 Tailwind 的三層樣式（base/components/utilities），再匯入 PrimeFlex 跟 PrimeIcons 這兩個 PrimeNG 需要的輔助套件。
-⚠️ 易錯點：color-scheme: light 這行特別強制鎖定亮色模式，是為了避免使用者系統開了深色模式時，某些元件的文字顏色跟背景反白撞色看不清楚，這是實務上處理「系統深色模式 vs 自訂 UI 框架」常見的權宜做法。
+styles.scss 是整個前端的全域樣式入口，ng add @angular/material（Angular Material 19）產生的 mat.theme(...) 定義了 Material 元件依賴的系統變數（--mat-sys-*），這段不能刪，删了全站元件的顏色字型都會跑掉。
 -->
 
 ---
 layout: default
 ---
 
-# 全域樣式 — 基底與表單修正
+# 全域樣式 — 匯入與變數 (2)
+
+### `src/styles.scss`（接續）
+
+在 scaffold 之後追加自訂色票變數，供全站頁面用 `var(--primary-color)` 取用：
 
 ```scss
-html, body {
-    height: 100%;
-    background-color: var(--bg-beige) !important;
-    color: #333333 !important;
-    font-family: Roboto, "Helvetica Neue", sans-serif;
+/* 以下為新增：自訂色票變數，供全站頁面用 var(--primary-color) 取用 */
+html {
+  --primary-color: #8D6E63;
+  --bg-beige: #F5F1EE;
+}
+```
+
+<!--
+我們在檔案最後追加另一個 html 選擇器補上 --primary-color、--bg-beige 兩個自訂變數，CSS 同名選擇器的宣告會合併，效果等同寫在同一個 html { } 裡，之後各頁面可以直接用 var(--primary-color) 取值，不用每次寫死色碼。
+⚠️ 易錯點：新加的變數用 CSS 變數（不是 Sass 變數），要放進某個 html 或 :root 選擇器裡才能被瀏覽器解析，直接寫在檔案最外層是無效的。
+-->
+
+---
+layout: default
+---
+
+# 全域樣式 — 基底樣式與表單修正
+
+沿用 scaffold 的 `body` 選擇器，把預設 Material 系統色改成自訂的米色系：
+
+```scss
+body {
+  color-scheme: light;   /* 強制亮色，避免系統深色模式造成文字反白 */
+  background-color: var(--bg-beige) !important;
+  color: #333333 !important;
+
+  /* 以下為 scaffold 原有設定，保留 */
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
 }
 
-/* 修正 Tailwind Preflight 與 Material 表單外框的衝突 */
+/* 修正 Angular Material 表單外框的細節 */
 .mat-mdc-form-field .mdc-notched-outline__notch {
     border-left: none !important;
     border-right: none !important;
@@ -3174,8 +3173,185 @@ html, body {
 ```
 
 <!--
-這頁補上 html/body 的基礎樣式，跟一段修正 Angular Material 表單外框跟 Tailwind Preflight 衝突的 CSS。
-⚠️ 易錯點：這種「兩套 CSS 框架混用互相打架」的狀況在實務專案很常見，遇到時通常要打開瀏覽器開發者工具，找到衝突的 class 再手動覆蓋，這頁就是一個真實案例的修正示範。
+這頁再補一段 body 選擇器：color-scheme 鎖亮色、background-color/color 換成自訂的米色系配色，蓋掉 scaffold 預設的 var(--mat-sys-surface)／var(--mat-sys-on-surface)。margin: 0 跟 font-family 是 scaffold 原本就有的設定，這裡沿用同一個 body 選擇器等於直接覆寫、合併成最終樣式，不用整段複製貼上重寫。最後補一段修正 Angular Material 表單外框細節的 CSS。下一頁接著看全站共用的版面 utility class。
+⚠️ 易錯點：SCSS 檔案裡同名選擇器可以出現多次，樣式會依照後面出現的規則覆蓋前面的（Cascade），不需要，也不建議把 scaffold 原本的 body 規則刪掉重寫。
+-->
+
+---
+layout: default
+---
+
+# 全域樣式 — Layout Class (Flex)
+
+```scss
+/* 共用版面 utility class（取代第三方 CSS 框架，全站頁面共用） */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.justify-end { justify-content: flex-end; }
+.gap-1 { gap: 0.25rem; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+.gap-4 { gap: 1rem; }
+.gap-5 { gap: 1.25rem; }
+.gap-6 { gap: 1.5rem; }
+.gap-8 { gap: 2rem; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+```
+
+<!--
+這頁是 flex 版面相關的 utility class——取代 Tailwind 的 flex / items- / justify- / gap- 系列寫法。card-grid 則是取代 Tailwind 響應式 grid-cols 的作法，用 auto-fit + minmax 讓卡片自動依容器寬度換行，不需要寫 sm:/md:/lg: 這種中斷點語法。
+-->
+
+---
+layout: default
+---
+
+# 全域樣式 — Layout Class (寬高與顯示)
+
+```scss
+.w-full { width: 100%; }
+.flex-grow { flex-grow: 1; }
+.h-full { height: 100%; }
+.max-w-md { max-width: 28rem; }
+.min-h-form { min-height: 70vh; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.cursor-pointer { cursor: pointer; }
+.hidden { display: none; }
+```
+
+<!--
+這頁補上寬高、對齊、顯示相關的 utility class，各元件 template 直接照樣引用即可。
+-->
+
+---
+layout: default
+---
+
+# 全域樣式 — Layout Class (Margin)
+
+```scss
+.mb-1 { margin-bottom: 0.25rem; }
+.mb-3 { margin-bottom: 0.75rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mt-3 { margin-top: 0.75rem; }
+.mt-4 { margin-top: 1rem; }
+.mt-8 { margin-top: 2rem; }
+.ml-1 { margin-left: 0.25rem; }
+.mr-2 { margin-right: 0.5rem; }
+```
+
+<!--
+margin 相關的 utility class，命名規則跟 Tailwind 一致（mb- = margin-bottom、mt- = margin-top…），方便同學對照理解。
+-->
+
+---
+layout: default
+---
+
+# 全域樣式 — Layout Class (Padding)
+
+```scss
+.p-2 { padding: 0.5rem; }
+.p-3 { padding: 0.75rem; }
+.p-4 { padding: 1rem; }
+.p-6 { padding: 1.5rem; }
+.p-12 { padding: 3rem; }
+.px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+.py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+.pt-4 { padding-top: 1rem; }
+```
+
+<!--
+padding 相關的 utility class，到這裡排版與間距的部分就補齊了，下面接著看文字、顏色與樣式的 utility class。
+-->
+
+---
+layout: default
+---
+
+# 全域樣式 — 文字與樣式 (字重/字級)
+
+```scss
+.font-bold { font-weight: 700; }
+.font-medium { font-weight: 500; }
+.text-sm { font-size: .875rem; }
+.text-lg { font-size: 1.125rem; }
+.text-xl { font-size: 1.25rem; }
+.text-2xl { font-size: 1.5rem; }
+.line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+```
+
+<!--
+文字大小跟字重相關的 utility class。line-clamp-3 比較特別，用 -webkit-box 系列屬性做「超過 3 行就截斷加省略號」的效果，這是 CSS 少數需要靠廠商前綴屬性才能做到的效果。
+-->
+
+---
+layout: default
+---
+
+# 全域樣式 — 文字與樣式 (圓角與陰影)
+
+```scss
+.rounded { border-radius: 4px; }
+.rounded-lg { border-radius: 8px; }
+.rounded-xl { border-radius: 12px; }
+.shadow-sm { box-shadow: 0 1px 2px rgba(0, 0, 0, .08); }
+.shadow { box-shadow: 0 2px 6px rgba(0, 0, 0, .12); }
+.shadow-md { box-shadow: 0 4px 10px rgba(0, 0, 0, .15); }
+.transition-shadow { transition: box-shadow .2s ease; }
+.border { border: 1px solid #e5e7eb; }
+.border-b { border-bottom: 1px solid #e5e7eb; }
+.border-2 { border: 2px solid #e5e7eb; }
+.border-accent-l { border-left: 4px solid var(--primary-color); }
+.border-success { border: 2px solid #a5d6a7; }
+```
+
+<!--
+圓角、陰影、邊框相關的 utility class。border-accent-l 用 var(--primary-color) 呼應前面 styles.scss 定義的品牌色，border-success 則是給確認頁的綠色邊框卡片用的。
+-->
+
+---
+layout: default
+---
+
+# 全域樣式 — 文字與樣式 (顏色)
+
+```scss
+.text-danger { color: #d32f2f; }
+.text-success { color: #2e7d32; }
+.text-muted { color: #757575; }
+.text-link { color: #1976d2; }
+.text-link:hover { text-decoration: underline; }
+.text-accent { color: var(--primary-color); }
+.bg-subtle { background-color: #f5f5f5; }
+.bg-white { background-color: #ffffff; }
+.bg-accent-tint { background-color: #ede7f6; }
+```
+
+<!--
+文字跟背景的語意化顏色 class，用「danger / success / muted / accent」這種語意命名，而不是直接寫死色碼，往後要換整站主題色時只要改這幾行就好。
+-->
+
+---
+layout: default
+---
+
+# 全域樣式 — 文字與樣式 (Badge 標籤)
+
+```scss
+.badge { padding: 2px 8px; border-radius: 4px; }
+.badge-success { background-color: #c8e6c9; color: #2e7d32; }
+.badge-neutral { background-color: #eeeeee; color: #616161; }
+```
+
+<!--
+badge 系列是搭配 mat-chip 顯示問卷發佈狀態用的標籤樣式，到這裡全站共用的 utility class 就補齊了。
 -->
 
 ---
@@ -3214,162 +3390,29 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# 前端：全域設定
-
-<!--
-專案骨架搭好了，接下來要設定 Angular 應用程式的全域組態，包含啟動流程、Providers、跟路由規則，這些是 standalone 模式下取代舊版 AppModule 的關鍵設定。
--->
-
----
-layout: default
----
-
-# main.ts — 啟動點
-
-```typescript
-// main.ts — 啟動點
-import { bootstrapApplication } from '@angular/platform-browser';
-import { appConfig } from './app/app.config';
-import { AppComponent } from './app/app.component';
-
-bootstrapApplication(AppComponent, appConfig)
-  .catch((err) => console.error(err));
-```
-
-<!--
-main.ts 是整個前端應用程式真正的進入點，bootstrapApplication 這個函式取代了舊版 Angular 的 platformBrowserDynamic().bootstrapModule() 寫法，是 standalone 元件時代的新啟動方式。程式碼很短，但值得帶同學理解它做的事：把 AppComponent 當作根元件，套用 appConfig 裡設定的所有全域服務，正式啟動整個應用程式。
--->
-
----
-layout: default
----
-
-# app.component — 根元件
-
-```typescript
-// app.component.ts — 根元件
-@Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [RouterOutlet, NavbarComponent],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
-})
-export class AppComponent { title = 'frontend'; }
-```
-
-```html
-<!-- app.component.html -->
-<app-navbar></app-navbar>
-<main class="container mx-auto mt-8 px-4">
-  <router-outlet></router-outlet>
-</main>
-```
-
-<!--
-AppComponent 是整個應用程式的根元件，standalone: true 代表它不需要被任何 NgModule 宣告，imports 陣列直接列出它用到的其他元件（這裡是 RouterOutlet 跟 NavbarComponent）。Template 裡的 <router-outlet> 就是頁面切換時，各個路由對應的元件會被渲染進來的位置，可以把它想像成一個固定的畫框，畫框裡的畫（頁面內容）會隨路由改變。
--->
-
----
-layout: default
----
-
-# app.config.ts — 全域 Providers
-
-```typescript
-export const appConfig: ApplicationConfig = {
-  providers: [
-    provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes),
-    provideAnimationsAsync(),
-    provideHttpClient(
-      withInterceptors([authInterceptor])   // 註冊 JWT 攔截器
-    ),
-    provideCharts(withDefaultRegisterables()), // Chart.js
-    providePrimeNG({                           // PrimeNG 主題
-      theme: {
-        preset: Aura,
-        options: { prefix: 'p', darkModeSelector: 'system', cssLayer: false }
-      }
-    })
-  ]
-};
-```
-
-Standalone 模式下，全域服務都在此註冊（取代舊版的 `AppModule`）。
-
-<!--
-app.config.ts 是 standalone 模式下集中註冊所有全域服務的地方，取代了舊版 AppModule 的 providers 陣列。帶大家看 provideHttpClient(withInterceptors([authInterceptor])) 這一行——這就是等一下會看到的 JWT 自動附加機制的註冊位置，少了這行，authInterceptor 就不會生效。同一頁還註冊了 Chart.js 跟 PrimeNG 主題，這些都是後面頁面會用到的第三方套件整合點。
--->
-
----
-layout: default
----
-
-# app.routes.ts — 路由
-
-```typescript
-export const routes: Routes = [
-  { path: 'login',    loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
-  { path: 'register', loadComponent: () => import('./pages/register/register.component').then(m => m.RegisterComponent) },
-  { path: 'home',     loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent) },
-  { path: 'fill/:id', loadComponent: () => import('./pages/survey-fill/survey-fill.component').then(m => m.SurveyFillComponent) },
-  { path: 'history',  loadComponent: () => import('./pages/user-history/user-history.component').then(m => m.UserHistoryComponent) },
-  { path: 'admin', children: [
-      { path: '',          loadComponent: () => import('./pages/admin/survey-list/survey-list.component').then(m => m.SurveyListComponent) },
-      { path: 'create',    loadComponent: () => import('./pages/admin/survey-editor/survey-editor.component').then(m => m.SurveyEditorComponent) },
-      { path: 'edit/:id',  loadComponent: () => import('./pages/admin/survey-editor/survey-editor.component').then(m => m.SurveyEditorComponent) },
-      { path: 'stats/:id', loadComponent: () => import('./pages/admin/survey-stats/survey-stats.component').then(m => m.SurveyStatsComponent) },
-  ]},
-  { path: '', redirectTo: 'home', pathMatch: 'full' }
-];
-```
-
-`loadComponent` 採用 **lazy loading**，每個頁面才需要時才載入。
-
-<!--
-這頁定義整個應用程式的路由表，帶大家留意每個路由都用 loadComponent 搭配動態 import()，這是 Angular 的懶加載（lazy loading）寫法——使用者實際導航到某個路由時，對應的元件程式碼才會被下載，而不是一開始就把所有頁面的程式碼都載入，能有效縮短應用程式的初始載入時間。admin 底下用巢狀 children 定義後台的子路由，結構跟 URL 路徑一一對應。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
 # 前端：資料模型與攔截器
 
 <!--
-路由設定好了，接下來要定義前端跟後端溝通時用的資料型別，以及一個很關鍵的 HTTP 攔截器，負責自動幫每個請求帶上身分憑證。
+專案骨架跟樣式都準備好了，接下來從最基礎的部分開始：先定義前端跟後端溝通時用的資料型別，以及一個很關鍵的 HTTP 攔截器，負責自動幫每個請求帶上身分憑證。這兩個檔案不依賴任何元件，所以放在最前面，後面的 Service、Component 都會用到它們。
 -->
 
 ---
 layout: default
 ---
 
-# Models — 資料結構
+# Models — 資料結構 (1)
+
+```bash
+ng generate interface models/auth model
+```
 
 ```typescript
-// models/auth.model.ts
 export interface User {
   id: number; email: string; name: string;
   phone?: string; role: 'USER' | 'ADMIN';
 }
 export interface AuthResponse {
   code: number; message: string; data: { token: string };
-}
-
-// models/survey.model.ts
-export type SurveyStatus = 'DRAFT' | 'PUBLISHED';
-export type QuestionType = 'SINGLE' | 'MULTI' | 'TEXT';
-export interface Option   { id?: number; optionText: string; orderIndex: number; }
-export interface Question {
-  id?: number; title: string; type: QuestionType;
-  required: boolean; orderIndex: number; options: Option[];
-}
-export interface Survey {
-  id?: number; title: string; description: string;
-  startDate: string; endDate: string; status: SurveyStatus;
-  hasResponses?: boolean; questions: Question[];
 }
 ```
 
@@ -3384,9 +3427,65 @@ TypeScript 的 `interface` 必須與後端 DTO 結構一一對應。
 layout: default
 ---
 
+# Models — 資料結構 (2)
+
+```bash
+ng generate interface models/survey model
+```
+
+```typescript
+export type SurveyStatus = 'DRAFT' | 'PUBLISHED';
+export type TimeStatus   = 'NOT_STARTED' | 'ONGOING' | 'ENDED';
+export type QuestionType = 'SINGLE' | 'MULTI' | 'TEXT';
+export interface Option   { id?: number; optionText: string; orderIndex: number; }
+export interface Question {
+  id?: number; title: string; type: QuestionType;
+  required: boolean; orderIndex: number; options: Option[];
+}
+export interface Survey {
+  id?: number; title: string; description: string;
+  startDate: string; endDate: string; status: SurveyStatus;
+  hasResponses?: boolean; questions: Question[];
+}
+// ... getTimeStatus 見下一頁
+```
+
+<!--
+這頁接續定義問卷相關的型別：SurveyStatus、TimeStatus、QuestionType 三個字串聯合型別，對應後端的狀態欄位。TimeStatus 是新增的（尚未開始/進行中/已結束），但故意沒有加進 Survey interface 當欄位——因為這個狀態純粹是拿 startDate/endDate 跟今天比較算出來的，Survey 物件本身已經有這兩個日期欄位，沒必要多存一個衍生欄位在型別裡，那樣反而要擔心「這個欄位跟 startDate/endDate 會不會對不上」的問題，下一頁會看到改成寫一個純函式現算。
+-->
+
+---
+layout: default
+---
+
+# Models — 資料結構 (3) 時間狀態計算
+
+```typescript
+// 依 startDate/endDate 算出時間狀態，只在已發佈時有意義；純前端計算，不佔後端 DTO 欄位
+export function getTimeStatus(s: Survey): TimeStatus | null {
+  if (s.status !== 'PUBLISHED') return null;
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  if (today < s.startDate) return 'NOT_STARTED';
+  if (today > s.endDate)   return 'ENDED';
+  return 'ONGOING';
+}
+```
+
+<!--
+getTimeStatus 要用的地方直接呼叫，永遠用最新的日期算，不會有資料不同步的疑慮，這是純函式（沒有依賴、沒有副作用，同樣輸入永遠同樣輸出）的典型好處。這裡故意不比較 Date 物件，改成直接比較 'yyyy-MM-dd' 字串——因為這個格式字串排序剛好等於日期先後順序（'2026-07-29' < '2026-07-30'），比較字串比比較 Date 物件簡單安全，完全避開下面這個易錯點。
+⚠️ 易錯點：如果改寫成 new Date(s.startDate) 去跟 today 比較，會踩到時區地雷——像 '2026-07-29' 這種純日期字串，JavaScript 會當成 UTC 午夜解析；在 UTC+8（台灣）時區，UTC 午夜換算成本地時間是早上 8 點。如果 today 是用 new Date() 取本地時間再歸零（本地午夜 0 點），拿本地 0 點去跟「换算成本地時間是早上 8 點」的 startDate 比，會誤判成「今天還沒到 startDate」，即使今天正好就是 startDate 當天。這種 Date 物件隱含時區轉換的問題很隱晦，改用字串比較是最乾脆的迴避方式。
+-->
+
+---
+layout: default
+---
+
 # Models — 統計結構
 
-### `models/survey-stats.model.ts`
+```bash
+ng generate interface models/survey-stats model
+```
 
 ```typescript
 export interface OptionStats {
@@ -3421,7 +3520,9 @@ layout: default
 
 # Interceptor — 自動帶上 JWT
 
-### `interceptors/auth.interceptor.ts`
+```bash
+ng generate interceptor interceptors/auth
+```
 
 ```typescript
 import { HttpInterceptorFn } from '@angular/common/http';
@@ -3464,9 +3565,29 @@ class: flex flex-col justify-center items-center text-center
 layout: default
 ---
 
-# AuthService (1) — 欄位與建構子
+# AuthService (1) — 建立與 Import
 
-### `services/auth.service.ts`
+```bash
+ng generate service services/auth
+```
+
+```typescript
+import { Injectable, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { tap, map } from 'rxjs';
+import { User, AuthResponse } from '../models/auth.model';
+```
+
+<!--
+用 ng generate service 建立 AuthService，這頁先列出後面會用到的所有 import：Injectable/inject/signal 來自 Angular 核心、HttpClient 負責發 API 請求、Router 負責登入登出後導頁、tap/map 是 RxJS 運算子、User/AuthResponse 是前面定義好的資料型別。
+-->
+
+---
+layout: default
+---
+
+# AuthService (2) — 欄位與建構子
 
 ```typescript
 @Injectable({ providedIn: 'root' })
@@ -3497,7 +3618,7 @@ export class AuthService {
 layout: default
 ---
 
-# AuthService (2) — 登入 / 註冊
+# AuthService (3) — 登入 / 註冊
 
 ```typescript
 export class AuthService {
@@ -3527,7 +3648,7 @@ login 跟 register 兩個方法結構幾乎一樣，都是呼叫後端 API，再
 layout: default
 ---
 
-# AuthService (3) — 登出與授權處理
+# AuthService (4) — 登出與授權處理
 
 ```typescript
 export class AuthService {
@@ -3560,7 +3681,7 @@ logout 很單純，清除 Token、重設 currentUser、導回登入頁。handleA
 layout: default
 ---
 
-# AuthService (4) — 取得個人資料
+# AuthService (5) — 取得個人資料
 
 ```typescript
 export class AuthService {
@@ -3588,9 +3709,29 @@ fetchUserProfile 呼叫後端取得目前登入者的資料，並用 tap 把結�
 layout: default
 ---
 
-# SurveyService (1a) — 查詢：清單
+# SurveyService (1) — 建立與 Import
 
-### `services/survey.service.ts`
+```bash
+ng generate service services/survey
+```
+
+```typescript
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, map } from 'rxjs';
+import { Survey } from '../models/survey.model';
+import { SurveyStats } from '../models/survey-stats.model';
+```
+
+<!--
+用 ng generate service 建立 SurveyService，這頁先列出後面會用到的 import：HttpClient 負責發 API 請求，HttpParams 用來組出後台/前台搜尋頁需要的 title/startDate/endDate 這幾個 Query Parameter，Observable/map 是 RxJS 型別跟運算子，Survey/SurveyStats 是前面定義好的資料型別。
+-->
+
+---
+layout: default
+---
+
+# SurveyService (2a) — 查詢：清單
 
 ```typescript
 @Injectable({ providedIn: 'root' })
@@ -3602,22 +3743,51 @@ export class SurveyService {
   getActiveSurveys(): Observable<Survey[]> {
     return this.http.get<any>(this.PUBLIC_API_URL).pipe(map(res => res.data));
   }
-  getAllSurveys(): Observable<Survey[]> {
-    return this.http.get<any>(this.ADMIN_API_URL).pipe(map(res => res.data));
+  // title/startDate/endDate 皆可省略，不帶等於「不篩選、查全部」
+  getAllSurveys(title?: string, startDate?: string, endDate?: string): Observable<Survey[]> {
+    const params = this.buildFilterParams(title, startDate, endDate);
+    return this.http.get<any>(this.ADMIN_API_URL, { params }).pipe(map(res => res.data));
   }
-  // ... 單筆查詢見下一頁
+  // ... 搜尋參數組裝見下一頁
 }
 ```
 
 <!--
-前端 SurveyService 封裝所有跟問卷相關的 API 呼叫，先看查詢相關的方法。ADMIN_API_URL 跟 PUBLIC_API_URL 分別對應後台跟前台兩組端點，getActiveSurveys 打前台拿進行中的問卷、getAllSurveys 打後台拿全部問卷，帶大家注意每個方法都用 .pipe(map(res => res.data)) 把後端統一回應格式（AppResponse）裡的 data 欄位取出來，這樣元件拿到的就是乾淨的資料本身，不用每次都自己寫 res.data.data 這種重複的解包邏輯。
+前端 SurveyService 封裝所有跟問卷相關的 API 呼叫，先看查詢相關的方法。ADMIN_API_URL 跟 PUBLIC_API_URL 分別對應後台跟前台兩組端點，getActiveSurveys 打前台拿進行中的問卷。getAllSurveys 多帶了 title/startDate/endDate 三個可選參數，對應後台 AdminSurveyController 原本就有的搜尋端點——新增的前台查詢頁（後面會看到的 SurveySearchComponent）直接呼叫這同一個方法，沒有另外開一支「前台專用」的查詢 API，因為後端這支端點目前沒有做權限管控，教學階段先直接沿用，不重複開發一份幾乎一樣的後端邏輯。
+⚠️ 易錯點：這裡讓前台查詢頁直接打 /api/admin/surveys 這條「後台」路徑，是刻意先求能動、暫不處理權限的權宜做法——正式環境一定要補上權限控管（後端限制誰能呼叫 /api/admin/** 系列端點），否則沒登入的訪客也能透過這條路徑看到還沒發佈的草稿問卷，這是需要留意的資安缺口，只是不在這堂課的討論範圍內。
 -->
 
 ---
 layout: default
 ---
 
-# SurveyService (1b) — 查詢：單筆
+# SurveyService (2b) — 搜尋參數組裝
+
+```typescript
+export class SurveyService {
+  // ... 接上一頁
+  // 組出可選的搜尋條件，值是 undefined/空字串就不加進 params
+  private buildFilterParams(title?: string, startDate?: string, endDate?: string): HttpParams {
+    let params = new HttpParams();
+    if (title)     params = params.set('title', title);
+    if (startDate) params = params.set('startDate', startDate);
+    if (endDate)   params = params.set('endDate', endDate);
+    return params;
+  }
+  // ... 單筆查詢見下一頁
+}
+```
+
+<!--
+buildFilterParams 把三個搜尋欄位組成 HttpParams，帶大家注意每個查詢方法都用 .pipe(map(res => res.data)) 把後端統一回應格式（AppResponse）裡的 data 欄位取出來，這樣元件拿到的就是乾淨的資料本身，不用每次都自己寫 res.data.data 這種重複的解包邏輯。
+⚠️ 易錯點：這裡用 if (title) 判斷要不要加參數，這代表空字串 '' 也會被視為「沒填」而不送出這個參數——這正是我們要的行為（使用者清空搜尋框，就等於不篩選），如果改用 title !== undefined 這種寫法，空字串會被當成合法值送給後端，效果就不對了。
+-->
+
+---
+layout: default
+---
+
+# SurveyService (3) — 查詢：單筆
 
 ```typescript
 export class SurveyService {
@@ -3642,7 +3812,7 @@ export class SurveyService {
 layout: default
 ---
 
-# SurveyService (2) — 統計與紀錄
+# SurveyService (4) — 統計與紀錄
 
 ```typescript
 export class SurveyService {
@@ -3651,21 +3821,33 @@ export class SurveyService {
     return this.http.get<any>(`${this.ADMIN_API_URL}/${id}/stats`)
       .pipe(map(res => res.data));
   }
+  // 依問卷 id 查詢所有填寫者清單 (供「查看回饋」列表用，後端已依 id 逆序排好)
+  getSurveyResponses(surveyId: number): Observable<any[]> {
+    return this.http.get<any>(`${this.ADMIN_API_URL}/${surveyId}/responses`)
+      .pipe(map(res => res.data));
+  }
   getUserHistory(): Observable<any[]> {
     return this.http.get<any>(`${this.PUBLIC_API_URL}/history`).pipe(map(res => res.data));
+  }
+  // 依 responseId 查詢單筆作答的詳細內容 (供「我的紀錄」、「查看回饋」點進去查看)
+  getResponseDetail(responseId: number): Observable<any> {
+    return this.http.get<any>(`${this.ADMIN_API_URL}/response-detail/${responseId}`)
+      .pipe(map(res => res.data));
   }
 }
 ```
 
 <!--
-這頁補上統計跟個人紀錄的查詢方法，寫法跟上一頁完全一致，都是呼叫 API 再用 map 解包。可以藉這個機會提醒同學：這種高度重複的 pipe(map(res => res.data)) 寫法，實務上有些團隊會抽成一個共用的 RxJS operator 減少重複程式碼，這裡先讓同學熟悉基本寫法。
+這頁補上統計、填寫者清單、個人紀錄清單、以及單筆作答明細四個查詢方法，寫法跟上一頁完全一致，都是呼叫 API 再用 map 解包。getSurveyResponses 對應後端 AdminSurveyController 早就有的 /{id}/responses 端點——後端 findBySurveyIdOrderByIdDesc 已經照 id 逆序排好（最新的在最前面），前端不用自己再排序一次。
+⚠️ 易錯點：getResponseDetail 打的是 ADMIN_API_URL 底下的 /response-detail/{responseId}（對應後端 AdminSurveyController），不是 PUBLIC_API_URL，容易因為「這是給一般會員用的功能」而誤打成 PUBLIC_API_URL 導致 404——教學版後端用 permitAll() 所以打得通，正式環境要記得這支 API 理論上該限制成「只能查自己的作答」，不是誰都能查任何 responseId。這個方法現在被兩個地方共用：使用者「我的紀錄」查看自己的作答、管理員「查看回饋」查看任何人的作答，回傳的資料結構完全一樣，不需要為了兩種身份分別寫一份。
+可以藉這個機會提醒同學：這種高度重複的 pipe(map(res => res.data)) 寫法，實務上有些團隊會抽成一個共用的 RxJS operator 減少重複程式碼，這裡先讓同學熟悉基本寫法。
 -->
 
 ---
 layout: default
 ---
 
-# SurveyService (3) — Session
+# SurveyService (5) — Session
 
 ```typescript
 export class SurveyService {
@@ -3698,7 +3880,7 @@ export class SurveyService {
 layout: default
 ---
 
-# SurveyService (4) — 基本 CRUD
+# SurveyService (6) — 基本 CRUD
 
 ```typescript
 export class SurveyService {
@@ -3736,9 +3918,21 @@ layout: default
 
 # Navbar — Component
 
+```bash
+ng generate component shared/navbar
+```
+
 ```typescript
+import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterLink, RouterLinkActive } from '@angular/router';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { AuthService } from '../../services/auth.service';
+
 @Component({
-  selector: 'app-navbar', standalone: true,
+  selector: 'app-navbar',
   imports: [CommonModule, MatToolbarModule, MatButtonModule,
             MatIconModule, RouterLink, RouterLinkActive],
   templateUrl: './navbar.component.html', styleUrl: './navbar.component.scss'
@@ -3768,8 +3962,9 @@ layout: default
     <span class="text-xl font-bold">動態問卷系統</span>
   </div>
   <div class="flex items-center gap-4">
+    <button mat-button routerLink="/surveys">問卷查詢</button>
     @if (authService.currentUser()) {
-      <span class="hidden sm:inline">歡迎, {{ authService.currentUser()?.name }}</span>
+      <span>歡迎, {{ authService.currentUser()?.name }}</span>
       <button mat-button routerLink="/admin">問卷管理</button>
       <button mat-button routerLink="/history">我的紀錄</button>
       <button mat-stroked-button color="warn" (click)="logout()">登出</button>
@@ -3785,6 +3980,7 @@ layout: default
 
 <!--
 這頁是 Navbar 的 HTML 樣板，重點看 @if (authService.currentUser()) 這段——這是 Angular 新版控制流程語法（取代舊版的 *ngIf），依照 signal 的值決定顯示「歡迎, 姓名」加上管理跟登出按鈕，還是顯示登入/註冊按鈕。
+「問卷查詢」這顆按鈕特意寫在 @if / @else 外面，不管有沒有登入都會顯示，因為它連到後面新增的公開查詢頁（/surveys），本來就是設計給不用登入的訪客用的，跟下面依登入狀態切換的按鈕群邏輯不同，不能塞進任何一個分支裡。
 ⚠️ 易錯點：注意呼叫 signal 要加括號 currentUser()，忘記加括號會拿到 signal 物件本身而不是裡面的值，這是 Angular Signal 初學者最常犯的錯誤。
 -->
 
@@ -3792,15 +3988,40 @@ layout: default
 layout: default
 ---
 
-# 登入頁 — Component
+# 登入頁 — Component (1)
 
-### `pages/login/login.component.ts`
+```bash
+ng generate component pages/login
+```
+
+```typescript
+import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { AuthService } from '../../services/auth.service';
+```
+
+<!--
+用 ng generate component 建立 LoginComponent，這頁先列出後面會用到的 import：ReactiveFormsModule 建表單、RouterLink 給下方的註冊連結用、一系列 Mat*Module 是 Angular Material 元件、AuthService 負責實際打登入 API。
+-->
+
+---
+layout: default
+---
+
+# 登入頁 — Component (2)
 
 ```typescript
 @Component({
-  selector: 'app-login', standalone: true,
+  selector: 'app-login',
   imports: [CommonModule, ReactiveFormsModule, MatCardModule, MatFormFieldModule,
-            MatInputModule, MatButtonModule, MatSnackBarModule],
+            MatInputModule, MatButtonModule, MatSnackBarModule, RouterLink],
   templateUrl: './login.component.html', styleUrl: './login.component.scss'
 })
 export class LoginComponent {
@@ -3853,7 +4074,7 @@ layout: default
 ### `pages/login/login.component.html`
 
 ```html
-<div class="flex justify-center items-center min-h-[80vh]">
+<div class="flex justify-center items-center min-h-form">
   <mat-card class="w-full max-w-md p-6">
     <mat-card-header>
       <mat-card-title class="text-2xl font-bold mb-4">系統登入</mat-card-title>
@@ -3912,7 +4133,7 @@ layout: default
         <button mat-raised-button color="primary" type="submit"
                 [disabled]="loginForm.invalid">登入</button>
         <div class="text-center mt-4">還沒有帳號？
-          <a routerLink="/register" class="text-blue-600 hover:underline">立即註冊</a>
+          <a routerLink="/register" class="text-link">立即註冊</a>
         </div>
       </form>
     </mat-card-content>
@@ -3928,11 +4149,42 @@ layout: default
 layout: default
 ---
 
-# 註冊頁 — Component
+# 註冊頁 — Component (1)
 
-### `pages/register/register.component.ts`
+```bash
+ng generate component pages/register
+```
 
 ```typescript
+import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { AuthService } from '../../services/auth.service';
+```
+
+<!--
+用 ng generate component 建立 RegisterComponent，這頁列出後面會用到的 import，跟登入頁幾乎一樣，只是多了 Router（註冊成功後導頁用）。
+-->
+
+---
+layout: default
+---
+
+# 註冊頁 — Component (2)
+
+```typescript
+@Component({
+  selector: 'app-register',
+  imports: [CommonModule, ReactiveFormsModule, MatCardModule, MatFormFieldModule,
+            MatInputModule, MatButtonModule, MatSnackBarModule],
+  templateUrl: './register.component.html', styleUrl: './register.component.scss'
+})
 export class RegisterComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
@@ -4053,13 +4305,36 @@ class: flex flex-col justify-center items-center text-center
 layout: default
 ---
 
-# 首頁 — 進行中的問卷
+# 首頁 — 進行中的問卷 (1)
 
-### `pages/home/home.component.ts`
+```bash
+ng generate component pages/home
+```
+
+```typescript
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { SurveyService } from '../../services/survey.service';
+import { Survey } from '../../models/survey.model';
+```
+
+<!--
+用 ng generate component 建立 HomeComponent，這頁列出後面會用到的 import：RouterLink 給卡片上的連結用，SurveyService/Survey 是查詢問卷資料要用的服務跟型別。
+-->
+
+---
+layout: default
+---
+
+# 首頁 — 進行中的問卷 (2)
 
 ```typescript
 @Component({
-  selector: 'app-home', standalone: true,
+  selector: 'app-home',
   imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, RouterLink],
   templateUrl: './home.component.html', styleUrl: './home.component.scss'
 })
@@ -4092,15 +4367,15 @@ layout: default
 
 ```html
 @if (surveys().length > 0) {
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  <div class="card-grid">
     @for (survey of surveys(); track survey.id) {
-      <mat-card class="hover:shadow-xl transition-shadow h-full flex flex-col">
+      <mat-card class="transition-shadow h-full flex flex-col">
         <mat-card-header>
-          <mat-card-title class="!text-xl !font-bold">{{ survey.title }}</mat-card-title>
+          <mat-card-title class="text-xl font-bold">{{ survey.title }}</mat-card-title>
           <mat-card-subtitle>開放至 {{ survey.endDate }}</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content class="flex-grow pt-4">
-          <p class="text-gray-600 line-clamp-3">
+          <p class="text-muted line-clamp-3">
             {{ survey.description || '本問卷尚無詳細說明。' }}</p>
         </mat-card-content>
         <!-- ... 動作按鈕與空狀態見下一頁 -->
@@ -4133,7 +4408,7 @@ layout: default
 <!-- surveys() 為空時顯示 -->
 @if (surveys().length === 0) {
   <div class="bg-white p-12 rounded-xl shadow text-center">
-    <p class="text-xl text-gray-500">目前沒有進行中的問卷，請稍後再來。</p>
+    <p class="text-xl text-muted">目前沒有進行中的問卷，請稍後再來。</p>
   </div>
 }
 ```
@@ -4147,11 +4422,51 @@ layout: default
 layout: default
 ---
 
-# 填寫頁 — 狀態與表單建立
+# 填寫頁 — 狀態與表單建立 (1)
 
-### `pages/survey-fill/survey-fill.component.ts` (1)
+```bash
+ng generate component pages/survey-fill
+```
 
 ```typescript
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
+import { MatCardModule } from '@angular/material/card';
+import { MatRadioModule } from '@angular/material/radio';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SurveyService } from '../../services/survey.service';
+import { Survey, Question } from '../../models/survey.model';
+```
+
+<!--
+用 ng generate component 建立 SurveyFillComponent，這頁先列出後面會用到的所有 import：這個元件同時要處理表單（FormBuilder/FormGroup/FormArray）、路由參數（ActivatedRoute）、單選/多選/簡答三種題型對應的 Material 元件，是前台最複雜的一個元件。
+⚠️ 易錯點：MatIconModule（確認頁按鈕的 mat-icon）、MatProgressSpinnerModule（讀取中的 mat-spinner）、RouterLink（取消按鈕的 routerLink）這三個容易漏，Template 裡用到卻沒 import，Angular compiler 會直接報「不是已知的 element」。
+-->
+
+---
+layout: default
+---
+
+# 填寫頁 — 狀態與表單建立 (2)
+
+```typescript
+@Component({
+  selector: 'app-survey-fill',
+  imports: [
+    CommonModule, ReactiveFormsModule, MatCardModule, MatFormFieldModule,
+    MatInputModule, MatButtonModule, MatRadioModule, MatCheckboxModule,
+    MatSnackBarModule, MatIconModule, MatProgressSpinnerModule, RouterLink
+  ],
+  templateUrl: './survey-fill.component.html', styleUrl: './survey-fill.component.scss'
+})
 export class SurveyFillComponent implements OnInit {
   private fb = inject(FormBuilder);
   private surveyService = inject(SurveyService);
@@ -4397,10 +4712,126 @@ layout: default
         };
       });
   }
+
+  // 確認頁用：由題目 ID + 選項 ID 反查選項文字
+  getOptionText(questionId: number, optionId: number): string {
+    const q = this.survey()?.questions.find(x => x.id === questionId);
+    return q?.options.find(o => o.id === optionId)?.optionText ?? '';
+  }
 ```
 
 <!--
-formatAnswers 把表單裡每一題的作答轉成後端要的陣列格式，帶大家看這行程式碼怎麼過濾掉姓名、電話、Email、年齡這些非題目欄位，只保留題目 ID 對應的作答，再依題型組成 optionIds 或 answerText。這是前端資料格式跟後端 DTO 格式不完全一致時，常見的「轉換層」寫法。
+formatAnswers 把表單裡每一題的作答轉成後端要的陣列格式，帶大家看這行程式碼怎麼過濾掉姓名、電話、Email、年齡這些非題目欄位，只保留題目 ID 對應的作答，再依題型組成 optionIds 或 answerText。這是前端資料格式跟後端 DTO 格式不完全一致時，常見的「轉換層」寫法。getOptionText 補在同一個元件裡，供確認頁的 Template 反查選項文字用。
+-->
+
+---
+layout: default
+---
+
+# 填寫頁 — Template：整體骨架
+
+<div v-pre>
+
+```html
+<div class="max-w-3xl mx-auto p-6">
+  @if (survey()) {
+    <!-- 標題區塊：見下一頁 -->
+
+    @if (!isConfirmPage()) {
+      <!-- 填寫模式：<form> 見後面幾頁 -->
+    } @else {
+      <!-- 確認頁模式：見後面幾頁 -->
+    }
+
+  } @else {
+    <div class="text-center py-20">
+      <mat-spinner class="mx-auto mb-4"></mat-spinner>
+      <p class="text-gray-500">正在讀取問卷內容...</p>
+    </div>
+  }
+</div>
+```
+
+</div>
+
+<!--
+這頁先講整份 Template 的三層骨架，後面每一頁都是往這個骨架裡面填內容，一定要先看懂這個結構，直接把後面片段照順序貼進檔案才不會出錯。
+第一層 @if (survey())：問卷資料還沒從後端回來時，survey() 是 null，顯示右下角的讀取中畫面（mat-spinner）；資料回來後才往下渲染填寫頁或確認頁。
+第二層 @if (!isConfirmPage()) / @else：這是 if/else，兩者互斥——isConfirmPage() 是 false 顯示填寫表單，true 顯示確認頁，不會同時出現。
+⚠️ 易錯點：這兩層 @if 一定要包住整個 <form> 跟確認頁，如果漏掉，<form> 會在 survey 資料還沒回來、fillForm 還是空的時候就搶先渲染，畫面上 formControlName="name" 就會找不到對應的 control 而噴錯。
+-->
+
+---
+layout: default
+---
+
+# 填寫頁 — Template：標題 + 基本資訊
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁：@if (survey()) 裡面，先是標題區塊 -->
+<div class="mb-8">
+  <h1 class="text-3xl font-bold text-indigo-900 mb-2">{{ survey()?.title }}</h1>
+  <p class="text-gray-600 bg-white p-4 rounded-lg border-l-4 border-indigo-500 shadow-sm">
+    {{ survey()?.description || '感謝您撥冗填寫此問卷。' }}
+  </p>
+</div>
+
+<!-- 填寫模式：@if (!isConfirmPage()) 內 -->
+<form [formGroup]="fillForm" (ngSubmit)="onGoToConfirm()" class="flex flex-col gap-6">
+  <mat-card class="p-6 bg-indigo-50 border-indigo-100 border">
+    <mat-card-header class="mb-4">
+      <mat-card-title class="!text-xl text-indigo-800">基本資訊</mat-card-title>
+    </mat-card-header>
+    <!-- ... 四個輸入欄位見下一頁 -->
+  </mat-card>
+  <!-- ... 題目區塊見後面 -->
+</form>
+```
+
+</div>
+
+<!--
+這頁先顯示問卷標題跟說明文字，接著開始寫填寫模式的 <form>，注意這個 <form> 要放在骨架第二層 @if (!isConfirmPage()) 的大括號裡面。[formGroup]="fillForm" 把整個表單跟元件裡的 fillForm 綁在一起，(ngSubmit)="onGoToConfirm()" 是按下「下一步」按鈕觸發送出時要跑的方法。第一個 mat-card 是「基本資訊」卡片的外殼，裡面四個欄位下一頁接著看。
+-->
+
+---
+layout: default
+---
+
+# 填寫頁 — Template：基本資訊欄位
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁：mat-card-header 之後 -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <mat-form-field appearance="outline">
+    <mat-label>姓名</mat-label>
+    <input matInput formControlName="name" placeholder="請輸入姓名">
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>手機</mat-label>
+    <input matInput formControlName="phone" placeholder="09xxxxxxxx">
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>Email (將作為重複填寫檢查依據)</mat-label>
+    <input matInput formControlName="email" type="email" placeholder="example@mail.com">
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>年齡 (選填)</mat-label>
+    <input matInput formControlName="age" type="number">
+  </mat-form-field>
+</div>
+<!-- ... </mat-card> 收尾，題目區塊見下一頁 -->
+```
+
+</div>
+
+<!--
+四個欄位對應 buildForm 裡動態表單前半段寫死的 name、phone、email、age。姓名、手機、Email 三個都是必填（驗證器在 buildForm 那頁已經看過），年齡選填。Email 特別註明是「重複填寫檢查依據」，呼應後端用 email 判斷同一人是否已經填過這份問卷的邏輯。
+⚠️ 易錯點：這四個 formControlName 的字串（name/phone/email/age）要跟 buildForm() 裡 group 物件的 key 完全一致，拼錯或大小寫不同都會找不到 control。
 -->
 
 ---
@@ -4412,12 +4843,17 @@ layout: default
 <div v-pre>
 
 ```html
+<!-- ... 接上一頁：基本資訊卡片 </mat-card> 已收尾 -->
 @for (q of survey()?.questions; track q.id) {
   <mat-card class="p-4">
-    <mat-card-title class="!text-lg">
-      {{ $index + 1 }}. {{ q.title }}
-      @if (q.required) { <span class="text-red-500 ml-1">*</span> }
-    </mat-card-title>
+    <mat-card-header class="mb-4">
+      <mat-card-title class="!text-lg">
+        {{ $index + 1 }}. {{ q.title }}
+        @if (q.required) {
+          <span class="text-red-500 ml-1">*</span>
+        }
+      </mat-card-title>
+    </mat-card-header>
     <mat-card-content>
       @if (q.type === 'SINGLE') {
         <mat-radio-group [formControlName]="q.id!" class="flex flex-col gap-3">
@@ -4435,8 +4871,8 @@ layout: default
 </div>
 
 <!--
-這頁開始渲染問卷題目，用 @for 迴圈跑過每一題，依照 q.type 用 @if 決定顯示哪種輸入元件，這頁先看 SINGLE 單選題用 mat-radio-group。
-⚠️ 易錯點：[formControlName]="q.id!" 這裡用了非空斷言 !，因為 TypeScript 型別上 q.id 是可選的（optional），但我們知道從後端拿到的資料一定有 id，這種斷言要謹慎使用，只有在真的確定不會是 undefined 時才用。
+這頁開始渲染問卷題目，用 @for 迴圈跑過每一題，依照 q.type 用 @if 決定顯示哪種輸入元件，這頁先看 SINGLE 單選題用 mat-radio-group。這個 @for 要接在基本資訊卡片後面，還是在同一個 <form> 裡面，因為每題都要能透過 formControlName 掛上 fillForm。
+⚠️ 易錯點：[formControlName]="q.id!" 用了非空斷言 !，因為 TypeScript 型別上 q.id 是可選的（optional），但我們知道從後端拿到的資料一定有 id，這種斷言要謹慎使用，只有在真的確定不會是 undefined 時才用。
 -->
 
 ---
@@ -4448,31 +4884,56 @@ layout: default
 <div v-pre>
 
 ```html
-<mat-card-content>
-  <!-- ... 接上一頁 (同一 @for / mat-card 內) -->
-      @if (q.type === 'MULTI') {
-        <div class="flex flex-col gap-3">
-          @for (opt of q.options; track opt.id) {
-            <mat-checkbox (change)="onCheckboxChange(q.id!, opt.id!, $event.checked)">
-              {{ opt.optionText }}
-            </mat-checkbox>
-          }
-        </div>
-      }
-      @if (q.type === 'TEXT') {
-        <mat-form-field appearance="outline" class="w-full">
-          <textarea matInput [formControlName]="q.id!" rows="3"></textarea>
-        </mat-form-field>
-      }
-    </mat-card-content>
-  </mat-card>
+<!-- ... 接上一頁 (同一 @for / mat-card-content 內) -->
+@if (q.type === 'MULTI') {
+  <div class="flex flex-col gap-3">
+    @for (opt of q.options; track opt.id) {
+      <mat-checkbox (change)="onCheckboxChange(q.id!, opt.id!, $event.checked)"
+        [checked]="fillForm.get(q.id!.toString())?.value?.includes(opt.id)">
+        {{ opt.optionText }}
+      </mat-checkbox>
+    }
+  </div>
+}
+@if (q.type === 'TEXT') {
+  <mat-form-field appearance="outline" class="w-full">
+    <mat-label>您的回答</mat-label>
+    <textarea matInput [formControlName]="q.id!" rows="3" placeholder="請在此輸入內容..."></textarea>
+  </mat-form-field>
 }
 ```
 
 </div>
 
 <!--
-這頁接續處理 MULTI 多選題（用 mat-checkbox，並手動綁定剛剛看過的 onCheckboxChange）跟 TEXT 簡答題（用 textarea）。三種題型的渲染邏輯集中在同一個 @for 迴圈裡用 @if 分流，這是動態表單常見的做法——不用為每種題型寫獨立的元件，而是用條件渲染切換顯示內容。
+這頁接續處理 MULTI 多選題跟 TEXT 簡答題，仍在同一個 @for / mat-card-content 裡面，跟上一頁的 SINGLE 判斷式是平行的三個 @if，依 q.type 分流顯示。
+⚠️ 易錯點：多選題不能只用 (change) 綁定 onCheckboxChange，一定要加上 [checked] 這個屬性繫結，讓畫面重新渲染時（例如按「修改內容」切回填寫頁）checkbox 能正確顯示之前勾選過的狀態，不然使用者會看到自己勾過的選項變成沒勾。
+-->
+
+---
+layout: default
+---
+
+# 填寫頁 — Template：送出按鈕
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁：</mat-card-content> </mat-card> 收尾，@for 結束 -->
+<div class="flex justify-center gap-4 py-6">
+  <button mat-button type="button" routerLink="/home">取消</button>
+  <button mat-raised-button color="primary" type="submit" [disabled]="fillForm.invalid" class="px-8">
+    下一步 (預覽)
+  </button>
+</div>
+</form>
+```
+
+</div>
+
+<!--
+這頁是填寫模式的最後一段：兩顆按鈕加上 </form> 收尾。「取消」按鈕一定要寫 type="button"，不然它在 <form> 裡預設也是 submit，按下去會誤觸表單送出。「下一步」按鈕才是真正的 type="submit"，[disabled]="fillForm.invalid" 讓表單沒填完必填欄位時按鈕直接是灰色不能按，提前擋掉不合法的送出，比等使用者按下去才跳錯誤提示體驗更好。
+</form> 這個收尾非常重要——漏掉的話，後面接的確認頁內容會被瀏覽器當成還在 <form> 裡面，容易產生排版跟事件綁定的怪異行為。
 -->
 
 ---
@@ -4484,23 +4945,31 @@ layout: default
 <div v-pre>
 
 ```html
-@if (isConfirmPage()) {
-  <mat-card class="p-6 border-2 border-green-200">
-    <mat-card-title class="text-green-700">請確認您的作答內容</mat-card-title>
-    <div class="bg-gray-50 p-4 rounded-lg mb-6">
-      <p><strong>姓名：</strong> {{ previewData().name }}</p>
-      <p><strong>手機：</strong> {{ previewData().phone }}</p>
-      <p><strong>Email：</strong> {{ previewData().email }}</p>
-    </div>
-    <!-- ... 作答內容與按鈕見下一頁 -->
-  </mat-card>
+<!-- 確認頁模式：接骨架第二層的 @else -->
+@else {
+  <div class="flex flex-col gap-6 animate-fade-in">
+    <mat-card class="p-6 border-2 border-green-200">
+      <mat-card-header class="mb-4">
+        <mat-card-title class="text-green-700">請確認您的作答內容</mat-card-title>
+      </mat-card-header>
+
+      <div class="bg-gray-50 p-4 rounded-lg flex flex-col gap-2 mb-6">
+        <p><strong>姓名：</strong> {{ previewData().name }}</p>
+        <p><strong>手機：</strong> {{ previewData().phone }}</p>
+        <p><strong>Email：</strong> {{ previewData().email }}</p>
+        <p><strong>年齡：</strong> {{ previewData().age || '未填寫' }}</p>
+      </div>
+      <!-- ... 作答內容與按鈕見下一頁 -->
+    </mat-card>
+  </div>
 }
 ```
 
 </div>
 
 <!--
-這頁開始渲染確認頁，isConfirmPage() 為 true 時才會顯示，用一個綠色邊框的卡片跟正在填寫的表單做視覺區隔，先顯示作答者的姓名、手機、Email 這些基本資料，讓使用者送出前能一目瞭然自己填了什麼。
+這頁接在整體骨架的 @else 上，跟前面 @if (!isConfirmPage()) 的 <form> 是互斥關係——isConfirmPage() 變成 true 時，畫面切到這個綠色邊框的確認頁，先顯示作答者的姓名、手機、Email、年齡這些基本資料，讓使用者送出前能一目瞭然自己填了什麼。年齡是選填欄位，用 || '未填寫' 處理沒填的情況，避免直接顯示空白或 null。
+⚠️ 易錯點：這裡的 @else 是接在上一頁 @if (!isConfirmPage()) 那個大括號後面，不是另外獨立開一個 @if (isConfirmPage())。用 if/else 而不是兩個獨立 @if，可以保證畫面上「填寫表單」跟「確認頁」永遠只會出現一個，不會同時渲染。
 -->
 
 ---
@@ -4512,28 +4981,25 @@ layout: default
 <div v-pre>
 
 ```html
-<mat-card class="p-6 border-2 border-green-200">
-  <!-- ... 接上一頁 -->
-    @for (ans of previewData().answers; track ans.questionId) {
-      <div class="py-4 border-b">
-        <p class="font-bold">{{ $index + 1 }}. {{ (survey()?.questions)![$index].title }}</p>
-        <p class="text-indigo-700">
-          @if (ans.answerText) { {{ ans.answerText }} }
-          @else {
-            @for (oId of ans.optionIds; track oId) {
-              <span class="bg-indigo-100 px-2 py-1 rounded mr-2">
-                {{ getOptionText(ans.questionId, oId) }}</span>
-            }
+<!-- ... 接上一頁：mat-card 裡面，基本資料 div 之後 -->
+<div class="divide-y divide-gray-200">
+  @for (ans of previewData().answers; track ans.questionId) {
+    <div class="py-4">
+      <p class="font-bold mb-2">{{ $index + 1 }}. {{ (survey()?.questions)![$index].title }}</p>
+      <p class="text-indigo-700">
+        @if (ans.answerText) {
+          {{ ans.answerText }}
+        } @else {
+          @for (oId of ans.optionIds; track oId) {
+            <span class="inline-block bg-indigo-100 px-2 py-1 rounded mr-2 text-sm">
+              {{ getOptionText(ans.questionId, oId) }}
+            </span>
           }
-        </p>
-      </div>
-    }
-    <div class="flex justify-center gap-4 mt-8">
-      <button mat-stroked-button (click)="isConfirmPage.set(false)">修改內容</button>
-      <button mat-raised-button color="accent" (click)="onFinalSubmit()">確認提交</button>
+        }
+      </p>
     </div>
-  </mat-card>
-}
+  }
+</div>
 ```
 
 </div>
@@ -4541,16 +5007,96 @@ layout: default
 `getOptionText(qId, oId)` 由選項 ID 反查文字，供預覽顯示。
 
 <!--
-這頁接續顯示每一題的作答內容，簡答題直接顯示文字，選擇題則用 getOptionText 反查選項 ID 對應的文字內容，用標籤樣式呈現。最下方是「修改內容」（切回填寫頁）跟「確認提交」兩個按鈕，整個作答流程到這裡從填寫到確認就完整串起來了。
+這頁接續顯示每一題的作答內容，簡答題（ans.answerText 有值）直接顯示文字，選擇題則用 getOptionText 反查選項 ID 對應的文字內容，用標籤樣式呈現。$index 對應題目在 survey()?.questions 陣列裡的順序，用來取回題目標題，這裡假設 previewData().answers 跟 survey()?.questions 的順序是一致的。
 -->
 
 ---
 layout: default
 ---
 
-# 我的紀錄 — Component
+# 填寫頁 — Template：確認頁按鈕
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁：</div> 之後，還在同一個 mat-card 裡面 -->
+<div class="flex justify-center gap-4 mt-8 pt-6 border-t">
+  <button mat-stroked-button type="button" (click)="isConfirmPage.set(false)">
+    <mat-icon>edit</mat-icon> 修改內容
+  </button>
+  <button mat-raised-button color="accent" (click)="onFinalSubmit()" class="px-8">
+    <mat-icon>send</mat-icon> 確認提交
+  </button>
+</div>
+<!-- ... </mat-card> </div> 收尾，@else 大括號結束 -->
+```
+
+</div>
+
+<!--
+最下方是「修改內容」跟「確認提交」兩個按鈕，整個作答流程到這裡從填寫到確認就完整串起來了。「修改內容」按 (click)="isConfirmPage.set(false)" 把狀態切回 false，畫面就會自動切回填寫表單（前面幾頁看到的多選題 [checked] 繫結，就是確保切回去時勾選狀態不會不見）；「確認提交」按 (click)="onFinalSubmit()" 才是真正呼叫後端把問卷寫入資料庫。兩顆按鈕都要記得寫 type="button"，因為它們沒有被包在 <form> 裡面，理論上不會誤觸提交，但養成明確寫 type 的習慣可以避免日後搬動程式碼時出錯。
+⚠️ 易錯點：這裡用了 <mat-icon>，元件的 imports 陣列要記得加上 MatIconModule，不然畫面上圖示位置會是空白甚至噴錯。
+-->
+
+---
+layout: default
+---
+
+# 填寫頁 — Template：組裝檢查清單
+
+<div v-pre>
+
+```text
+1. 最外層 <div class="max-w-3xl mx-auto p-6"> 包住整頁
+2.   @if (survey()) { ... } @else { 讀取中 spinner }
+3.     標題區塊 (h1 + p)
+4.     @if (!isConfirmPage()) { <form>...</form> } @else { 確認頁 <div> }
+5.       <form> 內：基本資訊 mat-card → @for 題目 mat-card → 按鈕 <div> → </form>
+6.       確認頁 <div> 內：作答者資料 → 作答內容 @for → 按鈕 <div>
+```
+
+</div>
+
+<!--
+這頁是給初學者對照用的組裝檢查清單，把前面 9 頁片段依照真正的巢狀層級列出來。建議實作完貼上程式碼後，對照這張清單逐層檢查括號有沒有對齊、每個 @if/@for 有沒有正確收尾，尤其是骨架那兩層 @if——這是最容易漏掉、也是最容易在瀏覽器噴出 Cannot find control 這類錯誤的地方。
+-->
+
+---
+layout: default
+---
+
+# 我的紀錄 — Component (1)
+
+```bash
+ng generate component pages/user-history
+```
 
 ```typescript
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { MatTableModule } from '@angular/material/table';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { SurveyService } from '../../services/survey.service';
+```
+
+<!--
+用 ng generate component 建立 UserHistoryComponent，這頁列出後面會用到的 import：MatTableModule 給表格用，MatButtonModule/MatIconModule 給操作欄的按鈕用，RouterLink 讓操作欄能導到問卷頁，SurveyService 負責呼叫查詢歷史紀錄的 API。
+-->
+
+---
+layout: default
+---
+
+# 我的紀錄 — Component (2)
+
+```typescript
+@Component({
+  selector: 'app-user-history',
+  imports: [CommonModule, RouterLink, MatTableModule, MatButtonModule, MatIconModule],
+  templateUrl: './user-history.component.html', styleUrl: './user-history.component.scss'
+})
 export class UserHistoryComponent implements OnInit {
   private surveyService = inject(SurveyService);
   history = signal<any[]>([]);
@@ -4573,12 +5119,16 @@ UserHistoryComponent 邏輯很單純，ngOnInit 時呼叫 API 載入這位會員
 layout: default
 ---
 
-# 我的紀錄 — Template
+# 我的紀錄 — Template (1) 序號 / 問卷名稱 / 提交時間
 
 <div v-pre>
 
 ```html
 <table mat-table [dataSource]="history()" class="w-full">
+  <ng-container matColumnDef="index">
+    <th mat-header-cell *matHeaderCellDef> # </th>
+    <td mat-cell *matCellDef="let h; let i = index"> {{ i + 1 }} </td>
+  </ng-container>
   <ng-container matColumnDef="surveyTitle">
     <th mat-header-cell *matHeaderCellDef> 問卷名稱 </th>
     <td mat-cell *matCellDef="let h"> {{ h.surveyTitle }} </td>
@@ -4587,16 +5137,466 @@ layout: default
     <th mat-header-cell *matHeaderCellDef> 提交時間 </th>
     <td mat-cell *matCellDef="let h"> {{ h.submittedAt | date:'yyyy-MM-dd HH:mm' }} </td>
   </ng-container>
-  <!-- index / actions 欄略 -->
-  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-  <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+  <!-- ... actions 欄與收尾見下一頁 -->
 </table>
 ```
 
 </div>
 
 <!--
-這頁用 mat-table 搭配 ng-container matColumnDef 定義每一欄要怎麼顯示，帶大家看 submittedAt 那欄用了 date pipe 格式化時間顯示（yyyy-MM-dd HH:mm），這是 Angular 內建 Pipe 最常見的應用之一，不用自己手動處理日期字串格式化。
+這頁先看序號、問卷名稱、提交時間三欄。displayedColumns 陣列裡的 'index' 一定要有對應的 matColumnDef="index"，不然 mat-table 在渲染表頭列時會直接噴 Could not find column with id "index" 這種錯誤——mat-table 是「先宣告要顯示哪些欄位（displayedColumns），再逐一去找對應的 matColumnDef」的機制，兩邊名稱要完全對上，少一個都不行。index 欄用 *matCellDef="let h; let i = index" 這個語法拿到目前是第幾列（從 0 開始），顯示時 +1 讓使用者看到的序號從 1 開始。submittedAt 那欄用了 date pipe 格式化時間顯示（yyyy-MM-dd HH:mm），這是 Angular 內建 Pipe 最常見的應用之一，不用自己手動處理日期字串格式化。
+-->
+
+---
+layout: default
+---
+
+# 我的紀錄 — Template (2) 操作欄與收尾
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁：<table> 裡面 -->
+<ng-container matColumnDef="actions">
+  <th mat-header-cell *matHeaderCellDef class="text-right"> 操作 </th>
+  <td mat-cell *matCellDef="let h" class="text-right">
+    <button mat-icon-button color="primary" [routerLink]="['/history', h.responseId]" title="查看作答內容">
+      <mat-icon>visibility</mat-icon>
+    </button>
+  </td>
+</ng-container>
+
+<tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+<tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+```
+
+</div>
+
+<!--
+操作欄放一顆「查看作答內容」按鈕，用 [routerLink]="['/history', h.responseId]" 導到下一節新增的唯讀詳情頁，回放這一筆（用 responseId 精準指定）當初填的答案。最後兩個 <tr> 是 mat-table 固定寫法：一個渲染表頭、一個渲染每一列資料，兩者都靠 displayedColumns 決定要顯示哪些欄位，到這裡 index/surveyTitle/submittedAt/actions 四個 matColumnDef 都齊了，跟元件裡 displayedColumns = ['index', 'surveyTitle', 'submittedAt', 'actions'] 一一對應。
+⚠️ 易錯點：這裡用的是 h.responseId（這一筆作答紀錄自己的 ID），不是 h.surveyId（問卷本身的 ID）。用錯會導到別的功能，兩個 ID 意義完全不同：surveyId 是「哪一份問卷」，responseId 是「哪一次作答」，同一份問卷可以有很多次作答、也就有很多個 responseId。
+-->
+
+---
+layout: default
+---
+
+# 作答內容 (唯讀) — Component (1) 建立與 Import
+
+```bash
+ng generate component pages/response-detail
+```
+
+```typescript
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { SurveyService } from '../../services/survey.service';
+```
+
+<!--
+用 ng generate component 建立 ResponseDetailComponent，這頁先列出後面會用到的 import：ActivatedRoute 拿路由參數 responseId，MatCardModule/MatButtonModule 給畫面用的卡片跟按鈕，SurveyService 負責呼叫上一節新增的 getResponseDetail API。
+-->
+
+---
+layout: default
+---
+
+# 作答內容 (唯讀) — Component (2) 元件與載入邏輯
+
+```typescript
+@Component({
+  selector: 'app-response-detail',
+  imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule],
+  templateUrl: './response-detail.component.html', styleUrl: './response-detail.component.scss'
+})
+export class ResponseDetailComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private surveyService = inject(SurveyService);
+  detail = signal<any>(null);
+
+  ngOnInit() {
+    const id = this.route.snapshot.paramMap.get('responseId');
+    if (id) {
+      this.surveyService.getResponseDetail(Number(id))
+        .subscribe({ next: (data) => this.detail.set(data) });
+    }
+  }
+}
+```
+
+<!--
+ResponseDetailComponent 是「我的紀錄」點進去看到的唯讀詳情頁，跟填寫頁（SurveyFillComponent）是兩個完全不同的元件——填寫頁是給使用者「填答」用的可編輯表單，這頁是給使用者「回顧」用的唯讀畫面，兩者共用同一個 SurveyService，但呼叫的方法不一樣（getSurveyById vs getResponseDetail）。ngOnInit 從路由參數拿到 responseId，呼叫上一節看過的 getResponseDetail 取得這一筆作答的完整內容。
+-->
+
+---
+layout: default
+---
+
+# 作答內容 (唯讀) — Template (1) 標題與作答列表
+
+<div v-pre>
+
+```html
+<div class="max-w-3xl mx-auto p-6">
+  @if (detail()) {
+    <mat-card class="p-6">
+      <h1 class="text-2xl font-bold text-indigo-900 mb-1">{{ detail().surveyTitle }}</h1>
+      <p class="text-gray-500 text-sm mb-6">
+        提交時間：{{ detail().submittedAt | date:'yyyy-MM-dd HH:mm' }}
+      </p>
+
+      <div class="flex flex-col gap-4">
+        @for (d of detail().details; track $index) {
+          <div class="py-3 border-b border-gray-200">
+            <p class="font-bold mb-1">{{ $index + 1 }}. {{ d.questionTitle }}</p>
+            <p class="text-indigo-700">{{ d.answer || '(未作答)' }}</p>
+          </div>
+        }
+      </div>
+      <!-- ... 返回按鈕與讀取中畫面見下一頁 -->
+```
+
+</div>
+
+<!--
+這頁渲染唯讀的作答內容：detail().details 就是後端 getResponseDetail 已經整理好的陣列，每一筆都有 questionTitle 跟 answer（不管單選、多選還是簡答，answerText 都已經是後端 join 好的純文字），前端不用再像填寫頁那樣區分 SINGLE/MULTI/TEXT 分別渲染不同元件，直接印出文字即可，這是後端把「顯示邏輯」做在 API 回應裡、簡化前端渲染複雜度的例子。
+⚠️ 易錯點：d.answer 可能是空字串（例如非必填題使用者沒填），用 {{ d.answer || '(未作答)' }} 給一個明確的提示文字，比顯示空白更清楚。
+-->
+
+---
+layout: default
+---
+
+# 作答內容 (唯讀) — Template (2) 返回按鈕與讀取中畫面
+
+<div v-pre>
+
+```html
+      <!-- ... 接上一頁：作答列表 div 之後，還在同一個 mat-card 裡面 -->
+      <div class="flex justify-center mt-8">
+        <button mat-stroked-button routerLink="/history">返回我的紀錄</button>
+      </div>
+    </mat-card>
+  } @else {
+    <p class="text-center text-gray-500 py-20">正在讀取作答內容...</p>
+  }
+</div>
+```
+
+</div>
+
+<!--
+最下面「返回我的紀錄」按鈕用 routerLink="/history" 導回列表頁。最外層 @if (detail()) / @else 保護：API 還沒回來、detail() 是 null 的時候顯示讀取中文字，避免 detail().surveyTitle 這種存取 null 屬性的寫法直接讓畫面噴錯——這跟填寫頁最外層 @if (survey()) 是同一個防禦性寫法的道理。
+-->
+
+---
+layout: default
+---
+
+# 問卷查詢頁 (前台) — Component (1) 建立與 Import
+
+```bash
+ng generate component pages/survey-search
+```
+
+```typescript
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { MatTableModule } from '@angular/material/table';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { SurveyService } from '../../services/survey.service';
+import { Survey, TimeStatus, getTimeStatus } from '../../models/survey.model';
+```
+
+<!--
+用 ng generate component 建立 SurveySearchComponent，這是給一般訪客（不用登入）瀏覽、搜尋所有已發佈問卷的頁面，跟後台 SurveyListComponent 長得很像，但少了新增/編輯/刪除這些管理功能。import 清單也精簡很多：不需要 MatIconModule 的操作按鈕群、不需要 MatSnackBarModule（這頁沒有會失敗的寫入操作，單純查詢失敗就顯示空列表即可）。多 import 了上一節寫的 getTimeStatus 純函式，用來在前端算出每筆問卷的時間狀態。
+-->
+
+---
+layout: default
+---
+
+# 問卷查詢頁 (前台) — Component (2) 元件裝飾器
+
+```typescript
+@Component({
+  selector: 'app-survey-search',
+  imports: [CommonModule, FormsModule, RouterLink, MatTableModule, MatChipsModule,
+            MatButtonModule, MatFormFieldModule, MatInputModule, MatPaginatorModule],
+  templateUrl: './survey-search.component.html', styleUrl: './survey-search.component.scss'
+})
+export class SurveySearchComponent implements OnInit {
+  private surveyService = inject(SurveyService);
+  surveys = signal<Survey[]>([]);
+  displayedColumns = ['id', 'title', 'status', 'period', 'result'];
+  // ... 搜尋/分頁狀態見下一頁
+}
+```
+
+<!--
+這個元件的結構跟後台 SurveyListComponent 幾乎是同一套模式（搜尋欄位、pagedSurveys 分頁、狀態文字轉換），這是刻意的——同一種 UI 模式（搜尋+分頁表格）在系統裡出現第二次，直接照抄上一個元件的寫法調整，而不是重新發明一套，是實務上很常見也很合理的做法。surveys 存完整查詢結果，displayedColumns 對應 Template 裡實際定義的欄位。
+-->
+
+---
+layout: default
+---
+
+# 問卷查詢頁 (前台) — Component (3) 搜尋與分頁狀態
+
+```typescript
+export class SurveySearchComponent implements OnInit {
+  // ... 接上一頁
+  titleFilter = '';
+  startDateFilter = '';
+  endDateFilter = '';
+  pageIndex = signal(0);
+  pageSize = signal(10);
+  pagedSurveys = computed(() => {
+    const start = this.pageIndex() * this.pageSize();
+    return this.surveys().slice(start, start + this.pageSize());
+  });
+  private readonly TIME_STATUS_LABEL: Record<TimeStatus, string> = {
+    NOT_STARTED: '尚未開始', ONGOING: '進行中', ENDED: '已結束'
+  };
+  // ... 查詢與狀態方法見下一頁
+}
+```
+
+<!--
+titleFilter/startDateFilter/endDateFilter 是搜尋欄位，pagedSurveys 是分頁後要顯示的那一段，TIME_STATUS_LABEL 是英文代碼轉中文的對照表。
+-->
+
+---
+layout: default
+---
+
+# 問卷查詢頁 (前台) — Component (4) 查詢與狀態方法
+
+```typescript
+export class SurveySearchComponent implements OnInit {
+  // ... 接上一頁
+  ngOnInit() { this.loadSurveys(); }
+  loadSurveys() {
+    this.surveyService.getAllSurveys(
+      this.titleFilter, this.startDateFilter, this.endDateFilter
+    ).subscribe({
+      next: (data) => { this.surveys.set(data); this.pageIndex.set(0); },
+      error: () => this.surveys.set([])
+    });
+  }
+  onSearch() { this.loadSurveys(); }
+  onPageChange(e: PageEvent) { this.pageIndex.set(e.pageIndex); this.pageSize.set(e.pageSize); }
+  // 三個方法都吃 getTimeStatus(s) 現算的結果，Template 直接呼叫就好
+  timeStatusOf(s: Survey): TimeStatus | null { return getTimeStatus(s); }
+  statusLabel(s: Survey): string { return this.TIME_STATUS_LABEL[this.timeStatusOf(s)!]; }
+  canFill(s: Survey): boolean { return this.timeStatusOf(s) === 'ONGOING'; }
+  canViewStats(s: Survey): boolean { return this.timeStatusOf(s) !== 'NOT_STARTED'; }
+}
+```
+
+<!--
+loadSurveys 直接呼叫 surveyService.getAllSurveys——沒錯，就是後台列表頁在用的同一個方法，打的是同一條 /api/admin/surveys 端點。這是刻意的選擇：後端這條查詢端點本來就已經支援標題/日期篩選，教學版又還沒對 /api/admin/** 做權限管控，與其為了「前台」這個身份另外多開一條幾乎一樣的後端 API，不如直接沿用現成的，把力氣留給真正需要新寫的部分。
+timeStatusOf 是包一層薄薄的 wrapper，呼叫上一節 models 檔案裡定義的 getTimeStatus 純函式——Template 沒辦法直接 import 一個獨立函式來用，只能呼叫 Component 的方法，所以才需要這層包裝。statusLabel、canFill、canViewStats 全部都透過這個方法拿到目前的時間狀態，不會各自重複寫一次日期比較邏輯。canFill 對應圖上「名稱：進行中的才有連結，點選連結填寫問卷」，只有 ONGOING 才能點進去填寫；canViewStats 對應「觀看統計：狀態是進行中、已結束才可觀看」，尚未開始不能看。
+⚠️ 易錯點：loadSurveys 的 error 處理跟後台不一樣——後台用 snackBar 跳錯誤訊息，這裡直接 this.surveys.set([])，因為前台訪客頁面沒有登入狀態，比較常遇到的情境是「查無資料」而不是需要跳出提示的系統錯誤，用空陣列讓表格自然顯示「目前沒有任何問卷」就夠了，不需要額外引入 MatSnackBarModule。
+⚠️ 易錯點：因為直接沿用後台查詢 API、沒有另外過濾狀態，這頁目前理論上也查得到草稿問卷——這是已知的權宜取捨（上一頁 SurveyService 那邊也提過），不是這堂課現階段要處理的範圍，但要知道這個限制存在，未來要補權限或狀態過濾時知道要改哪裡。
+-->
+
+---
+layout: default
+---
+
+# 問卷查詢頁 (前台) — Template (1) 標題與外層版面
+
+<div v-pre>
+
+```html
+<div class="p-6 max-w-5xl mx-auto">
+  <h1 class="text-2xl font-bold text-gray-800 mb-6">問卷查詢</h1>
+  <!-- ... 搜尋列見下一頁 -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <table mat-table [dataSource]="pagedSurveys()" class="w-full">
+      <!-- ... 欄位定義見後面幾頁 -->
+    </table>
+    <!-- ... 分頁器見收尾頁 -->
+  </div>
+</div>
+```
+
+</div>
+
+<!--
+外層結構跟後台列表頁同一套：標題、白底卡片包住的表格，[dataSource]="pagedSurveys()" 一樣要注意是分頁後的資料，不是完整的 surveys()。
+-->
+
+---
+layout: default
+---
+
+# 問卷查詢頁 (前台) — Template (2) 搜尋列
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁：<h1> 之後，表格卡片之前 -->
+<div class="flex flex-wrap items-end gap-4 mb-4 bg-white p-4 rounded-lg shadow">
+  <mat-form-field appearance="outline" class="flex-1 min-w-[200px]">
+    <mat-label>問卷名稱</mat-label>
+    <input matInput [(ngModel)]="titleFilter" placeholder="模糊搜尋">
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>統計時間 (開始)</mat-label>
+    <input matInput type="date" [(ngModel)]="startDateFilter">
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>統計時間 (結束)</mat-label>
+    <input matInput type="date" [(ngModel)]="endDateFilter">
+  </mat-form-field>
+  <button mat-raised-button color="primary" (click)="onSearch()" class="mb-5">搜尋</button>
+</div>
+```
+
+</div>
+
+<!--
+搜尋列（問卷名稱模糊搜尋 + 統計時間區間）跟後台列表頁的搜尋列是同一套寫法，三個欄位用 [(ngModel)] 雙向繫結到 Component 的 titleFilter/startDateFilter/endDateFilter，按下「搜尋」才呼叫 onSearch()。
+-->
+
+---
+layout: default
+---
+
+# 問卷查詢頁 (前台) — Template (3) 編號 / 名稱欄
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁：<table> 裡面 -->
+<ng-container matColumnDef="id">
+  <th mat-header-cell *matHeaderCellDef> 編號 </th>
+  <td mat-cell *matCellDef="let s"> #{{ s.id }} </td>
+</ng-container>
+
+<ng-container matColumnDef="title">
+  <th mat-header-cell *matHeaderCellDef> 名稱 </th>
+  <td mat-cell *matCellDef="let s" class="font-medium">
+    @if (canFill(s)) {
+      <a [routerLink]="['/fill', s.id]" class="text-indigo-600 hover:underline">{{ s.title }}</a>
+    } @else {
+      {{ s.title }}
+    }
+  </td>
+</ng-container>
+<!-- ... 狀態欄見下一頁 -->
+```
+
+</div>
+
+<!--
+名稱欄是這頁的重點：@if (canFill(s)) 只有進行中的問卷名稱才會渲染成 <a routerLink> 連結，可以點進去填寫；尚未開始、已結束就只是純文字，對應圖上「名稱：進行中的才有連結，點選連結填寫問卷」跟「尚未開始、已結束：取消問卷連結」這兩條規則。
+-->
+
+---
+layout: default
+---
+
+# 問卷查詢頁 (前台) — Template (4) 狀態欄
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁 -->
+<ng-container matColumnDef="status">
+  <th mat-header-cell *matHeaderCellDef> 狀態 </th>
+  <td mat-cell *matCellDef="let s">
+    @if (timeStatusOf(s) === 'ONGOING') {
+      <mat-chip class="!bg-green-100 !text-green-700">{{ statusLabel(s) }}</mat-chip>
+    } @else if (timeStatusOf(s) === 'NOT_STARTED') {
+      <mat-chip class="!bg-blue-100 !text-blue-700">{{ statusLabel(s) }}</mat-chip>
+    } @else {
+      <mat-chip class="!bg-red-100 !text-red-700">{{ statusLabel(s) }}</mat-chip>
+    }
+  </td>
+</ng-container>
+<!-- ... 開始/結束時間、結果欄見下一頁 -->
+```
+
+</div>
+
+<!--
+狀態欄跟後台列表頁的邏輯類似，只是這裡固定是三色（不會有草稿），拿掉了草稿那個分支。
+-->
+
+---
+layout: default
+---
+
+# 問卷查詢頁 (前台) — Template (5) 時間 / 結果欄
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁 -->
+<ng-container matColumnDef="period">
+  <th mat-header-cell *matHeaderCellDef> 開始/結束時間 </th>
+  <td mat-cell *matCellDef="let s" class="text-sm text-gray-500">
+    {{ s.startDate }} ~ {{ s.endDate }}
+  </td>
+</ng-container>
+
+<ng-container matColumnDef="result">
+  <th mat-header-cell *matHeaderCellDef> 結果 </th>
+  <td mat-cell *matCellDef="let s">
+    @if (canViewStats(s)) {
+      <a [routerLink]="['/admin/stats', s.id]" class="text-indigo-600 hover:underline">前往</a>
+    } @else {
+      <span class="text-gray-400">前往</span>
+    }
+  </td>
+</ng-container>
+<!-- ... 收尾與分頁器見下一頁 -->
+```
+
+</div>
+
+<!--
+結果欄用 [routerLink]="['/admin/stats', s.id]" 導到既有的後台統計頁——沒有另外做一個「公開版」統計頁，直接沿用 admin 底下那個 SurveyStatsComponent。這樣做得通，是因為 app.routes.ts 裡 /admin 這個路徑目前沒有掛任何路由守衛（CanActivate），後端也是 permitAll()，訪客不登入一樣能直接開啟這個網址；只是 URL 上會看到 /admin/stats/xx，語意上「訪客網址長得像後台網址」不是很乾淨，這是先求功能能動、暫緩處理權限與路由規劃的取捨。只有 canViewStats(s) 是 true（進行中或已結束）才渲染成連結，尚未開始就是灰色純文字，視覺上明確傳達「還不能點」。
+-->
+
+---
+layout: default
+---
+
+# 問卷查詢頁 (前台) — Template (6) 收尾與分頁器
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁：</ng-container> 之後 -->
+<tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+<tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+<tr class="mat-row" *matNoDataRow>
+  <td class="mat-cell p-8 text-center" colspan="5">目前沒有符合條件的問卷。</td>
+</tr>
+<!-- ... </table> -->
+<mat-paginator [length]="surveys().length" [pageSize]="pageSize()"
+               [pageIndex]="pageIndex()" [pageSizeOptions]="[10, 20, 50]"
+               (page)="onPageChange($event)"></mat-paginator>
+<!-- ... </div> </div> 收尾 -->
+```
+
+</div>
+
+<!--
+收尾的 <tr>、*matNoDataRow、mat-paginator 寫法跟後台列表頁完全一樣，[length] 一樣要綁 surveys().length 而不是 pagedSurveys().length，這是同一個地雷、同一個原因，兩個列表頁都要小心。
 -->
 
 ---
@@ -4614,11 +5614,47 @@ class: flex flex-col justify-center items-center text-center
 layout: default
 ---
 
-# 問卷列表 — Component
+# 問卷列表 — Component (1)
 
-### `pages/admin/survey-list/survey-list.component.ts`
+```bash
+ng generate component pages/admin/survey-list
+```
 
 ```typescript
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { MatTableModule } from '@angular/material/table';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SurveyService } from '../../../services/survey.service';
+import { Survey, TimeStatus, getTimeStatus } from '../../../models/survey.model';
+```
+
+<!--
+用 ng generate component 建立 SurveyListComponent，這頁列出後面會用到的 import：mat-table 相關模組顯示列表、mat-chip 顯示發佈狀態、SurveyService/Survey 負責資料存取。這次多加了 FormsModule（搜尋欄位用 [(ngModel)] 雙向綁定）、MatFormFieldModule/MatInputModule（搜尋輸入框）、MatPaginatorModule（分頁器）、getTimeStatus（前面 models 檔案寫的純函式，用日期算出時間狀態）。
+-->
+
+---
+layout: default
+---
+
+# 問卷列表 — Component (2) 元件裝飾器
+
+```typescript
+@Component({
+  selector: 'app-survey-list',
+  imports: [CommonModule, FormsModule, RouterLink, MatTableModule, MatChipsModule,
+            MatIconModule, MatButtonModule, MatFormFieldModule, MatInputModule,
+            MatPaginatorModule, MatSnackBarModule],
+  templateUrl: './survey-list.component.html', styleUrl: './survey-list.component.scss'
+})
 export class SurveyListComponent implements OnInit {
   private surveyService = inject(SurveyService);
   private snackBar = inject(MatSnackBar);
@@ -4626,22 +5662,88 @@ export class SurveyListComponent implements OnInit {
 
   surveys = signal<Survey[]>([]);
   displayedColumns = ['id', 'title', 'status', 'period', 'actions'];
+  // ... 搜尋欄位見下一頁
+}
+```
+
+<!--
+SurveyListComponent 跟前面看過的元件結構類似。displayedColumns 這次補上了 id、period 兩個欄位，要跟 Template 裡實際定義的 matColumnDef 一一對上，這是這個系列常見的地雷——Template 加了欄位，Component 的 displayedColumns 忘記同步更新，畫面就會出現 Could not find column with id "xxx" 這種錯誤。
+-->
+
+---
+layout: default
+---
+
+# 問卷列表 — Component (3) 搜尋欄位與初始化
+
+```typescript
+export class SurveyListComponent implements OnInit {
+  // ... 接上一頁
+  // 搜尋欄位 (雙向綁定用一般屬性，不是 signal)
+  titleFilter = '';
+  startDateFilter = '';
+  endDateFilter = '';
 
   ngOnInit() { this.loadSurveys(); }
+  // ... 分頁狀態見下一頁
+}
+```
 
+<!--
+titleFilter/startDateFilter/endDateFilter 是搜尋欄位，故意不用 signal、直接用一般屬性讓 [(ngModel)] 雙向繫結，因為這幾個值只是「使用者正在輸入中」的暫存狀態，不需要 signal 的變更偵測特性。
+-->
+
+---
+layout: default
+---
+
+# 問卷列表 — Component (4) 分頁狀態
+
+```typescript
+export class SurveyListComponent {
+  // ... 接上一頁
+  pageIndex = signal(0);
+  pageSize = signal(10);
+
+  // 目前這一頁要顯示的資料 (前端分頁：從完整陣列切一段出來)
+  pagedSurveys = computed(() => {
+    const start = this.pageIndex() * this.pageSize();
+    return this.surveys().slice(start, start + this.pageSize());
+  });
+  // ... 載入/搜尋方法見下一頁
+}
+```
+
+<!--
+pagedSurveys 是前端分頁的核心：用 computed() 依 pageIndex/pageSize 從完整的 surveys() 陣列切出目前這一頁要顯示的資料，這是「前端分頁」的標準做法——後端一次把符合搜尋條件的資料全部回傳，分頁完全由前端處理，資料量不大時很夠用；資料量真的很大時才需要改成後端分頁（在 API 加 page/size 參數，後端只回傳那一頁的資料）。
+⚠️ 易錯點：pagedSurveys 用的是 computed()，不是一般方法——這代表它會自動追蹤內部用到的 signal（surveys/pageIndex/pageSize），任何一個變了就自動重新算一次，Template 裡直接呼叫 pagedSurveys() 就好，不用手動呼叫更新，這是 signal 的一大優點。
+-->
+
+---
+layout: default
+---
+
+# 問卷列表 — Component (5) 載入與搜尋方法
+
+```typescript
+export class SurveyListComponent {
+  // ... 接上一頁
   loadSurveys() {
-    this.surveyService.getAllSurveys().subscribe({
-      next: (data) => this.surveys.set(data),
+    this.surveyService.getAllSurveys(
+      this.titleFilter, this.startDateFilter, this.endDateFilter
+    ).subscribe({
+      next: (data) => { this.surveys.set(data); this.pageIndex.set(0); },
       error: () => this.snackBar.open('無法載入問卷列表', '關閉', { duration: 3000 })
     });
   }
-
+  onSearch() { this.loadSurveys(); }
+  onPageChange(e: PageEvent) { this.pageIndex.set(e.pageIndex); this.pageSize.set(e.pageSize); }
   // ... 操作方法見下一頁
 }
 ```
 
 <!--
-SurveyListComponent 跟前面看過的元件結構類似，ngOnInit 時載入問卷列表。loadSurveys 被抽成獨立方法而不是直接寫在 ngOnInit 裡，是因為等一下操作方法（切換狀態、刪除）成功後都要重新呼叫它刷新列表，抽成方法可以避免重複程式碼。
+loadSurveys 這次多帶了 titleFilter/startDateFilter/endDateFilter 三個搜尋欄位呼叫 getAllSurveys，重新查詢成功後把 pageIndex 重設回 0，避免使用者搜尋後停在一個可能已經不存在的頁碼上（例如原本在第 5 頁，搜尋後結果只剩 2 頁）。onSearch 就是「搜尋」按鈕的 (click) 事件；onPageChange 接住 mat-paginator 的 (page) 事件，更新目前頁碼跟每頁筆數。
 -->
 
 ---
@@ -4688,6 +5790,7 @@ export class SurveyListComponent {
       });
     }
   }
+  // ... 狀態顯示輔助方法見下一頁
 }
 ```
 
@@ -4699,32 +5802,188 @@ onDelete 一樣先用 confirm() 二次確認才執行刪除，成功後呼叫 lo
 layout: default
 ---
 
-# 問卷列表 — Template (標題與狀態欄)
+# 問卷列表 — 狀態顯示輔助方法
+
+```typescript
+export class SurveyListComponent {
+  // ... 接上一頁
+  private readonly TIME_STATUS_LABEL: Record<TimeStatus, string> = {
+    NOT_STARTED: '尚未開始', ONGOING: '進行中', ENDED: '已結束'
+  };
+
+  // 包一層呼叫 models 檔案裡的 getTimeStatus 純函式，Template 才能呼叫
+  timeStatusOf(s: Survey): TimeStatus | null { return getTimeStatus(s); }
+
+  // 狀態欄要顯示的文字：草稿直接顯示「草稿」，已發佈才顯示日期算出的三態
+  statusLabel(s: Survey): string {
+    return s.status === 'DRAFT' ? '草稿' : this.TIME_STATUS_LABEL[this.timeStatusOf(s)!];
+  }
+
+  // 「結果」連結是否可點：只有已發佈、且進行中或已結束才能看統計 (尚未開始還沒資料)
+  canViewStats(s: Survey): boolean {
+    return s.status === 'PUBLISHED' && this.timeStatusOf(s) !== 'NOT_STARTED';
+  }
+}
+```
+
+<!--
+statusLabel 把 status（草稿/已發佈）跟 timeStatusOf(s)（尚未開始/進行中/已結束，前端現算）兩個結果合併成畫面上要顯示的單一文字：草稿問卷不看時間狀態（因為 getTimeStatus 對草稿一律回傳 null），已發佈才用 TIME_STATUS_LABEL 這個對照表把英文代碼轉成中文。canViewStats 對應圖上「觀看統計：狀態是進行中、已結束才可觀看」這條規則——尚未開始的問卷還沒有人填過，統計頁去看也只會是空的，直接在前端擋掉比較好。
+⚠️ 易錯點：TIME_STATUS_LABEL[this.timeStatusOf(s)!] 這裡用了非空斷言 !，是因為進到這個分支已經確定 s.status !== 'DRAFT'，也就是已發佈的問卷，這種情況下 getTimeStatus 一定會回傳三態之一、不會是 null——但這個推論只在這個分支成立，換個地方直接對可能是草稿的資料做一樣的斷言就會出錯，用之前要想清楚當下的情境。
+-->
+
+---
+layout: default
+---
+
+# 問卷列表 — Template (外層版面與新增按鈕)
 
 <div v-pre>
 
 ```html
-<table mat-table [dataSource]="surveys()" class="w-full">
-  <ng-container matColumnDef="title">
-    <th mat-header-cell *matHeaderCellDef> 問卷標題 </th>
-    <td mat-cell *matCellDef="let s" class="font-medium"> {{ s.title }} </td>
-  </ng-container>
-
-  <ng-container matColumnDef="status">
-    <th mat-header-cell *matHeaderCellDef> 狀態 </th>
-    <td mat-cell *matCellDef="let s">
-      @if (s.status === 'PUBLISHED') { <mat-chip class="!bg-green-100 !text-green-700">已發佈</mat-chip> }
-      @else { <mat-chip class="!bg-gray-100 !text-gray-600">草稿</mat-chip> }
-    </td>
-  </ng-container>
-  <!-- ... 操作欄見下一頁 -->
-</table>
+<div class="p-6">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">問卷管理</h1>
+    <button mat-raised-button color="primary" routerLink="/admin/create">
+      <mat-icon>add</mat-icon> 建立新問卷
+    </button>
+  </div>
+  <!-- ... 搜尋列見下一頁 -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <table mat-table [dataSource]="pagedSurveys()" class="w-full">
+      <!-- ... 欄位定義見後面幾頁 -->
+    </table>
+    <!-- ... 分頁器見收尾頁 -->
+  </div>
+</div>
 ```
 
 </div>
 
 <!--
-這頁是問卷列表表格的前半部分，重點看狀態欄用 @if / @else 依照 status 顯示綠色的「已發佈」或灰色的「草稿」標籤，用顏色直接傳達狀態差異，是很直覺的 UI 設計手法。
+這頁先講整個 Template 的外層版面：標題「問卷管理」跟右上角的「建立新問卷」按鈕放在同一列（flex justify-between），按鈕用 routerLink="/admin/create" 導到問卷編輯器的新增模式。table 包在一個白底、有陰影的卡片 div 裡，這是列表頁常見的排版手法。
+⚠️ 易錯點：這個按鈕很容易在照抄投影片片段時漏掉，因為前面元件的程式碼（Component 那幾頁）完全沒提到它，只有 Template 這裡才看得到——這也是為什麼一定要照 Template 頁把外層版面完整貼上，不能只貼 <table> 裡面的內容。
+[dataSource]="pagedSurveys()" 這裡要特別注意——不是 surveys()，是上一節新增的 pagedSurveys() computed，才會只顯示目前這一頁的資料，用錯成 surveys() 會變成分頁器擺著好看、表格卻一次全部顯示。
+-->
+
+---
+layout: default
+---
+
+# 問卷列表 — Template (搜尋列)
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁：「建立新問卷」那個 div 之後 -->
+<div class="flex flex-wrap items-end gap-4 mb-4 bg-white p-4 rounded-lg shadow">
+  <mat-form-field appearance="outline" class="flex-1 min-w-[200px]">
+    <mat-label>問卷名稱</mat-label>
+    <input matInput [(ngModel)]="titleFilter" placeholder="模糊搜尋">
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>開始日期</mat-label>
+    <input matInput type="date" [(ngModel)]="startDateFilter">
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>結束日期</mat-label>
+    <input matInput type="date" [(ngModel)]="endDateFilter">
+  </mat-form-field>
+  <button mat-raised-button color="primary" (click)="onSearch()" class="mb-5">搜尋</button>
+</div>
+```
+
+</div>
+
+<!--
+搜尋列放三個欄位：問卷名稱（對應後端 title 模糊搜尋）、開始/結束日期（對應後端 startDate/endDate 區間搜尋）。三個輸入框都用 [(ngModel)] 雙向繫結到 Component 裡的 titleFilter/startDateFilter/endDateFilter 一般屬性，「搜尋」按鈕 (click)="onSearch()" 才真正把這三個值送出去查詢——輸入框本身不會即時觸發查詢，要按下搜尋鈕才送出，這是搜尋列常見的互動模式，避免使用者每打一個字就打一次 API。
+⚠️ 易錯點：日期用原生 <input type="date">，雙向繫結出來的字串格式固定是 yyyy-MM-dd，剛好跟後端 @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) 要求的格式一致，不需要額外轉換；如果換成 Angular Material 的 Datepicker，繫結出來的會是 Date 物件，送出前還要自己格式化成字串，這裡故意選用原生 date input 讓範例單純一點。
+-->
+
+---
+layout: default
+---
+
+# 問卷列表 — Template (ID / 標題欄)
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁：<table> 裡面 -->
+<ng-container matColumnDef="id">
+  <th mat-header-cell *matHeaderCellDef> ID </th>
+  <td mat-cell *matCellDef="let s"> {{ s.id }} </td>
+</ng-container>
+
+<ng-container matColumnDef="title">
+  <th mat-header-cell *matHeaderCellDef> 問卷標題 </th>
+  <td mat-cell *matCellDef="let s" class="font-medium"> {{ s.title }} </td>
+</ng-container>
+<!-- ... 狀態欄見下一頁 -->
+```
+
+</div>
+
+<!--
+這頁是問卷列表表格欄位定義的前半部分：id、title 兩個直接顯示資料，沒有特殊邏輯。
+-->
+
+---
+layout: default
+---
+
+# 問卷列表 — Template (狀態欄)
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁 -->
+<ng-container matColumnDef="status">
+  <th mat-header-cell *matHeaderCellDef> 狀態 </th>
+  <td mat-cell *matCellDef="let s">
+    @if (s.status === 'DRAFT') {
+      <mat-chip class="!bg-gray-100 !text-gray-600">{{ statusLabel(s) }}</mat-chip>
+    } @else if (timeStatusOf(s) === 'ONGOING') {
+      <mat-chip class="!bg-green-100 !text-green-700">{{ statusLabel(s) }}</mat-chip>
+    } @else if (timeStatusOf(s) === 'NOT_STARTED') {
+      <mat-chip class="!bg-blue-100 !text-blue-700">{{ statusLabel(s) }}</mat-chip>
+    } @else {
+      <mat-chip class="!bg-red-100 !text-red-700">{{ statusLabel(s) }}</mat-chip>
+    }
+  </td>
+</ng-container>
+<!-- ... 開放期間欄、操作欄見下一頁 -->
+```
+
+</div>
+
+<!--
+狀態欄改成四種顏色對應四種狀態：草稿（灰）、進行中（綠）、尚未開始（藍）、已結束（紅），文字內容都呼叫上一節寫好的 statusLabel(s) 方法，Template 只負責依狀態決定顏色，文字轉換邏輯留在 Component。
+⚠️ 易錯點：mat-chip 的顏色 class 要用專案實際採用的 Tailwind utility（例如 !bg-green-100 !text-green-700），不要憑印象寫 badge badge-success 這種其他 UI 框架（如 Bootstrap）的 class 名稱，Tailwind 沒有這個 class，寫了也不會有任何顏色效果。
+-->
+
+---
+layout: default
+---
+
+# 問卷列表 — Template (開放期間欄)
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁 -->
+<ng-container matColumnDef="period">
+  <th mat-header-cell *matHeaderCellDef> 開放期間 </th>
+  <td mat-cell *matCellDef="let s" class="text-sm text-gray-500">
+    {{ s.startDate }} ~ {{ s.endDate }}
+  </td>
+</ng-container>
+<!-- ... 操作欄見下一頁 -->
+```
+
+</div>
+
+<!--
+period 欄顯示問卷的開放期間（startDate ~ endDate），純顯示沒有特殊邏輯。
 -->
 
 ---
@@ -4736,24 +5995,24 @@ layout: default
 <div v-pre>
 
 ```html
-<table mat-table [dataSource]="surveys()" class="w-full">
-  <!-- ... 接上一頁 -->
-  <ng-container matColumnDef="actions">
-    <th mat-header-cell *matHeaderCellDef> 操作 </th>
-    <td mat-cell *matCellDef="let s">
-      <button mat-icon-button (click)="toggleStatus(s)">
-        <mat-icon>{{ s.status === 'PUBLISHED' ? 'pause_circle_outline' : 'play_circle_outline' }}</mat-icon>
-      </button>
-      <button mat-icon-button [routerLink]="['/admin/stats', s.id]"><mat-icon>bar_chart</mat-icon></button>
-      <button mat-icon-button (click)="onEdit(s)"><mat-icon>edit</mat-icon></button>
-      <button mat-icon-button color="warn" (click)="onDelete(s.id)"
-              [disabled]="s.hasResponses"><mat-icon>delete</mat-icon></button>
-    </td>
-  </ng-container>
-
-  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-  <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-</table>
+<!-- ... 接上一頁 -->
+<ng-container matColumnDef="actions">
+  <th mat-header-cell *matHeaderCellDef class="text-right"> 操作 </th>
+  <td mat-cell *matCellDef="let s" class="text-right">
+    <button mat-icon-button (click)="toggleStatus(s)">
+      <mat-icon>{{ s.status === 'PUBLISHED' ? 'pause_circle_outline' : 'play_circle_outline' }}</mat-icon>
+    </button>
+    <button mat-icon-button [routerLink]="['/admin/stats', s.id]"
+            [disabled]="!canViewStats(s)" title="觀看統計"><mat-icon>bar_chart</mat-icon></button>
+    <button mat-icon-button [routerLink]="['/admin/responses', s.id]" title="查看回饋">
+      <mat-icon>forum</mat-icon>
+    </button>
+    <button mat-icon-button (click)="onEdit(s)"><mat-icon>edit</mat-icon></button>
+    <button mat-icon-button color="warn" (click)="onDelete(s.id)"
+            [disabled]="s.hasResponses"><mat-icon>delete</mat-icon></button>
+  </td>
+</ng-container>
+<!-- ... 收尾與空資料列見下一頁 -->
 ```
 
 </div>
@@ -4761,26 +6020,266 @@ layout: default
 已有作答的問卷，刪除鈕會 `disabled`（對應後端的保護）。
 
 <!--
-這頁補上操作欄，四個圖示按鈕分別對應切換狀態、查看統計、編輯、刪除。
-⚠️ 易錯點：刪除按鈕的 [disabled]="s.hasResponses" 正好對應後端 SurveyService.deleteSurvey 裡「已有作答紀錄則禁止刪除」的規則，前端這裡是提前擋一次讓使用者體驗更好，但後端還是要做同樣的檢查，因為前端的限制永遠可以被繞過（例如直接呼叫 API），這是前後端都要驗證的資安基本觀念。
+操作欄五個圖示按鈕分別對應切換狀態、查看統計、查看回饋、編輯、刪除。
+⚠️ 易錯點：查看統計按鈕新增了 [disabled]="!canViewStats(s)"，對應上一節加的規則——只有已發佈、且狀態是進行中或已結束才能點，尚未開始的問卷這顆按鈕會是灰色不能按，避免使用者點進去看到一個空空如也的統計頁。「查看回饋」按鈕沒有加這個限制，任何狀態（含草稿）都能點進去，因為就算目前沒有任何人填寫，列表頁本來就會用 *matNoDataRow 顯示「目前還沒有人填寫這份問卷」，不需要在按鈕層再擋一次。刪除按鈕的 [disabled]="s.hasResponses" 正好對應後端 SurveyService.deleteSurvey 裡「已有作答紀錄則禁止刪除」的規則，前端這裡是提前擋一次讓使用者體驗更好，但後端還是要做同樣的檢查，因為前端的限制永遠可以被繞過（例如直接呼叫 API），這是前後端都要驗證的資安基本觀念。
 -->
 
 ---
 layout: default
 ---
 
-# 問卷編輯器 — 表單結構
+# 問卷列表 — Template (收尾與分頁器)
 
-### `survey-editor.component.ts` (1)
+<div v-pre>
+
+```html
+<!-- ... 接上一頁：</ng-container> 之後 -->
+<tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+<tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+<tr class="mat-row" *matNoDataRow>
+  <td class="mat-cell p-8 text-center" colspan="5">
+    目前沒有任何問卷。
+  </td>
+</tr>
+<!-- ... </table>，分頁器接在 table 後面，還在同一個白底卡片 div 裡 -->
+<mat-paginator [length]="surveys().length" [pageSize]="pageSize()"
+               [pageIndex]="pageIndex()" [pageSizeOptions]="[10, 20, 50]"
+               (page)="onPageChange($event)"></mat-paginator>
+<!-- ... </div> </div> 收尾 -->
+```
+
+</div>
+
+<!--
+最後兩個 <tr> 是 mat-table 固定寫法：一個渲染表頭、一個渲染每一列資料，兩者都靠 displayedColumns 陣列決定要顯示哪些欄位跟顯示順序——這也是為什麼元件裡 displayedColumns 要跟這裡定義的 matColumnDef 名稱（id/title/status/period/actions）逐一對上。*matNoDataRow 是問卷列表是空陣列時顯示的提示列，colspan 要等於欄位數量（這裡是 5），不然表格排版會跑掉。
+mat-paginator 是這頁新增的分頁器：[length] 要給完整資料的總筆數（surveys().length，不是 pagedSurveys().length，不然分頁器會以為總共只有這一頁的資料量，算不出正確的總頁數）、[pageSize]/[pageIndex] 雙向對應 Component 的 pageSize/pageIndex signal、(page) 事件接住使用者換頁或改變每頁筆數的動作，交給 onPageChange 處理，預設每頁 10 筆（對應圖上「預設一頁 10 筆」的需求），pageSizeOptions 讓使用者可以自己調整每頁要看幾筆。
+⚠️ 易錯點：[length] 一定要綁完整陣列的長度，這是最容易寫錯的地方——很多人直覺會綁 pagedSurveys().length（目前這頁的筆數，通常就是 10），這樣分頁器會誤以為資料一頁就顯示完，算出來的總頁數永遠是 1，後面的頁碼按鈕直接消失。
+-->
+
+---
+layout: default
+---
+
+# 問卷回饋列表 — Component (1) 建立與 Import
+
+```bash
+ng generate component pages/admin/survey-responses
+```
 
 ```typescript
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { MatTableModule } from '@angular/material/table';
+import { MatButtonModule } from '@angular/material/button';
+import { SurveyService } from '../../../services/survey.service';
+```
+
+<!--
+用 ng generate component 建立 SurveyResponsesComponent，這是「查看回饋」按鈕點進去看到的頁面：列出某份問卷所有人的填寫紀錄，點「前往」再看單筆的作答明細。import 精簡很多，因為這頁沒有搜尋、沒有分頁需求（後端已經照 id 逆序排好，資料量通常不像問卷列表那麼多，先不做分頁），單純顯示一張表格。
+-->
+
+---
+layout: default
+---
+
+# 問卷回饋列表 — Component (2) 狀態與載入
+
+```typescript
+@Component({
+  selector: 'app-survey-responses',
+  imports: [CommonModule, RouterLink, MatTableModule, MatButtonModule],
+  templateUrl: './survey-responses.component.html', styleUrl: './survey-responses.component.scss'
+})
+export class SurveyResponsesComponent implements OnInit {
+  private surveyService = inject(SurveyService);
+  private route = inject(ActivatedRoute);
+
+  responses = signal<any[]>([]);
+  displayedColumns = ['index', 'userName', 'submittedAt', 'actions'];
+
+  ngOnInit() {
+    const surveyId = this.route.snapshot.paramMap.get('id');
+    if (surveyId) {
+      this.surveyService.getSurveyResponses(Number(surveyId)).subscribe({
+        next: (data) => this.responses.set(data),
+        error: () => this.responses.set([])
+      });
+    }
+  }
+}
+```
+
+<!--
+ngOnInit 從路由參數拿到問卷 id，呼叫上一節新增的 getSurveyResponses 取得填寫者清單存進 responses 這個 signal。displayedColumns 裡的 index 是純粹的畫面序號（第幾筆），不是後端回傳的欄位，等一下 Template 那頁會看到怎麼用 *matCellDef="let r; let i = index" 取得目前是第幾列。
+⚠️ 易錯點：這裡跟「我的紀錄」那頁一樣，displayedColumns 裡的每個名字都要跟 Template 裡的 matColumnDef 一一對上，這是這系列最常見的地雷，寫完務必回頭核對一次。
+-->
+
+---
+layout: default
+---
+
+# 問卷回饋列表 — Template (1) 標題與外層版面
+
+<div v-pre>
+
+```html
+<div class="p-6 max-w-3xl mx-auto">
+  <h1 class="text-2xl font-bold text-gray-800 mb-6">問卷回饋</h1>
+  <!-- ... 表格欄位見下一頁 -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <table mat-table [dataSource]="responses()" class="w-full">
+      <!-- ... 見下一頁 -->
+    </table>
+  </div>
+</div>
+```
+
+</div>
+
+<!--
+外層版面很單純：標題、白底卡片包住的表格，[dataSource]="responses()" 直接綁上一節 Component 載入好的完整清單，這頁沒有分頁需求，不用像列表頁那樣切成 pagedSurveys()。
+-->
+
+---
+layout: default
+---
+
+# 問卷回饋列表 — Template (2) 表格欄位
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁：<table> 裡面 -->
+<ng-container matColumnDef="index">
+  <th mat-header-cell *matHeaderCellDef> 編號 </th>
+  <td mat-cell *matCellDef="let r; let i = index"> #{{ i + 1 }} </td>
+</ng-container>
+
+<ng-container matColumnDef="userName">
+  <th mat-header-cell *matHeaderCellDef> 姓名 </th>
+  <td mat-cell *matCellDef="let r"> {{ r.userName }} </td>
+</ng-container>
+
+<ng-container matColumnDef="submittedAt">
+  <th mat-header-cell *matHeaderCellDef> 填寫時間 </th>
+  <td mat-cell *matCellDef="let r"> {{ r.submittedAt | date:'yyyy-MM-dd HH:mm' }} </td>
+</ng-container>
+
+<ng-container matColumnDef="actions">
+  <th mat-header-cell *matHeaderCellDef class="text-right"> 觀看回覆 </th>
+  <td mat-cell *matCellDef="let r" class="text-right">
+    <a [routerLink]="['/history', r.responseId]" class="text-indigo-600 hover:underline">前往</a>
+  </td>
+</ng-container>
+<!-- ... 收尾與返回按鈕見下一頁 -->
+```
+
+</div>
+
+<!--
+表格四欄：編號（畫面序號）、姓名、填寫時間、觀看回覆。「前往」連結用 [routerLink]="['/history', r.responseId]"，直接沿用前面「我的紀錄」那節做好的 ResponseDetailComponent（唯讀作答內容頁），沒有另外做一個管理員專用的細項頁——因為呼叫的是同一支 getResponseDetail(responseId) API、畫面內容也完全一樣（問卷標題、提交時間、逐題作答），沒有理由重做一份。
+⚠️ 易錯點：這裡的路由是 /history/:responseId，語意上是「使用者查看自己的紀錄」，管理員點進來看別人的回饋也走這條路——這是刻意共用元件換來的取捨，URL 語意不夠精確（明明是管理員在看，網址卻長得像「我的紀錄」），但省下重做一個幾乎一模一樣頁面的成本，跟前面「結果」連結直接沿用 /admin/stats/:id 是同一種考量。
+-->
+
+---
+layout: default
+---
+
+# 問卷回饋列表 — Template (3) 收尾與返回按鈕
+
+<div v-pre>
+
+```html
+      <!-- ... 接上一頁：</ng-container> 之後，還在同一個 <table> 裡面 -->
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      <tr class="mat-row" *matNoDataRow>
+        <td class="mat-cell p-8 text-center" colspan="4">目前還沒有人填寫這份問卷。</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="flex justify-center mt-6">
+    <button mat-stroked-button routerLink="/admin">返回問卷管理</button>
+  </div>
+</div>
+```
+
+</div>
+
+<!--
+收尾兩個 <tr> 跟 *matNoDataRow 是 mat-table 固定寫法，跟前面幾個列表頁一致。最下面「返回問卷管理」按鈕用 routerLink="/admin" 導回問卷列表頁，讓管理員看完某份問卷的回饋後能直接回到列表，不用手動改網址。
+-->
+
+---
+layout: default
+---
+
+# 問卷編輯器 (1) — 建立與 Import
+
+```bash
+ng generate component pages/admin/survey-editor
+```
+
+```typescript
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { CommonModule, formatDate } from '@angular/common';
+import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SurveyService } from '../../../services/survey.service';
+import { Survey } from '../../../models/survey.model';
+```
+
+<!--
+用 ng generate component 建立 SurveyEditorComponent，這頁列出後面會用到的所有 import：這是整個系統最複雜的表單元件，同時要處理巢狀 FormArray、日期選擇器、題型切換按鈕群組。
+-->
+
+---
+layout: default
+---
+
+# 問卷編輯器 (2) — 元件裝飾器與注入
+
+```typescript
+@Component({
+  selector: 'app-survey-editor',
+  imports: [CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule,
+            MatButtonModule, MatIconModule, MatButtonToggleModule, MatCheckboxModule,
+            MatDatepickerModule, MatSnackBarModule],
+  templateUrl: './survey-editor.component.html', styleUrl: './survey-editor.component.scss'
+})
 export class SurveyEditorComponent implements OnInit {
   private fb = inject(FormBuilder);
   private surveyService = inject(SurveyService);
-  private messageService = inject(MessageService);
+  private snackBar = inject(MatSnackBar);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+}
+```
 
+<!--
+先建立 SurveyEditorComponent 的 @Component 裝飾器跟建構所需的 5 個依賴：FormBuilder 建表單、SurveyService 存取問卷 API、MatSnackBar 彈提示、Router/ActivatedRoute 處理導頁跟路由參數。
+-->
+
+---
+layout: default
+---
+
+# 問卷編輯器 (3) — 狀態欄位
+
+```typescript
+export class SurveyEditorComponent implements OnInit {
+  // ... 接上一頁
   surveyId = signal<number | null>(null);
   activeStep = signal(0); // 0:基本資料 1:題目設定 2:預覽確認
   surveyForm: FormGroup;
@@ -4790,21 +6289,19 @@ export class SurveyEditorComponent implements OnInit {
     { label: '多選', value: 'MULTI' },
     { label: '文字', value: 'TEXT' }
   ];
-  // ... 建構子與初始化見下一頁
+  // ... 建構子見下一頁
 }
 ```
 
 <!--
-SurveyEditorComponent 是整個系統最複雜的表單元件，這頁先看它管理的狀態：surveyId 判斷新增還是編輯模式、activeStep 用數字控制目前在步驟 0（基本資料）、1（題目設定）還是 2（預覽確認），questionTypes 則是題型選單的選項資料，供 PrimeNG 的 SelectButton 元件使用。
+SurveyEditorComponent 是整個系統最複雜的表單元件，這頁看它管理的狀態：surveyId 判斷新增還是編輯模式、activeStep 用數字控制目前在步驟 0（基本資料）、1（題目設定）還是 2（預覽確認），questionTypes 則是題型選單的選項資料，供 Angular Material 的 mat-button-toggle-group 元件使用。
 -->
 
 ---
 layout: default
 ---
 
-# 問卷編輯器 — 建構表單
-
-### `survey-editor.component.ts` (1b)
+# 問卷編輯器 (4) — 建構表單
 
 ```typescript
 export class SurveyEditorComponent {
@@ -4831,9 +6328,7 @@ export class SurveyEditorComponent {
 layout: default
 ---
 
-# 問卷編輯器 — 初始化與 getter
-
-### `survey-editor.component.ts` (1c)
+# 問卷編輯器 (5) — 初始化與 getter
 
 ```typescript
 export class SurveyEditorComponent {
@@ -4857,9 +6352,7 @@ ngOnInit 判斷路由參數有沒有 id：有代表是編輯模式（載入既�
 layout: default
 ---
 
-# 問卷編輯器 — 動態題目
-
-### `survey-editor.component.ts` (2a)
+# 問卷編輯器 (6) — 動態新增/刪除題目
 
 ```typescript
 export class SurveyEditorComponent {
@@ -4889,9 +6382,7 @@ addQuestion 建立一個新的題目表單群組並加進 questionsArray，同�
 layout: default
 ---
 
-# 問卷編輯器 — 動態選項
-
-### `survey-editor.component.ts` (2b)
+# 問卷編輯器 (7) — 動態選項與題型切換
 
 ```typescript
 export class SurveyEditorComponent {
@@ -4919,9 +6410,7 @@ export class SurveyEditorComponent {
 layout: default
 ---
 
-# 問卷編輯器 — 暫存至 Session (驗證與整理 DTO)
-
-### `survey-editor.component.ts` (3a)
+# 問卷編輯器 (8) — 暫存至 Session：整理 DTO
 
 ```typescript
 export class SurveyEditorComponent {
@@ -4929,12 +6418,14 @@ export class SurveyEditorComponent {
   // 進確認頁前，整理成 DTO 並存入 Session
   goToConfirm() {
     if (this.surveyForm.invalid) {
-      this.messageService.add({ severity: 'warn', summary: '提醒', detail: '請填寫完整資訊' });
+      this.snackBar.open('請填寫完整資訊', '關閉', { duration: 3000 });
       return;
     }
     const fv = this.surveyForm.value;
     const surveyData: Survey = {
       ...fv, status: 'DRAFT',
+      startDate: formatDate(fv.startDate, 'yyyy-MM-dd', 'en-US'),
+      endDate: formatDate(fv.endDate, 'yyyy-MM-dd', 'en-US'),
       questions: fv.questions.map((q: any, i: number) => ({
         ...q, orderIndex: i,
         options: q.options.map((o: any, j: number) => ({ ...o, orderIndex: j }))
@@ -4948,13 +6439,14 @@ export class SurveyEditorComponent {
 <!--
 goToConfirm 是進入預覽步驟前的整理動作，這頁看前半段：先驗證表單合法性，不合法就跳警告訊息並中止；合法才把資料重新整理成後端 DTO 格式，補上 orderIndex 這種前端表單沒有、但後端需要的欄位。
 ⚠️ 易錯點：orderIndex 用陣列的索引 i、j 重新計算，而不是沿用舊值，這樣使用者調整題目順序或刪除中間題目後，順序編號才會保持正確連續。
+⚠️ 易錯點：surveyForm 的 startDate/endDate 欄位綁在 matDatepicker，表單值拿到的是原生 Date 物件，不是字串。直接原樣塞進 surveyData 送出，JSON.stringify 會把 Date 序列化成完整 ISO 時間字串，後端 SurveyDTO 的 LocalDate 欄位只吃 "yyyy-MM-dd" 格式會解析失敗，所以這裡要用 formatDate(..., 'yyyy-MM-dd', 'en-US')（來自 @angular/common）轉換好再組進 surveyData。
 -->
 
 ---
 layout: default
 ---
 
-# 問卷編輯器 — 暫存至 Session (存入並切換步驟)
+# 問卷編輯器 (9) — 暫存至 Session：存入並切換步驟
 
 ```typescript
 export class SurveyEditorComponent {
@@ -4977,9 +6469,7 @@ export class SurveyEditorComponent {
 layout: default
 ---
 
-# 問卷編輯器 — 最終提交
-
-### `survey-editor.component.ts` (3b)
+# 問卷編輯器 (10) — 最終提交
 
 ```typescript
 export class SurveyEditorComponent {
@@ -4988,10 +6478,10 @@ export class SurveyEditorComponent {
     if (!confirm(`確定要${isPublish ? '儲存並發佈' : '僅儲存'}嗎？`)) return;
     this.surveyService.confirmAdminSubmit(isPublish).subscribe({
       next: () => {
-        this.messageService.add({ severity: 'success', summary: '成功', detail: '問卷處理完成' });
+        this.snackBar.open('問卷處理完成', '關閉', { duration: 2000 });
         setTimeout(() => this.router.navigate(['/admin']), 1000);
       },
-      error: (err) => this.messageService.add({ severity: 'error', summary: '失敗', detail: err.error?.message })
+      error: (err) => this.snackBar.open(err.error?.message || '問卷處理失敗', '關閉', { duration: 3000 })
     });
   }
 ```
@@ -5004,9 +6494,7 @@ onFinalSubmit 接收一個 isPublish 布林參數，對應「僅儲存」跟「�
 layout: default
 ---
 
-# 問卷編輯器 — 載入既有問卷 (編輯模式)
-
-### `survey-editor.component.ts` (4)
+# 問卷編輯器 (11) — 載入既有問卷：基本欄位
 
 ```typescript
   loadSurvey(id: number) {
@@ -5015,6 +6503,27 @@ layout: default
         id: s.id, title: s.title, description: s.description,
         startDate: new Date(s.startDate), endDate: new Date(s.endDate)
       });
+      // ... 重建題目/選項 FormArray 見下一頁
+    });
+  }
+```
+
+編輯模式時，把後端資料 `patchValue` 回填基本欄位。
+
+<!--
+loadSurvey 是編輯模式專用的方法，先用 patchValue 回填標題、描述、日期這些基本欄位，題目/選項這種巢狀陣列沒辦法用 patchValue 處理，下一頁繼續看怎麼重建。
+-->
+
+---
+layout: default
+---
+
+# 問卷編輯器 (12) — 載入既有問卷：重建題目/選項
+
+```typescript
+  loadSurvey(id: number) {
+    // ... 接上一頁：patchValue 基本欄位
+    this.surveyService.getAdminSurveyById(id).subscribe(s => {
       this.questionsArray.clear();
       s.questions.forEach(q => {
         this.questionsArray.push(this.fb.group({
@@ -5032,10 +6541,10 @@ layout: default
 }
 ```
 
-編輯模式時，把後端資料 `patchValue` 回填，並重建題目 / 選項 FormArray。
+重建題目 / 選項 FormArray。
 
 <!--
-loadSurvey 是編輯模式專用的方法，重點在於它不只是 patchValue 基本欄位，還要清空並重建整個 questionsArray（因為題目數量因問卷而異，沒辦法用 patchValue 處理巢狀陣列）。
+這頁接續 loadSurvey：不只是 patchValue 基本欄位，還要清空並重建整個 questionsArray（因為題目數量因問卷而異，沒辦法用 patchValue 處理巢狀陣列）。
 ⚠️ 易錯點：這種「先 clear 再逐一 push」的做法是處理巢狀 FormArray 回填資料的標準手法，同學容易誤以為 patchValue 可以處理所有情境，但巢狀陣列結構不同時就必須手動重建。
 -->
 
@@ -5043,72 +6552,7 @@ loadSurvey 是編輯模式專用的方法，重點在於它不只是 patchValue 
 layout: default
 ---
 
-# 問卷編輯器 — Template：題目卡片
-
-<div v-pre>
-
-```html
-<div formArrayName="questions" class="flex flex-column gap-5">
-  @for (q of questionsArray.controls; track q; let i = $index) {
-    <div [formGroupName]="i" class="p-4 border-1 border-round-xl bg-gray-50">
-      <div class="flex justify-content-between mb-3">
-        <span class="text-xl font-bold">題目 #{{ i+1 }}</span>
-        <button pButton icon="pi pi-trash" (click)="removeQuestion(i)"
-                class="p-button-text p-button-danger"
-                [disabled]="questionsArray.length === 1"></button>
-      </div>
-      <input pInputText formControlName="title" class="w-full mb-3">
-      <p-selectButton [options]="questionTypes" formControlName="type"
-                      (onChange)="onTypeChange(i)"></p-selectButton>
-      <p-checkbox formControlName="required" [binary]="true"></p-checkbox> 必填
-      <!-- ... 選項區見下一頁 -->
-    </div>
-  }
-  <button pButton label="新增題目" (click)="addQuestion()" class="p-button-outlined"></button>
-</div>
-```
-
-</div>
-
-<!--
-這頁是題目設定步驟的核心 UI，用 formArrayName="questions" 搭配 @for 迴圈渲染每個題目卡片，帶大家看刪除按鈕的 [disabled]="questionsArray.length === 1"——強制至少保留一題，不能把問卷刪成完全沒有題目，這是資料完整性的前端防護。
--->
-
----
-layout: default
----
-
-# 問卷編輯器 — Template：選項區
-
-```html
-<!-- 接上一頁：題目卡片內 (q.type 非 TEXT 時顯示) -->
-      @if (q.get('type')?.value !== 'TEXT') {
-        <div formArrayName="options" class="flex flex-column gap-2 mt-3">
-          @for (opt of getOptionsArray(i).controls; track opt; let j = $index) {
-            <div [formGroupName]="j" class="flex gap-2">
-              <input pInputText formControlName="optionText" class="flex-grow-1">
-              <button pButton icon="pi pi-times" (click)="removeOption(i, j)"></button>
-            </div>
-          }
-          <button pButton label="新增選項" icon="pi pi-plus"
-                  (click)="addOption(getOptionsArray(i))"></button>
-        </div>
-      }
-    </div>
-  }
-  <button pButton label="新增題目" (click)="addQuestion()" class="p-button-outlined"></button>
-</div>
-```
-
-<!--
-這頁接續渲染選項編輯區，只有當題型不是 TEXT 時才顯示（對應剛剛看過 onTypeChange 的邏輯），用巢狀的 formArrayName="options" 搭配 @for 迴圈，讓每個選項都能獨立編輯文字跟刪除，是巢狀 FormArray 在 Template 層的實際應用範例。
--->
-
----
-layout: default
----
-
-# 問卷編輯器 — Template：步驟切換
+# 問卷編輯器 — Template (13) 步驟切換：STEP 0 標題與描述
 
 <div v-pre>
 
@@ -5116,45 +6560,327 @@ layout: default
 <form [formGroup]="surveyForm">
   <!-- STEP 0: 基本資料 -->
   @if (activeStep() === 0) {
-    <input pInputText formControlName="title" placeholder="問卷名稱" class="w-full">
-    <textarea pTextarea formControlName="description" rows="4" class="w-full"></textarea>
-    <p-datepicker formControlName="startDate"></p-datepicker>
-    <p-datepicker formControlName="endDate"></p-datepicker>
-    <button pButton label="下一步：設定題目" (click)="activeStep.set(1)"></button>
-  }
-  <!-- STEP 1: 題目設定 (見前頁) -->
-  @else if (activeStep() === 1) {
-    <button pButton label="上一步" (click)="activeStep.set(0)"></button>
-    <button pButton label="下一步：預覽確認" (click)="goToConfirm()"></button>
-  }
-  <!-- STEP 2: 預覽 + 儲存 -->
-  @else {
-    <p><strong>問卷名稱：</strong>{{ surveyForm.get('title')?.value }}</p>
-    <button pButton label="返回修改" (click)="activeStep.set(1)"></button>
-    <button pButton label="僅儲存 (草稿)" (click)="onFinalSubmit(false)"></button>
-    <button pButton label="儲存並發佈" (click)="onFinalSubmit(true)"></button>
+    <mat-form-field appearance="outline" class="w-full">
+      <input matInput formControlName="title" placeholder="問卷名稱">
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="w-full">
+      <textarea matInput formControlName="description" rows="4"></textarea>
+    </mat-form-field>
+    <!-- ... 日期欄位與下一步按鈕見下一頁 -->
   }
 </form>
-<p-toast></p-toast>
 ```
 
 </div>
 
 <!--
-這頁把三個步驟的畫面用 @if / @else if / @else 依照 activeStep() 的值切換顯示，三步驟（基本資料 → 題目 → 預覽）由 `activeStep` Signal 控制顯示，是一個典型的「多步驟表單精靈（Wizard）」UI 模式。帶大家留意最後一步的按鈕組合——返回修改、僅儲存草稿、儲存並發佈，剛好對應前面看過的 goToConfirm 跟 onFinalSubmit 兩個方法，把整個編輯器的邏輯跟畫面串成完整的一條線。
+問卷編輯器的 Template 用 <form [formGroup]="surveyForm"> 當最外層，裡面依 activeStep() 的值切成三個步驟。這頁先看 STEP 0（基本資料）的標題、描述兩個欄位。
 -->
 
 ---
 layout: default
 ---
 
-# 統計頁 — Component
+# 問卷編輯器 — Template (14) 步驟切換：STEP 0 日期與下一步
 
-### `pages/admin/survey-stats/survey-stats.component.ts`
+<div v-pre>
+
+```html
+<form [formGroup]="surveyForm">
+  <!-- ... 標題/描述見上一頁 -->
+  @if (activeStep() === 0) {
+    <mat-form-field appearance="outline">
+      <mat-label>開始日期</mat-label>
+      <input matInput [matDatepicker]="startPicker" formControlName="startDate">
+      <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+      <mat-datepicker #startPicker></mat-datepicker>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>結束日期</mat-label>
+      <input matInput [matDatepicker]="endPicker" formControlName="endDate">
+      <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+      <mat-datepicker #endPicker></mat-datepicker>
+    </mat-form-field>
+    <button mat-raised-button color="primary" (click)="activeStep.set(1)">下一步：設定題目</button>
+  }
+  <!-- ... STEP 1/2 見下一頁 -->
+</form>
+```
+
+</div>
+
+<!--
+這頁接續 STEP 0：開始/結束日期用 mat-datepicker，填完按「下一步」把 activeStep 設成 1 切到題目設定步驟。
+-->
+
+---
+layout: default
+---
+
+# 問卷編輯器 — Template (15) 步驟切換：STEP 1 入口
+
+<div v-pre>
+
+```html
+<form [formGroup]="surveyForm">
+  <!-- ... STEP 0 見上一頁 -->
+  <!-- STEP 1: 題目設定，完整內容 (formArrayName="questions" 區塊 + 上一步/下一步按鈕) 見下四頁 (16)-(19) -->
+  @if (activeStep() === 1) {
+    <!-- ... 見下四頁 -->
+  }
+  <!-- STEP 2: 預覽 + 儲存，見後面兩頁 -->
+  @else if (activeStep() === 2) {
+    <!-- ... 見後面兩頁 -->
+  }
+</form>
+```
+
+</div>
+
+<!--
+這頁看 STEP 1 跟 STEP 2 的分支入口：STEP 1 是實際的題目卡片 FormArray 內容（含結尾的上一步/下一步按鈕，下四頁完整展開），STEP 2 是預覽確認頁（後面兩頁展開）。三步驟（基本資料 → 題目 → 預覽）由 activeStep Signal 控制顯示，是典型的「多步驟表單精靈（Wizard）」UI 模式。
+-->
+
+---
+layout: default
+---
+
+# 問卷編輯器 — Template (16) 題目卡片：外殼與刪除鈕
+
+<div v-pre>
+
+```html
+<!-- 接上一頁：STEP 1 分支開始 -->
+@if (activeStep() === 1) {
+  <div formArrayName="questions" class="flex flex-col gap-5">
+  @for (q of questionsArray.controls; track q; let i = $index) {
+    <div [formGroupName]="i" class="p-4 border rounded-xl bg-subtle">
+      <div class="flex justify-between mb-3">
+        <span class="text-xl font-bold">題目 #{{ i+1 }}</span>
+        <button mat-icon-button color="warn" (click)="removeQuestion(i)"
+                [disabled]="questionsArray.length === 1">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+      <!-- ... 標題/題型/必填欄位見下一頁，還沒關閉這個 [formGroupName]="i" 的 div -->
+```
+
+</div>
+
+<!--
+這頁是題目設定步驟的核心 UI，用 formArrayName="questions" 搭配 @for 迴圈渲染每個題目卡片，帶大家看刪除按鈕的 [disabled]="questionsArray.length === 1"——強制至少保留一題，不能把問卷刪成完全沒有題目，這是資料完整性的前端防護。這頁的程式碼還沒收尾，[formGroupName]="i"、@for、formArrayName、@if 這四層都還開著，會在 (18)(19) 依序關閉。
+-->
+
+---
+layout: default
+---
+
+# 問卷編輯器 — Template (17) 題目卡片：標題/題型/必填
+
+<div v-pre>
+
+```html
+<!-- 接上一頁：題目卡片內 -->
+      <mat-form-field appearance="outline" class="w-full mb-3">
+        <input matInput formControlName="title">
+      </mat-form-field>
+      <mat-button-toggle-group formControlName="type" (change)="onTypeChange(i)">
+        @for (t of questionTypes; track t.value) {
+          <mat-button-toggle [value]="t.value">{{ t.label }}</mat-button-toggle>
+        }
+      </mat-button-toggle-group>
+      <mat-checkbox formControlName="required">必填</mat-checkbox>
+      <!-- ... 選項區見下一頁 -->
+```
+
+</div>
+
+<!--
+這頁接續題目卡片內容：標題輸入框、用 mat-button-toggle-group 呈現題型選擇（單選/多選/文字），切換時觸發 onTypeChange(i)，最後是必填 checkbox。
+-->
+
+---
+layout: default
+---
+
+# 問卷編輯器 — Template (18) 選項區：清單渲染
+
+```html
+<!-- 接上一頁：題目卡片內 (q.type 非 TEXT 時顯示)，還沒關閉這一層 @if -->
+      @if (q.get('type')?.value !== 'TEXT') {
+        <div formArrayName="options" class="flex flex-col gap-2 mt-3">
+          @for (opt of getOptionsArray(i).controls; track opt; let j = $index) {
+            <div [formGroupName]="j" class="flex gap-2">
+              <mat-form-field appearance="outline" class="flex-grow">
+                <input matInput formControlName="optionText">
+              </mat-form-field>
+              <button mat-icon-button (click)="removeOption(i, j)">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          }
+          <!-- ... 新增選項按鈕與收尾見下一頁，formArrayName 的 div 跟這層 @if 都還開著 -->
+```
+
+<!--
+這頁接續渲染選項編輯區，只有當題型不是 TEXT 時才顯示（對應剛剛看過 onTypeChange 的邏輯），用巢狀的 formArrayName="options" 搭配 @for 迴圈，讓每個選項都能獨立編輯文字跟刪除，是巢狀 FormArray 在 Template 層的實際應用範例。這頁的程式碼也還沒收尾，@for 迴圈本身關了（每個選項渲染完），但 formArrayName="options" 的 div 跟外層 @if 都還開著，留給 (19) 收尾。
+-->
+
+---
+layout: default
+---
+
+# 問卷編輯器 — Template (19) 選項區：新增按鈕與收尾
+
+```html
+<!-- 接上一頁：formArrayName="options" 內 -->
+          <button mat-stroked-button (click)="addOption(getOptionsArray(i))">
+            <mat-icon>add</mat-icon> 新增選項
+          </button>
+        </div>
+      }
+    </div>
+  }
+    <button mat-stroked-button (click)="addQuestion()">新增題目</button>
+  </div>
+  <button mat-stroked-button (click)="activeStep.set(0)">上一步</button>
+  <button mat-raised-button color="primary" (click)="goToConfirm()">下一步：預覽確認</button>
+}
+```
+
+<!--
+這頁補上「新增選項」按鈕，收尾整個 formArrayName="questions" 區塊（還有一個「新增題目」按鈕，對應前面看過的 addQuestion/addOption 兩個方法），最後是 STEP 1 的「上一步」「下一步：預覽確認」導覽按鈕，對齊 (13)-(15) 開頭 @if (activeStep() === 1) 的收尾大括號。
+-->
+
+---
+layout: default
+---
+
+# 問卷編輯器 — Template (20) STEP 2：基本資料摘要
+
+<div v-pre>
+
+```html
+<!-- ... 接 (15) 頁的 @else if (activeStep() === 2) { -->
+<div class="bg-indigo-50 p-4 rounded-lg mb-6 border border-indigo-100">
+  <p class="mb-1"><strong>問卷名稱：</strong> {{ surveyForm.get('title')?.value }}</p>
+  <p class="mb-1"><strong>問卷說明：</strong> {{ surveyForm.get('description')?.value }}</p>
+  <p>
+    <strong>開放期間：</strong>
+    {{ surveyForm.get('startDate')?.value | date:'yyyy-MM-dd' }}
+    ~ {{ surveyForm.get('endDate')?.value | date:'yyyy-MM-dd' }}
+  </p>
+</div>
+<!-- ... 題目列表見下一頁 -->
+```
+
+</div>
+
+<!--
+STEP 2 是儲存前的最後確認頁，不能只顯示問卷名稱，使用者才有辦法在真正送出（儲存草稿或發佈）之前，確認自己剛剛在 STEP 0、STEP 1 填的內容有沒有錯。這頁先做上半段：把 STEP 0 填的名稱、說明、開放期間整理成一個卡片顯示。
+⚠️ 易錯點：日期用 `| date:'yyyy-MM-dd'` pipe 格式化，這個 pipe 由 CommonModule 提供，元件的 imports 陣列裡已經有 CommonModule（(1) 那頁的 import 清單），不用額外再 import DatePipe。
+-->
+
+---
+layout: default
+---
+
+# 問卷編輯器 — Template (21) STEP 2：題目列表
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁 -->
+<div class="flex flex-col gap-4 mb-6">
+  @for (q of surveyForm.value.questions; track $index) {
+    <div class="p-3 border-b border-gray-200">
+      <p class="font-bold">
+        {{ $index + 1 }}. {{ q.title }}
+        <span class="text-gray-500 text-sm font-normal ml-2">
+          ({{ q.type === 'SINGLE' ? '單選' : q.type === 'MULTI' ? '多選' : '文字' }})
+        </span>
+        @if (q.required) { <span class="text-red-500 ml-1">*</span> }
+      </p>
+      @if (q.type !== 'TEXT') {
+        <div class="flex flex-wrap gap-2 mt-2">
+          @for (opt of q.options; track $index) {
+            <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">{{ opt.optionText }}</span>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
+<!-- ... 儲存按鈕見下一頁 -->
+```
+
+</div>
+
+<!--
+這頁用 surveyForm.value.questions 把每一題的標題、題型（單選/多選/文字）、必填星號都列出來，非簡答題還會把所有選項用標籤樣式攤開顯示。走過這個完整清單，使用者才能真正確認整份問卷的內容，而不是只看到一個標題就被要求按下「儲存並發佈」。
+-->
+
+---
+layout: default
+---
+
+# 問卷編輯器 — Template (22) STEP 2：儲存按鈕
+
+<div v-pre>
+
+```html
+<!-- ... 接上一頁 -->
+<div class="flex justify-center gap-4 pt-4 border-t">
+  <button mat-stroked-button (click)="activeStep.set(1)">返回修改</button>
+  <button mat-stroked-button (click)="onFinalSubmit(false)">僅儲存 (草稿)</button>
+  <button mat-raised-button color="accent" (click)="onFinalSubmit(true)">儲存並發佈</button>
+</div>
+<!-- ... } 收尾對齊 (15) 頁的 @else if -->
+```
+
+</div>
+
+<!--
+最下面三顆按鈕收尾：返回修改、僅儲存草稿、儲存並發佈，對應前面看過的 activeStep.set(1) 跟 onFinalSubmit(false/true)。到這裡完整的三步驟 Template（STEP 0 基本資料 → STEP 1 題目卡片/選項區 → STEP 2 完整預覽確認）就串成一條線了。
+-->
+
+---
+layout: default
+---
+
+# 統計頁 — Component (1)
+
+```bash
+ng generate component pages/admin/survey-stats
+```
+
+```typescript
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterLink, ActivatedRoute } from '@angular/router';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatDividerModule } from '@angular/material/divider';
+import { BaseChartDirective } from 'ng2-charts';
+import { ChartConfiguration, ChartData } from 'chart.js';
+import { SurveyService } from '../../../services/survey.service';
+import { SurveyStats, QuestionStats } from '../../../models/survey-stats.model';
+```
+
+<!--
+用 ng generate component 建立 SurveyStatsComponent，這頁列出後面會用到的 import：BaseChartDirective 是 ng2-charts 套件提供的指令，等一下會在 Template 裡用它把資料畫成圖表；ChartConfiguration/ChartData 是 Chart.js 的型別。
+-->
+
+---
+layout: default
+---
+
+# 統計頁 — Component (2)
 
 ```typescript
 @Component({
-  selector: 'app-survey-stats', standalone: true,
+  selector: 'app-survey-stats',
   imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule,
             MatDividerModule, RouterLink, BaseChartDirective],
   templateUrl: './survey-stats.component.html', styleUrl: './survey-stats.component.scss'
@@ -5177,6 +6903,7 @@ export class SurveyStatsComponent implements OnInit {
 
 <!--
 SurveyStatsComponent 從路由拿到問卷 id，呼叫 API 取得統計資料存進 stats 這個 signal。imports 陣列裡的 BaseChartDirective 是 ng2-charts 套件提供的指令，等一下會在 Template 裡用它把資料畫成圖表。
+新增的前台查詢頁「結果」欄也是導到這同一個元件（走 /admin/stats/:id 這條既有路由），沒有另外複製一份、也沒有幫它加上前台/後台雙模式的判斷邏輯——因為 /admin 底下目前沒有任何路由守衛，訪客不登入本來就能直接開這個網址，沒有必要為了區分「誰在看」而讓元件變複雜。
 -->
 
 ---
@@ -5223,8 +6950,8 @@ layout: default
     <mat-card-title>{{ $index + 1 }}. {{ q.questionTitle }}</mat-card-title>
     <mat-card-content class="p-6">
       @if (q.type !== 'TEXT') {
-        <div class="flex flex-col md:flex-row gap-8">
-          <div class="w-full md:w-1/2 max-w-[300px]">
+        <div class="flex flex-col gap-8">
+          <div class="w-full" style="max-width: 300px;">
             <canvas baseChart [data]="getChartData(q)"
                     [options]="pieChartOptions" [type]="'pie'"></canvas>
           </div>
@@ -5254,12 +6981,12 @@ layout: default
 
 ```html
 <!-- 接上一頁：圓餅圖右側的票數/百分比表 -->
-          <table class="w-full md:w-1/2 text-sm">
+          <table class="w-full text-sm">
             @for (opt of (q.optionStats | keyvalue); track opt.key) {
               <tr class="border-b">
                 <td class="p-2">{{ opt.value.optionText }}</td>
                 <td class="p-2 text-right">{{ opt.value.count }}</td>
-                <td class="p-2 text-right text-indigo-600">{{ opt.value.percentage }}%</td>
+                <td class="p-2 text-right text-accent">{{ opt.value.percentage }}%</td>
               </tr>
             }
           </table>
@@ -5285,7 +7012,7 @@ layout: default
 <!-- 接上一頁：mat-card-content 內，q.type === 'TEXT' 時 -->
       @if (q.type === 'TEXT') {
         @for (ans of q.textAnswers; track $index) {
-          <div class="bg-white p-3 rounded shadow-sm mb-2 border-l-4 border-indigo-400">
+          <div class="bg-white p-3 rounded shadow-sm mb-2 border-accent-l">
             {{ ans }}
           </div>
         }
@@ -5298,6 +7025,206 @@ layout: default
 
 <!--
 這頁處理簡答題的統計顯示，因為文字答案沒辦法畫成圖表，就直接把 textAnswers 陣列逐筆列出來，用左側色條做視覺區隔。可以留意這種「依資料類型決定顯示方式」的設計思維，貫穿了整個統計頁：選擇題畫圖表、簡答題列文字，各自用最適合的呈現方式。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 前端：全域設定
+
+<!--
+所有 Service、共用元件、頁面元件都做完了，最後這一節才是把它們兜在一起：先組出根元件，再定義路由把每個路徑對應到剛剛做好的頁面，接著在全域 Providers 註冊路由跟攔截器，最後寫進入點 main.ts 啟動整個應用程式。這幾個檔案刻意放在最後，因為它們全部都要「引用」前面已經做好的檔案（Navbar、各頁面元件、Interceptor），照這個順序做，每一步貼上程式碼都不會出現找不到模組的錯誤。
+-->
+
+---
+layout: default
+---
+
+# app.component — 根元件
+
+### `src/app/app.component.ts`
+
+```typescript
+// app.component.ts — 根元件
+import { Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+import { NavbarComponent } from './shared/navbar/navbar.component';
+
+@Component({
+  selector: 'app-root',
+  imports: [RouterOutlet, NavbarComponent],
+  templateUrl: './app.component.html',
+  styleUrl: './app.component.scss'
+})
+export class AppComponent { title = 'frontend'; }
+```
+
+<!--
+AppComponent 是整個應用程式的根元件，standalone: true 代表它不需要被任何 NgModule 宣告，imports 陣列直接列出它用到的其他元件——這裡的 NavbarComponent 現在已經建好了，所以可以直接引入並在 Template 最上方放 <app-navbar></app-navbar>，之後每個路由頁面上方都會固定顯示這個導覽列。
+-->
+
+---
+layout: default
+---
+
+# app.component — Template 與樣式
+
+### `src/app/app.component.html`
+
+```html
+<!-- app.component.html -->
+<app-navbar></app-navbar>
+<main class="app-main">
+  <router-outlet></router-outlet>
+</main>
+```
+
+### `src/app/app.component.scss`
+
+```scss
+/* app.component.scss */
+.app-main {
+    max-width: 1200px;
+    margin: 2rem auto 0;
+    padding: 0 1rem;
+}
+```
+
+<!--
+<router-outlet> 就是頁面切換時，各路由對應的元件會被渲染進來的位置。app-main 這個 class 對應下面的 scoped SCSS，用純 CSS 做出「置中、限制最大寬度、留左右內距」的容器效果。
+-->
+
+---
+layout: default
+---
+
+# app.routes.ts — 路由 (1/2)
+
+### `src/app/app.routes.ts`
+
+```typescript
+import { Routes } from '@angular/router';
+
+export const routes: Routes = [
+  { path: 'login',    loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
+  { path: 'register', loadComponent: () => import('./pages/register/register.component').then(m => m.RegisterComponent) },
+  { path: 'home',     loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent) },
+  { path: 'fill/:id', loadComponent: () => import('./pages/survey-fill/survey-fill.component').then(m => m.SurveyFillComponent) },
+  { path: 'history',  loadComponent: () => import('./pages/user-history/user-history.component').then(m => m.UserHistoryComponent) },
+  { path: 'history/:responseId', loadComponent: () => import('./pages/response-detail/response-detail.component').then(m => m.ResponseDetailComponent) },
+  { path: 'surveys',  loadComponent: () => import('./pages/survey-search/survey-search.component').then(m => m.SurveySearchComponent) },
+  // ... 見下一頁
+];
+```
+
+`loadComponent` 採用 **lazy loading**，每個頁面才需要時才載入。
+
+<!--
+這頁定義路由表前半段：一般使用者頁面（login、register、home、fill、history、history/:responseId、surveys）。帶大家留意每個路由都用 loadComponent 搭配動態 import()，這是 Angular 的懶加載（lazy loading）寫法——使用者實際導航到某個路由時，對應的元件程式碼才會被下載，而不是一開始就把所有頁面的程式碼都載入，能有效縮短應用程式的初始載入時間。這頁放在所有頁面元件都做完之後，是因為每一行 import() 都要指向一個真實存在的檔案，順序寫反會出現「找不到模組」的錯誤。
+⚠️ 易錯點：history/:responseId 要放在 history 底下、當成兩條各自獨立的路徑，不是巢狀子路由，Angular 路由是照 path 字串整條比對，跟 admin 底下用 children 巢狀的寫法是兩種不同情境，這裡沒有共用外層版面的需求，直接平行寫兩條路由最單純。
+surveys（前台查詢頁）沒有另外配一條公開的 stats 路由——查詢頁的「結果」連結直接導到下一頁 admin 巢狀路由裡的 admin/stats/:id，因為那條路由目前沒有守衛保護，不用登入一樣進得去，不需要為了「前台/後台」這個身份差異多開一條路由。
+-->
+
+---
+layout: default
+---
+
+# app.routes.ts — 路由 (2/2)
+
+### `src/app/app.routes.ts` — admin 巢狀路由
+
+```typescript
+export const routes: Routes = [
+  // ... 接上一頁
+  { path: 'admin', children: [
+      { path: '',          loadComponent: () => import('./pages/admin/survey-list/survey-list.component').then(m => m.SurveyListComponent) },
+      { path: 'create',    loadComponent: () => import('./pages/admin/survey-editor/survey-editor.component').then(m => m.SurveyEditorComponent) },
+      { path: 'edit/:id',  loadComponent: () => import('./pages/admin/survey-editor/survey-editor.component').then(m => m.SurveyEditorComponent) },
+      { path: 'stats/:id', loadComponent: () => import('./pages/admin/survey-stats/survey-stats.component').then(m => m.SurveyStatsComponent) },
+      { path: 'responses/:id', loadComponent: () => import('./pages/admin/survey-responses/survey-responses.component').then(m => m.SurveyResponsesComponent) },
+  ]},
+  { path: '', redirectTo: 'home', pathMatch: 'full' }
+];
+```
+
+<!--
+接續上一頁，這裡是 admin 底下用巢狀 children 定義的後台子路由，結構跟 URL 路徑一一對應（/admin、/admin/create、/admin/edit/:id、/admin/stats/:id、/admin/responses/:id）。最後一行 { path: '', redirectTo: 'home' } 是預設路由，網址列沒有指定路徑時導向首頁。
+-->
+
+---
+layout: default
+---
+
+# app.config.ts — 全域 Providers (1/2)
+
+### `src/app/app.config.ts` — import
+
+```typescript
+import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
+import { provideNativeDateAdapter } from '@angular/material/core';
+import { routes } from './app.routes';
+import { authInterceptor } from './interceptors/auth.interceptor';
+```
+
+<!--
+app.config.ts 是 standalone 模式下集中註冊所有全域服務的地方，取代了舊版 AppModule 的 providers 陣列。這頁先看 import 清單：routes 來自剛剛的 app.routes.ts，authInterceptor 則是更前面「資料模型與攔截器」那節就做好的檔案，這裡直接拿來用。這頁排在 app.routes.ts 之後，就是因為 provideRouter(routes) 要引用該檔案。
+-->
+
+---
+layout: default
+---
+
+# app.config.ts — 全域 Providers (2/2)
+
+### `src/app/app.config.ts` — providers 陣列
+
+```typescript
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideZoneChangeDetection({ eventCoalescing: true }),
+    provideRouter(routes),
+    provideAnimationsAsync(),
+    provideHttpClient(
+      withInterceptors([authInterceptor])   // 註冊 JWT 攔截器
+    ),
+    provideCharts(withDefaultRegisterables()), // Chart.js
+    provideNativeDateAdapter()                 // Angular Material Datepicker 日期格式
+  ]
+};
+```
+
+Standalone 模式下，全域服務都在此註冊（取代舊版的 `AppModule`）。
+
+<!--
+接續上一頁，帶大家看 provideHttpClient(withInterceptors([authInterceptor])) 這一行——這就是等一下會看到的 JWT 自動附加機制的註冊位置，少了這行，authInterceptor 就不會生效。同一頁還註冊了 Chart.js 跟 provideNativeDateAdapter()，後者是問卷編輯器用 Angular Material Datepicker 選日期時的必要設定，少了這行 Datepicker 會拋出找不到 DateAdapter 的錯誤。
+-->
+
+---
+layout: default
+---
+
+# main.ts — 啟動點
+
+### `src/main.ts`
+
+```typescript
+// main.ts — 啟動點
+import { bootstrapApplication } from '@angular/platform-browser';
+import { appConfig } from './app/app.config';
+import { AppComponent } from './app/app.component';
+
+bootstrapApplication(AppComponent, appConfig)
+  .catch((err) => console.error(err));
+```
+
+<!--
+main.ts 是整個前端應用程式真正的進入點，bootstrapApplication 這個函式取代了舊版 Angular 的 platformBrowserDynamic().bootstrapModule() 寫法，是 standalone 元件時代的新啟動方式。把 AppComponent 當作根元件，套用 appConfig 裡設定的所有全域服務，正式啟動整個應用程式。這是整個前端最後一個要寫的檔案，因為它同時依賴 AppComponent 跟 appConfig，兩者都必須先存在，main.ts 才能成立——寫完這頁，執行 ng serve 就能看到完整功能的畫面。
 -->
 
 ---
