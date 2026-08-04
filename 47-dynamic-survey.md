@@ -115,18 +115,35 @@ graph TB
 layout: default
 ---
 
-# 後端專案結構
+# 後端專案結構 (1)：進入點與 Controller
 
 ```text
 backend/src/main/java/com/example/dynamic_survey/
 ├── DynamicSurveyApplication.java   # 進入點
 ├── config/
 │   └── GlobalExceptionHandler.java # 全域例外處理
-├── controller/                     # REST API 接口
-│   ├── AuthController.java         # 註冊 / 登入
-│   ├── UserController.java         # 個人資料
-│   ├── SurveyController.java       # 前台問卷流程
-│   └── AdminSurveyController.java  # 後台問卷管理
+├── exception/
+│   └── BizException.java           # 業務例外 (帶 RspCode)
+└── controller/                     # REST API 接口
+    ├── AuthController.java         # 註冊 / 登入
+    ├── UserController.java         # 個人資料
+    ├── SurveyController.java       # 前台問卷流程
+    └── AdminSurveyController.java  # 後台問卷管理
+```
+
+<!--
+這頁先看後端專案的上半部：進入點、全域例外處理，以及 controller 資料夾。controller 是整個後端的門面，所有 REST API 的接口都在這裡，之後每一章寫的 API 都會對應放進去。
+config 跟 exception 這兩個資料夾是搭配使用的：BizException 帶著 RspCode 往外丟，GlobalExceptionHandler 統一接住並轉成前端看得懂的回應格式，這樣就不用在每個 Controller 裡面寫 try-catch。
+-->
+
+---
+layout: default
+---
+
+# 後端專案結構 (2)：Service 以下
+
+```text
+backend/src/main/java/com/example/dynamic_survey/
 ├── service/                        # 業務邏輯
 │   ├── AuthService.java
 │   └── SurveyService.java
@@ -138,12 +155,21 @@ backend/src/main/java/com/example/dynamic_survey/
 │   ├── User.java  Survey.java  Question.java
 │   ├── Option.java  SurveyResponse.java  ResponseAnswer.java
 ├── dto/                            # 傳輸物件 (請求 / 回應)
-├── vo/                             # 統一回應 (RspCode, AppResponse)
+│   ├── LoginRequest.java  RegisterRequest.java
+│   ├── SurveyDTO.java  QuestionDTO.java  OptionDTO.java
+│   └── ResponseDTO.java  AnswerDTO.java
+├── vo/                             # 統一回應
+│   └── AppResponse.java  RspCode.java
 └── security/                       # JWT 與權限控管
+    ├── SecurityConfig.java         # 路徑權限設定
+    ├── JwtAuthFilter.java          # 驗證 JWT
+    ├── JwtUtil.java                # 產生 / 解析 Token
+    └── UserDetailsImpl.java  UserDetailsServiceImpl.java
 ```
 
 <!--
-這頁列出整個後端專案的資料夾配置，之後每一章的程式碼都會對應放進 controller、service、repository 這些資料夾。這就是我們熟悉的三層式架構（Controller → Service → Repository），只是這次多了 dto、vo、security 幾個資料夾，用來放傳輸物件、統一回應格式跟安全機制。建議大家先花點時間看過這個結構，等一下看到程式碼才知道它放在哪裡、為什麼放在那裡。
+這頁是後端專案的下半部。service 跟 repository 就是我們熟悉的三層式架構（Controller → Service → Repository）的後兩層，之後每一章的程式碼都會對應放進這些資料夾。
+比較特別的是多了 dto、vo、security 三個資料夾，用來放傳輸物件、統一回應格式跟安全機制。建議大家先花點時間看過這兩頁的結構，等一下看到程式碼才知道它放在哪裡、為什麼放在那裡。
 -->
 
 ---
@@ -271,7 +297,7 @@ jjwt 這個 JWT 套件比較新，Spring Initializr 的介面上找不到，所�
 layout: default
 ---
 
-# application.properties
+# application.properties (1/2) — 資料庫與 JPA
 
 ```properties
 # Database Configuration (MySQL)
@@ -285,7 +311,25 @@ spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+```
 
+- `ddl-auto=update`：Hibernate 會依 Entity 自動建立 / 更新資料表，開發期最方便。
+- 連線字串裡的資料庫名稱 `dynamic_survey` 必須與前面建立的資料庫完全一致。
+
+<!--
+這頁先設定資料庫連線跟 JPA。連線字串後面掛的三個參數都有用途：useSSL=false 關掉本機不需要的 SSL、serverTimezone=UTC 避免時區錯亂、allowPublicKeyRetrieval=true 是 MySQL 8 之後連線常需要補的參數，少了會連不上。
+JPA 這段最關鍵的是 ddl-auto=update，它會依照我們寫的 Entity 自動幫忙建立跟更新資料表，開發期非常方便；show-sql 跟 format_sql 則是把 Hibernate 實際下的 SQL 印出來並排版，之後 debug 時很好用。
+⚠️ 易錯點：連線字串裡的資料庫名稱 dynamic_survey 一定要跟前面 CREATE DATABASE 建的那個完全一致，不然啟動就會連不到資料庫。
+預期結果：設定完成、資料庫也建立好之後，啟動專案應該會在 console 看到 Hibernate 自動建立資料表的 SQL 訊息。
+-->
+
+---
+layout: default
+---
+
+# application.properties (2/2) — Jackson 與 JWT
+
+```properties
 # Jackson Date Formatting (日期序列化為 yyyy-MM-dd 而非時間戳)
 spring.jackson.datatype.datetime.write-dates-as-timestamps=false
 spring.jackson.date-format=yyyy-MM-dd
@@ -295,13 +339,42 @@ jwt.secret=vAK3M9YSw2q1eRE1oJs0JAcUswCqDOBD4l19sdOWoX+qlVzBEfNyUI/A+EogMuaQlAIzz
 jwt.expiration=86400000
 ```
 
-- `jwt.secret` 必須是 **Base64 編碼**過的隨機亂數（見第 45 章），開發期可用 `openssl rand -base64 64` 產生；正式環境不要寫在 properties 裡，改用環境變數覆蓋。
-- ⚠️ **HS512 演算法要求密鑰長度 ≥ 512 bits（64 bytes）**：`openssl rand -base64 32` 只產生 32 bytes（256 bits），解碼後不夠長會拋 `WeakKeyException` / `Unable to compute HS512 signature`，務必用 `-base64 64`。
+- `jwt.secret` 必須是 **Base64 編碼**過的隨機亂數；正式環境不要寫在 properties 裡，改用環境變數覆蓋。
 
 <!--
-這頁把資料庫連線、JPA、Jackson 日期格式跟 JWT 金鑰全部集中設定好，是整個後端能不能順利啟動的關鍵檔案。特別帶大家看 jwt.secret 這一行——這跟第 45 章教過的一樣，必須是 Base64 編碼過的隨機亂數。
-⚠️ 易錯點：投影片特別標注了 HS512 演算法要求金鑰長度至少 512 bits，如果我們用 openssl rand -base64 32 產生的金鑰只有 256 bits，一啟動就會丟出 WeakKeyException，一定要用 -base64 64 才夠長。
-預期結果：設定完成、資料庫也建立好之後，啟動專案應該會在 console 看到 Hibernate 自動建立資料表的 SQL 訊息。
+這頁是設定檔的後半段。Jackson 那兩行是為了讓日期回傳成 yyyy-MM-dd 這種人看得懂的格式，而不是一長串時間戳數字，前端拿到就不用再自己轉換。
+JWT 這段特別帶大家看 jwt.secret——它必須是 Base64 編碼過的隨機亂數，而且正式環境不應該寫死在 properties 裡，要改用環境變數覆蓋。jwt.expiration 設 86400000 毫秒，也就是 24 小時。
+下一頁會教大家怎麼自己產生一組金鑰。
+-->
+
+---
+layout: default
+---
+
+# 產生 jwt.secret 金鑰
+
+**macOS / Linux**（終端機）
+
+```bash
+openssl rand -base64 64
+```
+
+**Windows**（PowerShell）
+
+```powershell
+$b = [byte[]]::new(64)
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+[Convert]::ToBase64String($b)
+```
+
+- Windows 若已安裝 **Git for Windows**，也可直接開 **Git Bash** 執行左邊那行 `openssl` 指令。
+- 產生的字串貼進 `application.properties` 的 `jwt.secret=` 後面，**必須是一整行**，中間不能有換行或空白。
+
+<!--
+這頁教大家怎麼自己產生一組 jwt.secret，不要直接拿投影片上那組來用。macOS 跟 Linux 最單純，終端機一行 openssl rand -base64 64 就搞定；Windows 的 PowerShell 沒有內建 openssl，所以改用 .NET 內建的 RandomNumberGenerator 產生 64 個位元組再轉成 Base64，安全性是一樣的。
+如果同學的 Windows 裝過 Git for Windows，其實裡面就附了 openssl，直接開 Git Bash 跑左邊那行指令最快。
+⚠️ 易錯點：產生出來的字串很長，終端機通常會自動折成兩行顯示，貼進 properties 檔的時候一定要接成一整行，中間不能有換行或空白，不然啟動會解析失敗。另外要用 64 不要用 32，長度不夠會出問題。
+預期結果：執行完會看到一長串隨機的 Base64 字串，把它貼進設定檔就完成了。
 -->
 
 ---
@@ -426,7 +499,7 @@ public record AppResponse<T>(int code, String message, T data) {
 - 取值方式從 `getCode()` 變成 `code()`（record 慣例，無 `get` 前綴）。
 
 <!--
-AppResponse 用 record 定義，讓所有 API 回傳的 JSON 都長成 { code, message, data } 這樣固定的結構，前端才能用同一套邏輯處理所有回應。跟第 45 章一樣，因為這三個欄位建立後就不會再被修改，非常適合用 record 取代傳統的 class + Lombok。
+AppResponse 用 record 定義，讓所有 API 回傳的 JSON 都長成 { code, message, data } 這樣固定的結構，前端才能用同一套邏輯處理所有回應。因為這三個欄位建立後就不會再被修改，非常適合用 record 取代傳統的 class + Lombok。
 ⚠️ 易錯點：record 沒有 getCode() 這種傳統 getter，取值方式變成 code()，同學如果沿用舊習慣打 getCode() 會編譯不過。
 -->
 
@@ -457,7 +530,8 @@ public record AppResponse<T>(int code, String message, T data) {
 ```
 
 <!--
-這頁補上 success 跟兩個 error 靜態工廠方法，讓我們在 Controller 或 Service 裡可以很簡潔地寫 AppResponse.success(data) 或 AppResponse.error(RspCode.XXX)，不用每次都手動 new 一個物件塞三個參數。帶大家留意最後一個多載版本，可以帶自訂訊息覆蓋 RspCode 預設的 message，這在驗證失敗要顯示具體錯誤原因時很好用。
+這頁補上 success 跟兩個 error 靜態工廠方法，讓我們可以很簡潔地寫 AppResponse.success(data) 或 AppResponse.error(RspCode.XXX)，不用每次都手動 new 一個物件塞三個參數。帶大家留意最後一個多載版本，可以帶自訂訊息覆蓋 RspCode 預設的 message，這在驗證失敗要顯示具體錯誤原因時很好用。
+先預告一下這兩組方法的分工，等到「全域例外處理」那一節就會看到完整的理由：success 是 Service 正常回傳結果時用的；error 則幾乎只會出現在 GlobalExceptionHandler 裡。Service 遇到錯誤不會回傳 AppResponse.error，而是丟出例外，理由跟 HTTP 狀態碼有關，到時候會用一整頁專門說明。
 ⚠️ 易錯點：record 沒有 setter，所以想要換訊息只能重新 new 一個新物件，這也是程式碼裡註解特別寫「record 沒有 setter，直接用自訂訊息建立新物件」的原因。
 -->
 
@@ -1140,7 +1214,7 @@ class: flex flex-col justify-center items-center text-center
 # 後端：安全機制 (Security & JWT)
 
 <!--
-問卷系統要區分訪客、會員、管理員，勢必要有身分驗證機制。這一節我們會重建第 45 章教過的 JWT 認證流程，只是這次要套用到真實的問卷專案上。
+問卷系統要區分訪客、會員、管理員，勢必要有身分驗證機制。這一節我們會把 JWT 認證流程完整建立起來，套用到真實的問卷專案上。
 -->
 
 ---
@@ -1194,8 +1268,6 @@ public class JwtUtil {
 }
 ```
 
-- 改成**建構子注入**：`@Value` 一樣可以標在建構子參數上，欄位改成 `private final`，好處是這兩個值一旦建構完成就不能再被改動。
-
 <!--
 JwtUtil 是整個認證機制的核心工具類別，這頁先看欄位跟建構子：改成建構子注入後，@Value 標在建構子參數上，jwtSecret、jwtExpirationMs 都是 private final，一旦建構完成就不能再被改動。
 -->
@@ -1219,7 +1291,7 @@ public class JwtUtil {
 }
 ```
 
-- 與第 45 章一致：`jwt.secret` 必須是 **Base64 編碼**過的隨機亂數，`getSigningKey()` 要先用 `Decoders.BASE64.decode()` 還原成位元組，再交給 `Keys.hmacShaKeyFor()`。
+- `jwt.secret` 必須是 **Base64 編碼**過的隨機亂數，`getSigningKey()` 要先用 `Decoders.BASE64.decode()` 還原成位元組，再交給 `Keys.hmacShaKeyFor()`。
 
 <!--
 這頁看 getSigningKey 這個方法——因為 jwt.secret 是 Base64 編碼過的字串，要先用 Decoders.BASE64.decode() 還原成位元組，才能交給 Keys.hmacShaKeyFor() 產生真正用來簽章的金鑰物件。
@@ -1299,11 +1371,11 @@ public class JwtUtil {
 }
 ```
 
-- 與第 45 章一致：`JwtUtil` 內部**不做 try-catch**，簽名不對或過期時 `parseSignedClaims()` 直接拋出 `JwtException`，交給 `JwtAuthFilter` 統一接住——這樣才能在 Filter 那層正確回 401，而不是被 `JwtUtil` 吞掉。
+- `JwtUtil` 內部**不做 try-catch**，簽名不對或過期時 `parseSignedClaims()` 直接拋出 `JwtException`，交給 `JwtAuthFilter` 統一接住——這樣才能在 Filter 那層正確回 401，而不是被 `JwtUtil` 吞掉。
 
 <!--
 這頁的重點是 validateJwtToken：要帳號對得上、而且沒有過期，兩個條件同時成立才算驗證通過。
-⚠️ 易錯點：跟第 45 章一致，JwtUtil 內部故意不做 try-catch，簽名錯誤或過期時 parseSignedClaims() 會直接拋出 JwtException，這是刻意設計，要交給呼叫端的 JwtAuthFilter 統一處理，才能正確回應 401 而不是被吞掉變成看不懂的錯誤。
+⚠️ 易錯點：JwtUtil 內部故意不做 try-catch，簽名錯誤或過期時 parseSignedClaims() 會直接拋出 JwtException，這是刻意設計，要交給呼叫端的 JwtAuthFilter 統一處理，才能正確回應 401 而不是被吞掉變成看不懂的錯誤。
 -->
 
 ---
@@ -1421,8 +1493,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 }
 ```
 
-- 改成**建構子注入**：加上 `@Component` + `@RequiredArgsConstructor`（Lombok 自動產生建構子），`jwtUtil`、`userDetailsService` 都改成 `private final`，這樣 SecurityConfig 就能直接把這個 Bean 當方法參數注入，不用再手動 `new`（見下面 SecurityConfig 頁面）。
-
 <!--
 JwtAuthFilter 繼承 OncePerRequestFilter，是每個 HTTP 請求進來後第一個攔截點。這裡改成建構子注入：加上 @Component、@RequiredArgsConstructor，欄位改成 private final，之後 SecurityConfig 就能直接把它當方法參數注入，不用再手動 new 一個出來。
 -->
@@ -1451,7 +1521,7 @@ layout: default
         // ... 見下一頁
 ```
 
-- 跟第 45 章一致：`try-catch` 只包 `getUserNameFromJwtToken()` 這一行，接住 `JwtUtil` 拋出的 `JwtException`，並把 `username` 設回 `null`，交給後面的 Spring Security 授權機制回 401，而不是讓例外一路衝出去變成 500。
+- `try-catch` 只包 `getUserNameFromJwtToken()` 這一行，接住 `JwtUtil` 拋出的 `JwtException`，並把 `username` 設回 `null`，交給後面的 Spring Security 授權機制回 401，而不是讓例外一路衝出去變成 500。
 
 <!--
 這頁先看解析 Token 的部分：parseJwt() 從 Header 拿出 Token 之後，try-catch 只包住 getUserNameFromJwtToken() 這一行。
@@ -1596,7 +1666,7 @@ public class SecurityConfig {
 layout: default
 ---
 
-# Security — SecurityConfig (2) 過濾鏈
+# Security — SecurityConfig (2a) 安全規則
 
 ```java
     @Bean
@@ -1608,6 +1678,27 @@ layout: default
                 session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(auth -> auth
                 .anyRequest().permitAll());                            // 開發環境全公開
+        // ... 掛上 JWT filter 見下一頁
+    }
+```
+
+> 教學版為求簡單採 `permitAll()`；正式環境應改為 `requestMatchers("/api/admin/**").hasRole("ADMIN")` 等規則。
+
+<!--
+filterChain 這個 Bean 定義了整個請求要經過的安全規則，這頁先看四個設定：關閉 CSRF（因為是 REST API 不是傳統表單，不會有瀏覽器自動送出的表單攻擊面）、開啟 CORS 並指向下下頁會寫的 corsConfigurationSource、Session 政策設成 IF_REQUIRED 讓確認頁的暫存功能可以用，最後 authorizeHttpRequests 決定哪些路徑需要權限。
+⚠️ 易錯點：投影片特別用引用區塊提醒，教學版為求簡單用了 permitAll() 開放所有請求，正式環境一定要改成針對 /api/admin/** 這類路徑加上 hasRole("ADMIN") 等實際的權限規則，不然管理員 API 誰都能呼叫。
+-->
+
+---
+layout: default
+---
+
+# Security — SecurityConfig (2b) 掛上 JWT Filter
+
+```java
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        // ... 接上一頁
 
         http.addFilterBefore(jwtAuthFilter,
                 UsernamePasswordAuthenticationFilter.class);           // 掛上 JWT filter
@@ -1615,11 +1706,12 @@ layout: default
     }
 ```
 
-> 教學版為求簡單採 `permitAll()`；正式環境應改為 `requestMatchers("/api/admin/**").hasRole("ADMIN")` 等規則。
+- `addFilterBefore()` 把 `JwtAuthFilter` 插在 `UsernamePasswordAuthenticationFilter` **之前**，請求才會先驗 Token、把身分寫進 `SecurityContext`，後面的授權機制才有身分可判斷。
 
 <!--
-filterChain 這個 Bean 定義了整個請求要經過的安全規則：關閉 CSRF（因為是 REST API 不是傳統表單）、開啟 CORS、設定 Session 政策支援確認頁暫存，最後把建構子注入拿到的 jwtAuthFilter 掛在 UsernamePasswordAuthenticationFilter 之前——跟原本 authenticationJwtTokenFilter() 效果一樣，只是不用再手動呼叫方法拿 Bean。
-⚠️ 易錯點：投影片特別用引用區塊提醒，教學版為求簡單用了 permitAll() 開放所有請求，正式環境一定要改成針對 /api/admin/** 這類路徑加上 hasRole("ADMIN") 等實際的權限規則，不然管理員 API 誰都能呼叫。
+這頁把 JwtAuthFilter 掛進過濾鏈。順序是關鍵：addFilterBefore 指定插在 UsernamePasswordAuthenticationFilter 之前，因為要先驗完 Token、把使用者身分寫進 SecurityContext，後面的授權機制才知道現在是誰在發請求。順序如果反過來，Token 都還沒解析，授權那層看到的就是未登入狀態。
+這裡的 jwtAuthFilter 是前面建構子注入拿到的 Bean，跟原本寫 authenticationJwtTokenFilter() 手動呼叫方法拿 Bean 效果一樣，但寫法更乾淨。
+最後 http.build() 把整條規則組起來回傳，filterChain 這個 Bean 就完成了。
 -->
 
 ---
@@ -1654,10 +1746,21 @@ layout: default
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 後端：全域例外處理
+
+<!--
+前面幾節我們把 Entity、Repository、DTO、Security 都建好了，但還缺一塊：程式出錯的時候，要回什麼給前端？這一節就來處理這件事。我們會用 @RestControllerAdvice 做一個全域的例外攔截器，把 @Valid 的驗證錯誤、自訂的業務例外、還有沒預期到的系統例外，全部統一包成前面定義好的 AppResponse 格式。這樣前端就永遠只需要看 code 這個欄位判斷成功或失敗，不用管後端到底是哪一種錯誤。
+-->
+
+---
 layout: default
 ---
 
-# 全域例外處理 (1/2) — @Valid 驗證
+# 全域例外處理 (1/5) — @Valid 驗證
 
 ### `config/GlobalExceptionHandler.java`
 
@@ -1690,7 +1793,100 @@ GlobalExceptionHandler 用 @RestControllerAdvice 集中攔截整個系統的例�
 layout: default
 ---
 
-# 全域例外處理 (2/2) — 通用例外
+# 全域例外處理 (2/5) — 為什麼錯誤是 200？
+
+```java
+// Service 回傳一個「內容是錯誤」的物件
+return AppResponse.error(RspCode.UNAUTHORIZED, "帳號或密碼錯誤");
+```
+
+實際收到的回應：
+
+```text
+HTTP/1.1 200 OK                        ← Spring 預設狀態碼
+{"code":401, "message":"帳號或密碼錯誤", "data":null}   ← 401 只在這裡
+```
+
+<!--
+這頁要釐清一個非常容易誤解的觀念：RspCode.UNAUTHORIZED 裡的 401，只是我們自己定義的一個 int 欄位，會被序列化成 JSON body 的一部分，它跟 HTTP 狀態列完全沒有關係。
+原因在於 Controller 的回傳型別是 AppResponse，Spring MVC 拿到這個物件之後，只負責把它轉成 JSON 寫進 body。既然沒有任何一段程式碼告訴 Spring「狀態碼要用 401」，它就套用預設值 200。
+這件事的後果比想像中嚴重。前端的 HTTP 攔截器、瀏覽器的 fetch、Angular 的 HttpClient，判斷成功失敗全都是看狀態碼；狀態碼是 200，錯誤回應就會被當成成功回應走進 success 分支，錯誤處理邏輯永遠不會被觸發。同理，監控系統統計錯誤率、Nginx 記 log，看的也都是狀態碼。
+所以我們需要一個機制，讓 Service 判斷出錯誤時，能真正改變 HTTP 狀態碼。接下來三頁就是在解決這件事。
+-->
+
+---
+layout: default
+---
+
+# 全域例外處理 (3/5) — 自訂業務例外
+
+### `exception/BizException.java`
+
+```java
+@Getter
+public class BizException extends RuntimeException {
+
+    private final RspCode rspCode;
+
+    public BizException(RspCode rspCode) {
+        super(rspCode.getMessage());
+        this.rspCode = rspCode;
+    }
+
+    public BizException(RspCode rspCode, String customMessage) {
+        super(customMessage);
+        this.rspCode = rspCode;
+    }
+}
+```
+
+<!--
+解法是讓 Service 不要「回傳」錯誤，而是「丟出」錯誤。BizException 繼承 RuntimeException，並且多帶一個 RspCode 欄位，這樣攔截它的地方就知道該回哪個狀態碼、哪段訊息。兩個建構子分別對應 AppResponse 的兩個 error 多載：用預設訊息，或用自訂訊息。
+繼承 RuntimeException 而不是 Exception 是刻意的。RuntimeException 屬於 unchecked exception，不用在每個方法簽章上加 throws，也不用每一層都 try-catch，例外會自己一路往上飛到 @RestControllerAdvice。如果繼承 Exception，Service 到 Controller 的每一層都要宣告 throws，程式碼會被汙染得很嚴重。
+可能有同學會問：一定要自己寫一個類別嗎？不一定。如果專案只有一兩處錯誤，直接用 Spring 內建的 ResponseStatusException 就夠了。但我們這個專案光是 Service 層就有十幾處錯誤情境，而且每一處都要對應到自己的 RspCode，這時候一個十幾行的自訂類別反而是最省事的做法。
+-->
+
+---
+layout: default
+---
+
+# 全域例外處理 (4/5) — 攔截業務例外
+
+### `config/GlobalExceptionHandler.java`
+
+```java
+public class GlobalExceptionHandler {
+    // ... 接上一頁
+
+    // 帳密錯誤：Spring Security 驗證失敗時丟出
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<AppResponse<?>> handleBadCredentials(BadCredentialsException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(AppResponse.error(RspCode.UNAUTHORIZED, "帳號或密碼錯誤"));
+    }
+
+    // 業務例外：HTTP 狀態碼直接取自 RspCode
+    @ExceptionHandler(BizException.class)
+    public ResponseEntity<AppResponse<?>> handleBizException(BizException ex) {
+        return ResponseEntity.status(ex.getRspCode().getCode())
+                .body(AppResponse.error(ex.getRspCode(), ex.getMessage()));
+    }
+}
+```
+
+<!--
+這兩個處理器是整個機制的核心。關鍵在 ResponseEntity.status(...)：只有透過 ResponseEntity，我們才能同時指定「狀態碼」跟「body」，這正是前面直接回傳 AppResponse 做不到的事。
+handleBizException 只有三行，卻一次解決了全部十幾種業務錯誤：狀態碼由 ex.getRspCode().getCode() 動態決定，Email 重複就是 409、找不到資料就是 404、未登入就是 401，不用每種錯誤各寫一個處理器。這也正是我們當初把 RspCode 的數值設計成跟 HTTP 狀態碼一致的回報。
+handleBadCredentials 則示範了另一種情況：帳密錯誤的例外不是我們丟的，是 AuthenticationManager.authenticate() 內部丟出來的 BadCredentialsException。既然 Spring Security 已經幫我們定義好了，就直接攔截它，沒必要再包一層自己的例外。
+⚠️ 易錯點：狀態碼直接用 RspCode 的數值，前提是這些數值都在 HTTP 合法範圍 100～599 內。如果之後在 RspCode 裡加了像 1001 這種自訂業務碼，ResponseEntity.status(1001) 會直接丟 IllegalArgumentException，反而變成 500。要嘛維持「RspCode 就是 HTTP 狀態碼」的約定，要嘛在 RspCode 裡多存一個獨立的 httpStatus 欄位。
+另外提醒 @ExceptionHandler 的比對規則：Spring 會挑「型別最接近」的處理器，所以就算下一頁有一個攔截 Exception 的保底處理器，BizException 仍然會被這裡接走，不會被保底的搶先。
+-->
+
+---
+layout: default
+---
+
+# 全域例外處理 (5/5) — 通用例外
 
 ### `config/GlobalExceptionHandler.java`
 
@@ -1709,6 +1905,8 @@ public class GlobalExceptionHandler {
 <!--
 這頁補上一個攔截所有 Exception 的保底處理器，確保就算是我們沒預期到的系統錯誤，也不會讓使用者看到難懂的堆疊追蹤，而是統一回傳格式化過的錯誤訊息。
 ⚠️ 易錯點：這種「攔截所有例外」的寫法方便，但正式產品通常會把直接回傳 ex.getMessage() 視為資安風險，值得跟同學提一下實務上的取捨。
+另一個容易忽略的問題是：這裡把例外吃掉之後就沒有留下任何紀錄了。前端拿到 500，但伺服器端的 log 一片空白，出事時完全無從查起。實務上這個方法裡一定要加一行 log.error("未預期的例外", ex)，把完整的堆疊追蹤寫進 log，回給前端的則維持一句通用訊息。
+還要記得一個結論：任何沒有被明確註冊處理器的例外，最後都會落到這裡變成 500。所以每當我們決定丟出一種新的例外，就要同時想清楚「誰負責把它轉成正確的狀態碼」。
 -->
 
 ---
@@ -1759,7 +1957,7 @@ layout: default
 ```java
 public AppResponse<?> registerUser(RegisterRequest signUpRequest) {
     if (userRepository.existsByEmail(signUpRequest.email())) {
-        return AppResponse.error(RspCode.DUPLICATE_ERROR, "錯誤：此電子郵件已被使用！");
+        throw new BizException(RspCode.DUPLICATE_ERROR, "錯誤：此電子郵件已被使用！");
     }
     User user = new User();
     user.setEmail(signUpRequest.email());
@@ -1779,6 +1977,8 @@ public AppResponse<?> registerUser(RegisterRequest signUpRequest) {
 
 <!--
 registerUser 示範了完整的註冊流程：檢查 Email 是否重複、用 BCrypt 加密密碼、存進資料庫。
+Email 重複這個情況用 throw new BizException 而不是 return AppResponse.error，前面全域例外處理那一節說明過原因：回傳錯誤物件只會改到 body，狀態碼仍然是 200；丟例外才能讓 GlobalExceptionHandler 把它轉成 409。這個專案的 Service 層全部統一用丟例外的方式，方法的回傳值一律只代表成功結果。
+還有一個實際的好處：註冊成功後我們呼叫 authenticateUser，如果用回傳錯誤物件的寫法，這裡就得先接住結果、判斷 code 是不是 200、再決定要不要往上傳，多層呼叫時每一層都要重複這段判斷。改成丟例外之後，錯誤會自己穿透所有層級，中間的程式碼可以假設「能執行到下一行就代表前面都成功」。
 ⚠️ 易錯點：user.setRole("ADMIN") 這一行是教學版特別的設計，代表註冊帳號直接變成管理員，方便我們馬上體驗後台功能，正式產品要記得改回一般會員角色。最後一步很聰明：註冊完直接呼叫 authenticateUser 幫使用者登入，一次操作就拿到可以使用的 Token，不用使用者再手動登入一次。
 -->
 
@@ -1822,10 +2022,10 @@ layout: default
 public AppResponse<?> getCurrentUser() {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     if (auth == null || auth.getPrincipal().equals("anonymousUser"))
-        return AppResponse.error(RspCode.UNAUTHORIZED);
+        throw new BizException(RspCode.UNAUTHORIZED);
     UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
-    User user = userRepository.findById(userDetails.getId()).orElse(null);
-    if (user == null) return AppResponse.error(RspCode.NOT_FOUND);
+    User user = userRepository.findById(userDetails.getId())
+            .orElseThrow(() -> new BizException(RspCode.NOT_FOUND));
     return AppResponse.success(userToMap(user));
 }
 ```
@@ -1833,7 +2033,9 @@ public AppResponse<?> getCurrentUser() {
 <!--
 getCurrentUser 從 SecurityContext 取出目前登入者的身分，再回資料庫查完整資料。
 ⚠️ 易錯點：要先判斷 auth 是否為 null 或是 anonymousUser，因為就算沒登入，Spring Security 的 SecurityContext 也不會是完全空的，而是會有一個代表「匿名使用者」的物件，直接強轉型別會丟例外。
+查資料庫這一段順便帶大家看一個好用的寫法：findById(...).orElseThrow(() -> new BizException(RspCode.NOT_FOUND))。原本要寫成 .orElse(null) 再接一行 if (user == null)，兩行縮成一行，而且不會出現 null 這個中間狀態——變數一旦被賦值就保證不是 null，後面不需要再防呆。Optional 的 orElseThrow 就是為這種「找不到就是錯誤」的情境設計的。
 -->
+
 
 ---
 layout: default
@@ -1845,8 +2047,8 @@ layout: default
 public AppResponse<?> updateProfile(Map<String, String> updates) {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
-    User user = userRepository.findById(userDetails.getId()).orElse(null);
-    if (user == null) return AppResponse.error(RspCode.NOT_FOUND);
+    User user = userRepository.findById(userDetails.getId())
+            .orElseThrow(() -> new BizException(RspCode.NOT_FOUND));
     if (updates.containsKey("name"))  user.setName(updates.get("name"));
     if (updates.containsKey("phone")) user.setPhone(updates.get("phone"));
     if (updates.get("password") != null && !updates.get("password").isEmpty())
@@ -1901,20 +2103,21 @@ public class AuthController {
 
     @PostMapping("/login")
     public AppResponse<?> login(@Valid @RequestBody LoginRequest req) {
-        try { return authService.authenticateUser(req); }
-        catch (Exception e) {
-            return AppResponse.error(RspCode.UNAUTHORIZED, "帳號或密碼錯誤");
-        }
+        // 帳密錯誤由 BadCredentialsException 一路飛到 GlobalExceptionHandler → 401
+        return authService.authenticateUser(req);
     }
     @PostMapping("/register")
     public AppResponse<?> register(@Valid @RequestBody RegisterRequest req) {
+        // Email 重複由 BizException(DUPLICATE_ERROR) 交給 GlobalExceptionHandler → 409
         return authService.registerUser(req);
     }
 }
 ```
 
 <!--
-AuthController 是註冊、登入這兩個功能對外的入口，帶大家注意 login 方法用 try-catch 包住呼叫，把 Spring Security 驗證失敗丟出的例外接住，轉換成我們熟悉的 401 格式回應，而不是讓例外一路衝到 GlobalExceptionHandler 變成看不懂的訊息。這頁程式碼很短，但正好是前端呼叫後端拿到 Token 的第一個進入點，等一下做完前端就會實際打到這兩支 API。
+AuthController 是註冊、登入這兩個功能對外的入口。兩個方法都只有一行，這正是有了全域例外處理之後該有的樣子：Controller 只負責把請求轉給 Service，錯誤處理完全不出現在這裡。
+⚠️ 特別要提醒的是「不要在 Controller 裡寫 try-catch」。很多人會習慣性地在 login 外面包一層 catch (Exception e) 再回傳 401，看起來很直覺，實際上有兩個問題。第一，catch (Exception e) 是全包的，資料庫連線失敗、NullPointerException 全都會被轉換成「帳號或密碼錯誤」，使用者拿到誤導的訊息，我們也失去了真正的錯誤資訊。第二，Controller 一旦把例外接住並回傳 AppResponse，例外就飛不到 GlobalExceptionHandler 了，狀態碼又會退回 200——我們前面做的那一整套機制等於被繞過。
+換句話說，Controller 裡的 try-catch 跟全域例外處理是互斥的：選了後者，前者就要拿掉。這頁程式碼很短，但正好是前端呼叫後端拿到 Token 的第一個進入點，等一下做完前端就會實際打到這兩支 API。
 -->
 
 ---
@@ -2158,14 +2361,14 @@ layout: default
 // 單一問卷詳情
 public AppResponse<SurveyDTO> getSurveyDetails(Long id) {
     return surveyRepository.findById(id).map(s -> AppResponse.success(convertToDTO(s)))
-            .orElse(AppResponse.error(RspCode.NOT_FOUND));
+            .orElseThrow(() -> new BizException(RspCode.NOT_FOUND));
 }
 
 // 刪除 (已有作答則禁止)
 @Transactional
 public AppResponse<?> deleteSurvey(Long id) {
     if (responseRepository.existsBySurveyId(id))
-        return AppResponse.error(RspCode.PARAM_ERROR, "已有作答紀錄");
+        throw new BizException(RspCode.PARAM_ERROR, "已有作答紀錄");
     surveyRepository.deleteById(id);
     return AppResponse.success(null);
 }
@@ -2192,7 +2395,7 @@ public AppResponse<?> saveAdminSurveyToSession(SurveyDTO dto, HttpSession sessio
 // 2. 取回編輯中的問卷
 public AppResponse<SurveyDTO> getAdminSurveyFromSession(HttpSession session) {
     SurveyDTO dto = (SurveyDTO) session.getAttribute(ADMIN_EDIT_SESSION_KEY);
-    if (dto == null) return AppResponse.error(RspCode.NOT_FOUND, "找不到編輯中的資料");
+    if (dto == null) throw new BizException(RspCode.NOT_FOUND, "找不到編輯中的資料");
     return AppResponse.success(dto);
 }
 
@@ -2217,10 +2420,11 @@ layout: default
 public AppResponse<SurveyDTO> commitAdminSurveyFromSession(
         boolean isPublish, HttpSession session) {
     SurveyDTO dto = (SurveyDTO) session.getAttribute(ADMIN_EDIT_SESSION_KEY);
-    if (dto == null) return AppResponse.error(RspCode.NOT_FOUND);
+    if (dto == null) throw new BizException(RspCode.NOT_FOUND);
     dto.setStatus(isPublish ? "PUBLISHED" : "DRAFT");
+    // saveSurvey 失敗會直接丟例外，能走到下一行就是成功
     AppResponse<SurveyDTO> response = saveSurvey(dto);
-    if (response.code() == 200) session.removeAttribute(ADMIN_EDIT_SESSION_KEY);
+    session.removeAttribute(ADMIN_EDIT_SESSION_KEY);
     return response;
 }
 ```
@@ -2261,8 +2465,8 @@ layout: default
 ```java
 // 單一作答者的詳細內容
 public AppResponse<?> getResponseDetail(Long responseId) {
-    SurveyResponse response = responseRepository.findById(responseId).orElse(null);
-    if (response == null) return AppResponse.error(RspCode.NOT_FOUND);
+    SurveyResponse response = responseRepository.findById(responseId)
+            .orElseThrow(() -> new BizException(RspCode.NOT_FOUND));
     Map<String, Object> result = new HashMap<>();
     result.put("responseId", response.getId()); result.put("userName", response.getName());
     result.put("submittedAt", response.getSubmittedAt());
@@ -2290,8 +2494,8 @@ layout: default
 
 ```java
 public AppResponse<?> getSurveyStats(Long id) {
-    Survey survey = surveyRepository.findById(id).orElse(null);
-    if (survey == null) return AppResponse.error(RspCode.NOT_FOUND);
+    Survey survey = surveyRepository.findById(id)
+            .orElseThrow(() -> new BizException(RspCode.NOT_FOUND));
     List<SurveyResponse> responses = responseRepository.findBySurveyId(id);
     int totalResponses = responses.size();
 
@@ -2759,7 +2963,7 @@ layout: default
 public AppResponse<?> saveToSession(ResponseDTO submission, HttpSession session) {
     if (responseRepository.existsBySurveyIdAndEmail(
             submission.surveyId(), submission.email())) {
-        return AppResponse.error(RspCode.DUPLICATE_ERROR, "此 Email 已填寫過本問卷。");
+        throw new BizException(RspCode.DUPLICATE_ERROR, "此 Email 已填寫過本問卷。");
     }
     session.setAttribute(SURVEY_SESSION_KEY, submission);
     return AppResponse.success(null);
@@ -2768,7 +2972,7 @@ public AppResponse<?> saveToSession(ResponseDTO submission, HttpSession session)
 // 從 Session 取回暫存資料 (確認頁用)
 public AppResponse<ResponseDTO> getFromSession(HttpSession session) {
     ResponseDTO data = (ResponseDTO) session.getAttribute(SURVEY_SESSION_KEY);
-    if (data == null) return AppResponse.error(RspCode.NOT_FOUND);
+    if (data == null) throw new BizException(RspCode.NOT_FOUND);
     return AppResponse.success(data);
 }
 ```
@@ -2789,11 +2993,11 @@ layout: default
 public AppResponse<?> commitFromSession(HttpSession session) {
     ResponseDTO submission =
         (ResponseDTO) session.getAttribute(SURVEY_SESSION_KEY);
-    if (submission == null) return AppResponse.error(RspCode.NOT_FOUND);
+    if (submission == null) throw new BizException(RspCode.NOT_FOUND);
 
+    // submitResponse 失敗會直接丟例外，能走到下一行就是成功
     AppResponse<?> response = submitResponse(submission.surveyId(), submission);
-    if (response.code() == 200)
-        session.removeAttribute(SURVEY_SESSION_KEY); // 成功後清空暫存
+    session.removeAttribute(SURVEY_SESSION_KEY); // 成功後清空暫存
     return response;
 }
 ```
@@ -2813,8 +3017,8 @@ layout: default
 ```java
 @Transactional
 public AppResponse<?> submitResponse(Long surveyId, ResponseDTO submission) {
-    Survey survey = surveyRepository.findById(surveyId).orElse(null);
-    if (survey == null) return AppResponse.error(RspCode.NOT_FOUND);
+    Survey survey = surveyRepository.findById(surveyId)
+            .orElseThrow(() -> new BizException(RspCode.NOT_FOUND));
 
     SurveyResponse response = new SurveyResponse();
     response.setSurvey(survey);
@@ -2899,7 +3103,7 @@ public AppResponse<?> getUserHistory() {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     if (auth == null || !auth.isAuthenticated()
             || auth instanceof AnonymousAuthenticationToken)
-        return AppResponse.error(RspCode.UNAUTHORIZED);
+        throw new BizException(RspCode.UNAUTHORIZED);
 
     UserDetailsImpl ud = (UserDetailsImpl) auth.getPrincipal();
     User user = userRepository.findById(ud.getId()).orElse(null);
@@ -3641,6 +3845,8 @@ export class AuthService {
 
 <!--
 login 跟 register 兩個方法結構幾乎一樣，都是呼叫後端 API，再用 RxJS 的 tap 運算子在成功時觸發 handleAuthSuccess。
+這裡要跟後端的全域例外處理對照著看。後端改成用例外回傳真實狀態碼之後，帳密錯誤是 401、Email 重複是 409，這些回應在 Angular 裡根本不會走進 tap，而是直接進入訂閱時的 error 分支——所以 tap 裡面那個 res.code === 200 的判斷，實際上已經恆真了。留著它不會出錯，但同學要清楚：真正負責處理錯誤的是元件裡的 error callback，不是這個 if。
+反過來說，這也解釋了為什麼後端非把狀態碼做對不可。如果後端維持「一律回 200、錯誤只寫在 body 的 code 欄位」，error 分支永遠不會被觸發，所有錯誤都得靠這種 res.code 判斷手動攔——每一支 API 呼叫都要記得寫，漏一個就靜默失敗。
 ⚠️ 易錯點：tap 只是「順便做一件事」，不會改變資料流，如果同學把它誤用成 map 而回傳了不同的值，後面訂閱者拿到的資料型別就會跟預期不一樣，這是初學 RxJS 常見的混淆點。
 -->
 
@@ -3702,6 +3908,7 @@ export class AuthService {
 
 <!--
 fetchUserProfile 呼叫後端取得目前登入者的資料，並用 tap 把結果存進 currentUser 這個 signal。
+map 裡面那行 if (res.code !== 200) throw 是後端還在「錯誤也回 200」時期留下來的防線：當時未登入的回應狀態碼是 200、body 的 code 是 401，Angular 會把它當成成功資料，只能靠這行手動檢查再自己丟錯誤。現在後端真的回 401 了，這段回應會直接被 HttpClient 判定為錯誤，map 根本不會執行，這行等於是死碼。留著當作防呆無妨，但要知道它已經不是主要的防線了。
 ⚠️ 易錯點：URL 後面加了 ?t=${Date.now()} 這個時間戳，是為了避免瀏覽器快取住舊的 401 回應——這種瀏覽器快取造成「明明後端已經修好了，前端卻還是拿到舊錯誤」的狀況，在除錯時很容易讓人摸不著頭緒，是實務上一個值得記住的小技巧。
 -->
 
