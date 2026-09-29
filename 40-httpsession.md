@@ -324,21 +324,39 @@ Session 的生命週期可以這樣理解：
 layout: default
 ---
 
-# 練習 1：實作登入與讀取 Session
-### 任務說明
+# 練習 1：作答暫存與確認頁讀取
 
-建立一個 `SessionController`，實作以下三支 API：
+問卷需求規定：使用者按「送出」時，**不立刻寫資料庫**，先放進 Session 並跳到確認頁；在確認頁可以檢查、修改，按下確認才真正寫入。請實作前半段：
 
-1. `POST /session/login`：接收 `@RequestParam("username") String username`，呼叫 `session.setAttribute("username", username)`，回傳登入成功訊息與 Session ID
-2. `GET /session/info`：呼叫 `session.getAttribute("username")`，若為 `null` 回傳「尚未登入」，否則回傳「目前登入：xxx」
-3. 使用 Postman 測試：先呼叫 `/session/login`，再呼叫 `/session/info`，確認第二支 API 能讀到 Session 資料
+1. `dto/ResponseDTO`、`dto/AnswerDTO`：作答者資料（姓名、手機、Email 必填，年齡選填）與每題答案（`values` 是陣列，多選有多個值）
+2. `service/DraftService`：用 `HttpSession` 存取作答暫存，key 為 `"responseDraft:" + surveyId`
+3. `POST /api/surveys/{id}/draft`：檢查資料格式（`@Valid`），且問卷必須「進行中」，通過就存進 Session
+4. `GET /api/surveys/{id}/draft`：讀出 Session 的暫存；沒有暫存回傳 **409 `NO_DRAFT`**
+5. 用 Postman 驗證：① 暫存後可讀回 ② 換一份問卷讀不到（key 不同）③ 清掉 Cookie 就讀不到 ④ 對「尚未開始」的問卷暫存被拒絕
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ 放進 Session 的物件要實作 <code>Serializable</code>：Tomcat 重新啟動時會把 Session 存到磁碟再讀回來，物件不能序列化就會遺失或報錯。
+</div>
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-這個練習讓大家從零建立一個最基本的 Session 登入流程。
+這一題是動態問卷「前台作答」流程的前半段。需求文件寫得很清楚：使用者按送出之後，先放到 Session，跳到確認頁，確認之後才寫進資料庫。為什麼要這樣設計？因為確認頁的資料要能「帶回去修改」，如果一送出就寫進資料庫，使用者按修改，就得再更新資料庫；放在 Session 裡，只是暫時的，隨時可以覆蓋，也不會在資料庫留下半成品。
 
-重點是要用 Postman 測試，觀察 Cookie 的行為——登入之後，Postman 應該會自動持有 JSESSIONID，後續請求自動帶上，所以 /session/info 才能讀到資料。
+Session 存取的技巧，剛剛在本章已經學過：HttpSession 宣告在方法參數，Spring 自動注入。這裡有兩個新的地方：
 
-如果 Postman 設定成每次都清 Cookie，就會發現 /session/info 永遠回傳「尚未登入」——這就是 Session 機制的本質，很值得親眼觀察一次。
+第一，key 要跟問卷 id 綁在一起。使用者可能同時開兩份問卷，如果 key 都叫 draft，兩份問卷的暫存會互相覆蓋。
+
+第二，Session 裡放的是一個物件，不是字串。物件要實作 Serializable。這個很容易被忽略：開發的時候用 IDE 每改一次程式碼就會重新啟動，Tomcat 預設會把 Session 保存起來，重新啟動後再載入；如果物件不能序列化，你會發現每次重啟後，暫存都消失了，或是啟動時出現一堆警告。
+
+驗證的部分，@Valid 已經在上一章學過，會擋掉格式錯誤；「問卷必須進行中」是業務規則，放在 Service。
 -->
 
 ---
@@ -346,190 +364,928 @@ layout: default
 ---
 
 # 練習 1：解題提示
-### 提示說明
 
-1. `HttpSession` 宣告在方法參數中，Spring Boot 會自動注入，不需要 `@Autowired`
-2. import 路徑：`jakarta.servlet.http.HttpSession`（Spring Boot 3.x / 4.x，注意是 `jakarta` 不是 `javax`）
-3. `getAttribute` 回傳的是 `Object`，需要強制轉型：`(String) session.getAttribute("username")`
-4. Postman 預設開啟 Cookie Jar，可確保跨請求自動持有 JSESSIONID；可在 Postman Cookies 頁籤觀察到它
+1. DTO 要 `implements Serializable`；`answers` 是 `List<AnswerDTO>`，`AnswerDTO.values` 是 `List<String>`（單選、文字題只有一個值，多選有多個）
+2. `HttpSession` 直接宣告在 Controller 方法參數，不需要 `@Autowired`
+3. `session.getAttribute(key)` 回傳 `Object`，取出時要強制轉型；沒有值會是 `null`
+4. 讀不到暫存要丟 `BizException(RspCode.NO_DRAFT)`，由 `GlobalExceptionHandler` 轉成 409
+5. 「問卷必須進行中」：用 ch37 的 `statusOf(survey) == SurveyStatus.ONGOING` 判斷
+6. Postman 預設會自動保存 Cookie（`JSESSIONID`），所以不同請求會共用同一個 Session
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-最容易出錯的地方有兩個：
+提示第三點：取出來的值可能是 null，一定要處理。這裡我們用 BizException 讓呼叫端得到一個清楚的錯誤，而不是 NullPointerException。
 
-第一是 import 路徑，Jakarta EE 遷移是 Spring Boot 3.x / 4.x 的大改變，如果 IDE 自動補全了 javax.servlet.http.HttpSession，一定要手動改掉。
+Postman 的 Cookie 管理很好用：登入一次就自動帶上。要模擬「另一個使用者」，可以在 Postman 的 Cookies 頁籤把 localhost 的 JSESSIONID 刪掉，再發請求，就等於是全新的瀏覽器。
 
-第二是 getAttribute 的型別轉型——因為 Session 存的是 Object，取出來一定要轉型，如果型別不對會在 Runtime 拋出 ClassCastException。
-
-Postman 預設會自動管理 Cookie，所以跨請求的 Session 追蹤是自動的。如果覺得奇怪為什麼能讀到，去 Postman 的 Cookie 頁籤看看有沒有 JSESSIONID 就明白了。
+驗證 ③ 很有意思，大家一定要親自試：清掉 Cookie 之後再 GET draft，會得到 409。這證明 Session 是跟著「瀏覽器」的，不是跟著「使用者帳號」的，這也是為什麼我們的問卷可以讓沒有登入的訪客填寫。
 -->
 
 ---
+layout: default
+---
 
-# 練習 1：解答程式碼
+# 練習 1：解答（DTO）
 
 ```java
-import jakarta.servlet.http.HttpSession;
-import org.springframework.web.bind.annotation.*;
+@Getter
+@Setter
+public class ResponseDTO implements java.io.Serializable {
+    private Integer id;              // 只在回傳時填入
+    private Integer surveyId;
+    private LocalDateTime submittedAt;
 
-@RestController
-@RequestMapping("/session")
-public class SessionController {
+    @NotBlank(message = "請輸入姓名")
+    private String name;
 
-    @PostMapping("/login")
-    public String login(@RequestParam("username") String username,
-                        HttpSession session) {
-        session.setAttribute("username", username);
-        return "登入成功，Session ID：" + session.getId();
+    @NotBlank(message = "請輸入手機")
+    @Pattern(regexp = "^09\\d{8}$", message = "手機格式錯誤（09 開頭，共 10 碼）")
+    private String phone;
+
+    @NotBlank(message = "請輸入 Email")
+    @Email(message = "Email 格式錯誤")
+    private String email;
+
+    @Min(value = 1, message = "年齡不合理")
+    @Max(value = 120, message = "年齡不合理")
+    private Integer age;
+
+    @Valid
+    private List<AnswerDTO> answers = new ArrayList<>();
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+ResponseDTO 有兩類欄位。第一類是作答者的基本資料：姓名、手機、Email 必填，年齡選填。@Pattern 用正規表示式規定手機格式，09 開頭共十碼；@Email 檢查 Email 格式；@Min、@Max 限制年齡合理範圍。這些都是上一章學過的驗證註解，訊息也跟需求文件的畫面一致。
+
+第二類是 answers：每一題一個 AnswerDTO。AnswerDTO 的 values 是 List<String>，統一表示三種題型：單選題和文字題只有一個值，多選題有多個值。把三種題型統一成同一個結構，前端和後端都不需要判斷題型分別處理。
+-->
+
+---
+layout: default
+---
+
+# 練習 1：解答（DTO）（續）
+
+```java
+@Getter
+@Setter
+public class AnswerDTO implements java.io.Serializable {
+    private Integer questionId;
+    private String questionTitle; // 只在回傳時填入
+    private List<String> values = new ArrayList<>(); // 單選 / 文字只有一個值，多選有多個
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+id、surveyId、submittedAt 這三個欄位是回傳時才填的，前端送來的會被忽略。questionTitle 在 AnswerDTO 也是一樣，只在後台看回饋細節時才填。
+-->
+
+---
+layout: default
+---
+
+# 練習 1：解答（DraftService 與 Controller）
+### `service/DraftService.java`、`SurveyController`
+
+```java
+/** 「送出前先放 Session、確認後才寫資料庫」的暫存區。 */
+@Service
+public class DraftService {
+
+    // key 跟問卷 id 綁在一起，同時填兩份問卷才不會互相覆蓋
+    private String responseKey(Integer surveyId) {
+        return "responseDraft:" + surveyId;
     }
 
-    @GetMapping("/info")
-    public String getSessionInfo(HttpSession session) {
-        String username = (String) session.getAttribute("username");
-        if (username == null) {
-            return "尚未登入";
-        }
-        return "目前登入：" + username;
+    public void saveResponse(HttpSession session, Integer surveyId, ResponseDTO dto) {
+        session.setAttribute(responseKey(surveyId), dto);
+    }
+
+    public ResponseDTO getResponse(HttpSession session, Integer surveyId) {
+        return (ResponseDTO) session.getAttribute(responseKey(surveyId));
+    }
+
+    public void clearResponse(HttpSession session, Integer surveyId) {
+        session.removeAttribute(responseKey(surveyId));
     }
 }
 ```
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-login 用 setAttribute 存使用者名稱，info 用 getAttribute 讀回來並做 null 檢查。兩支 API 共用同一個 Session，只要 Postman 的 Cookie 有正確帶上 JSESSIONID 就會串起來。
+DraftService 把「怎麼存取 Session」集中在一個地方。Controller 和其他 Service 不用知道 key 長什麼樣子，也不會不小心拼錯字。responseKey 方法把 key 拼成 responseDraft: 加問卷 id。
+
+這種寫法還有一個好處：如果將來要把暫存從 Session 換成別的地方，例如 Redis，只需要改這個類別。
 -->
 
+---
+layout: default
+---
+
+# 練習 1：解答（DraftService 與 Controller）（續）
+### `service/DraftService.java`、`SurveyController`
+
+```java
+@PostMapping("/api/surveys/{id}/draft")
+public AppResponse<Void> saveDraft(@PathVariable("id") Integer id,
+                                   @Valid @RequestBody ResponseDTO body, HttpSession session) {
+    responseService.saveDraft(id, body, session);
+    return AppResponse.success();
+}
+
+@GetMapping("/api/surveys/{id}/draft")
+public AppResponse<ResponseDTO> getDraft(@PathVariable("id") Integer id, HttpSession session) {
+    return AppResponse.success(responseService.getDraft(id, session));
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+Controller 很薄：POST 收到資料，@Valid 先驗證格式，再交給 Service；GET 把 Session 的暫存回傳給確認頁使用。
+
+⚠️ 易錯點：HttpSession 是每個請求都可以注入的，但只有在你真的呼叫 getSession 或是注入它的時候，Tomcat 才會建立 Session。如果一個只讀資料的 API 也注入了 HttpSession，每個請求都會創建一個新的 Session，浪費記憶體，所以只有需要的 API 才注入。
+-->
+
+---
+layout: default
+---
+
+# 練習 1：解答（ResponseService 的暫存與檢查）
+### `service/ResponseService.java`（1/2）
+
+```java
+@Service
+@RequiredArgsConstructor
+public class ResponseService {
+
+    private final SurveyService surveyService;
+    private final DraftService draftService;
+    private final SurveyResponseRepository responseRepository;
+
+    /** 第一步：檢查後放進 Session（不寫資料庫） */
+    public void saveDraft(Integer surveyId, ResponseDTO dto, HttpSession session) {
+        check(surveyId, dto);
+        draftService.saveResponse(session, surveyId, dto);
+    }
+
+    public ResponseDTO getDraft(Integer surveyId, HttpSession session) {
+        ResponseDTO dto = draftService.getResponse(session, surveyId);
+        if (dto == null) throw new BizException(RspCode.NO_DRAFT);
+        return dto;
+    }
+    // check() 見下一頁
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+saveDraft 先呼叫 check 做檢查，通過才存進 Session。check 這個方法很重要，練習 2 的送出也會再呼叫一次，所以我們先把它獨立出來。
+
+getDraft 讀取暫存，沒有就丟 BizException(NO_DRAFT)。
+
+為什麼要在送出時「再檢查一次」？因為使用者按下暫存到按下確認之間，可能隔了好幾分鐘。這段時間裡，問卷可能剛好過期，或是同一個 Email 已經有人用另一個瀏覽器送出了。只在暫存時檢查是不夠的，送出時一定要重新檢查。這是很常被忽略的防禦。
+-->
+
+---
+layout: default
+---
+
+# 練習 1：解答（check — 共用檢查）
+### `service/ResponseService.java`（2/2）
+
+```java
+    // ... 接上一頁
+
+    /** 共用檢查：問卷要在填寫期間、Email 沒填過、必填題都有答、答案在選項裡 */
+    private Survey check(Integer surveyId, ResponseDTO dto) {
+        Survey survey = surveyService.findOrThrow(surveyId);
+        if (surveyService.statusOf(survey) != SurveyStatus.ONGOING) {
+            throw new BizException(RspCode.SURVEY_NOT_OPEN);
+        }
+        if (responseRepository.existsBySurveyIdAndEmail(surveyId, dto.getEmail().trim().toLowerCase())) {
+            throw new BizException(RspCode.ALREADY_RESPONDED);
+        }
+        Map<Integer, AnswerDTO> answers = dto.getAnswers().stream()
+                .filter(a -> a.getQuestionId() != null)
+                .collect(Collectors.toMap(AnswerDTO::getQuestionId, a -> a, (x, y) -> y));
+
+    // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+check 依序檢查五件事，任何一件不符合就丟 BizException：
+
+一，問卷必須是進行中，前面已經介紹過，用 SurveyStatus 判斷。
+
+二，同一個 Email 沒有填過這份問卷。這是用 existsBySurveyIdAndEmail 查資料庫，需求文件規定「同一個 Email 無法重複填寫同一張問卷」。
+-->
+
+---
+layout: default
+---
+
+# 練習 1：解答（check — 共用檢查）（續）
+### `service/ResponseService.java`（2/2）
+
+```java
+        // ... 接上一頁
+
+        for (Question q : survey.getQuestions()) {
+            AnswerDTO a = answers.get(q.getId());
+            List<String> values = a == null ? List.of() : cleanValues(a);
+            if (values.isEmpty()) {
+                if (q.getRequired()) {
+                    throw new BizException(RspCode.VALIDATION_ERROR, "「" + q.getTitle() + "」為必填");
+                }
+                continue;
+            }
+            if (q.getType() == QuestionType.TEXT) continue;
+            Set<String> labels = q.getOptions().stream().map(Option::getLabel).collect(Collectors.toSet());
+
+        // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+三，每一題必填的，都要有答案。
+
+四，單選跟多選的答案，必須真的是選項裡的值。這個檢查很重要：前端的畫面雖然只有選項可以選，但是任何人都可以用 Postman 直接送任意的值，後端不能相信前端。
+-->
+
+---
+layout: default
+---
+
+# 練習 1：解答（check — 共用檢查）（續）
+### `service/ResponseService.java`（2/2）
+
+```java
+    // ... 接上一頁
+
+            if (!labels.containsAll(values)) {
+                throw new BizException(RspCode.VALIDATION_ERROR, "「" + q.getTitle() + "」的答案不在選項內");
+            }
+            if (q.getType() == QuestionType.SINGLE && values.size() != 1) {
+                throw new BizException(RspCode.VALIDATION_ERROR, "「" + q.getTitle() + "」只能選一個");
+            }
+        }
+        return survey;
+    }
+
+    private List<String> cleanValues(AnswerDTO a) {
+        return a.getValues().stream().map(String::trim).filter(v -> !v.isEmpty()).toList();
+    }
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+五，單選題只能有一個答案。
+
+還有一個小技巧：answers 先轉成 Map，key 是題目 id，這樣逐題檢查時，直接用題目 id 找答案，不用每題都掃一遍整個 List，寫起來也比較清楚。
+
+Email 統一轉小寫存進資料庫，避免 A@x.com 和 a@x.com 被當成兩個不同的人。
+-->
+
+---
+layout: default
 ---
 
 # 練習 1：Postman 測試
 
-| 步驟 | Method / URL | Body | 預期回應 |
-| --- | --- | --- | --- |
-| 1 | `POST http://localhost:8080/session/login?username=Tom` | 無 | `登入成功，Session ID：xxxxxxxx` |
-| 2 | `GET http://localhost:8080/session/info` | 無 | `目前登入：Tom` |
+`POST /api/surveys/2/draft`，Body（JSON）：
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>設定重點：</b> <code>@RequestParam</code> 對應的是 <b>URL 的 query string</b>，直接把 <code>?username=Tom</code> 接在網址後面，不需要開 Body。
+```json
+{
+  "name": "測試員", "phone": "0955123456", "email": "t1@example.com", "age": 30,
+  "answers": [
+    { "questionId": 1, "values": ["輕食"] },
+    { "questionId": 2, "values": ["青菜", "豆腐"] },
+    { "questionId": 3, "values": ["很好"] }
+  ]
+}
+```
+
+| 步驟 | 動作 | 預期結果 |
+| --- | --- | --- |
+| 1 | `POST /api/surveys/2/draft` | 200，`SUCCESS`；Postman Cookies 出現 `JSESSIONID` |
+| 2 | `GET /api/surveys/2/draft` | 200，內容跟剛才送的一樣 |
+| 3 | `GET /api/surveys/3/draft` | **409** `NO_DRAFT`（key 不同，互不影響） |
+| 4 | 刪除 Cookie 後 `GET /api/surveys/2/draft` | **409** `NO_DRAFT`（新的瀏覽器） |
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+測試的重點在步驟 3 和 4，這兩步證明了 Session 的特性：它是跟著瀏覽器走的，不是跟著使用者帳號，也不是全站共用。
+
+步驟 5、6、7 是驗證我們的檢查有生效。特別是步驟 7：「必填題沒有答案」的情況，這個檢查不是 @Valid 做的，@Valid 不知道每份問卷有哪些必填題，是 Service 的 check 對照資料庫裡的題目設定，逐題檢查的。
+-->
+
+---
+layout: default
+---
+
+# 練習 1：Postman 測試（續）
+
+| 步驟 | 動作 | 預期結果 |
+| --- | --- | --- |
+| 5 | `POST /api/surveys/4/draft`（尚未開始） | **409** `SURVEY_NOT_OPEN` |
+| 6 | `phone` 傳 `"123"`、`email` 傳 `"abc"` | **400**，訊息含「手機格式錯誤」「Email 格式錯誤」 |
+| 7 | 必填的題目 1 不傳答案 | **400**，「你平常午餐吃什麼？」為必填 |
+
+<div class="mt-2 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>驗證重點：</b> 步驟 3、4 證明「暫存是跟著瀏覽器（Cookie）走」；打開 MySQL 確認 <code>survey_responses</code> 沒有新增任何資料。
 </div>
 
-<!--
-先送 login，Postman 自動把回應裡的 JSESSIONID Cookie 存起來；接著送 info，Postman 自動帶上同一個 Cookie，Controller 就能從 Session 讀到剛才存的 username。
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
-可以到 Postman 的 Cookies 分頁確認 localhost 底下有一筆 JSESSIONID。
+<!--
+最後一定要打開 MySQL，執行 SELECT COUNT(*) FROM survey_responses，確認筆數沒有變。這樣才真正證明「暫存階段不寫資料庫」。
 -->
 
 ---
 layout: default
 ---
 
-# 練習 2：實作登出與 Session 保護
-### 任務說明
+# 練習 2：確認送出，寫入資料庫
 
-在練習 1 的基礎上，繼續新增：
+使用者在確認頁按下「送出」，才真正寫入資料庫。請實作後半段：
 
-1. `POST /session/logout`：呼叫 `session.invalidate()`，回傳「已登出」
-2. 在 `/session/info` 加上保護：若 `getAttribute("username")` 為 `null`，改用 `ResponseEntity` 回傳 HTTP 401
-3. 在 `application.properties` 加上 `server.servlet.session.timeout=2m`，重新啟動後等待 2 分鐘，確認 Session 自動過期、再呼叫 `/session/info` 得到 401
+1. 建立 `SurveyResponse`、`ResponseAnswer` 兩個 Entity 與 `SurveyResponseRepository`（見下一頁）
+2. `ResponseService.submit(surveyId, session)`：
+   - 讀取 Session 的暫存（沒有 → 409 `NO_DRAFT`），並**重新執行 `check`**
+   - 建立 `SurveyResponse`，每一題答案建立一筆 `ResponseAnswer`，**多選的答案以分號 `;` 串接**（`青菜;豆腐`），沒回答的選填題不存
+   - 存進資料庫；**同一 Email 重複填寫 → 409 `ALREADY_RESPONDED`**
+   - 成功後清除該問卷的 Session 暫存
+3. `POST /api/surveys/{id}/submit`：回傳新作答紀錄的 id
+4. 用 Postman 走完 暫存 → 讀取 → 送出，再用 MySQL 確認資料
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-這個練習讓大家理解 Session 的「主動失效」和「被動過期」兩種情境。
+練習 2 是整個作答流程的第二半，把資料真正寫進資料庫。
 
-登出是主動的，呼叫 invalidate() 立刻清除。只移除 attribute 是不夠的，舊的 Session ID 還可能被重複使用，這是安全漏洞。
+這一題有兩個重要的技術點。
 
-timeout 設成 2 分鐘只是為了測試方便，讓大家親眼看到 Session 過期的效果。實際專案通常是 30 分鐘。
+第一是重複填寫的處理。需求規定同一個 Email 不能重複填寫同一份問卷。我們在 MySQL 課設計資料表時，已經加了 UNIQUE (survey_id, email) 這個約束，資料庫保證不會有兩筆一樣的資料。所以我們的程式有兩道防線：第一道，check 裡面先查一次，可以給使用者一個友善的訊息；第二道，如果兩個請求同時進來，兩個都通過了第一道，第二個寫入資料庫的時候，會違反唯一約束，丟出 DataIntegrityViolationException，我們把它接住，轉成同樣的 409 訊息。
 
-ResponseEntity 回傳 401 讓大家練習把 Session 狀態轉換成正確的 HTTP 回應碼，這在 RESTful API 設計中很重要。
+第二是多選答案串接。資料庫的 answer_text 只有一個欄位，所以多選題的答案，用分號串接。這也是為什麼在儲存問卷的選項時，不允許選項本身包含分號：不然之後拆不回來。
+
+大家先想想，這個方法要不要加 @Transactional？為什麼？
 -->
 
 ---
 layout: default
 ---
 
-# 練習 2：解題提示
-### 提示說明
-
-1. 回傳 HTTP 401：`return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("尚未登入");`
-2. `session.invalidate()` 之後，不要再呼叫同一個 `session` 物件的任何方法——Session 已失效，呼叫會拋出 `IllegalStateException`
-3. `server.servlet.session.timeout=2m` 加在 `application.properties` 後，需重新啟動才生效
-4. 測試流程：登入 → 等超過 2 分鐘 → 呼叫 `/session/info` → 應回傳 401
-
-<!--
-invalidate() 之後不能再操作這個 Session 物件，這是初學者很常犯的錯誤——在 invalidate() 之後還想讀取某個 attribute 確認它被刪掉了，結果拋出 IllegalStateException。
-
-timeout=2m 是縮短時間方便測試，記得測試完改回合理的值（如 30m）。
-
-ResponseEntity 的用法大家在 ch21 已經學過，這裡只是複習一下回傳非 200 狀態碼的寫法。
--->
-
----
-
-# 練習 2：解答程式碼 — login 與 info
+# 練習 2：解題提示與 Entity
+### `entity/SurveyResponse.java`、`ResponseAnswer.java`
 
 ```java
-@RestController
-@RequestMapping("/session")
-public class SessionController {
+@Entity
+@Table(name = "survey_responses")
+@Getter
+@Setter
+public class SurveyResponse {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
-    @PostMapping("/login")
-    public String login(@RequestParam("username") String username,
-                        HttpSession session) {
-        session.setAttribute("username", username);
-        return "登入成功，Session ID：" + session.getId();
-    }
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "survey_id")
+    private Survey survey;
 
-    @GetMapping("/info")
-    public ResponseEntity<String> getSessionInfo(HttpSession session) {
-        String username = (String) session.getAttribute("username");
-        if (username == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("尚未登入");
+// ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+SurveyResponse 是作答紀錄，有作答者的基本資料，跟一個 List<ResponseAnswer> 作答明細，同樣用 cascade = ALL，存一筆作答紀錄，所有明細一起存。
+
+user 這個欄位是 nullable，因為訪客不需要登入就可以填寫，這時 user_id 是 null。現在我們還沒有會員功能，所以先不設定它，第 44 章加了登入後，才會把登入者填進去。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：解題提示與 Entity（續）
+### `entity/SurveyResponse.java`、`ResponseAnswer.java`
+
+```java
+// ... 接上一頁
+
+    // 訪客免登入，所以可為 null
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    private String name;
+    private String phone;
+    private String email;
+    private Integer age;
+    private LocalDateTime submittedAt;
+
+    @OneToMany(mappedBy = "response", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ResponseAnswer> answers = new ArrayList<>();
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+ResponseAnswer 是每題一筆的答案，同時關聯到 SurveyResponse 和 Question，answerText 存答案本身。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：解題提示與 Entity（續）
+### `entity/SurveyResponse.java`、`ResponseAnswer.java`
+
+```java
+@Entity
+@Table(name = "response_answers")
+@Getter
+@Setter
+public class ResponseAnswer {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "response_id")
+    private SurveyResponse response;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "question_id")
+    private Question question;
+
+    private String answerText; // 多選以分號 ; 串接
+}
+```
+
+```java
+public interface SurveyResponseRepository extends JpaRepository<SurveyResponse, Integer> {
+    boolean existsBySurveyIdAndEmail(Integer surveyId, String email);
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+Repository 只需要一個方法：existsBySurveyIdAndEmail。這是 Spring Data 的方法名稱查詢，SurveyId 對應到 survey.id 這個路徑，AndEmail 對應 email 欄位。方法名稱本身就是查詢，不需要寫任何 SQL。
+
+提示：如果啟動時 Hibernate 的 validate 報錯，通常是欄位名稱跟資料庫對不上，回頭檢查 Entity 的屬性和資料表欄位。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：解答（submit）
+### `service/ResponseService.java`、`SurveyController`
+
+```java
+    // ResponseService
+    @Transactional
+    public Integer submit(Integer surveyId, HttpSession session) {
+        ResponseDTO dto = getDraft(surveyId, session);
+        Survey survey = check(surveyId, dto);
+
+        SurveyResponse r = new SurveyResponse();
+        r.setSurvey(survey);
+        r.setName(dto.getName().trim());
+        r.setPhone(dto.getPhone());
+        r.setEmail(dto.getEmail().trim().toLowerCase());
+        r.setAge(dto.getAge());
+        r.setSubmittedAt(LocalDateTime.now());
+
+    // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+submit 一步一步來：先從 Session 讀暫存，讀不到就是 409；再呼叫 check 重新檢查一次；然後建立 SurveyResponse，把基本資料複製進去；接著逐題建立 ResponseAnswer。
+
+這裡用 String.join(";", values) 把多個值串起來。單選題、文字題只有一個值，串接的結果就是它自己，不需要特別判斷題型。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：解答（submit）（續）
+### `service/ResponseService.java`、`SurveyController`
+
+```java
+        // ... 接上一頁
+
+        Map<Integer, Question> questions = survey.getQuestions().stream()
+                .collect(Collectors.toMap(Question::getId, q -> q));
+        for (AnswerDTO a : dto.getAnswers()) {
+            List<String> values = cleanValues(a);
+            if (values.isEmpty()) continue; // 選填題沒回答就不存
+            ResponseAnswer ra = new ResponseAnswer();
+            ra.setResponse(r);
+            ra.setQuestion(questions.get(a.getQuestionId()));
+            ra.setAnswerText(String.join(";", values)); // 多選以分號串接
+            r.getAnswers().add(ra);
         }
-        return ResponseEntity.ok("目前登入：" + username);
-    }
-}
+        try {
+            responseRepository.saveAndFlush(r);
+        } catch (DataIntegrityViolationException e) {
+            // 兩個人同時送出時，程式檢查會漏，UNIQUE(survey_id, email) 是最後防線
+
+        // ... 見下一頁
 ```
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-login 跟練習 1 完全一樣。info 的差異在回傳型別改成 ResponseEntity<String>——沒登入時回傳 401 Unauthorized，而不是原本的普通字串。
+沒回答的選填題，values 是空的，就直接 continue 跳過，不寫入資料庫。這樣後台看回饋的時候，沒答的題目就不會出現，也能區分「沒回答」和「回答空字串」。
+
+saveAndFlush 而不是 save：save 只是把資料放到 JPA 的暫存區，等到交易結束才會真的送 SQL，那時候才發現違反唯一約束，例外會在方法之外丟出，try/catch 就接不到了。saveAndFlush 會立刻送出 SQL，違反約束的例外就會在 try 裡面被接到。
 -->
 
 ---
+layout: default
+---
 
-# 練習 2：解答程式碼 — logout 與設定
+# 練習 2：解答（submit）（續）
+### `service/ResponseService.java`、`SurveyController`
 
 ```java
-    @PostMapping("/logout")
-    public String logout(HttpSession session) {
-        session.invalidate();
-        return "已登出";
+    // ... 接上一頁
+
+            throw new BizException(RspCode.ALREADY_RESPONDED);
+        }
+        draftService.clearResponse(session, surveyId);
+        return r.getId();
     }
+```
+
+```java
+@PostMapping("/api/surveys/{id}/submit")
+public AppResponse<Map<String, Integer>> submit(@PathVariable("id") Integer id, HttpSession session) {
+    return AppResponse.success(Map.of("responseId", responseService.submit(id, session)));
 }
 ```
 
-```properties
-server.servlet.session.timeout=2m
-```
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-logout 呼叫 invalidate() 徹底清空 Session，屬於同一個 SessionController 類別。timeout 設 2 分鐘方便測試，實務上要記得改回 30m。
+成功寫入之後，清除這份問卷的 Session 暫存，使用者按上一頁再重複送出，就會得到 NO_DRAFT，不會重複寫入。
+
+方法上有 @Transactional：整筆作答紀錄跟所有答案，要嘛全部成功，要嘛全部失敗，不會留下只有作答者、沒有答案的殘缺資料。
 -->
 
+---
+layout: default
 ---
 
 # 練習 2：Postman 測試
 
-| 步驟 | Method / URL | 動作 | 預期回應 |
-| --- | --- | --- | --- |
-| 1 | `POST /session/login?username=Tom` | 登入 | `登入成功，Session ID：xxxxxxxx` |
-| 2 | `GET /session/info` | 立即查詢 | `200 OK`，`目前登入：Tom` |
-| 3 | `POST /session/logout` | 登出 | `已登出` |
-| 4 | `GET /session/info` | 登出後查詢 | `401 Unauthorized`，`尚未登入` |
-| 5 | 重新登入後等 2 分鐘，再 `GET /session/info` | 閒置過期 | `401 Unauthorized`，`尚未登入` |
+| 步驟 | 動作 | 預期結果 |
+| --- | --- | --- |
+| 1 | 練習 1 的 `POST /api/surveys/2/draft`（`t1@example.com`） | 200 |
+| 2 | `POST /api/surveys/2/submit` | 200，回傳 `{"responseId": 11}` |
+| 3 | 再次 `POST /api/surveys/2/submit` | **409** `NO_DRAFT`（暫存已清除） |
+| 4 | 重新暫存**同一個 Email**，再送出 | 暫存階段就 **409** `ALREADY_RESPONDED` |
+| 5 | 直接送出（不經過暫存）：換一個沒有 Session 的 Cookie | **409** `NO_DRAFT` |
 
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>驗證重點：</b> 步驟 3 之後 Session 已被 <code>invalidate()</code> 主動清除；步驟 5 則是驗證 <code>timeout=2m</code> 的被動過期效果——兩者都應該回傳 401。
-</div>
+驗證資料庫：
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-步驟 1–4 驗證主動登出（invalidate）的效果；步驟 5 驗證被動過期（timeout）的效果。兩種情境都要讓學生實際在 Postman 上看到 401，才算真的搞懂過期與失效的差異。
+步驟 1、2 是正常的流程。步驟 3 是為了驗證暫存被清除，這很重要，避免使用者在瀏覽器上按重新整理，造成重複送出。
+
+步驟 4 有一個值得討論的細節：同一個 Email 已經填過，在暫存的時候就被擋下來了，因為 saveDraft 也呼叫 check，check 裡面有 existsBy 的查詢。這是給使用者更好的體驗：不用填完整份問卷，按下送出才發現填過了。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：Postman 測試（續）
+
+```sql
+SELECT r.id, r.name, r.email, a.question_id, a.answer_text
+FROM survey_responses r JOIN response_answers a ON a.response_id = r.id
+WHERE r.email = 't1@example.com';
+-- 題目 2（多選）的 answer_text 應該是 青菜;豆腐
+```
+
+<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>進階：</b>想驗證資料庫的最後防線？用兩個 Postman 分頁（兩個不同 Cookie）暫存<b>同一個 Email</b>，再依序送出，第二個送出也會得到 409，而且這時擋下它的是 <code>UNIQUE (survey_id, email)</code> 約束。
+</div>
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+進階的驗證，是為了看到資料庫這道最後防線的效果。用兩個不同的 Cookie，代表兩個瀏覽器，各自暫存同一個 Email，此時兩個暫存階段都會通過，因為還沒有人送出。接著依序送出，第一個成功，第二個在 check 裡就會被擋下來。要真正觸發資料庫的唯一約束，需要兩個請求「同時」進入 submit，用 Postman 不容易做到，但是原理是一樣的：如果程式的檢查有漏洞，資料庫還會擋住。
+-->
+
+---
+layout: default
+---
+
+# 練習 3：後台編輯問卷的暫存（延伸）
+
+後台新增 / 編輯問卷分三步：**基本資料 → 題目 → 確認頁**。前兩步的資料都先暫存在 Session，到確認頁才寫入資料庫（「僅儲存」或「儲存並發佈」）。請實作：
+
+1. `DraftService` 加入後台版本的存取方法（key 固定為 `"adminSurveyDraft"`）
+2. `POST /api/admin/survey-draft`：`@Valid` 驗證後存入 Session（`SurveyDTO` 可以帶 `id`，代表編輯既有問卷）
+3. `GET /api/admin/survey-draft`：讀出暫存，給確認頁使用
+4. `POST /api/admin/survey-draft/commit?publish=true|false`：從 Session 取出，呼叫 `surveyService.save(dto, publish)` 寫入，成功後清除暫存；沒有暫存 → 409 `NO_DRAFT`
+5. Postman：暫存 → 讀取 → `commit?publish=false`（資料庫 `published = 0`）→ 再暫存一次 → `commit?publish=true`（`published = 1`）
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+這是選做的延伸練習，但很值得做，因為它是後台新增問卷的核心流程，而且它跟前台作答暫存幾乎是一模一樣的套路。
+
+有兩個地方要注意：
+
+第一，後台編輯的暫存，key 是固定的字串，因為同一個管理員同時只會編輯一份問卷，不需要跟問卷 id 綁定。
+
+第二，commit 的 publish 參數，決定要不要發佈：確認頁有兩個按鈕，「僅儲存」寫進資料庫但是不發佈，前台看不到；「儲存並發佈」寫進資料庫並且發佈，出現在前台列表頁。這兩個按鈕，對應的就是 publish=false 和 publish=true。
+
+還記得第 37 章的 save 方法嗎？它接收 publish 參數，也會檢查問卷是不是可以編輯。我們現在只是換了資料的來源：從 Session 來，而不是直接從請求 Body 來。
+-->
+
+---
+layout: default
+---
+
+# 練習 3：解答
+
+```java
+@Service
+public class DraftService {
+
+    private static final String ADMIN_SURVEY_KEY = "adminSurveyDraft";
+
+    // ... 前台作答暫存的部分（練習 1）
+
+    public void saveSurvey(HttpSession session, SurveyDTO dto) {
+        session.setAttribute(ADMIN_SURVEY_KEY, dto);
+    }
+
+    public SurveyDTO getSurvey(HttpSession session) {
+        return (SurveyDTO) session.getAttribute(ADMIN_SURVEY_KEY);
+    }
+
+    public void clearSurvey(HttpSession session) {
+        session.removeAttribute(ADMIN_SURVEY_KEY);
+    }
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+DraftService 的後台版本，跟前台幾乎一樣，只是 key 是固定的字串，不需要問卷 id。
+-->
+
+---
+layout: default
+---
+
+# 練習 3：解答（續）
+
+```java
+// AdminSurveyController
+    @PostMapping("/survey-draft")
+    public AppResponse<Void> saveDraft(@Valid @RequestBody SurveyDTO dto, HttpSession session) {
+        draftService.saveSurvey(session, dto);
+        return AppResponse.success();
+    }
+
+    @GetMapping("/survey-draft")
+    public AppResponse<SurveyDTO> getDraft(HttpSession session) {
+        return AppResponse.success(draftService.getSurvey(session));
+    }
+
+// ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+Controller 的三個方法：POST 存入暫存，前面加 @Valid，所以基本資料跟題目的格式在存進 Session 之前，就已經被檢查過了；GET 讀出暫存，給確認頁顯示；commit 是最後一步，從 Session 取出，呼叫 surveyService.save，寫進資料庫，然後清除暫存。
+
+commit 這個路徑，用 POST 而不是 GET，因為它會改變伺服器狀態，符合 REST 的語意。publish 是必填的參數，沒有預設值，強迫呼叫的人明確表態：要發佈還是不發佈。
+-->
+
+---
+layout: default
+---
+
+# 練習 3：解答（續）
+
+```java
+    // ... 接上一頁
+
+    /** 確認頁按「僅儲存」(publish=false) 或「儲存並發佈」(publish=true) */
+    @PostMapping("/survey-draft/commit")
+    public AppResponse<SurveyDTO> commit(@RequestParam(name = "publish") boolean publish, HttpSession session) {
+        SurveyDTO dto = draftService.getSurvey(session);
+        if (dto == null) throw new BizException(RspCode.NO_DRAFT);
+        SurveyDTO saved = surveyService.save(dto, publish);
+        draftService.clearSurvey(session);
+        return AppResponse.success(saved);
+    }
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+⚠️ 這裡有個設計上的取捨：後台的暫存，只存在伺服器的 Session 記憶體裡。如果管理員編輯到一半，伺服器重新啟動，暫存就會遺失。對於課程專案這樣就夠了，實務上如果資料很重要，可以改存資料庫，或是用 Redis 共享 Session。
 -->
 
 ---
@@ -545,6 +1301,8 @@ logout 呼叫 invalidate() 徹底清空 Session，屬於同一個 SessionControl
 | 核心 API | `setAttribute` / `getAttribute` / `invalidate` / `getId` |
 | 逾時設定 | `server.servlet.session.timeout=30m` |
 | 登出實作 | 呼叫 `session.invalidate()`，不能只刪除 attribute |
+| 問卷系統的應用 | 作答、後台編輯都先放 Session，確認頁才寫資料庫；key 要含問卷 id，放進去的物件要 `Serializable` |
+| 兩道防線 | 送出時重新檢查；重複填寫由 `UNIQUE(survey_id, email)` 當最後防線 |
 
 <!--
 今天的重點：

@@ -105,11 +105,11 @@ class: flex flex-col justify-center items-center text-center
 | --- | --- |
 | Project | **Gradle - Groovy** |
 | Language | **Java** |
-| Spring Boot | **3.5.14**（避免 SNAPSHOT / RC） |
+| Spring Boot | **4.1.1**（避免 SNAPSHOT / RC） |
 | Group | `com.example` |
 | Artifact | `demo` |
 | Packaging | **Jar** |
-| Java | **17** |
+| Java | **21** |
 
 </div>
 <div>
@@ -124,11 +124,11 @@ class: flex flex-col justify-center items-center text-center
 
 我們選擇 Gradle 而不是 Maven，因為這個課程用 Gradle 作為建構工具。Gradle 比 Maven 更現代，設定檔也比較簡潔。
 
-Language 選 Java，Spring Boot 版本選 3.5.14，這是目前課程對應的穩定版本。有 SNAPSHOT 或 RC 字樣的都不要選，那些是測試版，可能有不穩定的問題。
+Language 選 Java，Spring Boot 版本選 4.1.1，這是目前課程對應的穩定版本。⚠️ 畫面上如果最上面預設選的是 4.1.2 (SNAPSHOT) 這類版本，請不要選：SNAPSHOT 是每天重新編譯的開發版，同一個版本號在不同天下載的內容可能不同，跟著投影片做會對不上。有 SNAPSHOT 或 RC 字樣的都不要選，選最新的正式版就好。
 
 Group 和 Artifact 就是你專案的識別名稱，這裡先用預設的 com.example 和 demo 就好。
 
-Java 版本選 17，這是目前企業主流的 LTS 版本。
+Java 版本選 21，這是目前的 LTS 長期支援版本，跟我們在 Java 課程安裝的 JDK 21 一致。Spring Boot 4 最低需要 Java 17，選 21 可以直接用到新版語法。
 -->
 
 ---
@@ -279,21 +279,21 @@ Eclipse 就會開始幫我們下載所有依賴的 JAR 檔，第一次比較久�
 
 ---
 
-# 常見問題：Gradle 找不到 JDK 17
+# 常見問題：Gradle 找不到 JDK 21
 
 若 Refresh 後出現以下錯誤：
 
 ```
-Cannot find a Java installation matching: {languageVersion=17}
+Cannot find a Java installation matching: {languageVersion=21}
 Toolchain download repositories have not been configured.
 ```
 
-代表 Gradle Toolchain 偵測不到系統上的 JDK 17。修復方式：開啟 `build.gradle`，找到 `java { toolchain { ... } }` 區塊，改為：
+代表 Gradle Toolchain 偵測不到系統上的 JDK 21。修復方式：開啟 `build.gradle`，找到 `java { toolchain { ... } }` 區塊，改為：
 
 ```groovy
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 ```
 

@@ -720,143 +720,779 @@ POST /students（body 帶 phone: "0912345"）
 layout: default
 ---
 
-# 練習 1：為 CreateCourseRequest 加上驗證
-### 任務說明
+# 練習 1：為問卷 DTO 加上驗證
 
-承接第 37 章的課程管理練習，`CreateCourseRequest` 目前沒有任何驗證：
+承接第 37 章的問卷 CRUD，`SurveyDTO` 目前沒有任何驗證，前端送什麼都收。請依下表加上驗證：
 
-| 欄位 | 類型 | 驗證規則 |
+| DTO | 欄位 | 驗證規則（`message`） |
 | --- | --- | --- |
-| `name` | `String` | 不可為空白 |
-| `credit` | `Integer` | 最小值 1，最大值 10 |
+| `SurveyDTO` | `title` | 不可空白、最多 50 字（問卷名稱尚未填寫 / 問卷名稱最多 50 字） |
+| | `description` | 不可空白、最多 300 字 |
+| | `startDate` | 不可為 null，且**晚於今天**（開始日期必須晚於今天） |
+| | `endDate` | 不可為 null，且**在開始日期之後**（跨欄位規則） |
+| | `questions` | 每一題都要驗證（巢狀驗證） |
+| `QuestionDTO` | `title`、`type` | 題目不可空白、題型不可為 null |
+| `OptionDTO` | `label` | 選項不可空白、最多 100 字 |
 
 請完成：
-1. 在 `CreateCourseRequest.java` 加上對應的驗證 Annotation
-2. 在 `CourseController.java` 的 `create` 方法加上 `@Valid`
-3. 用 Postman 測試，傳入不合法資料，確認收到 HTTP 400
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-我們來做第一個練習，把剛學的驗證 Annotation 加進第 33 章已經建立的 CreateCourseRequest。
+我們來做第一個練習，把剛學的驗證 Annotation 加進第 37 章已經建立的問卷 DTO。這些規則直接來自需求文件：問卷名稱和說明必填、日期要防呆，不能是今天以前。
 
-大家先在腦海裡想一下：name 要用哪個 Annotation？credit 要用哪兩個？
+大家先在腦海裡想一下：標題要用哪兩個 Annotation？開始日期「晚於今天」用哪個？結束日期要「晚於開始日期」，這是兩個欄位互相比較，用什麼方法？
 
-想好了再動手，看看能不能一次寫對！記得先確認 build.gradle 有加 spring-boot-starter-validation 依賴，這是最常忘記的步驟。
--->
-
----
-
-# 練習 1：解題提示
-
-1. `name` → `@NotBlank(message = "課程名稱不能為空")`
-2. `credit` → `@Min(value = 1, message = "學分至少為 1")` + `@Max(value = 10, message = "學分不超過 10")`
-3. Controller 方法：`public CourseResponse create(@Valid @RequestBody CreateCourseRequest req)`
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-⚠️ <b>常見錯誤：</b> 忘記在 <code>build.gradle</code> 加 <code>spring-boot-starter-validation</code>，會出現 <code>@NotBlank cannot be resolved</code> 的編譯錯誤。
-</div>
-
-<!--
-三個步驟按順序做：先確認依賴，再標 Annotation，最後在 Controller 加 @Valid。
-
-用 Postman 傳一個空的 name，應該收到 400 Bad Request，回應裡有 Spring 預設的驗證錯誤訊息。
-
-有沒有成功看到 400 的回應？
--->
-
----
-
-# 練習 1：解答程式碼
-
-```java
-public class CreateCourseRequest {
-
-    @NotBlank(message = "課程名稱不能為空")
-    private String name;
-
-    @Min(value = 1, message = "學分至少為 1")
-    @Max(value = 10, message = "學分不超過 10")
-    private Integer credit;
-
-    // Getter 和 Setter
-}
-```
-
-```java
-@RestController
-public class CourseController {
-    @Autowired
-    private CourseService courseService;
-
-    @PostMapping("/courses")
-    public CourseResponse create(
-            @Valid @RequestBody CreateCourseRequest req) {
-        return courseService.createCourse(req);
-    }
-}
-```
-
-<!--
-CreateCourseRequest 兩個欄位各自標上驗證規則，Controller 只需要在 @RequestBody 前面加 @Valid，其餘不用改。
+提示一：@Future 是「必須在未來」，對日期來說，就是明天以後，正好符合「晚於今天」。@FutureOrPresent 才包含今天。
 -->
 
 ---
 layout: default
 ---
 
-# 練習 2：加上統一錯誤回應
-### 任務說明
+# 練習 1：為問卷 DTO 加上驗證（續）
 
-承接練習 1，目前驗證失敗的回應格式是 Spring 預設的，包含很多不必要的資訊。
+1. `build.gradle` 加入 `spring-boot-starter-validation`
+2. 在三個 DTO 加上對應的驗證 Annotation
+3. 在 `create`、`update` 的 `@RequestBody` 前加上 `@Valid`
+4. 用 Postman 傳入不合法資料（空標題、開始日期是今天、結束日期早於開始日期），確認收到 HTTP 400
 
-請建立 `ValidationExceptionHandler.java`，攔截驗證失敗並統一回傳：
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
-```json
-{
-  "errors": [
-    { "field": "name", "message": "課程名稱不能為空" }
-  ]
+<!--
+提示二：題目在 SurveyDTO 裡面是一個 List，List 裡面的元素要驗證，必須在 List 欄位上加 @Valid，否則 Spring 只會檢查最外層。
+
+提示三：跨欄位驗證，最簡單的做法是在 DTO 裡寫一個 isXxx() 方法，回傳 boolean，加上 @AssertTrue。
+
+想好了再動手，記得先確認 build.gradle 有加 spring-boot-starter-validation 依賴，這是最常忘記的步驟。
+-->
+
+---
+layout: default
+---
+
+# 練習 1：解題提示
+
+1. `title` → `@NotBlank(message = "問卷名稱尚未填寫")` + `@Size(max = 50, message = "問卷名稱最多 50 字")`
+2. `startDate` → `@NotNull` + `@Future(message = "開始日期必須晚於今天")`
+3. 「結束日期在開始日期之後」→ 在 DTO 寫 `isEndAfterStart()`，加 `@AssertTrue`；記得加 `@JsonIgnore`
+4. `questions`、`options` 這種 `List` → 欄位上加 `@Valid`，才會驗證每個元素
+5. Controller：`create(@Valid @RequestBody SurveyDTO dto, ...)`
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>常見錯誤：</b> ① 忘記加 <code>spring-boot-starter-validation</code>，出現 <code>@NotBlank cannot be resolved</code>；② <code>List</code> 欄位沒加 <code>@Valid</code>，巢狀的題目完全沒被檢查；③ <code>@AssertTrue</code> 的方法沒加 <code>@JsonIgnore</code>，回傳的 JSON 裡會多出一個 <code>endAfterStart</code> 欄位。
+</div>
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+三個步驟按順序做：先確認依賴，再標 Annotation，最後在 Controller 加 @Valid。
+
+@AssertTrue 的方法有兩個規則：方法名稱要以 is 開頭，Bean Validation 才會把它當成一個屬性；回傳型別是 boolean。當任何一個日期是 null 的時候，這個方法直接回傳 true，因為「日期不可為空」已經由 @NotNull 負責，我們不重複報錯。
+
+為什麼要加 @JsonIgnore？因為 Jackson 看到 isEndAfterStart() 也會把它當成一個叫 endAfterStart 的屬性，輸出到 JSON 裡；加了 @JsonIgnore，就不會了。
+
+用 Postman 傳一個空的 title，應該收到 400 Bad Request，回應裡有 Spring 預設的驗證錯誤訊息。有沒有成功看到 400 的回應？
+-->
+
+---
+layout: default
+---
+
+# 練習 1：解答程式碼（SurveyDTO）
+### `dto/SurveyDTO.java`
+
+```java
+@Getter
+@Setter
+public class SurveyDTO implements java.io.Serializable {
+    private Integer id;
+
+    @Schema(description = "問卷名稱，最多 50 字", example = "午餐偏好調查")
+    @NotBlank(message = "問卷名稱尚未填寫")
+    @Size(max = 50, message = "問卷名稱最多 50 字")
+    private String title;
+
+    @NotBlank(message = "問卷說明尚未填寫")
+    @Size(max = 300, message = "問卷說明最多 300 字")
+    private String description;
+
+    @Schema(description = "開始日期，必須晚於今天", example = "2026-10-01")
+    @NotNull(message = "請選擇開始日期")
+    @Future(message = "開始日期必須晚於今天")
+    private LocalDate startDate;
+
+    @NotNull(message = "請選擇結束日期")
+    private LocalDate endDate;
+
+    private boolean published;
+
+// ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+SurveyDTO 每個欄位各自標上驗證規則。
+
+@Size(max = 300) 跟資料庫的 VARCHAR(300) 對齊，確保資料到資料庫之前，就已經被擋掉，而不是等資料庫報錯。這是我們在 MySQL 課設計資料表時決定的長度。
+-->
+
+---
+layout: default
+---
+
+# 練習 1：解答程式碼（SurveyDTO）（續）
+### `dto/SurveyDTO.java`
+
+```java
+// ... 接上一頁
+
+    // 跨欄位規則：驗證方法必須以 is 開頭、回傳 boolean；@JsonIgnore 避免它被當成 JSON 屬性輸出
+    @JsonIgnore
+    @Schema(hidden = true)
+    @AssertTrue(message = "結束日期必須在開始日期之後")
+    public boolean isEndAfterStart() {
+        return startDate == null || endDate == null || endDate.isAfter(startDate);
+    }
+
+    // 以下由後端計算，前端不用傳
+    @Schema(description = "由後端計算，前端不用傳", accessMode = Schema.AccessMode.READ_ONLY)
+    private String status;       // DRAFT / NOT_STARTED / ONGOING / ENDED
+    private String statusLabel;  // 未發佈 / 尚未開始 / 進行中 / 已結束
+
+    @Valid
+    private List<QuestionDTO> questions = new ArrayList<>();
 }
 ```
 
-測試：用 Postman 傳入不合法資料，確認回應格式如上。
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-練習 2 要把剛才學的 @ControllerAdvice 用起來。
+isEndAfterStart() 這個方法，注意三個 Annotation：@JsonIgnore 讓它不進入 JSON；@Schema(hidden = true) 讓 Swagger 文件不顯示它；@AssertTrue 才是驗證的主角，method 名稱以 is 開頭，Bean Validation 才認得。
 
-這是業界實際開發一定會做的事：前端不想解析 Spring 預設的錯誤格式，所以後端要統一整理成友善的 JSON。
+還有 status 和 statusLabel 兩個由後端計算的欄位，前端傳來的值，Service 一律忽略，不必驗證。
 
-試著先不看 Part 5 的範例，自己寫看看。寫不出來再回去看——這樣學得最扎實。
+驗證訊息我們寫成前端可以直接顯示的句子，例如「問卷名稱尚未填寫」，這些字串跟需求文件的畫面是一致的。
 -->
 
 ---
+layout: default
+---
 
-# 練習 2：解題提示
+# 練習 1：解答程式碼（QuestionDTO、OptionDTO、Controller）
 
-1. 建立 `ValidationExceptionHandler.java`，加上 `@ControllerAdvice`
-2. 新增方法，加上 `@ExceptionHandler(MethodArgumentNotValidException.class)`
-3. 用 `ex.getBindingResult().getFieldErrors()` 取出所有欄位錯誤
-4. 整理成 `Map.of("errors", errors)` 回傳
+```java
+@Getter
+@Setter
+public class QuestionDTO implements java.io.Serializable {
+    private Integer id;
 
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>成功標準：</b> 傳空的 name，收到 400 且回應 JSON 裡有 <code>"field": "name"</code> 和你設定的 message 訊息。
-</div>
+    @NotBlank(message = "題目不可空白")
+    @Size(max = 200, message = "題目最多 200 字")
+    private String title;
+
+    @NotNull(message = "請選擇題型")
+    private QuestionType type;
+
+    private boolean required;
+
+    // 選項是「陣列」：單選、多選至少 2 個，文字題為空陣列
+    @Valid
+    private List<OptionDTO> options = new ArrayList<>();
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-做完之後，再用 Postman 試一次驗證失敗——這次回傳的 JSON 格式應該乾淨很多了。
+QuestionDTO 的 options 欄位加了 @Valid，這樣 OptionDTO 裡的 @NotBlank，才會真的被執行。SurveyDTO 的 questions 也是一樣的道理，一層一層往下，每個 List 欄位都要加。
 
-如果想挑戰進階版，可以再加上 ConstraintViolationException 的 handler，讓 @PathVariable 的驗證失敗也有一致的錯誤格式。
+Controller 只需要在 @RequestBody 前面加 @Valid，其餘不用改。update 方法也一樣加。
 -->
 
 ---
+layout: default
+---
 
-# 練習 2：解答參考
+# 練習 1：解答程式碼（QuestionDTO、OptionDTO、Controller）（續）
 
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ 程式碼與 <b>Part 5 -「@ControllerAdvice + @ExceptionHandler」</b> 那頁完全相同，攔截的是同一種 <code>MethodArgumentNotValidException</code>，直接沿用即可，不需要改任何邏輯——回去參考那頁的程式碼。
-</div>
+```java
+@Getter
+@Setter
+public class OptionDTO implements java.io.Serializable {
+    private Integer id;
+
+    @NotBlank(message = "選項不可空白")
+    @Size(max = 100, message = "選項最多 100 字")
+    private String label;
+}
+```
+
+```java
+@PostMapping("/api/admin/surveys")
+public SurveyDTO create(@Valid @RequestBody SurveyDTO dto,
+                        @RequestParam(name = "publish", defaultValue = "false") boolean publish) {
+    dto.setId(null);
+    return surveyService.save(dto, publish);
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-Course 練習跟 Student 範例攔截的例外類型一樣，Handler 程式碼不需要為了 Course 另外改寫，這就是統一錯誤處理的價值：一次寫好，全專案共用。
+驗證失敗時，Spring 會丟出 MethodArgumentNotValidException，預設回傳 400，但回應的格式是 Spring 預設的，資訊很雜。下一個練習我們就來統一整理。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：統一回應格式與錯誤處理
+
+目前驗證失敗的回應是 Spring 預設格式，而且 Service 丟的 `IllegalStateException` 會變成 500。請建立整個專案統一的回應與錯誤處理：
+
+1. `vo/AppResponse<T>`：欄位 `code`、`message`、`data`，提供 `success(data)`、`error(code)`
+2. `vo/RspCode`（enum）：每個代碼對應一個 **HTTP 狀態碼**與預設訊息，例如 `NOT_FOUND`(404)、`SURVEY_NOT_EDITABLE`(409)
+3. `exception/BizException`：業務例外，帶著一個 `RspCode`
+4. `exception/GlobalExceptionHandler`（`@RestControllerAdvice`）：
+   - `BizException` → 用 `RspCode` 的狀態碼回傳
+   - `MethodArgumentNotValidException` → 400，`message` 放所有錯誤訊息，`data` 放 `[{field, message}]`
+   - `Exception` → 500，不洩漏細節
+5. 把 `SurveyService` 的 `IllegalArgumentException` / `IllegalStateException` 改成 `BizException`
+6. Controller 回傳改成 `AppResponse.success(...)`，分頁結果包成 `PageResult`
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 成功回應：<code>{"code":"SUCCESS","message":"成功","data":{...}}</code>；失敗回應同樣格式，<code>data</code> 是 <code>null</code>（驗證失敗時是欄位錯誤陣列），HTTP 狀態碼則反映真正的錯誤類型。
+</div>
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+練習 2 要把剛才學的 @RestControllerAdvice 用起來，而且是整個專案共用的版本，之後每一章、每一個 API 都會沿用。
+
+這是業界實際開發一定會做的事：前端不想解析 Spring 預設的錯誤格式，所以後端要統一整理成友善的 JSON。而且前端只需要處理一種格式，不管成功失敗，都是 code、message、data。
+
+有一個設計決定要特別提醒：HTTP 狀態碼要不要跟著錯誤變化？有些教材會不管什麼錯誤，都回 200，再由 code 欄位告訴前端成功或失敗。這樣做簡單，但是瀏覽器的開發工具、監控系統、API 閘道都看不出來哪些請求失敗。我們的做法是兩者並用：HTTP 狀態碼是真的，code 欄位再提供更細的業務代碼。
+
+RspCode 每個常數帶一個 HttpStatus，這樣 Handler 只要一行 ResponseEntity.status(code.getStatus())，不需要為每種例外寫 if。
+
+試著先不看解答，自己寫看看，寫不出來再往下看。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：解答（RspCode、AppResponse、PageResult）
+
+```java
+@Getter
+public enum RspCode {
+    SUCCESS(HttpStatus.OK, "成功"),
+    VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "資料格式錯誤"),
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "請先登入"),
+    FORBIDDEN(HttpStatus.FORBIDDEN, "沒有權限"),
+    NOT_FOUND(HttpStatus.NOT_FOUND, "找不到資料"),
+    SURVEY_NOT_EDITABLE(HttpStatus.CONFLICT, "問卷已開始，無法修改或刪除"),
+    SURVEY_NOT_OPEN(HttpStatus.CONFLICT, "問卷不在填寫期間"),
+    SURVEY_NO_STATISTICS(HttpStatus.CONFLICT, "問卷尚未開始，沒有統計資料"),
+    ALREADY_RESPONDED(HttpStatus.CONFLICT, "此 Email 已經填寫過這份問卷"),
+    NO_DRAFT(HttpStatus.CONFLICT, "沒有暫存的資料，請重新填寫"),
+    EMAIL_EXISTS(HttpStatus.CONFLICT, "此 Email 已經註冊"),
+    LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "帳號或密碼錯誤"),
+    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "Token 無效或已過期"),
+    SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "系統發生錯誤");
+
+    private final HttpStatus status;
+    private final String message;
+
+    RspCode(HttpStatus status, String message) {
+        this.status = status;
+        this.message = message;
+    }
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+RspCode 是一個 enum，每個常數有兩個值：HTTP 狀態碼和預設訊息。常見的對應：
+400 是資料格式錯誤，401 是沒登入，403 是沒權限，404 是找不到，409 是「跟目前狀態衝突」，例如問卷已經開始，不能修改，或是這個 Email 已經填寫過。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：解答（RspCode、AppResponse、PageResult）（續）
+
+```java
+@Getter
+@AllArgsConstructor
+public class AppResponse<T> {
+    private final String code;
+    private final String message;
+    private final T data;
+
+    public static <T> AppResponse<T> success(T data) {
+        return new AppResponse<>(RspCode.SUCCESS.name(), RspCode.SUCCESS.getMessage(), data);
+    }
+
+    public static AppResponse<Void> success() {
+        return success(null);
+    }
+
+// ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+409 Conflict 很適合用在「請求本身格式沒問題，但是跟資料現在的狀態衝突」的情況。
+
+AppResponse 是一個泛型類別，data 的型別由呼叫的人決定。success(data) 回傳成功，error(code) 回傳失敗，data 是 null。static 方法讓呼叫端寫起來很簡潔：AppResponse.success(dto)。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：解答（RspCode、AppResponse、PageResult）（續）
+
+```java
+// ... 接上一頁
+
+    public static AppResponse<Void> error(RspCode code) {
+        return new AppResponse<>(code.name(), code.getMessage(), null);
+    }
+
+    public static AppResponse<Void> error(RspCode code, String message) {
+        return new AppResponse<>(code.name(), message, null);
+    }
+
+    public static <T> AppResponse<T> error(RspCode code, String message, T data) {
+        return new AppResponse<>(code.name(), message, data);
+    }
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+Lombok 的 @AllArgsConstructor 產生建構子，@Getter 產生 getter，Jackson 就是靠 getter 把它轉成 JSON。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：解答（PageResult、BizException、GlobalExceptionHandler）
+
+```java
+@Getter
+@AllArgsConstructor
+public class PageResult<T> {
+    private final List<T> content;
+    private final int page;          // 從 0 開始
+    private final int size;
+    private final long totalElements;
+    private final int totalPages;
+
+    public static <E, T> PageResult<T> of(Page<E> page, Function<E, T> mapper) {
+        return new PageResult<>(page.getContent().stream().map(mapper).toList(),
+                page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages());
+    }
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+PageResult 是我們自己定義的分頁格式。為什麼不直接回傳 Spring Data 的 Page？因為 Page 序列化出來的 JSON 有很多我們用不到的欄位，像 pageable、sort、first、last，而且 Spring 官方也不建議直接序列化 PageImpl。我們只保留前端需要的五個欄位：content、page、size、totalElements、totalPages。
+
+of() 這個靜態方法，接收一個 Page 和一個轉換函式，把 Page 裡的內容轉換成別的型別，同時保留分頁資訊。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：解答（PageResult、BizException、GlobalExceptionHandler）（續）
+
+```java
+@Getter
+public class BizException extends RuntimeException {
+    private final RspCode code;
+
+    public BizException(RspCode code) {
+        super(code.getMessage());
+        this.code = code;
+    }
+
+    public BizException(RspCode code, String message) {
+        super(message);
+        this.code = code;
+    }
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+BizException 是 RuntimeException，不需要在方法上宣告 throws，在 Service 裡任何地方都可以丟。帶著一個 RspCode，Handler 就知道要回什麼狀態碼。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：解答（GlobalExceptionHandler）
+
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(BizException.class)
+    public ResponseEntity<AppResponse<Void>> handleBiz(BizException e) {
+        return ResponseEntity.status(e.getCode().getStatus())
+                .body(AppResponse.error(e.getCode(), e.getMessage()));
+    }
+
+// ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+GlobalExceptionHandler 用 @RestControllerAdvice，攔截整個專案 Controller 丟出來的例外，每個 @ExceptionHandler 負責一種例外。
+
+BizException：直接用它帶的 RspCode 決定狀態碼。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：解答（GlobalExceptionHandler）（續）
+
+```java
+    // ... 接上一頁
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<AppResponse<List<FieldErrorVO>>> handleValid(MethodArgumentNotValidException e) {
+        List<FieldErrorVO> errors = e.getBindingResult().getFieldErrors().stream()
+                .map(f -> new FieldErrorVO(f.getField(), f.getDefaultMessage()))
+                .toList();
+        // message 只放訊息本身（前端直接跳提醒視窗）；data 保留欄位名稱，方便標紅欄位
+        String message = errors.stream().map(FieldErrorVO::message).collect(Collectors.joining("；"));
+        return ResponseEntity.badRequest().body(AppResponse.error(RspCode.VALIDATION_ERROR, message, errors));
+    }
+
+    // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+MethodArgumentNotValidException：這就是 @Valid 驗證失敗的例外。我們把每個欄位的錯誤整理成 FieldErrorVO，message 放所有錯誤訊息，用分號串起來，前端可以直接跳提醒視窗；data 放欄位陣列，方便標紅有問題的欄位。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：解答（GlobalExceptionHandler）（續）
+
+```java
+    // ... 接上一頁
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<AppResponse<Void>> handleUnreadable(HttpMessageNotReadableException e) {
+        return ResponseEntity.badRequest().body(AppResponse.error(RspCode.VALIDATION_ERROR, "請求內容格式錯誤"));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<AppResponse<Void>> handleNoResource(NoResourceFoundException e) {
+        return ResponseEntity.status(RspCode.NOT_FOUND.getStatus()).body(AppResponse.error(RspCode.NOT_FOUND));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<AppResponse<Void>> handleDenied(AccessDeniedException e) {
+        return ResponseEntity.status(RspCode.FORBIDDEN.getStatus()).body(AppResponse.error(RspCode.FORBIDDEN));
+    }
+
+    // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+HttpMessageNotReadableException 是 JSON 格式根本就錯了，例如少了逗號，回 400。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：解答（GlobalExceptionHandler）（續）
+
+```java
+// ... 接上一頁
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<AppResponse<Void>> handleOther(Exception e) {
+        log.error("未預期的錯誤：{}", e.getMessage(), e);   // ERROR：最後一個參數傳 e，才會印出完整 stack trace
+        return ResponseEntity.status(RspCode.SERVER_ERROR.getStatus()).body(AppResponse.error(RspCode.SERVER_ERROR));
+    }
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+最後一個 Exception，是最後的防線：不管是什麼沒預料到的例外，都回 500，訊息只有「系統發生錯誤」，不要把例外的細節丟給前端，那可能洩漏資料庫結構等敏感資訊；細節印在日誌裡就好，這在下一個章節會用 Logger 取代 printStackTrace。
+
+⚠️ 順序不重要：Spring 會自動挑選「最具體」的 Handler，所以 BizException 會由 handleBiz 處理，而不是最後的 Exception。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：解答（Service 與 Controller 的修改）
+
+```java
+// SurveyService：把一般例外換成 BizException
+private Survey findOrThrow(Integer id) {
+    return surveyRepository.findById(id)
+            .orElseThrow(() -> new BizException(RspCode.NOT_FOUND));
+}
+
+// save() 裡：進行中、已結束的問卷不能修改
+if (survey.getId() != null && !statusOf(survey).isEditable()) {
+    throw new BizException(RspCode.SURVEY_NOT_EDITABLE);
+}
+
+// deleteAll() 裡：任何一份已開始，整批都不刪
+for (Survey s : surveys) {
+    if (!statusOf(s).isEditable()) {
+        throw new BizException(RspCode.SURVEY_NOT_EDITABLE,
+                "「" + s.getTitle() + "」已開始，無法刪除");
+    }
+}
+
+// search() 改回傳 PageResult
+public PageResult<SurveyDTO> search(/* 參數不變 */) {
+    // ...
+    return PageResult.of(surveyRepository.search(keyword, start, end, publishedOnly, pageable),
+            s -> toDTO(s, false));
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+Service 的修改很單純：把 IllegalArgumentException 換成 BizException(RspCode.NOT_FOUND)，把 IllegalStateException 換成 BizException(RspCode.SURVEY_NOT_EDITABLE)。
+
+批次刪除的訊息，我們用 BizException 的第二個建構子，帶自訂訊息，告訴前端是哪一份問卷不能刪：「午餐偏好調查」已開始，無法刪除。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：解答（Service 與 Controller 的修改）（續）
+
+```java
+// SurveyController：回傳 AppResponse，分頁包成 PageResult
+@GetMapping("/api/surveys")
+public AppResponse<PageResult<SurveyDTO>> list(/* 參數不變 */) {
+    return AppResponse.success(surveyService.search(title, startDate, endDate, true, page, size));
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+Controller 的修改也很單純：所有的回傳值，都用 AppResponse.success() 包起來；分頁結果由 PageResult.of() 轉換，Service 的 search 方法回傳 PageResult。
+
+這裡有一個小細節：Service 現在回傳 PageResult，而不是 Spring 的 Page 了，所以 Service 的 search 要改成 PageResult.of(repository.search(...), s -> toDTO(s, false))。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：Postman 測試
+
+| 測試 | 預期結果 |
+| --- | --- |
+| `POST /api/admin/surveys`，`title` 傳 `""` | **400**，`code = VALIDATION_ERROR`，`message` 含「問卷名稱尚未填寫」，`data` 有 `{"field":"title", ...}` |
+| `startDate` 傳今天 | **400**，「開始日期必須晚於今天」 |
+| `endDate` 等於 `startDate` | **400**，「結束日期必須在開始日期之後」 |
+| 選項的 `label` 傳空白 | **400**（巢狀驗證生效） |
+| `PUT /api/admin/surveys/2`（進行中） | **409**，`code = SURVEY_NOT_EDITABLE` |
+| `GET /api/admin/surveys/999` | **404**，`code = NOT_FOUND` |
+| Body 傳壞掉的 JSON（少一個引號） | **400**，「請求內容格式錯誤」 |
+| 合法資料 `POST` | **200**，`code = SUCCESS`，`data` 是新增的問卷 |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>成功標準：</b> 不論成功或失敗，回應都是 <code>code / message / data</code> 三個欄位，而且 HTTP 狀態碼與錯誤類型相符。
+</div>
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+最後用 Postman 把每一種情況都試一遍。
+
+特別注意「選項的 label 傳空白」這一項：它會被擋下來，證明巢狀驗證是有效的。如果你沒看到 400，請回去檢查 QuestionDTO 的 options 欄位有沒有加 @Valid。
+
+還有 PUT 進行中的問卷，現在回傳 409 加上清楚的訊息，而不是之前的 500。狀態碼跟訊息都是從 RspCode 這個 enum 來的，要新增一種錯誤，只要在 enum 加一行，Handler 完全不用改。
+
+做完這兩個練習，後端的「門面」就完成了：驗證、統一回應、統一錯誤處理，之後不管加什麼新功能，都沿用這套規則。
 -->
 
 ---

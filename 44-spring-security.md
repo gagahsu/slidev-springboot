@@ -921,29 +921,44 @@ Collection<? extends GrantedAuthority> roles = auth.getAuthorities();
 layout: default
 ---
 
-# 練習一：設定 Spring Security 保護 REST API
-### 任務說明
+# 練習一：保護動態問卷的 REST API
 
-你有一個電商後台，需要設定以下安全規則：
+問卷系統要依「誰能做什麼」設定安全規則：
 
-1. `GET /api/products/**` — 公開，任何人可以存取
-2. `POST/PUT/DELETE /api/products/**` — 需要 `ADMIN` 角色
-3. `GET /api/orders/my` — 需要登入（任何角色）
-4. `/api/admin/**` — 需要 `ADMIN` 角色
-5. 其他所有路徑 — 需要登入
+1. `/api/auth/**` — 公開（註冊、登入）
+2. `GET /api/surveys/**` — 公開（前台列表、內頁、統計、讀取暫存）
+3. `POST /api/surveys/*/draft`、`POST /api/surveys/*/submit` — 公開（**訪客免登入**也能作答）
+4. `/api/admin/**` — 需要 `ADMIN` 角色（整個後台）
+5. `/api/users/**` — 需要登入（任何角色）
+6. 其他所有路徑 — 一律拒絕（`denyAll`）
 
-**測試帳號需求：**
-- `alice` / `pass123` → `USER` 角色
-- `bob` / `admin456` → `USER` + `ADMIN` 角色
+**測試帳號（先用記憶體帳號）：**
+- `admin@example.com` / `Passw0rd12` → `ADMIN` 角色
+- `ming@example.com` / `Passw0rd12` → `USER` 角色
 
-**要求：** 使用 SecurityFilterChain + Lambda DSL，關閉 CSRF。
+**要求：** 使用 `SecurityFilterChain` + Lambda DSL，開啟 HTTP Basic，關閉 CSRF。
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-這個練習涵蓋了我們學到的所有基本設定。
+這個練習把動態問卷的權限需求，翻譯成 Spring Security 的規則。可以對照需求文件：前台，訪客不用登入就能瀏覽和填寫；後台只有管理員能進去；會員相關的功能，要登入。
 
-試著啟動之後，用 Postman 測試看看：
-不帶認證呼叫 GET /api/products/ 應該成功，
-呼叫 DELETE /api/products/1 應該回 401 或 403。
+有幾個容易搞混的地方。
+
+第一，同一個路徑前綴 /api/surveys，GET 是公開的，POST 只有 draft 和 submit 兩個是公開的，其他的 POST，例如 POST /api/surveys 根本不存在，最後會被 denyAll 擋下。這種「預設拒絕」的設計很重要：只開放明確允許的，其他一律不行，比「只擋住明確禁止的」安全得多。
+
+第二，路徑裡有一個變數：問卷的 id。requestMatchers 支援 * 來代表「這一段是任意值」，所以 /api/surveys/*/draft 可以比對 /api/surveys/2/draft。
+
+第三，規則的順序：Spring Security 由上往下比對，第一個符合的就生效。所以比較具體的規則要寫在前面，anyRequest 一定放最後。
+
+啟動之後，用 Postman 測試看看：不帶認證呼叫 GET /api/surveys 應該成功；呼叫 GET /api/admin/surveys 應該回 401；用 ming 的帳號呼叫，應該回 403；用 admin 的帳號，才會成功。
 -->
 
 ---
@@ -951,30 +966,37 @@ layout: default
 ---
 
 # 練習一：解題提示
-### 提示說明
 
-1. HTTP Method 可以在 `requestMatchers` 的第一個參數指定：`requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()`
-2. 多個 HTTP Method 的規則要分開寫，PUT 和 DELETE 各寫一行 `requestMatchers`
-3. `PasswordEncoder` Bean 要獨立定義，再注入到 `UserDetailsService`，避免循環依賴
-4. 規則順序很重要：`/api/products/**` 的 POST/PUT/DELETE 限制要寫在 `anyRequest()` 之前
+1. HTTP Method 可以在 `requestMatchers` 的第一個參數指定：`requestMatchers(HttpMethod.GET, "/api/surveys/**").permitAll()`
+2. 同一個 Method 的多個路徑，可以寫在同一個 `requestMatchers` 裡：`requestMatchers(HttpMethod.POST, "/api/surveys/*/draft", "/api/surveys/*/submit")`
+3. 路徑中間的變數用 `*` 比對一層（`/api/surveys/2/draft`），`**` 比對任意多層
+4. `PasswordEncoder` Bean 要獨立定義，再注入到 `UserDetailsService`，避免循環依賴
+5. 規則順序很重要：`anyRequest().denyAll()` 一定寫在最後
+
+**401 和 403 的差別：** 401 是「你是誰？我不認識你」（沒帶帳密或帳密錯誤）；403 是「我知道你是誰，但你沒有權限」（登入了但角色不夠）。
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-最容易卡住的地方是 HTTP Method 的設定。
-requestMatchers 的第一個參數可以傳入 HttpMethod enum。
+最容易卡住的是路徑的比對規則。* 只比對一層，不含斜線；** 比對任意多層。所以 /api/surveys/* 不會符合 /api/surveys/2/draft，因為多了一層。
 
-另外密碼編碼器的循環依賴問題也是很多人會踩到的坑。
-PasswordEncoder 要定義成獨立的 Bean，不然 Spring 在初始化的時候可能會出問題。
+401 和 403 的差別，在 API 的設計上很重要，前端會依據這兩個狀態碼做不同的事：收到 401，會導向登入頁；收到 403，會顯示「沒有權限」的訊息。
 
-規則順序也是常見地雷：Spring Security 由上到下比對，
-精確規則沒寫在 anyRequest 前面就永遠輪不到它。
+另外密碼編碼器的循環依賴問題，也是很多人會踩到的坑。PasswordEncoder 要定義成獨立的 Bean，用參數注入，不要用欄位注入。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.82em !important; }
+layout: default
 ---
 
-# 練習一：解答程式碼 — SecurityConfig（1/2）
+# 練習一：解答（SecurityConfig 1/2）
 
 ```java
 @Configuration
@@ -988,90 +1010,121 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService(PasswordEncoder encoder) {
-        UserDetails alice = User.builder()
-            .username("alice")
-            .password(encoder.encode("pass123"))
-            .roles("USER")
-            .build();
-        UserDetails bob = User.builder()
-            .username("bob")
-            .password(encoder.encode("admin456"))
-            .roles("USER", "ADMIN")
-            .build();
-        return new InMemoryUserDetailsManager(alice, bob);
+        UserDetails admin = User.builder()
+                .username("admin@example.com")
+                .password(encoder.encode("Passw0rd12"))
+                .roles("ADMIN")
+                .build();
+        UserDetails ming = User.builder()
+                .username("ming@example.com")
+                .password(encoder.encode("Passw0rd12"))
+                .roles("USER")
+                .build();
+        return new InMemoryUserDetailsManager(admin, ming);
     }
-```
 
-<!--
-先看 PasswordEncoder 和 UserDetailsService 這兩個 Bean。
-PasswordEncoder 獨立定義，userDetailsService 用參數注入，避免循環依賴。
-alice 只有 USER 角色，bob 同時有 USER 和 ADMIN，對應題目的測試帳號需求。
-SecurityFilterChain 的部分在下一頁。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# 練習一：解答程式碼 — SecurityConfig（2/2）
-
-```java
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
-        http.authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/products/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/products/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMIN")
-                .requestMatchers("/api/orders/my").authenticated()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .anyRequest().authenticated()
-            )
-            .httpBasic(Customizer.withDefaults())
-            .csrf(csrf -> csrf.disable());
-        return http.build();
-    }
+    // SecurityFilterChain 見下一頁
 }
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>驗證：</b> 不帶認證呼叫 <code>GET /api/products/1</code> 應該 200；呼叫 <code>DELETE /api/products/1</code> 應該 401（未登入）或 403（登入但非 ADMIN）。
-</div>
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-GET /api/products/** 公開，POST/PUT/DELETE 各自限定 ADMIN，
-且都寫在 anyRequest 之前，符合順序規則。
-httpBasic 開啟才能用 Postman Basic Auth 測試。
+先看 PasswordEncoder 和 UserDetailsService 這兩個 Bean。
+
+PasswordEncoder 獨立定義，用 BCrypt 演算法：它每次加密，都會加入不同的隨機鹽，所以同樣的密碼，產生的密文每次都不一樣，這也是為什麼我們不能用 equals 比對密文，一定要用 encoder 的 matches。
+
+userDetailsService 用參數注入 encoder，建立兩個帳號：admin 有 ADMIN 角色，ming 只有 USER 角色。roles 方法會自動幫角色名稱加上 ROLE_ 的前綴，所以寫 roles("ADMIN")，Spring Security 內部是 ROLE_ADMIN；之後 hasRole("ADMIN") 也是一樣的規則。
+
+InMemoryUserDetailsManager 把帳號存在記憶體，適合測試跟練習。下一個練習，我們就會換成資料庫。
 -->
 
 ---
 layout: default
 ---
 
-# 練習二：整合資料庫用戶認證
-### 任務說明
+# 練習一：解答（SecurityConfig 2/2）
 
-把練習一的記憶體帳號換成資料庫帳號，**沿用 Part 7 的三件套**：
+```java
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http.authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/surveys/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/surveys/*/draft", "/api/surveys/*/submit").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/users/**").authenticated()
+                        .anyRequest().denyAll()
+                )
+                .httpBasic(Customizer.withDefaults())
+                .csrf(csrf -> csrf.disable());
+        return http.build();
+    }
+}
+```
 
-1. **`User` Entity** — Part 7 已經寫好，直接用（`role` 欄位存 `"USER"` / `"ADMIN"`）
-2. **`UserRepository`** — Part 7 已經寫好，提供 `findByUsername`
-3. **`CustomUserDetailsService`** — Part 7 已經寫好，`@Service` 自動註冊成 Bean
-4. **`SecurityConfig`** — 從練習一改造：刪掉 `InMemoryUserDetailsManager` 的 `@Bean`，路徑規則多開一條 `/api/register`
-5. **`UserController`**（新寫）
-   - `POST /api/register`（公開，不需登入）— 建立新用戶，密碼要用 `BCryptPasswordEncoder` 加密後再存
-   - `GET /api/me` — 回傳當前登入用戶的帳號名稱
+<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>驗證：</b> 不帶認證 <code>GET /api/surveys</code> → 200；<code>GET /api/admin/surveys</code> → <b>401</b>；用 ming（USER）→ <b>403</b>；用 admin → <b>200</b>；<code>DELETE /api/surveys/1</code> → 被 <code>denyAll</code> 擋下（401 / 403）。
+</div>
 
-**加分項目：** 在 `GET /api/me` 裡透過 `SecurityContextHolder` 取得當前用戶，不要用方法參數注入。
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-這個練習刻意不讓學生重寫 Entity 跟 Service —— Part 7 已經教過了，直接搬過來用。
-練習二真正要練的是「銜接」：把練習一的 InMemory 設定換掉，
-以及補上註冊 / 查詢自己身份的 API。
+GET /api/surveys/** 公開；POST 的 draft 和 submit 公開，讓訪客可以填寫問卷；/api/admin/** 限 ADMIN；/api/users/** 要登入；其他所有路徑全部拒絕。每一條規則都由具體到一般，符合順序規則。
 
-命名全章一致：User / UserRepository / CustomUserDetailsService，
-下一章 ch45 做 JWT 時會原封不動繼續用同一組類別。
+httpBasic 開啟才能用 Postman 的 Basic Auth 測試。csrf 關閉，因為我們是 REST API，不是用瀏覽器表單的網站，用不到 CSRF token，這個在 Part 9 已經討論過。
+
+測試的重點，是「四個帳號狀態」× 「前台後台兩種 API」的組合。特別建議大家測一個「不存在的路徑」，例如 GET /api/abc：因為最後有 denyAll，會得到 401 或 403，而不是 404，這也證明了「預設拒絕」有生效。
+-->
+
+---
+layout: default
+---
+
+# 練習二：整合資料庫的會員認證
+
+把練習一的記憶體帳號換成 MySQL 的 `users` 表（**以 Email 當登入帳號**），並完成會員功能：
+
+1. `User` Entity（對應 `users` 表）、`UserRepository`（`findByEmail`）、`CustomUserDetailsService`（沿用 Part 7 的做法，把 `loadUserByUsername(email)` 換成 email 查詢）
+2. `SecurityConfig`：**移除**記憶體帳號的 `userDetailsService` Bean，只留 `PasswordEncoder` 與規則
+3. `POST /api/auth/register`：註冊會員（姓名必填；Email 格式；**密碼 8～12 字元**；手機 `09` 開頭共 10 碼）
+   - 密碼用 `passwordEncoder.encode()` 加密後才存；角色固定為 `USER`
+   - Email 已註冊 → **409** `EMAIL_EXISTS`
+4. `GET /api/users/me`、`PUT /api/users/me`：查詢、修改自己的姓名與手機
+5. **登入者作答自動關聯**：登入的會員送出作答時，`survey_responses.user_id` 要填入；訪客則維持 `NULL`。並新增 `GET /api/users/me/responses`（我的填寫紀錄，最新的在前）
+6. Postman（Basic Auth）驗證整個流程
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+練習二要把練習一的記憶體帳號，換成真正的資料庫會員。資料庫的 users 表，在 MySQL 課已經設計好了：name、email、password、phone、role。這裡有一個小小的調整：Spring Security 的「username」這個概念，我們用 Email 來當帳號，所以 loadUserByUsername 的參數，其實就是 Email。
+
+注意 seed.sql 裡的三個帳號，密碼欄位已經是 BCrypt 雜湊，密碼是 Passw0rd12，所以你可以直接用它們登入，不需要再手動 encode。
+
+第 5 點是需求文件裡的「會員功能」：登入的會員，可以看到自己過去填寫過的問卷。關鍵是，前台作答本身不強制登入，訪客也能填，所以 user 這個欄位是可選的：有登入，就關聯；沒登入，就是 null。實作上，Controller 用 @AuthenticationPrincipal 注入目前登入者，訪客的時候，這個值是 null。
+
+大家先想想看：註冊時，為什麼角色要固定是 USER，而不是讓前端傳進來？
 -->
 
 ---
@@ -1079,268 +1132,424 @@ layout: default
 ---
 
 # 練習二：解題提示
-### 提示說明
 
-1. `User` 的 `role` 欄位存**不帶前綴**的字串（`"USER"` / `"ADMIN"`），搭配 `.roles(user.getRole())`，Spring 會自動補上 `ROLE_` 前綴 —— 這樣 `hasRole("ADMIN")` 才比對得到
-2. 練習一手動宣告的 `userDetailsService()` `@Bean` 要**整段刪掉**，否則跟 `CustomUserDetailsService` 撞型別，`NoUniqueBeanDefinitionException` 啟動失敗
-3. 啟用 HTTP Basic 認證：`http.httpBasic(Customizer.withDefaults())`；Postman 在 Authorization 頁籤選 Basic Auth 填帳密即可測
-4. 取得當前用戶：`SecurityContextHolder.getContext().getAuthentication().getName()`
-5. `POST /api/register` 要記得在 `authorizeHttpRequests` 裡 `permitAll()`，不然新用戶連註冊都要先登入，變成雞生蛋問題
+1. 三件套（Entity / Repository / UserDetailsService）套路跟 Part 7 一樣，差別只在：帳號欄位是 `email`；`role` 存 `"USER"` / `"ADMIN"`，不帶 `ROLE_` 前綴
+2. `RegisterRequest` 可以用 Java `record`，驗證註解直接標在 record 的參數上
+3. 註冊前先 `existsByEmail` 檢查；Email 統一轉小寫存入
+4. 取得目前登入者：`@AuthenticationPrincipal UserDetails user`，`user.getUsername()` 就是 Email；**匿名訪客時 `user` 是 `null`**
+5. `ResponseService.submit` 多接一個 `String userEmail`，不是 `null` 才查 `User` 並 `setUser(...)`
+6. 「我的紀錄」：`SurveyResponseRepository` 加 `findByUserIdOrderByIdDesc(Integer userId)`
 
-<div class="mt-3 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>只能二選一：</b> DB 存 <code>"USER"</code> 就用 <code>.roles()</code>；DB 存 <code>"ROLE_USER"</code> 就要改用 <code>.authorities()</code>。兩者混用會變成 <code>ROLE_ROLE_USER</code>，權限永遠比對不到。本章統一採用前者。
+<div class="mt-2 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>小提醒：</b>你自己的 Entity 叫 <code>User</code>，跟 <code>org.springframework.security.core.userdetails.User</code> 同名，import 不要選錯；<code>CustomUserDetailsService</code> 裡建構 Spring 的 <code>User</code> 時，請直接寫完整套件名稱。
 </div>
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-三個容易踩的坑：
+第 1 點：整個套路跟第 7 個 Part 完全一樣。
 
-第一是 roles 跟 authorities 的差異。本章統一：資料庫存 "USER"、"ADMIN" 這種短字串，
-程式用 .roles()，Spring 幫你加 ROLE_ 前綴。
-如果反過來資料庫存 ROLE_USER 又用 .roles()，就會疊成 ROLE_ROLE_USER，全部權限失效。
+第 2 點：Java record 是 Java 16 之後的功能，適合用來寫單純的資料載體，後面第 45 章會詳細介紹。驗證註解可以直接標在 record 的參數上。
 
-第二是刪掉練習一的 InMemory Bean，這就是 Part 7 那頁講的銜接問題。
+第 3 點：Email 統一轉小寫，避免 A@x.com 和 a@x.com 被當成兩個不同的使用者。
 
-第三是 /api/register 要記得 permitAll，這是最容易漏掉的地方——
-沒開的話新用戶要先登入才能註冊，邏輯上矛盾。
+第 4 點，很重要：@AuthenticationPrincipal 注入的型別，要跟 Authentication 裡面存放的 principal 型別一致。現在我們用 Spring 的 UserDetails，所以參數型別寫 UserDetails。如果訪客沒有登入，Spring Security 的 principal 是字串 anonymousUser，型別對不上，注入的結果就是 null，這正是我們想要的行為。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.82em !important; }
+layout: default
 ---
 
-# 練習二：解答程式碼 — 資料層三件套（直接沿用 Part 7）
-
-這三個類別 **Part 7 已經寫過，一行都不用改**，複製過來即可：
+# 練習二：解答（User、UserRepository、CustomUserDetailsService）
 
 ```java
-@Entity @Table(name = "users")
+@Entity
+@Table(name = "users")
+@Getter
+@Setter
 public class User {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    @Column(nullable = false, unique = true) private String username;
-    @Column(nullable = false) private String password;   // BCrypt 密文
-    @Column(nullable = false) private String role;       // "USER" / "ADMIN"，不帶 ROLE_ 前綴
-    private boolean enabled = true;
-    // getter / setter 省略
-}
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
-public interface UserRepository extends JpaRepository<User, Long> {
-    Optional<User> findByUsername(String username);
+    private String name;
+    private String email;
+    private String password;
+    private String phone;
+    private String role; // USER / ADMIN
 }
 ```
 
-<div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <code>CustomUserDetailsService</code> 也原封不動沿用 Part 7 的版本（下一頁再看一次重點）。
-</div>
+```java
+public interface UserRepository extends JpaRepository<User, Integer> {
+    Optional<User> findByEmail(String email);
+
+    boolean existsByEmail(String email);
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-刻意不讓學生重寫一套 Member/MemberRepository —— Part 7 教過的東西就直接用，
-這樣從 Part 7 到練習二、再到下一章 ch45，類別名稱從頭到尾都是同一組，
-學生腦中只需要維護一份心智模型。
+User Entity 對應 users 表：name、email、password、phone、role。一樣用 @Getter、@Setter，不用 @Data。
 
-再強調一次 role 欄位：存 "USER" 而不是 "ROLE_USER"，因為下一頁用的是 .roles()。
+UserRepository 有兩個方法：findByEmail，給 UserDetailsService 和個人資料使用；existsByEmail 給註冊時檢查使用。都是 Spring Data 的方法名稱查詢，不用寫 SQL。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.82em !important; }
+layout: default
 ---
 
-# 練習二：解答程式碼 — CustomUserDetailsService（Part 7 原版）
+# 練習二：解答（User、UserRepository、CustomUserDetailsService）（續）
 
 ```java
-@Service   // ← 有這個註解，Spring 自動註冊成 UserDetailsService Bean
+@Service
+@RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
+    /** 本系統用 Email 當登入帳號（Spring Security 稱為 username） */
     @Override
-    public UserDetails loadUserByUsername(String username)
-            throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
-            .orElseThrow(() ->
-                new UsernameNotFoundException("找不到使用者：" + username));
-
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("找不到使用者：" + email));
         return org.springframework.security.core.userdetails.User
-            .withUsername(user.getUsername())
-            .password(user.getPassword())
-            .roles(user.getRole())   // DB 存 "USER"，Spring 自動補成 ROLE_USER
-            .build();
+                .withUsername(user.getEmail())
+                .password(user.getPassword())
+                .roles(user.getRole())      // "USER" / "ADMIN"，Spring 會自動加上 ROLE_ 前綴
+                .build();
     }
 }
 ```
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-跟 Part 7 完全一樣，一行都沒改。
+CustomUserDetailsService 是 Spring Security 登入時會自動呼叫的類別：使用者送來 Email，它從資料庫查出使用者，轉成 Spring Security 認得的 UserDetails，內容是帳號、BCrypt 密文、還有角色。密碼比對是 Spring Security 自己做的，我們只負責提供資料。
 
-再說一次 roles() 的規則：DB 存 "USER"，roles() 會自動補 ROLE_ 前綴變成 ROLE_USER，
-這樣練習一寫的 hasRole("ADMIN") 才比對得到。
-如果 DB 改存 "ROLE_ADMIN"，就要改用 authorities()，否則會疊成 ROLE_ROLE_ADMIN。
-
-這個 @Service 本身就實作了 UserDetailsService，Spring 開機自動偵測、註冊成 Bean，
-不需要在 SecurityConfig 裡再手動宣告 userDetailsService()。
+注意 Spring 的 User 用的是完整套件名稱寫法，避免跟我們自己的 User Entity 混淆。roles(user.getRole()) 的角色不用自己加 ROLE_，Spring 會處理。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.82em !important; }
+layout: default
 ---
 
-# 練習二：解答程式碼 — SecurityConfig（1/3）class 骨架
+# 練習二：解答（SecurityConfig — 資料庫版）
 
 ```java
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+    // 密碼加密器獨立定義；CustomUserDetailsService 是 @Service，Spring Security 會自動使用它
     @Bean
-    public PasswordEncoder passwordEncoder() {   // 跟練習一完全相同
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+// ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+跟練習一比，SecurityConfig 少了 userDetailsService 那個 Bean。因為 CustomUserDetailsService 已經用 @Service 註冊成 Bean，Spring Security 啟動時會自動找到它，用它來認證。這就是為什麼刪掉記憶體帳號的 Bean，其他規則完全不用改。
+
+如果同時有兩個 UserDetailsService Bean，Spring Security 就搞不清楚要用哪個了，所以一定要刪掉。
+-->
+
+---
+layout: default
+---
+
+# 練習二：解答（SecurityConfig — 資料庫版）（續）
+
+```java
+// ... 接上一頁
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
-        http.authorizeHttpRequests(auth -> auth ... )   // 授權規則下一頁
-            .httpBasic(Customizer.withDefaults())
-            .csrf(csrf -> csrf.disable());
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http.authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/surveys/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/surveys/*/draft", "/api/surveys/*/submit").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/users/**").authenticated()
+                        .anyRequest().denyAll()
+                )
+                .httpBasic(Customizer.withDefaults())
+                .csrf(csrf -> csrf.disable());
+
         return http.build();
     }
 }
 ```
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-先看整體骨架：passwordEncoder 跟練習一完全相同可以直接沿用。
-authorizeHttpRequests 裡面的規則展開在下一頁。
+⚠️ 測試時如果登入失敗，先檢查三件事：資料庫的 password 欄位是不是 BCrypt 密文（開頭是 $2a$ 或 $2b$）；密文有沒有被截斷（欄位長度要 100 以上，MySQL 課我們設計好了）；還有 Postman 的 Basic Auth 帳號欄位是不是填 Email。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.82em !important; }
+layout: default
 ---
 
-# 練習二：解答程式碼 — SecurityConfig（2/3）授權規則
-
-`authorizeHttpRequests` 沿用**練習一同一組路徑規則**，只多加 `/api/register` 公開：
+# 練習二：解答（註冊、個人資料）
 
 ```java
-http.authorizeHttpRequests(auth -> auth
-        .requestMatchers(HttpMethod.POST, "/api/register").permitAll()
-        .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
-        .requestMatchers(HttpMethod.POST, "/api/products/**").hasRole("ADMIN")
-        .requestMatchers(HttpMethod.PUT, "/api/products/**").hasRole("ADMIN")
-        .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMIN")
-        .requestMatchers("/api/orders/my").authenticated()
-        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-        // ↓ anyRequest / httpBasic / csrf 見下一頁
-```
+public class AuthDTO {
 
-<!--
-authorizeHttpRequests 整組規則跟練習一一模一樣，只在最前面加一行
-/api/register 的 permitAll，讓學生一眼看出兩份設定的關聯，不會誤以為是兩套邏輯。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# 練習二：解答程式碼 — SecurityConfig（3/3）
-
-```java
-                .anyRequest().authenticated()
-            )
-            .httpBasic(Customizer.withDefaults())
-            .csrf(csrf -> csrf.disable());
-        return http.build();
+    public record RegisterRequest(
+            @NotBlank(message = "請輸入姓名") String name,
+            @NotBlank(message = "請輸入 Email") @Email(message = "Email 格式錯誤") String email,
+            @NotBlank(message = "請輸入密碼") @Size(min = 8, max = 12, message = "密碼需 8 到 12 個字元") String password,
+            @Pattern(regexp = "^09\\d{8}$", message = "手機格式錯誤（09 開頭，共 10 碼）") String phone) {
     }
-
-    // 不用再宣告 userDetailsService()！
-    // CustomUserDetailsService（@Service）已經是 UserDetailsService，
-    // Spring 會自動偵測並取代練習一的 InMemory 版本。
+    // ... UserInfo、UpdateProfileRequest 等
 }
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>跟練習一唯一的差異：</b> <code>passwordEncoder()</code> 與路徑授權規則都相同，可以直接沿用；差別只有兩點——多一行 <code>/api/register</code> 的 <code>permitAll()</code>，以及練習一手動宣告的 <code>userDetailsService()</code>（InMemory）要整段刪掉，換成資料庫版的 <code>CustomUserDetailsService</code>，兩者不能並存。
-</div>
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-強調差異只有兩點，其餘都能整段複製練習一的 SecurityConfig，降低學生的認知負擔。
+RegisterRequest 用 record 寫，驗證註解直接標在參數上：密碼規定 8 到 12 個字元。
+
+register 有幾個重點：先查 Email 有沒有註冊過，有就丟 EMAIL_EXISTS，轉成 409。密碼一定要先過 passwordEncoder.encode()，不能把明文密碼存進資料庫。角色固定給 USER：如果讓前端傳角色，有人就可以送 ADMIN，把自己註冊成管理員，這是很典型的權限提升漏洞。管理員帳號只能由資料庫直接建立。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.82em !important; }
+layout: default
 ---
 
-# 練習二：解答程式碼 — UserController（1/2）註冊
+# 練習二：解答（註冊、個人資料）（續）
 
 ```java
-public record RegisterRequest(String username, String password) {}
+    public UserInfo register(RegisterRequest req) {
+        String email = req.email().trim().toLowerCase();
+        if (userRepository.existsByEmail(email)) {
+            throw new BizException(RspCode.EMAIL_EXISTS);
+        }
+        User u = new User();
+        u.setName(req.name().trim());
+        u.setEmail(email);
+        u.setPassword(passwordEncoder.encode(req.password())); // 只存 BCrypt 雜湊
+        u.setPhone(req.phone());
+        u.setRole("USER");                                      // 註冊一律是一般會員，不開放自己指定角色
+        return toInfo(userRepository.save(u));
+    }
+```
 
+```java
+    @PostMapping("/register")
+    public AppResponse<UserInfo> register(@Valid @RequestBody RegisterRequest req) {
+        return AppResponse.success(userService.register(req));
+    }
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+回傳的 UserInfo 完全不含 password，即使是加密過的，也不該給前端看。這跟第 37 章的 PO 和 DTO 的觀念一樣。
+-->
+
+---
+layout: default
+---
+
+# 練習二：解答（我的資料、登入者作答）
+
+```java
 @RestController
+@RequestMapping("/api/users")
+@RequiredArgsConstructor
 public class UserController {
 
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final UserService userService;
+    private final ResponseService responseService;
 
-    @PostMapping("/api/register")
-    public String register(@RequestBody RegisterRequest req) {
-        User user = new User();                                    // 我們自己的 Entity
-        user.setUsername(req.username());
-        user.setPassword(passwordEncoder.encode(req.password()));  // 加密後再存
-        user.setRole("USER");                                      // 不帶 ROLE_ 前綴
-        userRepository.save(user);
-        return "註冊成功：" + user.getUsername();
+    @GetMapping("/me")
+    public AppResponse<UserInfo> me(@AuthenticationPrincipal UserDetails user) {
+        return AppResponse.success(userService.me(user.getUsername()));
+    }
+
+    @PutMapping("/me")
+    public AppResponse<UserInfo> update(@AuthenticationPrincipal UserDetails user,
+                                        @Valid @RequestBody UpdateProfileRequest req) {
+        return AppResponse.success(userService.updateProfile(user.getUsername(), req));
+    }
+
+    @GetMapping("/me/responses")
+    public AppResponse<List<ResponseDTO>> myResponses(@AuthenticationPrincipal UserDetails user) {
+        return AppResponse.success(responseService.mine(user.getUsername()));
     }
 }
 ```
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-密碼一定要先過 passwordEncoder.encode()，不能把明文密碼直接存進資料庫。
-role 固定給 "USER"（不帶 ROLE_ 前綴，跟 CustomUserDetailsService 的 .roles() 對應），
-實務上通常不開放使用者自己指定角色，避免有人把自己升成 ADMIN。
+UserController 的三個方法都不用檢查有沒有登入：因為 SecurityConfig 已經規定 /api/users/** 要登入，沒登入根本進不到這裡。
 
-小提醒：這個檔案裡的 User 是我們自己的 Entity，
-不要不小心 import 成 org.springframework.security.core.userdetails.User。
-
-這個端點在上一頁的 SecurityConfig 已設為 permitAll，未登入也能呼叫。
+@AuthenticationPrincipal UserDetails user：取得目前登入者。user.getUsername() 就是登入時用的 Email。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.82em !important; }
+layout: default
 ---
 
-# 練習二：解答程式碼 — UserController（2/2）查詢自己
-
-同一個 `UserController` 裡再加一個方法：
+# 練習二：解答（我的資料、登入者作答）（續）
 
 ```java
-    @GetMapping("/api/me")
-    public String me() {
-        return SecurityContextHolder.getContext()
-            .getAuthentication().getName();
+// SurveyController：submit 多接一個登入者（訪客為 null）
+@PostMapping("/api/surveys/{id}/submit")
+public AppResponse<Map<String, Integer>> submit(@PathVariable("id") Integer id, HttpSession session,
+                                                @AuthenticationPrincipal UserDetails user) {
+    String email = user == null ? null : user.getUsername();
+    return AppResponse.success(Map.of("responseId", responseService.submit(id, session, email)));
+}
+
+// ResponseService.submit：登入會員才關聯 user
+public Integer submit(Integer surveyId, HttpSession session, String userEmail) {
+    // ...（其餘同 ch40）
+    if (userEmail != null) {
+        r.setUser(userRepository.findByEmail(userEmail).orElse(null));
     }
+    // ...
+}
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>完整測試流程：</b> ① <code>POST /api/register</code> 註冊 alice ② Postman 選 Basic Auth 填 alice / 密碼 ③ <code>GET /api/me</code> 回傳 <code>alice</code>。
-</div>
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-注意這是接在上一頁同一個 UserController 裡面的方法，不是新的類別。
+前台作答的 submit，我們新增了 @AuthenticationPrincipal 參數。訪客沒有登入，值是 null，登入會員才有值。ResponseService 根據這個 Email 查出 User Entity，設定到作答紀錄上。
 
-用 SecurityContextHolder 拿目前登入用戶名稱，符合加分項目的要求（不用方法參數注入）。
-httpBasic 讓 Postman 能直接測 /api/me，帶 Basic Auth 帳密就能拿到當前登入者名稱。
+還記得資料表設計嗎？survey_responses.user_id 是可為 NULL 的，而且刪除會員時 ON DELETE SET NULL：會員帳號刪除，填寫的資料還在，只是變成匿名。
 
-這整套（User Entity + UserRepository + CustomUserDetailsService + SecurityConfig + UserController）
-下一章 ch45 做 JWT 時會直接接手繼續用，不會再換名字。
+最後不要忘記 SurveyResponseRepository 要加上 findByUserIdOrderByIdDesc，這樣「我的紀錄」才能最新的排在最前面。
+-->
+
+---
+layout: default
+---
+
+# 練習二：Postman 測試
+
+| 步驟 | 動作 | 預期結果 |
+| --- | --- | --- |
+| 1 | `POST /api/auth/register`：`{"name":"新會員","email":"new@example.com","password":"Abcd1234","phone":"0966000111"}` | 200，回傳的 `data` **沒有 password** |
+| 2 | 再送一次同樣的 Email | **409** `EMAIL_EXISTS` |
+| 3 | 密碼傳 `"short"` | **400**，「密碼需 8 到 12 個字元」 |
+| 4 | Basic Auth（`new@example.com` / `Abcd1234`）`GET /api/users/me` | 200，`role` 是 `USER` |
+| 5 | Basic Auth 密碼故意打錯 | **401** |
+| 6 | 用 `ming@example.com` / `Passw0rd12` 呼叫 `GET /api/admin/surveys` | **403** |
+| 7 | 用 `new@example.com` 暫存並 `POST /api/surveys/6/submit` | 200；MySQL：`survey_responses.user_id` 有值 |
+| 8 | 不帶帳密，暫存並送出另一份作答 | 200；`user_id` 是 `NULL`（訪客） |
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+這張表把整個練習串起來。特別是步驟 7 和 8，證明同一個 API，登入的會員和訪客，資料庫裡的紀錄是不同的：一個有 user_id，另一個是 NULL。
+
+步驟 1 之後，打開 MySQL 看 users 表，會看到剛註冊的會員，密碼欄位是一長串 $2a$10$ 開頭的字串，這就是 BCrypt 的密文，任何人（包含資料庫管理員）都看不出原本的密碼。
+-->
+
+---
+layout: default
+---
+
+# 練習二：Postman 測試（續）
+
+| 步驟 | 動作 | 預期結果 |
+| --- | --- | --- |
+| 9 | `GET /api/users/me/responses`（`new@example.com`） | 只有自己的紀錄，最新的在前 |
+
+<div class="mt-2 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>驗證重點：</b> 用 <code>SELECT id, user_id, email FROM survey_responses</code> 確認步驟 7、8 的差別；步驟 1 之後看 <code>users.password</code>，應該是 <code>$2a$</code> 開頭的密文。
+</div>
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+下一章，我們要把 HTTP Basic 換成 JWT：每次請求不再帶帳號密碼，而是帶一個有時效的 Token。
 -->
 
 ---

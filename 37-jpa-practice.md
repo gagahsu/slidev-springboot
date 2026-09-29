@@ -764,23 +764,120 @@ PUT 更新時，id 放在 URL 路徑，不是 Body 裡；Body 一樣是 name、p
 layout: default
 ---
 
-# 練習：課程管理 CRUD API
-### 任務說明
+# 練習：建立正式專案 dynamic-survey
 
-用 JPA 四層架構 + DTO 設計，實作「課程（Course）」CRUD API：
+從這個練習開始，我們不再用練習用的 `demo` 專案，而是建立**整個課程的正式專案**。到 https://start.spring.io 依下表設定：
 
-| 類別 | 欄位 | 說明 |
-| --- | --- | --- |
-| **Course（PO）** | id, name, credit, teacherPassword | 含敏感欄位 |
-| **CreateCourseRequest** | name, credit | 不含 id、不含密碼 |
-| **CourseResponse** | id, name, credit | 不含 teacherPassword |
+| 欄位 | 選擇值 |
+| --- | --- |
+| Project / Language | **Gradle - Groovy** / **Java** |
+| Spring Boot | **4.1.1**（不要選 SNAPSHOT） |
+| Group / Artifact | `com.example` / `dynamic-survey` |
+| Package name | `com.example.survey` |
+| Java / Packaging | **21** / **Jar** |
+| Dependencies | Spring Web、Spring Data JPA、MySQL Driver、Lombok |
 
-**目標 API：** GET `/courses`、POST `/courses`、DELETE `/courses/{id}`
+`application.properties`：
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-練習題把今天學的完整架構都用到了：Entity（PO）、Request DTO、Response DTO、Repository、Service、Controller。
+這個練習開始，我們要建立整個課程的正式專案，名字叫 dynamic-survey。前面的 demo 專案是練習用的，可以留著當參考，但之後的章節都在這個新專案裡累積程式碼，最後第 47 章會把它整合起來驗收。
 
-最重要的練習重點是：Course PO 有 teacherPassword 欄位，但 CourseResponse 刻意不包含它，這樣前端拿到的課程資料就不含密碼。
+Initializr 的設定跟第 3 章一樣，只是 Artifact 換成 dynamic-survey，Package name 是 com.example.survey。依賴選四個：Spring Web、Spring Data JPA、MySQL Driver 和 Lombok。後面的章節需要 Validation、Security 的時候，再回來 build.gradle 加。
+-->
+
+---
+layout: default
+---
+
+# 練習：建立正式專案 dynamic-survey（續）
+
+```properties
+spring.application.name=dynamic-survey
+spring.datasource.url=jdbc:mysql://localhost:3306/dynamic_survey?serverTimezone=Asia/Taipei&characterEncoding=utf-8
+spring.datasource.username=root
+spring.datasource.password=（你的 MySQL 密碼）
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.open-in-view=false
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+application.properties 有兩個值得講的地方。第一，ddl-auto 是 validate：資料庫的表已經在 MySQL 課建好了，Hibernate 只負責驗證 Entity 跟表對不對得上。第二，open-in-view 設成 false：這是 Spring Boot 預設會開的一個功能，讓 Entity 的延遲載入可以撐到 Controller 層，聽起來方便，但會讓資料庫連線被佔用太久，也讓「Entity 不能出 Service 層」這個原則被模糊掉。我們關掉它，強迫自己在 Service 裡就把資料轉成 DTO。
+
+⚠️ 執行之前，先確認 MySQL 已經跑過 schema.sql 和 seed.sql。
+-->
+
+---
+layout: default
+---
+
+# 練習：動態問卷 CRUD API
+
+用 JPA 四層架構 + DTO 設計，實作問卷（Survey）的查詢、新增、修改、批次刪除：
+
+| 類別 | 說明 |
+| --- | --- |
+| **Survey / Question / Option（PO）** | 對應 `surveys`、`questions`、`options` 三張表；一份問卷有多題，一題有多個選項 |
+| **SurveyDTO / QuestionDTO / OptionDTO** | 前端看到的格式，選項是**陣列**；`SurveyDTO` 多了計算出來的 `status` |
+| **SurveyStatus（enum）** | 由 `published` + 日期算出「未發佈 / 尚未開始 / 進行中 / 已結束」 |
+| **SurveyRepository** | 沿用 ch28 的 `search`（標題、日期區間、分頁） |
+| **SurveyService** | `search`、`get`、`save`、`deleteAll`、PO ↔ DTO 轉換 |
+
+**目標 API：** 前台 `GET /api/surveys`；後台 `GET /api/admin/surveys`、`GET /api/admin/surveys/{id}`、`POST` / `PUT /api/admin/surveys/{id}`、`DELETE /api/admin/surveys`
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+這一題把這章學的完整架構全部用上：Entity（PO）、DTO、Repository、Service、Controller，而且是真正的問卷系統會用到的 API。
+
+有三個重點要注意。第一，問卷和題目、題目和選項是一對多的關係，儲存的時候要用 cascade 一次存好，不要自己一筆一筆存。第二，狀態這個欄位在資料庫裡沒有，是 Service 在轉換 DTO 的時候，用 SurveyStatus 即時計算出來的，這跟本章的 ScoreVO 是同樣的概念：業務規則封裝在一個物件裡。第三，修改和刪除的限制，是後端的責任，即使前端把按鈕藏起來，有人直接打 API 也不能通過。
+-->
+
+---
+layout: default
+---
+
+# 練習：動態問卷 CRUD API（續）
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 只有「未發佈」與「尚未開始」的問卷可以修改、刪除；進行中與已結束的不行。這條規則要寫在 Service，不能只靠前端擋。
+</div>
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+API 路徑刻意用 /api/admin/ 和 /api/ 分開，前台只能看到已發佈的，後台看得到全部。現在還沒有登入功能，所以先不設權限，第 44 章學了 Spring Security 之後，再把 /api/admin/** 保護起來。
 -->
 
 ---
@@ -788,183 +885,971 @@ layout: default
 ---
 
 # 練習：解題步驟
-### 提示說明
 
 | 步驟 | 要建立的類別 | 關鍵重點 |
 | --- | --- | --- |
-| 1 | `Course`（PO） | `@Entity`、含 `teacherPassword` 欄位 |
-| 2 | `CreateCourseRequest`（DTO） | 只含 `name`、`credit`，不含 `id` |
-| 3 | `CourseResponse`（DTO） | 只含 `id`、`name`、`credit`，不含 `teacherPassword` |
-| 4 | `CourseRepository` | `extends JpaRepository<Course, Integer>` |
-| 5 | `CourseService` | `toResponse()`、`createCourse()`、`getAllCourses()` |
-| 6 | `CourseController` | 全程只用 DTO，不直接碰 PO |
+| 1 | `Survey`、`Question`、`Option`（PO） | `@OneToMany(cascade = ALL, orphanRemoval = true)`、`@OrderBy` |
+| 2 | `SurveyStatus`（enum） | `of(published, start, end, today)`、`isEditable()` |
+| 3 | 三個 DTO | 選項是 `List<OptionDTO>`；`SurveyDTO` 有 `status`、`statusLabel` |
+| 4 | `SurveyRepository` | ch28 的 `search` 方法（加一個 `publishedOnly` 參數） |
+| 5 | `SurveyService` | `Page.map` 轉 DTO、`save` 重建題目、`deleteAll` 檢查狀態 |
+| 6 | `SurveyController` | 全程只用 DTO，不直接碰 PO |
 
 <div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>驗證方式：</b> POST 新增課程後，GET 查詢，確認回應 JSON 裡沒有 <code>teacherPassword</code> 欄位。
+✅ <b>驗證方式：</b> Postman 新增一份問卷（含兩題），GET 取回確認題目與選項都在；再 PUT 修改、DELETE 刪除。對進行中的問卷 PUT / DELETE 應該失敗。
 </div>
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
 解題的核心心法：從 Entity（最底層）往上建，每一層都想清楚「我用的是 PO 還是 DTO？」
 
-建完 Service 之後，重點驗證：用 Postman 發 POST 新增一筆課程，再 GET 查詢，確認回應的 JSON 只有 id、name、credit，沒有 teacherPassword——這才算真正完成了資料安全設計。
+建議的順序是：先把三個 Entity 建好，啟動專案，看 Hibernate 的 validate 有沒有通過，這一步就能抓出所有欄位名稱、型別對不上的問題。接著寫 SurveyStatus，用單元測試或是 main 方法，先確認狀態計算是對的，這個邏輯是整個系統的核心。然後才是 DTO、Repository、Service、Controller。
+
+最後用 Postman 驗證。特別要測的是：新增一份有兩題的問卷，再 GET 回來，確認選項有出現、順序是對的；然後測試修改與刪除的限制。
 -->
 
 ---
+layout: default
+---
 
-# 練習解答：Entity（PO）
+# 練習解答：Entity — Survey
+### `entity/Survey.java`
 
 ```java
 @Entity
-public class Course {
+@Table(name = "surveys")
+@Getter
+@Setter
+public class Survey {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-    private String name;
-    private Integer credit;
-    private String teacherPassword; // DB 有，不應傳給前端
-    // Getter 和 Setter（省略）
+
+    private String title;
+    private String description;
+    private LocalDate startDate;
+    private LocalDate endDate;
+
+    @JdbcTypeCode(SqlTypes.TINYINT)
+    private Boolean published;
+
+    @OneToMany(mappedBy = "survey", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("orderIndex ASC")
+    private List<Question> questions = new ArrayList<>();
 }
 ```
 
-| 說明 | 詳情 |
-| --- | --- |
-| **含 `teacherPassword`** | 敏感欄位，只在 Repository ↔ Service 流動 |
-| **不能直接 return** | 不可讓 Controller 直接回傳這個 PO |
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-Course PO 對應資料庫的 course 表格，包含所有欄位，包括 teacherPassword。這個欄位不能出現在 Controller 回傳給前端的資料裡。
+Survey 是三個 Entity 的最上層。幾個重點：
+
+第一，@OneToMany(mappedBy = "survey", cascade = ALL, orphanRemoval = true)：mappedBy 表示外鍵在 Question 那邊，Survey 只是「反向」的關聯。cascade = ALL 讓我們儲存 Survey 的時候，底下的 Question 一起存；orphanRemoval = true 則是當我們把題目從 List 移除時，資料庫裡對應那一列會被刪除，而不是留下孤兒。
+
+第二，@OrderBy("orderIndex ASC")：關聯資料庫本身不保證順序，所以要用這個註解，確保取出來的題目順序，跟使用者編輯的順序一致。
+
+第三，published 用 @JdbcTypeCode(SqlTypes.TINYINT)。資料庫欄位是 TINYINT，Java 型別用 Boolean，這行讓 Hibernate 用 TINYINT 來對應，validate 才會通過。
+
+⚠️ 易錯點：Entity 不要用 @Data。@Data 會產生 equals、hashCode 和 toString，在有雙向關聯的時候，會互相呼叫而造成無窮迴圈。我們只用 @Getter 和 @Setter。
 -->
 
 ---
+layout: default
+---
 
-# 練習解答：DTO
-
-```java
-public class CreateCourseRequest {
-    private String name;
-    private Integer credit;
-    // Getter 和 Setter
-}
-```
+# 練習解答：Entity — Question 與 Option
 
 ```java
-public class CourseResponse {
+@Entity
+@Table(name = "questions")
+@Getter
+@Setter
+public class Question {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-    private String name;
-    private Integer credit;
-    // Getter 和 Setter（刻意不含 teacherPassword）
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "survey_id")
+    private Survey survey;
+
+    private String title;
+
+    @Enumerated(EnumType.STRING)
+    private QuestionType type;
+
+    @JdbcTypeCode(SqlTypes.TINYINT)
+    private Boolean required;
+
+    private Integer orderIndex;
+
+    @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("orderIndex ASC")
+    private List<Option> options = new ArrayList<>();
 }
 ```
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-CreateCourseRequest 不含 id 和 teacherPassword，前端新增課程時只傳 name、credit。
-CourseResponse 不含 teacherPassword，這就是這題的核心考點——PO 裡有的敏感欄位，Response DTO 刻意不複製。
+Question 和 Option 的結構很像，都是「多」的那一邊：用 @ManyToOne 指回上一層，@JoinColumn 指定外鍵欄位名稱，fetch = LAZY 表示需要的時候才去載入，不要每次都一起撈。
+
+Question 的 type 用 @Enumerated(EnumType.STRING)，資料庫存的是字串 SINGLE、MULTI、TEXT。如果沒有指定 STRING，預設是存列舉的順序編號 0、1、2，之後只要調整列舉的宣告順序，資料就全部錯亂，所以一定要記得寫 STRING。
 -->
 
 ---
+layout: default
+---
 
-# 練習解答：Repository（DAO）
+# 練習解答：Entity — Question 與 Option（續）
 
 ```java
-@Repository
-public interface CourseRepository
-        extends JpaRepository<Course, Integer> {
+@Entity
+@Table(name = "options")
+@Getter
+@Setter
+public class Option {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "question_id")
+    private Question question;
+
+    private String label;
+    private Integer orderIndex;
 }
 ```
 
+```java
+public enum QuestionType {
+    SINGLE, MULTI, TEXT
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-繼承 JpaRepository 即可，不需要寫任何方法，save()、findAll()、deleteById() 全部內建。
+這裡的 optional = false，表示這個關聯一定要有值，Hibernate 會在存進去之前就先檢查，而不是等到資料庫報錯。
+
+Question 底下還有 Option 的 @OneToMany，一樣有 cascade 和 orphanRemoval。所以從 Survey 一路往下存，三層會一次存完。
 -->
 
 ---
+layout: default
+---
 
-# 練習解答：Service — toResponse 與 createCourse
+# 練習解答：SurveyStatus — 狀態計算
+### `entity/SurveyStatus.java`
+
+```java
+/** 問卷狀態：由 published + 日期計算，不存進資料庫。 */
+@Getter
+public enum SurveyStatus {
+    DRAFT("未發佈"),
+    NOT_STARTED("尚未開始"),
+    ONGOING("進行中"),
+    ENDED("已結束");
+
+    private final String label;
+
+    SurveyStatus(String label) {
+        this.label = label;
+    }
+
+// ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+這個列舉就是「狀態不存資料庫，即時計算」的實作。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：SurveyStatus — 狀態計算（續）
+### `entity/SurveyStatus.java`
+
+```java
+    // ... 接上一頁
+
+    public static SurveyStatus of(boolean published, LocalDate start, LocalDate end, LocalDate today) {
+        if (!published) return DRAFT;
+        if (today.isBefore(start)) return NOT_STARTED;
+        if (!today.isAfter(end)) return ONGOING;
+        return ENDED;
+    }
+
+    /** 後台只有這兩種狀態可以修改、刪除 */
+    public boolean isEditable() {
+        return this == DRAFT || this == NOT_STARTED;
+    }
+
+    // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+of() 方法有先後順序：先看有沒有發佈，沒發佈就是 DRAFT；發佈了，再看今天是不是還沒到開始日期；沒到就是 NOT_STARTED；然後看今天是不是沒超過結束日期，沒超過就是 ONGOING，包含結束日期當天；否則就是 ENDED。這跟 MySQL 課寫的 CASE 完全是同一個邏輯。
+
+today 是從外面傳進來的參數，而不是在方法裡面呼叫 LocalDate.now()。這樣做的好處是可以測試：單元測試的時候，我們可以傳入固定的日期，測試結果才穩定。這個技巧在第 41 章寫測試的時候會用到。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：SurveyStatus — 狀態計算（續）
+### `entity/SurveyStatus.java`
+
+```java
+// ... 接上一頁
+
+    /** 進行中、已結束才有統計與回饋 */
+    public boolean hasResult() {
+        return this == ONGOING || this == ENDED;
+    }
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+isEditable() 和 hasResult() 把「哪些狀態可以修改」「哪些狀態有統計」這種業務規則，收在同一個地方。之後 Service 只要問 status.isEditable()，不需要到處寫 if。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：DTO — 選項是陣列
+
+```java
+@Getter
+@Setter
+public class SurveyDTO {
+    private Integer id;
+    private String title;
+    private String description;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private boolean published;
+    private String status;       // 由 Service 計算：DRAFT / NOT_STARTED / ONGOING / ENDED
+    private String statusLabel;  // 未發佈 / 尚未開始 / 進行中 / 已結束
+    private List<QuestionDTO> questions = new ArrayList<>();
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+SurveyDTO 是前端看到的格式。跟 Survey Entity 比較，有三個差別：
+
+第一，多了 status 和 statusLabel 兩個欄位。它們在資料庫裡沒有，是 Service 算出來的，前端不需要自己再算一次。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：DTO — 選項是陣列（續）
+
+```java
+@Getter
+@Setter
+public class QuestionDTO {
+    private Integer id;
+    private String title;
+    private QuestionType type;
+    private boolean required;
+    private List<OptionDTO> options = new ArrayList<>(); // 選項是「陣列」
+}
+```
+
+```java
+@Getter
+@Setter
+public class OptionDTO {
+    private Integer id;
+    private String label;
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+第二，題目跟選項都是 List，這就是需求文件裡說的「選項用陣列」。JSON 會長得像 options 是一個陣列，每個元素有 id 跟 label。
+
+第三，DTO 裡完全沒有 Survey 指向 Question 的反向關聯，所以轉成 JSON 的時候不會有無窮迴圈。這就是為什麼我們不直接把 Entity 回傳給前端。
+
+這裡的 DTO 先不加任何驗證註解，下一章 Validation 會回來補上「標題必填、最多 50 字」這類規則。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：Repository — 沿用 ch28 的 search
+### `repository/SurveyRepository.java`
+
+```java
+public interface SurveyRepository extends JpaRepository<Survey, Integer> {
+
+    // 標題模糊搜尋 + 起訖日期「包含在區間內」，三個條件都可省略
+    @Query("""
+            select s from Survey s
+            where (:title is null or s.title like concat('%', :title, '%'))
+              and (:start is null or s.startDate >= :start)
+              and (:end is null or s.endDate <= :end)
+              and (:publishedOnly = false or s.published = true)
+            """)
+    Page<Survey> search(@Param("title") String title,
+                        @Param("start") LocalDate start,
+                        @Param("end") LocalDate end,
+                        @Param("publishedOnly") boolean publishedOnly,
+                        Pageable pageable);
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+Repository 就是 ch28 的 search 方法。跟 ch28 只差一個地方：多了一個 publishedOnly 參數。前台呼叫的時候傳 true，只看已發佈的問卷；後台傳 false，看全部。
+
+JPQL 裡寫 (:publishedOnly = false or s.published = true)，意思是：如果 publishedOnly 是 false，這個條件恆為真，等於不篩選；如果是 true，才要求 published = true。
+
+繼承 JpaRepository 之後，findById、findAllById、save、deleteAll 都是現成的，不需要再寫。
+
+回傳 Page<Survey> 而不是 List，Spring Data 會自動加上 limit 跟 offset，再多執行一次 count 查詢，所以有總筆數跟總頁數。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：Service（1/3）— 查詢
+### `service/SurveyService.java`
 
 ```java
 @Service
-public class CourseService {
-    @Autowired
-    private CourseRepository courseRepository;
+@RequiredArgsConstructor
+public class SurveyService {
 
-    private CourseResponse toResponse(Course po) {
-        CourseResponse resp = new CourseResponse();
-        resp.setId(po.getId());
-        resp.setName(po.getName());
-        resp.setCredit(po.getCredit());
-        return resp; // 刻意不複製 teacherPassword
+    private final SurveyRepository surveyRepository;
+
+    // ---------- 查詢 ----------
+    @Transactional(readOnly = true)
+    public Page<SurveyDTO> search(String title, LocalDate start, LocalDate end,
+                                  boolean publishedOnly, int page, int size) {
+        String keyword = (title == null || title.isBlank()) ? null : title.trim();
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
+        return surveyRepository.search(keyword, start, end, publishedOnly, pageable)
+                .map(s -> toDTO(s, false));   // Page.map：保留分頁資訊，只轉換內容
     }
 
-    public CourseResponse createCourse(CreateCourseRequest req) {
-        Course po = new Course();
-        po.setName(req.getName());
-        po.setCredit(req.getCredit());
-        Course saved = courseRepository.save(po);
-        return toResponse(saved);
-    }
-}
+// ... 見下一頁
 ```
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-toResponse() 是安全設計的核心——把 PO 轉成 Response DTO 時，刻意不複製 teacherPassword。
-createCourse 走 Request DTO → PO → save → Response DTO 的標準流程，跟 Student 的 createStudent 結構完全一樣。
+Service 的第一部分是查詢。
+
+search 方法回傳 Page<SurveyDTO>。重點是 Page.map：它會保留分頁資訊，包括總筆數和總頁數，只把裡面的內容從 Survey 轉成 SurveyDTO。這樣就不需要自己重新組一個分頁物件。列表頁不需要題目，所以 toDTO 的第二個參數傳 false，避免多執行一堆不必要的查詢。
 -->
 
 ---
+layout: default
+---
 
-# 練習解答：Service — getAllCourses 與 deleteCourse
+# 練習解答：Service（1/3）— 查詢（續）
+### `service/SurveyService.java`
 
 ```java
-public List<CourseResponse> getAllCourses() {
-    List<Course> poList = courseRepository.findAll();
-    List<CourseResponse> result = new ArrayList<>();
-    for (Course po : poList) result.add(toResponse(po));
-    return result;
-}
+// ... 接上一頁
 
-public void deleteCourse(Integer id) {
-    courseRepository.deleteById(id);
+    @Transactional(readOnly = true)
+    public SurveyDTO get(Integer id) {
+        return toDTO(findOrThrow(id), true);
+    }
+
+    private Survey findOrThrow(Integer id) {
+        return surveyRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("找不到問卷 " + id));
+    }
+
+    private SurveyStatus statusOf(Survey s) {
+        return SurveyStatus.of(s.getPublished(), s.getStartDate(), s.getEndDate(), LocalDate.now());
+    }
+    // ... 新增、修改、刪除見下一頁
 }
 ```
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-getAllCourses：從 Repository 取得 PO List，逐一轉成 Response DTO List，回傳給 Controller。
-deleteCourse：最單純，直接呼叫 deleteById()，不需要轉換任何物件。
+get 方法載入單一份問卷，包含所有題目跟選項，給編輯頁跟填寫頁使用。
+
+@Transactional(readOnly = true) 有兩個作用：一是告訴 JPA 這是唯讀查詢，效能比較好；二是保證延遲載入（LAZY）的題目跟選項，在這個方法結束之前都能讀到，因為我們把 open-in-view 關掉了。如果沒加這個註解，讀 survey.getQuestions() 時會發生 LazyInitializationException。
+
+findOrThrow 是私有的小工具，找不到就丟例外。目前先用 IllegalArgumentException，第 39 章會換成自訂的業務例外。
 -->
 
 ---
+layout: default
+---
 
-# 練習解答：Controller
+# 練習解答：Service（2/3）— 新增與修改
+
+```java
+public class SurveyService {
+    // ... 接上一頁
+
+    // ---------- 新增 / 修改 ----------
+    @Transactional
+    public SurveyDTO save(SurveyDTO dto, boolean publish) {
+        Survey survey = (dto.getId() == null) ? new Survey() : findOrThrow(dto.getId());
+        if (survey.getId() != null && !statusOf(survey).isEditable()) {
+            throw new IllegalStateException("問卷已開始，無法修改");
+        }
+        survey.setTitle(dto.getTitle());
+        survey.setDescription(dto.getDescription());
+        survey.setStartDate(dto.getStartDate());
+        survey.setEndDate(dto.getEndDate());
+        survey.setPublished(publish);
+
+// ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+save 同時負責新增和修改：DTO 的 id 是 null 就是新增，否則就是修改。
+
+修改的時候，先檢查這份問卷現在的狀態，不是「未發佈」或「尚未開始」就不能改，直接丟例外。這個檢查一定要放在後端。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：Service（2/3）— 新增與修改（續）
+
+```java
+        // ... 接上一頁
+
+        survey.getQuestions().clear();          // orphanRemoval：舊題目與選項會被刪除
+        int qIndex = 1;
+        for (QuestionDTO qd : dto.getQuestions()) {
+            Question q = new Question();
+            q.setSurvey(survey);
+            q.setTitle(qd.getTitle());
+            q.setType(qd.getType());
+            q.setRequired(qd.isRequired());
+            q.setOrderIndex(qIndex++);
+            int oIndex = 1;
+            for (OptionDTO od : qd.getOptions()) {
+                Option o = new Option();
+                o.setQuestion(q);
+                o.setLabel(od.getLabel());
+                o.setOrderIndex(oIndex++);
+                q.getOptions().add(o);
+            }
+
+        // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+接下來是這個方法最關鍵的技巧：不管是新增還是修改，題目和選項一律「整批重建」。先用 survey.getQuestions().clear() 清空，因為設定了 orphanRemoval，被移除的舊題目和選項，儲存的時候會被刪除；再根據 DTO 一題一題建立新的，並設定 orderIndex，讓順序固定。最後呼叫一次 save，因為 cascade，所有題目和選項都會一起存進去。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：Service（2/3）— 新增與修改（續）
+
+```java
+// ... 接上一頁
+
+            survey.getQuestions().add(q);
+        }
+        return toDTO(surveyRepository.save(survey), true);   // cascade：題目、選項一起存
+    }
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+為什麼不逐題比對、只更新有變動的？因為問卷在「尚未開始」的狀態時，還沒有任何人作答，題目重建不會影響到既有的資料，整批重建的程式碼最簡單，也最不容易出錯。
+
+⚠️ 易錯點：一定要設定 q.setSurvey(survey) 和 o.setQuestion(q)。@OneToMany 的 mappedBy 那一端只是「鏡子」，真正決定外鍵值的是 @ManyToOne 那一端，如果漏掉，survey_id 會是 null，儲存時報錯。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：Service（3/3）— 批次刪除與 PO → DTO
+
+```java
+public class SurveyService {
+    // ... 接上一頁
+
+    // ---------- 批次刪除 ----------
+    @Transactional
+    public void deleteAll(List<Integer> ids) {
+        List<Survey> surveys = surveyRepository.findAllById(ids);
+        for (Survey s : surveys) {
+            if (!statusOf(s).isEditable()) {
+                throw new IllegalStateException("「" + s.getTitle() + "」已開始，無法刪除");
+            }
+        }
+        surveyRepository.deleteAll(surveys);
+    }
+
+// ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+deleteAll 是批次刪除。規則是：只要勾選的問卷裡，有任何一份不是「未發佈」或「尚未開始」，整批都不刪。因為整個方法是一個交易，丟出例外的時候，還沒刪的就不會刪，不會出現「刪了一半」的情況。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：Service（3/3）— 批次刪除與 PO → DTO（續）
+
+```java
+    // ... 接上一頁
+
+    // ---------- PO → DTO ----------
+    private SurveyDTO toDTO(Survey s, boolean withQuestions) {
+        SurveyDTO dto = new SurveyDTO();
+        dto.setId(s.getId());
+        dto.setTitle(s.getTitle());
+        dto.setDescription(s.getDescription());
+        dto.setStartDate(s.getStartDate());
+        dto.setEndDate(s.getEndDate());
+        dto.setPublished(s.getPublished());
+        SurveyStatus status = statusOf(s);             // 狀態不存資料庫，即時計算
+        dto.setStatus(status.name());
+        dto.setStatusLabel(status.getLabel());
+        if (withQuestions) {
+            for (Question q : s.getQuestions()) {
+                QuestionDTO qd = new QuestionDTO();
+
+    // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+刪除一份問卷的時候，它底下的題目和選項，因為 Entity 上的 cascade，會一起被刪掉；資料庫端也有 ON DELETE CASCADE 當作雙重保障。
+
+toDTO 是整個安全設計的核心：把 PO 轉成 DTO 的時候，我們決定哪些欄位可以給前端看，並且在這裡計算狀態。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：Service（3/3）— 批次刪除與 PO → DTO（續）
+
+```java
+// ... 接上一頁
+
+                qd.setId(q.getId());
+                qd.setTitle(q.getTitle());
+                qd.setType(q.getType());
+                qd.setRequired(q.getRequired());
+                for (Option o : q.getOptions()) {
+                    OptionDTO od = new OptionDTO();
+                    od.setId(o.getId());
+                    od.setLabel(o.getLabel());
+                    qd.getOptions().add(od);
+                }
+                dto.getQuestions().add(qd);
+            }
+        }
+        return dto;
+    }
+}
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+這段程式碼寫得比較長，但是每一段都很單純：複製欄位、計算狀態、有需要的話，逐題逐選項複製。之後在 Spring 有一些工具，像 MapStruct，可以幫忙自動產生這類轉換，但是在學習階段，手寫可以讓大家清楚看到資料是怎麼流動的。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：Controller — 前台與後台
 
 ```java
 @RestController
-public class CourseController {
-    @Autowired
-    private CourseService courseService;
+@RequiredArgsConstructor
+public class SurveyController {
 
-    @GetMapping("/courses")
-    public List<CourseResponse> getAll() {
-        return courseService.getAllCourses();
+    private final SurveyService surveyService;
+
+    // ===== 前台：只看已發佈的問卷 =====
+    @GetMapping("/api/surveys")
+    public Page<SurveyDTO> list(
+            @RequestParam(name = "title", required = false) String title,
+            @RequestParam(name = "startDate", required = false) LocalDate startDate,
+            @RequestParam(name = "endDate", required = false) LocalDate endDate,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size) {
+        return surveyService.search(title, startDate, endDate, true, page, size);
     }
 
-    @PostMapping("/courses")
-    public CourseResponse create(
-            @RequestBody CreateCourseRequest req) {
-        return courseService.createCourse(req);
+// ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+Controller 很薄，只做三件事：接收參數、呼叫 Service、回傳結果。所有的判斷都在 Service。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：Controller — 前台與後台（續）
+
+```java
+    // ... 接上一頁
+
+    // ===== 後台：全部狀態都看得到，可新增、修改、批次刪除 =====
+    @GetMapping("/api/admin/surveys")
+    public Page<SurveyDTO> adminList(
+            @RequestParam(name = "title", required = false) String title,
+            @RequestParam(name = "startDate", required = false) LocalDate startDate,
+            @RequestParam(name = "endDate", required = false) LocalDate endDate,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size) {
+        return surveyService.search(title, startDate, endDate, false, page, size);
     }
 
-    @DeleteMapping("/courses/{id}")
-    public void delete(@PathVariable("id") Integer id) {
-        courseService.deleteCourse(id);
+    @GetMapping("/api/admin/surveys/{id}")
+    public SurveyDTO get(@PathVariable("id") Integer id) {
+        return surveyService.get(id);
+    }
+
+    // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+前台和後台的差別，只在於傳給 Service 的 publishedOnly：前台傳 true，後台傳 false。路徑用 /api/surveys 和 /api/admin/surveys 分開，之後在 Spring Security 章節，我們只要規定 /api/admin/** 要有管理員角色，就能保護整個後台。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：Controller — 前台與後台（續）
+
+```java
+    // ... 接上一頁
+
+    @PostMapping("/api/admin/surveys")
+    public SurveyDTO create(@RequestBody SurveyDTO dto,
+                            @RequestParam(name = "publish", defaultValue = "false") boolean publish) {
+        dto.setId(null);
+        return surveyService.save(dto, publish);
+    }
+
+    @PutMapping("/api/admin/surveys/{id}")
+    public SurveyDTO update(@PathVariable("id") Integer id, @RequestBody SurveyDTO dto,
+                            @RequestParam(name = "publish", defaultValue = "false") boolean publish) {
+        dto.setId(id);
+        return surveyService.save(dto, publish);
+    }
+
+    // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+修改的時候，路徑上的 id 是唯一可信的 id，所以我們用 dto.setId(id) 覆蓋 body 裡可能亂傳的 id；新增的時候則相反，把 id 清成 null，避免有人偷偷傳 id 進來，結果變成修改。
+
+批次刪除用 DELETE 加 body 傳 id 陣列，例如 [3, 5, 8]。有些 HTTP 工具不允許 DELETE 帶 body，但 Spring MVC 和 Postman 都支援。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：Controller — 前台與後台（續）
+
+```java
+// ... 接上一頁
+
+    @DeleteMapping("/api/admin/surveys")
+    public void delete(@RequestBody List<Integer> ids) {
+        surveyService.deleteAll(ids);
     }
 }
 ```
 
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ Controller 全程只接觸 DTO，GET /courses 回傳的 JSON 陣列裡每個物件都沒有 teacherPassword。
-</div>
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-三個 API 全部完成：GET 查全部、POST 新增、DELETE 刪除，Controller 只看得到 DTO，Course PO 的 teacherPassword 全程不外洩。
+目前所有 API 都還沒有權限保護，任何人都能呼叫後台，這是暫時的。第 44 章會補上。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：Postman 測試
+
+**新增一份問卷**（`POST /api/admin/surveys?publish=true`，Body 選 raw / JSON）：
+
+```json
+{
+  "title": "社團博覽會意見調查",
+  "description": "你對博覽會有什麼想法？",
+  "startDate": "2026-10-01",
+  "endDate": "2026-10-08",
+  "questions": [
+    { "title": "你會參加嗎？", "type": "SINGLE", "required": true,
+      "options": [ { "label": "會" }, { "label": "不會" } ] },
+    { "title": "其他建議", "type": "TEXT", "required": false, "options": [] }
+  ]
+}
+```
+
+| 測試 | 預期結果 |
+| --- | --- |
+| `GET /api/surveys?size=2` | 分頁 JSON：`content` 最多 2 筆、`totalElements`、`totalPages`；看不到未發佈的問卷 |
+| `GET /api/admin/surveys` | 含未發佈的問卷；每筆有 `status` / `statusLabel` |
+| `GET /api/admin/surveys/{新增的 id}` | 兩題，且第一題的 `options` 是兩個元素的陣列 |
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+最後用 Postman 把整條流程走一遍。新增的 Body 用 JSON，要記得設定 Content-Type 是 application/json，Postman 選 raw 加 JSON 的時候會自動加上。
+
+幾個值得停下來觀察的地方：
+
+第一，新增之後 GET 回來，題目跟選項都在，這證明 cascade 有正確運作。
+-->
+
+---
+layout: default
+---
+
+# 練習解答：Postman 測試（續）
+
+| 測試 | 預期結果 |
+| --- | --- |
+| `PUT` 改標題 | 題目重建後，`questions` 的 id 都是新的 |
+| `PUT /api/admin/surveys/2`（進行中） | 失敗（目前是 500，第 39 章會改成 409） |
+| `DELETE` Body `[新id, 4, 5]` | 成功；再 GET 列表，三份都不見了 |
+| `DELETE` Body `[2]` | 失敗，問卷 2 仍在 |
+
+<div class="mt-2 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ 日期要晚於今天才符合後續章節的驗證規則，請依你執行當天的日期調整；這一章還沒有驗證，任何日期都能存。
+</div>
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+第二，修改之後，題目的 id 全部變成新的了。這是因為我們用「整批重建」的做法，舊的題目被刪掉，新的被建立。對尚未開始的問卷來說沒有問題，因為還沒有人作答，沒有任何資料在參照這些題目。
+
+第三，對進行中的問卷 PUT 或 DELETE 都會失敗，這證明業務規則有生效。現在回傳的是 500 錯誤，因為我們丟的是一般的例外，沒有處理，用戶端看到的訊息很難看，第 39 章我們會用全域例外處理，把它變成 409 加上清楚的訊息。
+
+這一章的練習做完，資料庫、Entity、DTO、Service、Controller 都已經串起來了，這也是整個後端專案最核心的骨架，後面章節都是在它上面加東西。
 -->
 
 ---

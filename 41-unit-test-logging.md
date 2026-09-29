@@ -155,6 +155,8 @@ src/
 
 `spring-boot-starter-test` 已內建 JUnit（Spring Boot 4.x 為 JUnit 6，API 與 JUnit 5 相同）、Mockito、AssertJ，Spring Initializr 預設自動加入，不需手動設定。
 
+<div class="mt-2 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">⚠️ <b>Spring Boot 4 的測試切片是獨立模組：</b><code>@WebMvcTest</code> 要加 <code>spring-boot-starter-webmvc-test</code>，<code>@DataJpaTest</code> 要加 <code>spring-boot-starter-data-jpa-test</code>（測試類別的 import 套件也跟著改到 <code>org.springframework.boot.webmvc.test.autoconfigure</code>、<code>org.springframework.boot.data.jpa.test.autoconfigure</code>）。Spring Boot 3.x 則全部包在 <code>spring-boot-starter-test</code>。</div>
+
 <!--
 這個結構很重要，很多新手不知道測試檔案要放哪裡。
 
@@ -862,24 +864,43 @@ class: flex flex-col justify-center items-center text-center
 layout: default
 ---
 
-# 練習一：Service 層測試
-### 任務說明
+# 練習一：問卷 Service 的單元測試
 
-**情境：** 沿用 ch37 的 `StudentService`，其中的 `getStudentById(Integer id)` 會呼叫 `StudentRepository.findById(id)`，找不到時拋出例外。
+**情境：** 問卷系統的核心規則是「狀態計算」與「只有未發佈 / 尚未開始的問卷能修改、刪除」。這些規則出錯，後台會誤刪進行中的問卷，所以一定要有測試保護。
 
 **任務：**
 
-1. 建立 `StudentServiceTest`，使用 `@ExtendWith(MockitoExtension.class)`
-2. Mock 掉 `StudentRepository`
-3. 撰寫測試方法：
-   - `getStudentById_存在的ID_回傳StudentResponse`：Mock 回傳一個 `Student`，驗證 `StudentResponse` 的欄位
-   - `getStudentById_不存在的ID_拋出例外`：Mock 回傳 `Optional.empty()`，驗證 `assertThrows`
-4. 確認兩個測試都是綠燈 ✓
+1. `SurveyStatusTest`（純 JUnit，不用 Mockito）：測試 `SurveyStatus.of(published, start, end, today)` 的邊界
+   - 未發佈 → `DRAFT`；開始日在未來 → `NOT_STARTED`
+   - **開始當天、結束當天**都是 `ONGOING`；結束日已過 → `ENDED`
+   - `isEditable()`：只有 `DRAFT`、`NOT_STARTED` 為 `true`
+2. `SurveyServiceTest`（`@ExtendWith(MockitoExtension.class)`，Mock 掉 `SurveyRepository`）：
+   - `save`：單選題少於兩個選項 → 丟 `BizException`
+   - `save`：問卷已在進行中 → `BizException`，錯誤碼是 `SURVEY_NOT_EDITABLE`
+   - `deleteAll`：只要有一份進行中，整批不刪 → `assertThrows`，且 `verify(surveyRepository, never()).deleteAll(any())`
+3. 確認全部綠燈 ✓
+
+<div class="mt-2 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>Spring Boot 4 的測試依賴：</b>以上只需要 <code>spring-boot-starter-test</code>。若之後要用 <code>@WebMvcTest</code>、<code>@DataJpaTest</code>，要另外加 <code>spring-boot-starter-webmvc-test</code>、<code>spring-boot-starter-data-jpa-test</code>。
+</div>
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-這個練習是最基本的 Service 層測試模式，幾乎每個 Spring Boot 專案都會有類似的寫法。
+這個練習是最基本的 Service 層測試模式，而且測的是問卷系統最重要的商業規則。
 
-先不要急著寫，想一下測試的結構：setup 要做什麼，測試方法要驗證什麼。
+為什麼狀態計算要測？因為「進行中」的邊界很容易寫錯：開始當天算不算進行中？結束當天呢？需求文件寫的是兩天都算，如果程式寫成 isBefore 或 isAfter 差一天，就會有問卷在最後一天突然打不開。這種邊界錯誤，人工測試很難發現，單元測試最擅長。
+
+還記得第 37 章，我們特別讓 of 方法接收 today 參數，而不是在方法裡呼叫 LocalDate.now() 嗎？現在就看到好處了：測試的時候，傳入固定的日期，測試結果永遠一樣，不會因為今天是幾號而改變。
+
+SurveyService 的測試，Mock 掉 Repository，不需要真的連資料庫。測試的是 Service 裡的判斷邏輯：進行中的問卷不能修改，批次刪除只要有一份不能刪，整批都不刪。特別注意最後那個 verify never：我們不只要驗證有丟例外，還要驗證「沒有刪」，這才是真正的保證。
 -->
 
 ---
@@ -887,99 +908,425 @@ layout: default
 ---
 
 # 練習一：解題提示
-### 提示說明
 
-1. 建立測試類別骨架：`@ExtendWith(MockitoExtension.class)`，`@Mock StudentRepository`，`@InjectMocks StudentService`
-2. 正常路徑：`when(studentRepository.findById(1)).thenReturn(Optional.of(po))` → `assertEquals` 驗證欄位
-3. 例外路徑：`when(studentRepository.findById(99)).thenReturn(Optional.empty())` → `assertThrows(RuntimeException.class, () -> ...)`
+1. `SurveyStatusTest` 準備一個固定的 `today = LocalDate.of(2025, 1, 10)`，其他日期都用 `today.plusDays(n)` 算
+2. 邊界測試：`SurveyStatus.of(true, today, today.plusDays(5), today)`（開始當天）、`of(true, today.minusDays(5), today, today)`（結束當天）
+3. `SurveyServiceTest`：`@Mock SurveyRepository`、`@InjectMocks SurveyService`
+4. 建一個「進行中」的 `Survey`：`published = true`，開始日是昨天、結束日是明天，`when(surveyRepository.findById(1)).thenReturn(Optional.of(...))`
+5. 驗證錯誤碼：`BizException e = assertThrows(...)`，再 `assertEquals(RspCode.SURVEY_NOT_EDITABLE, e.getCode())`
+6. 驗證「沒有被呼叫」：`verify(mock, never()).方法(any())`
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-Step 3 是很多人卡住的地方：Service 要先有拋出例外的邏輯，測試才測得到。
+步驟 4：測試資料要用相對於 LocalDate.now() 的日期，因為 SurveyService 裡是呼叫 LocalDate.now() 計算狀態，我們沒辦法傳入固定的日期。
 
-這也是測試驅動開發（TDD）的思路：先寫測試，再寫讓測試通過的實作。
+這也是一個很好的設計反思：Service 直接呼叫 LocalDate.now()，讓測試變得比較不確定。進階的做法，是注入一個 Clock 物件，測試的時候換成固定時間的 Clock。這裡先用最簡單的相對日期，讓大家專心練習測試的寫法。
+
+步驟 5：只 assertThrows(BizException.class) 是不夠的，因為 BizException 有很多種錯誤碼，我們要確認是「正確的那一種」被丟出來。
 -->
 
 ---
+layout: default
+---
 
-# 練習一：解答程式碼 — Service（沿用 ch37）
+# 練習一：解答（SurveyStatusTest）
+### `src/test/java/.../entity/SurveyStatusTest.java`
 
 ```java
-@Service
-public class StudentService {
-    @Autowired
-    private StudentRepository studentRepository;
+class SurveyStatusTest {
 
-    public StudentResponse getStudentById(Integer id) {
-        Student po = studentRepository.findById(id)
-            .orElseThrow(() ->
-                new RuntimeException("Student not found: " + id));
-        return toResponse(po);   // toResponse 定義同 ch37
+    private final LocalDate today = LocalDate.of(2025, 1, 10);
+
+    @Test
+    void 未發佈不論日期都是DRAFT() {
+        assertEquals(SurveyStatus.DRAFT, SurveyStatus.of(false, today.minusDays(5), today.plusDays(5), today));
+    }
+
+    @Test
+    void 開始日期在未來是NOT_STARTED() {
+        assertEquals(SurveyStatus.NOT_STARTED, SurveyStatus.of(true, today.plusDays(1), today.plusDays(9), today));
+    }
+
+// ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+這五個測試方法，對應狀態計算的四種結果，加上可編輯的判斷。
+-->
+
+---
+layout: default
+---
+
+# 練習一：解答（SurveyStatusTest）（續）
+### `src/test/java/.../entity/SurveyStatusTest.java`
+
+```java
+    // ... 接上一頁
+
+    @Test
+    void 開始當天與結束當天都算ONGOING() {
+        assertEquals(SurveyStatus.ONGOING, SurveyStatus.of(true, today, today.plusDays(5), today));
+        assertEquals(SurveyStatus.ONGOING, SurveyStatus.of(true, today.minusDays(5), today, today));
+    }
+
+    @Test
+    void 結束日期已過是ENDED() {
+        assertEquals(SurveyStatus.ENDED, SurveyStatus.of(true, today.minusDays(9), today.minusDays(1), today));
+    }
+
+    // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+方法名稱用中文寫，是台灣教學常見的寫法：測試失敗的時候，報告上直接就是一句白話文，「開始日期在未來是 NOT_STARTED」，一看就知道是哪個規則壞了。
+
+第三個測試，同時驗證開始當天和結束當天，是整個測試最重要的地方，也就是「邊界」。寫測試的時候，值得特別注意的，永遠是邊界：剛好等於、剛好差一天。
+-->
+
+---
+layout: default
+---
+
+# 練習一：解答（SurveyStatusTest）（續）
+### `src/test/java/.../entity/SurveyStatusTest.java`
+
+```java
+// ... 接上一頁
+
+    @Test
+    void 只有DRAFT與NOT_STARTED可以編輯() {
+        assertTrue(SurveyStatus.DRAFT.isEditable());
+        assertTrue(SurveyStatus.NOT_STARTED.isEditable());
+        assertFalse(SurveyStatus.ONGOING.isEditable());
+        assertFalse(SurveyStatus.ENDED.isEditable());
     }
 }
 ```
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-Service 沿用 ch37，找不到就 orElseThrow 拋 RuntimeException——這是測試例外路徑的前提。
-先不引入自訂例外，避免混淆，讓重點留在測試本身。
-toResponse 沿用 ch37，把 Student PO 轉成 StudentResponse，並過濾掉 password。
+today 是在測試類別最上面的欄位，固定為 2025 年 1 月 10 日，測試永遠可以重現。這個測試完全不需要 Spring，不需要 Mockito，執行速度是毫秒等級的，這就是單元測試最理想的樣子。
 -->
 
 ---
+layout: default
+---
 
-# 練習一：解答程式碼 — 測試類別
+# 練習一：解答（SurveyServiceTest）
+### `src/test/java/.../service/SurveyServiceTest.java`
 
 ```java
 @ExtendWith(MockitoExtension.class)
-class StudentServiceTest {
+class SurveyServiceTest {
 
     @Mock
-    private StudentRepository studentRepository;
+    private SurveyRepository surveyRepository;
 
     @InjectMocks
-    private StudentService studentService;
+    private SurveyService surveyService;
+
+    private SurveyDTO validDto() {
+        OptionDTO a = new OptionDTO();
+        a.setLabel("喜歡");
+        OptionDTO b = new OptionDTO();
+        b.setLabel("不喜歡");
+        QuestionDTO q = new QuestionDTO();
+        q.setTitle("喜歡嗎");
+        q.setType(QuestionType.SINGLE);
+        q.setOptions(List.of(a, b));
+
+// ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+測試類別的骨架跟前面的範例一樣：@ExtendWith(MockitoExtension.class)、@Mock、@InjectMocks。
+-->
+
+---
+layout: default
+---
+
+# 練習一：解答（SurveyServiceTest）（續）
+### `src/test/java/.../service/SurveyServiceTest.java`
+
+```java
+    // ... 接上一頁
+
+        SurveyDTO dto = new SurveyDTO();
+        dto.setTitle("新問卷");
+        dto.setDescription("說明");
+        dto.setStartDate(LocalDate.now().plusDays(2));
+        dto.setEndDate(LocalDate.now().plusDays(7));
+        dto.setQuestions(List.of(q));
+        return dto;
+    }
+
+    private Survey ongoingSurvey() {
+        Survey s = new Survey();
+        s.setId(1);
+        s.setTitle("進行中");
+        s.setPublished(true);
+        s.setStartDate(LocalDate.now().minusDays(1));
+        s.setEndDate(LocalDate.now().plusDays(1));
+        return s;
+    }
+
+    // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+validDto 和 ongoingSurvey 是兩個測試資料的輔助方法。把「建立一個合法的 DTO」寫成一個方法，每個測試再依照自己的需要，只修改一個欄位，這樣每個測試看起來都很短，而且一眼就能看出「這個測試改了什麼」，例如選項只剩一個。
+-->
+
+---
+layout: default
+---
+
+# 練習一：解答（SurveyServiceTest）（續）
+### `src/test/java/.../service/SurveyServiceTest.java`
+
+```java
+    // ... 接上一頁
 
     @Test
-    void getStudentById_存在的ID_回傳StudentResponse() {
-        Student po = new Student();
-        po.setId(1); po.setName("Alice"); po.setScore(85);
-        when(studentRepository.findById(1)).thenReturn(Optional.of(po));
+    void 單選題少於兩個選項要被擋下() {
+        SurveyDTO dto = validDto();
+        dto.getQuestions().get(0).setOptions(List.of(dto.getQuestions().get(0).getOptions().get(0)));
+        assertThrows(BizException.class, () -> surveyService.save(dto, false));
+    }
 
-        StudentResponse result = studentService.getStudentById(1);
+    @Test
+    void 進行中的問卷不能修改() {
+        SurveyDTO dto = validDto();
+        dto.setId(1);
+        when(surveyRepository.findById(1)).thenReturn(Optional.of(ongoingSurvey()));
+        BizException e = assertThrows(BizException.class, () -> surveyService.save(dto, false));
+        assertEquals(RspCode.SURVEY_NOT_EDITABLE, e.getCode());
+    }
 
-        assertNotNull(result);
-        assertEquals("Alice", result.getName());
-        assertEquals(85, result.getScore());
-        verify(studentRepository, times(1)).findById(1);
+    // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+「進行中的問卷不能修改」這個測試，我們把 findById 設定成回傳一個進行中的問卷，然後呼叫 save，預期丟出 BizException，而且錯誤碼是 SURVEY_NOT_EDITABLE。
+
+最後一個批次刪除的測試，用 verify never，驗證 deleteAll 一次都沒有被呼叫。
+-->
+
+---
+layout: default
+---
+
+# 練習一：解答（SurveyServiceTest）（續）
+### `src/test/java/.../service/SurveyServiceTest.java`
+
+```java
+// ... 接上一頁
+
+    @Test
+    void 批次刪除只要有一份進行中就整批不刪() {
+        when(surveyRepository.findAllById(List.of(1))).thenReturn(List.of(ongoingSurvey()));
+        assertThrows(BizException.class, () -> surveyService.deleteAll(List.of(1)));
+        verify(surveyRepository, never()).deleteAll(any());
     }
 }
 ```
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-正常路徑：when 設定 Mock 回傳 Optional.of(po)，驗證欄位並 verify findById 被呼叫一次。
+⚠️ 易錯點：Mockito 嚴格模式，如果你設定了一個 when，卻沒有被用到，測試會失敗，並且報 UnnecessaryStubbingException。所以每個 when，都要是這個測試真正需要的。
 -->
 
 ---
+layout: default
+---
 
-# 練習一：解答程式碼 — 例外路徑測試
+# 練習一（延伸）：DTO 驗證規則也要測
+### `src/test/java/.../dto/SurveyDTOValidationTest.java`（選做）
 
 ```java
-    @Test
-    void getStudentById_不存在的ID_拋出例外() {
-        when(studentRepository.findById(99))
-            .thenReturn(Optional.empty());
+class SurveyDTOValidationTest {
 
-        assertThrows(RuntimeException.class,
-            () -> studentService.getStudentById(99));
+    private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
-        verify(studentRepository, times(1)).findById(99);
+    private SurveyDTO valid() {
+        SurveyDTO dto = new SurveyDTO();
+        dto.setTitle("新問卷");
+        dto.setDescription("說明");
+        dto.setStartDate(LocalDate.now().plusDays(2));
+        dto.setEndDate(LocalDate.now().plusDays(7));
+        return dto;
     }
+
+    private Set<String> messages(SurveyDTO dto) {
+        return validator.validate(dto).stream().map(v -> v.getMessage()).collect(Collectors.toSet());
+    }
+
+// ... 見下一頁
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>兩個測試都綠燈：</b> 正常路徑驗證回傳值，例外路徑用 <code>assertThrows</code> 驗證有拋出 <code>RuntimeException</code>。</div>
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-例外路徑：Mock 回傳 Optional.empty()，Service 的 orElseThrow 就會拋例外。
-assertThrows 第一個參數是預期的例外型別，第二個是觸發例外的 lambda。
+上一章 Validation 寫的驗證規則，也是需要測試的。好消息是，不需要啟動 Spring：Bean Validation 的 Validator，可以在測試裡直接建立，餵一個 DTO 進去，看回傳的違規訊息。
+-->
+
+---
+layout: default
+---
+
+# 練習一（延伸）：DTO 驗證規則也要測（續）
+### `src/test/java/.../dto/SurveyDTOValidationTest.java`（選做）
+
+```java
+    // ... 接上一頁
+
+    @Test
+    void 合法資料沒有錯誤() {
+        assertTrue(messages(valid()).isEmpty());
+    }
+
+    @Test
+    void 開始日期是今天要被擋下() {
+        SurveyDTO dto = valid();
+        dto.setStartDate(LocalDate.now());
+        assertTrue(messages(dto).contains("開始日期必須晚於今天"));
+    }
+
+    // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+這裡驗證了三件事：合法資料沒有錯誤、開始日期是今天會被擋下、結束日期不在開始日期之後會被擋下。
+
+還記得 isEndAfterStart 這個 @AssertTrue 方法嗎？如果不小心改壞了它，這個測試就會立刻告訴我們。
+-->
+
+---
+layout: default
+---
+
+# 練習一（延伸）：DTO 驗證規則也要測（續）
+### `src/test/java/.../dto/SurveyDTOValidationTest.java`（選做）
+
+```java
+// ... 接上一頁
+
+    @Test
+    void 結束日期不在開始日期之後要被擋下() {
+        SurveyDTO dto = valid();
+        dto.setEndDate(dto.getStartDate());
+        assertTrue(messages(dto).contains("結束日期必須在開始日期之後"));
+    }
+
+    @Test
+    void 標題空白與過長要被擋下() {
+        SurveyDTO dto = valid();
+        dto.setTitle(" ");
+        assertTrue(messages(dto).contains("問卷名稱尚未填寫"));
+        dto.setTitle("x".repeat(51));
+        assertTrue(messages(dto).contains("問卷名稱最多 50 字"));
+    }
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+這類測試很便宜，卻可以保護整個系統最前面的一道關卡，非常值得。
 -->
 
 ---
@@ -987,24 +1334,36 @@ layout: default
 ---
 
 # 練習二：日誌設定
-### 任務說明
 
-**情境：** 你的 API 在 Production 有時候會有神秘的 500 錯誤，但你完全不知道發生了什麼事。
+**情境：** 作答送出後偶爾出現神秘的 500 錯誤，但你完全不知道發生了什麼事。而且目前 `GlobalExceptionHandler` 裡是 `e.printStackTrace()`，Production 環境看不到。
 
 **任務：**
 
-1. 在 `StudentService` 的 `createStudent()` 方法中，加入適當的 log：
-   - `DEBUG`：方法進入點，記錄輸入參數（name、score）
-   - `INFO`：學生建立成功，記錄學生 ID
-   - `WARN`：分數低於 60（不及格），記錄學生 name
-   - `ERROR`：建立失敗（catch 區塊），記錄 exception message
-2. 在 `application.properties` 設定 `com.example.demo.service` 的 level 為 `DEBUG`，輸出到 `logs/app.log`，每檔最大 10MB，保留 30 天
+1. 在 `ResponseService.submit()` 加入適當的 log：
+   - `DEBUG`：方法進入點，記錄 `surveyId`（**不要記錄姓名、手機、Email 等個資**）
+   - `INFO`：作答送出成功，記錄 `surveyId`、`responseId`、答案筆數
+   - `WARN`：重複填寫被資料庫擋下，記錄 `surveyId` 與**遮罩後**的 Email（`a1***@example.com`）
+2. 把 `GlobalExceptionHandler` 的 `e.printStackTrace()` 換成 `log.error(...)`（`ERROR`：記錄 exception message，並印出完整 stack trace）
+3. 在 `application.properties` 設定 `com.example.survey` 的 level 為 `DEBUG`，其他維持 `INFO`，輸出到 `logs/dynamic-survey.log`，每檔最大 10MB，保留 30 天
+4. 送出一份作答，確認 log 檔出現 DEBUG 與 INFO；重複送出一次，確認出現 WARN
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-這個練習沒有標準答案，但有好的 log 和壞的 log 之分。
+這個練習有標準答案，但也有好的 log 和壞的 log 之分。
 
-好的 log：清楚記錄是誰做了什麼，結果是什麼。
-壞的 log：只寫 "error occurred" 或根本不寫。
+好的 log：清楚記錄是誰做了什麼，結果是什麼。壞的 log：只寫「error occurred」，或者根本不寫。
+
+這個練習多了一個非常重要的觀念：log 不能寫個資。姓名、手機、Email 屬於個人資料，寫進 log 檔，就可能被有權限看 log 的人（例如維運人員、第三方的日誌平台）看到，違反個資保護的原則。所以我們只記錄 id，或是遮罩過的資料。
+
+還有 printStackTrace 為什麼不好？它印到標準錯誤輸出，沒有時間、沒有 level、沒有執行緒名稱，沒辦法用 logging.level 控制，也不會寫進 log 檔，是新手最常見的壞習慣。
 -->
 
 ---
@@ -1012,107 +1371,217 @@ layout: default
 ---
 
 # 練習二：解題提示
-### 提示說明
 
-1. 宣告 Logger：`private static final Logger log = LoggerFactory.getLogger(StudentService.class);`
-2. 各 level 加 log：進入方法用 `debug`，成功用 `info`，低庫存用 `warn`，catch 區塊用 `error`
-3. `log.error("Failed: {}", e.getMessage(), e)` — 最後傳入 `e` 讓 Logback 印出完整 stack trace
+1. 宣告 Logger：`private static final Logger log = LoggerFactory.getLogger(ResponseService.class);`
+2. 用 `{}` 佔位符，不要用字串相加：`log.debug("送出作答，surveyId={}", surveyId)`
+3. `log.error("...：{}", e.getMessage(), e)` — 最後傳入 `e`，Logback 才印出完整 stack trace
+4. 遮罩 Email：只保留前 2 碼與 `@` 之後的網域，寫成一個 `maskEmail` 小方法
+5. 記得同時設定 `logging.level.root=INFO`，避免第三方套件（Hibernate、Tomcat）的 DEBUG 洗版
 
 ```properties
-logging.level.com.example.demo.service=DEBUG
-logging.file.name=logs/app.log
+logging.level.root=INFO
+logging.level.com.example.survey=DEBUG
+logging.file.name=logs/dynamic-survey.log
 logging.logback.rollingpolicy.max-file-size=10MB
 logging.logback.rollingpolicy.max-history=30
 ```
 
-<!--
-注意 log.error 的最後那個 e：把 exception 物件也傳進去，Logback 會幫你印出完整的 stack trace。
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
-只傳 e.getMessage() 是不夠的，stack trace 才是你找問題的關鍵。
+<!--
+為什麼用 {} 佔位符，不用字串相加？因為如果 log level 沒有開啟，字串相加還是會先執行，白白浪費效能；佔位符只有在真的要輸出的時候，才會組字串。
+
+注意 log.error 的最後那個 e：把 exception 物件也傳進去，Logback 會幫你印出完整的 stack trace。只傳 e.getMessage() 是不夠的，stack trace 才是你找問題的關鍵。
+
+記得把 logs/ 資料夾加進 .gitignore，log 檔不應該被提交到 Git。
 -->
 
 ---
+layout: default
+---
 
-# 練習二：解答程式碼 — Logger 與方法骨架
+# 練習二：解答（ResponseService）
+### `service/ResponseService.java`
 
 ```java
 @Service
-public class StudentService {
-    private static final Logger log =
-        LoggerFactory.getLogger(StudentService.class);
-    @Autowired
-    private StudentRepository studentRepository;
+@RequiredArgsConstructor
+public class ResponseService {
 
-    public StudentResponse createStudent(CreateStudentRequest req) {
-        log.debug("建立學生，name={}, score={}",   // DEBUG：進入點
-            req.getName(), req.getScore());
-        try {
-            Student po = new Student();
-            po.setName(req.getName());
-            po.setScore(req.getScore());
-            Student saved = studentRepository.save(po);
-            // ↓ WARN / INFO / ERROR 見下一頁
+    private static final Logger log = LoggerFactory.getLogger(ResponseService.class);
+    // ...
+
+// ... 見下一頁
 ```
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-先看 Logger 宣告與方法骨架：
-DEBUG 記錄進入點與輸入參數，方便開發時追流程。
-接著 new 一個 Student PO、set 欄位、save 進資料庫。
-WARN、INFO、ERROR 的部分在下一頁。
+DEBUG 記錄進入點，只記 surveyId，不記使用者輸入的姓名、手機、Email。
 -->
 
 ---
+layout: default
+---
 
-# 練習二：解答程式碼 — WARN / INFO / ERROR
+# 練習二：解答（ResponseService）（續）
+### `service/ResponseService.java`
 
 ```java
-            if (saved.getScore() < 60) {
-                log.warn("學生分數不及格，name={}, score={}",   // WARN
-                    saved.getName(), saved.getScore());
-            }
-            log.info("學生建立成功，id={}", saved.getId());     // INFO
-            return toResponse(saved);
-        } catch (Exception e) {
-            log.error("建立學生失敗：{}", e.getMessage(), e);   // ERROR
-            throw e;
+    // ... 接上一頁
+
+    @Transactional
+    public Integer submit(Integer surveyId, HttpSession session) {
+        log.debug("送出作答，surveyId={}", surveyId);   // DEBUG：進入點（不記個資）
+        // ... 讀取暫存、check、建立 SurveyResponse（同練習 2）
+        try {
+            responseRepository.saveAndFlush(r);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("重複填寫被資料庫擋下，surveyId={}, email={}",
+                    surveyId, maskEmail(r.getEmail()));                  // WARN
+            throw new BizException(RspCode.ALREADY_RESPONDED);
         }
+        draftService.clearResponse(session, surveyId);
+        log.info("作答送出成功，surveyId={}, responseId={}, answers={}",
+                surveyId, r.getId(), r.getAnswers().size());             // INFO
+        return r.getId();
+    }
+
+    // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+WARN 放在 catch DataIntegrityViolationException 裡：這種情況不是程式的錯，是使用者重複送出，或是兩個請求同時進來，所以用 WARN，不是 ERROR。ERROR 留給真正「不該發生」的情況。Email 用 maskEmail 遮罩過才寫進 log。
+
+INFO 記錄成功事件，包含 surveyId、responseId、答案筆數。日後如果客訴說「我明明送出了」，我們可以用 responseId 在資料庫查到，也可以在 log 裡查到那筆請求。
+-->
+
+---
+layout: default
+---
+
+# 練習二：解答（ResponseService）（續）
+### `service/ResponseService.java`
+
+```java
+// ... 接上一頁
+
+    /** log 不可以寫入完整個資：a1@example.com → a1***@example.com */
+    private static String maskEmail(String email) {
+        int at = email.indexOf('@');
+        return at <= 2 ? "***" + email.substring(at) : email.substring(0, 2) + "***" + email.substring(at);
     }
 }
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>四個 level 各司其職：</b>DEBUG 追流程、WARN 標不及格、INFO 記成功、ERROR 在 catch 區塊。<code>log.error</code> 最後傳 <code>e</code>，Logback 才印完整 stack trace。</div>
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-接續上一頁的 try 區塊：
-WARN 記錄不及格（業務上可接受但需注意的狀況）。
-INFO 記錄成功事件與 id。
-ERROR 在 catch 區塊，log.error 最後一個參數傳 e，Logback 才會印出完整 stack trace。
+第 44 章加入登入功能之後，如果想在 log 裡標示「是誰送出的」，也請用遮罩過的 Email，或是使用者 id，不要記完整的個資。
 -->
 
 ---
+layout: default
+---
 
-# 練習二：解答設定 — application.properties
+# 練習二：解答（GlobalExceptionHandler 與設定）
+
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    // ... 其他 handler 不變
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<AppResponse<Void>> handleOther(Exception e) {
+        // ERROR：最後一個參數傳 e，才會印出完整 stack trace
+        log.error("未預期的錯誤：{}", e.getMessage(), e);
+        return ResponseEntity.status(RspCode.SERVER_ERROR.getStatus())
+                .body(AppResponse.error(RspCode.SERVER_ERROR));   // 回給前端的訊息不含細節
+    }
+}
+```
 
 ```properties
-# service 套件開 DEBUG，方便看到進入點 log
-logging.level.com.example.demo.service=DEBUG
-
-# 全域維持 INFO，避免第三方套件洗版
+# 自己的套件開 DEBUG，其餘維持 INFO，避免第三方套件洗版
 logging.level.root=INFO
+logging.level.com.example.survey=DEBUG
 
-# 輸出到檔案
-logging.file.name=logs/app.log
-
-# 檔案滾動：每檔最大 10MB，保留 30 天
+# 輸出到檔案，每檔最大 10MB，保留 30 天
+logging.file.name=logs/dynamic-survey.log
 logging.logback.rollingpolicy.max-file-size=10MB
 logging.logback.rollingpolicy.max-history=30
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">💡 <b>驗證：</b> 呼叫 <code>createStudent</code> 後，<code>logs/app.log</code> 會出現 DEBUG 進入點、INFO 成功、必要時的 WARN；若丟例外則有 ERROR 加完整 stack trace。</div>
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-root 設 INFO、service 設 DEBUG，只放大自己的套件，第三方套件不會洗版。
-logging.file.name 讓 log 同時寫到檔案，rolling policy 控制檔案大小與保留天數。
+GlobalExceptionHandler 的最後一道防線，現在用 log.error 取代 printStackTrace，並且最後一個參數傳 e。細節寫進日誌，給前端的訊息維持「系統發生錯誤」，不洩漏資料庫結構等敏感資訊。
+
+application.properties 的設定：root 維持 INFO，只有我們自己的套件 com.example.survey 開 DEBUG，第三方套件不會洗版。logging.file.name 讓 log 同時寫到檔案，rolling policy 控制檔案大小與保留天數。
+-->
+
+---
+layout: default
+---
+
+# 練習二：解答（GlobalExceptionHandler 與設定）（續）
+
+<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>驗證：</b>送出作答後，<code>logs/dynamic-survey.log</code> 出現 DEBUG「送出作答」與 INFO「作答送出成功」；同一 Email 再送一次，出現 WARN（Email 已遮罩）。
+</div>
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+上一章 Validation 的解答裡，我們把 handleOther 寫成 printStackTrace，現在補上正式的做法。這是很典型的專案演進：一開始先讓功能動起來，再逐步把品質補上。
+
+如果你想看到 Hibernate 實際送出的 SQL，可以暫時加上 spring.jpa.show-sql=true，開發時很有幫助，但正式環境要關掉。
 -->
 
 ---

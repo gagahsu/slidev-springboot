@@ -51,3 +51,14 @@ Package manager is `pnpm` (v10.33.0). Do not use `npm` or `yarn`.
 ## Reference Materials
 
 `ref1.md`, `ref2.md`, `ref3.md` — source content (Java OOP topics) used as reference when authoring slides. Do not modify these files; they are input materials, not slides.
+
+## 貫穿專案：動態問卷系統
+
+本課程 ch28、ch37–ch41、ch44–ch45、ch47 的練習題全部圍繞「動態問卷系統」，跨課程（MySQL / Spring Boot / Angular / Docker）共用。**規格以 `SURVEY-SPEC.md` 為準**（各 repo 內容一致，修改時要同步）。
+
+- **版本：** Spring Boot **4.1.1**（不選 SNAPSHOT）、Java 21、Gradle - Groovy；Spring Security 7、Hibernate 7、Jackson 3（`tools.jackson.*`）
+- **`sql/`：** `schema.sql`、`seed.sql`（與 `slidev-mysql/sql/` 相同）、`ch45-refresh-tokens.sql`（ch45 新增的表）
+- **`reference/dynamic-survey/`：** 可執行的參考答案（`./gradlew test`、`./e2e.sh`）。**投影片裡的程式碼必須取自這個專案**（已編譯、測試過）；改題目時先改參考專案並跑過測試與 `e2e.sh`，再改投影片
+- **章節解答是逐步累積的**：ch40 的 `submit` 沒有登入者參數，ch44 才加入；參考專案是最終版
+- 練習題的做法（PO ↔ DTO、`AppResponse`、`BizException`、Session 暫存、JWT + Session 並存）見 `47-dynamic-survey.md` 的疑難排解表
+- **投影片排版：** 練習題的投影片一張只放約 20 行程式碼（畫布 980×552）。長程式碼會拆成「（續）」頁並加上「接上一頁 / 見下一頁」註解；投影片內的 `<style>` 區塊才是投影片層級的 CSS（frontmatter 的 `style:` 不是 CSS 規則區塊）

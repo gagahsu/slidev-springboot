@@ -258,6 +258,10 @@ runtimeOnly    'io.jsonwebtoken:jjwt-jackson:0.12.5'
 💡 <b>注意：</b> jjwt-impl 和 jjwt-jackson 都要設 <code>runtimeOnly</code>！jjwt-api 是編譯期介面，後兩者是執行期實作。
 </div>
 
+<div class="mt-2 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>Spring Boot 4 的 Jackson：</b> Boot 4 內建 Jackson 3（<code>tools.jackson</code>），jjwt-jackson 用的是 Jackson 2（<code>com.fasterxml.jackson</code>）。兩者可以同時存在，jjwt-jackson 會自己帶入 Jackson 2，不需要另外設定。
+</div>
+
 <!--
 jjwt 拆成三個 JAR 是有原因的：jjwt-api 提供介面，你的程式碼只依賴介面；jjwt-impl 是實作，設成 runtime scope 表示編譯時不需要，執行時才載入；jjwt-jackson 負責把 Claims 序列化成 JSON。
 -->
@@ -312,7 +316,7 @@ style: |
 </div>
 
 ```java
-package com.example.demo.security;
+package com.example.survey.security;
 
 @Component
 public class JwtUtil {
@@ -439,7 +443,7 @@ style: |
 # JwtAuthFilter（1/4）：類別宣告
 
 ```java
-package com.example.demo.security;
+package com.example.survey.security;
 
 @Component
 @RequiredArgsConstructor
@@ -587,10 +591,10 @@ Filter 實作好了，現在要把它掛進 Spring Security 的過濾鏈。
 
 | 項目 | ch44 練習二（Session 版） | ch45（JWT 版） |
 |------|-------------------|----------------|
-| 登入方式 | `.httpBasic(...)` | ① **刪掉 httpBasic**，改用自己的 `/auth/login` |
+| 登入方式 | `.httpBasic(...)` | ① **刪掉 httpBasic**，改用自己的 `/api/auth/login` |
 | Session | 預設 Stateful，靠 Session 記登入狀態 | ② 加 `.sessionCreationPolicy(STATELESS)` |
 | **JWT 加在哪** | — | ③ 加 `.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)` |
-| 路徑授權規則 | `/api/products/**`、`/api/admin/**`… | **完全不變**，只多開一條 `/auth/**` |
+| 路徑授權規則 | `/api/products/**`、`/api/admin/**`… | **完全不變**，只多開一條 `/api/auth/**` |
 | `UserDetailsService` | `CustomUserDetailsService`（查 DB） | **完全不變**，原封不動繼續用 |
 | `PasswordEncoder` | `BCryptPasswordEncoder` | **完全不變** |
 
@@ -613,7 +617,7 @@ style: |
 
 # SecurityConfig（1/4）：授權規則（沿用 ch44）
 
-`authorizeHttpRequests` 整組**沿用 ch44 練習二**，只多開一條 `/auth/**`：
+`authorizeHttpRequests` 整組**沿用 ch44 練習二**，只多開一條 `/api/auth/**`：
 
 ```java
 @Bean
@@ -621,7 +625,7 @@ public SecurityFilterChain securityFilterChain(
         HttpSecurity http, JwtAuthFilter jwtAuthFilter)  // ← 方法參數注入，不是 field
         throws Exception {
     http.authorizeHttpRequests(auth -> auth
-            .requestMatchers("/auth/**").permitAll()                   // ← ch45 新增：登入端點
+            .requestMatchers("/api/auth/**").permitAll()                   // ← ch45 新增：登入端點
             .requestMatchers(HttpMethod.POST, "/api/register").permitAll()  // ch44 沿用
             .requestMatchers(HttpMethod.GET,    "/api/products/**").permitAll()
             .requestMatchers(HttpMethod.POST,   "/api/products/**").hasRole("ADMIN")
@@ -635,7 +639,7 @@ public SecurityFilterChain securityFilterChain(
 
 <!--
 這頁的重點是「差異」而不是「全新」：整段 authorizeHttpRequests 跟 ch44 練習二一字不差，
-只在最上面多加一條 /auth/** permitAll。
+只在最上面多加一條 /api/auth/** permitAll。
 
 /api/register 一定要留著，否則新用戶沒帳號、又不能註冊，根本拿不到 Token 去登入——
 這就是 ch44 練習二講過的雞生蛋問題，換成 JWT 之後一樣存在。
@@ -663,12 +667,12 @@ style: |
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>三個 ch45 新增項：</b> ① <code>STATELESS</code>（不建 Session）② <code>addFilterBefore</code>（把 <code>JwtAuthFilter</code> 插進過濾鏈）③ 把 ch44 的 <code>.httpBasic(...)</code> 刪掉（帳密只在 <code>/auth/login</code> 交換一次，不再每次請求都帶）。
+💡 <b>三個 ch45 新增項：</b> ① <code>STATELESS</code>（不建 Session）② <code>addFilterBefore</code>（把 <code>JwtAuthFilter</code> 插進過濾鏈）③ 把 ch44 的 <code>.httpBasic(...)</code> 刪掉（帳密只在 <code>/api/auth/login</code> 交換一次，不再每次請求都帶）。
 </div>
 
 <!--
 三個 ch45 新增項：STATELESS（不建 Session）、addFilterBefore（把 JwtAuthFilter 插進過濾鏈）、
-以及把 ch44 的 .httpBasic(...) 刪掉（帳密只在 /auth/login 交換一次，不再每次請求都帶）。
+以及把 ch44 的 .httpBasic(...) 刪掉（帳密只在 /api/auth/login 交換一次，不再每次請求都帶）。
 
 DSL 順序跟 ch44 一致：authorizeHttpRequests 先寫，csrf 收尾，中間插 ch45 新增的東西，
 這樣兩章的設定檔並排看差異一目了然。
@@ -695,14 +699,14 @@ style: |
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>為什麼 JWT 專案還需要 PasswordEncoder？</b><br>
-JWT 只解決「發完 Token 之後怎麼認人」，但 <code>/auth/login</code> 第一次驗帳密時，還是要靠 <code>DaoAuthenticationProvider</code> 用它去 <code>matches()</code> 比對 DB 裡的 BCrypt 密文。<b>註冊 API 存密碼時也是用同一個 Bean。</b>
+JWT 只解決「發完 Token 之後怎麼認人」，但 <code>/api/auth/login</code> 第一次驗帳密時，還是要靠 <code>DaoAuthenticationProvider</code> 用它去 <code>matches()</code> 比對 DB 裡的 BCrypt 密文。<b>註冊 API 存密碼時也是用同一個 Bean。</b>
 </div>
 
 <!--
 這個 Bean 從 ch44 一路帶過來，完全沒改。
 
 要跟學生講清楚它在 JWT 架構裡的位置：JWT 不會取代密碼驗證，只是取代「Session 記住你」這件事。
-帳密比對還是照舊發生在 /auth/login 那一次，之後才換成 Token。
+帳密比對還是照舊發生在 /api/auth/login 那一次，之後才換成 Token。
 ch44 練習二寫的註冊 API（passwordEncoder.encode）也是用這個 Bean，同樣不用改。
 -->
 
@@ -960,7 +964,7 @@ record 補充完了，現在來實作 Controller！
 
 ```java
 public record LoginRequest(
-    String username,
+    String email,      // 本系統用 Email 當登入帳號
     String password
 ) {}
 ```
@@ -968,7 +972,7 @@ public record LoginRequest(
 ```java
 public record LoginResponse(
     String token,
-    String username,
+    String email,
     long expiresIn
 ) {}
 ```
@@ -988,11 +992,11 @@ style: |
   pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
 ---
 
-# AuthController：POST /auth/login
+# AuthController：POST /api/auth/login
 
 ```java
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -1004,11 +1008,11 @@ public class AuthController {
             @RequestBody LoginRequest request) {
         authManager.authenticate(
             new UsernamePasswordAuthenticationToken(
-                request.username(), request.password()));
+                request.email(), request.password()));
 
-        String token = jwtUtil.generateToken(request.username());
+        String token = jwtUtil.generateToken(request.email());
         return ResponseEntity.ok(new LoginResponse(
-            token, request.username(), 86400000));
+            token, request.email(), 86400000));
     }
 }
 ```
@@ -1028,18 +1032,18 @@ public class AuthController {
 **第一步：登入拿 Token**
 
 ```
-POST /auth/login
+POST /api/auth/login
 Content-Type: application/json
 
-{ "username": "alice", "password": "pass123" }
+{ "email": "admin@example.com", "password": "Passw0rd12" }
 ```
 
 回傳 `200 OK`，body 裡的 `token` 欄位就是要用的 JWT。
 
 <!--
-這裡強調跟 ch44 的操作差異：ch44 用 httpBasic，Postman 選 Basic Auth 帳密就搞定；ch45 完全沒開 httpBasic，帳密驗證只在 /auth/login 這個端點做一次性交換。
+這裡強調跟 ch44 的操作差異：ch44 用 httpBasic，Postman 選 Basic Auth 帳密就搞定；ch45 完全沒開 httpBasic，帳密驗證只在 /api/auth/login 這個端點做一次性交換。
 
-實際操作：送 POST /auth/login，把回傳 body 裡的 token 字串複製起來，下一頁要用。
+實際操作：送 POST /api/auth/login，把回傳 body 裡的 token 字串複製起來，下一頁要用。
 -->
 
 ---
@@ -1082,7 +1086,7 @@ class: flex flex-col justify-center items-center text-center
 
 | 步驟 | 動作 | 說明 |
 |------|------|------|
-| 1 | 前端 POST /auth/login | 帶上 username + password |
+| 1 | 前端 POST /api/auth/login | 帶上 email + password |
 | 2 | AuthController | 呼叫 AuthenticationManager 驗證 |
 | 3 | 驗證成功 | JwtUtil.generateToken() 生成 Token |
 | 4 | 回傳 200 OK | 回應 body 包含 JWT Token |
@@ -1150,21 +1154,45 @@ JWT 用起來很爽，但有幾個安全陷阱要注意。
 layout: default
 ---
 
-# 練習：加入 Refresh Token 機制
-### 任務說明
+# 練習：JWT 登入與 Refresh Token
 
-延續本章 Part 6~10 教過的 `JwtUtil` / `JwtAuthFilter` / `SecurityConfig` / `AuthController`（也就是接手 ch44 練習二的專案改成 JWT 之後的成果），加入 Refresh Token 功能：
+把 ch44 的 HTTP Basic 換成 JWT，讓前端（Angular）用 Token 呼叫 API，並加入 Refresh Token：
 
-1. 修改 `JwtUtil`，加入 `generateRefreshToken()` 方法（過期時間 7 天）
-2. 修改 `LoginResponse`，加入 `refreshToken` 欄位
-3. 建立 `RefreshToken` Entity，儲存 refreshToken 到資料庫（含 username、token、過期時間）
-4. 建立 `POST /auth/refresh` 端點：接收 refreshToken → 查資料庫驗證 → 生成新的 Access Token 回傳
-5. 建立 `POST /auth/logout` 端點：從資料庫刪除 Refresh Token，回傳 200 OK
+0. 在 MySQL 執行 `sql/ch45-refresh-tokens.sql`（新增 `refresh_tokens` 表）
+1. `build.gradle` 加入 jjwt 三個依賴、`application.properties` 加入 `jwt.secret`（Base64、至少 256-bit）
+2. `JwtUtil`（本章 Part 6）新增 `generateRefreshToken()`：Access Token **15 分鐘**、Refresh Token **7 天**
+3. `JwtAuthFilter` + `SecurityConfig`（Part 7、8）：改成 **無狀態**、移除 `httpBasic`、掛上 Filter、提供 `AuthenticationManager` Bean；未登入 / 權限不足要回**統一格式的 JSON**（401 / 403）
+4. `RefreshToken` Entity 與 `RefreshTokenRepository`（存 `email`、`token`、`expiryDate`）
+5. `AuthController`：
+   - `POST /api/auth/login`：Email + 密碼 → 回傳 `accessToken`、`refreshToken` 與使用者資訊，並把 Refresh Token 存資料庫
+   - `POST /api/auth/refresh`：查資料庫驗證 → 簽發新的 Access Token
+   - `POST /api/auth/logout`：刪除資料庫的 Refresh Token
+6. CORS：允許 `http://localhost:4200`，並允許帶 Cookie（`allowCredentials`）
+7. 用 Postman 驗證完整流程，並確認**訪客作答的 Session 暫存**仍然正常（ch40）
 
 **思考題：** 為什麼 Refresh Token 要存資料庫，但 Access Token 不用？
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-這個進階練習模擬了真實應用的完整認證流程。Refresh Token 需要儲存在資料庫，因為我們需要能夠廢止它（資料庫刪除就等於廢止），這補足了 JWT 無法即時廢止的缺點。
+這個練習把整個認證流程完成：登入、拿 Token、用 Token 呼叫 API、Token 過期之後用 Refresh Token 換新的、登出讓 Refresh Token 失效。
+
+跟本章 Part 6 到 Part 10 教的內容比，這個練習有幾個地方要注意：
+
+第一，Access Token 我們設 15 分鐘。前面的範例是 24 小時，但實務上 Access Token 越短越安全，因為它一旦外洩，壞人能用的時間就越短；配合 Refresh Token，使用者不需要每 15 分鐘登入一次。
+
+第二，SecurityConfig 要處理「未登入」和「權限不足」的回應。預設 Spring Security 回傳的是空的 body，或是 HTML 的錯誤頁，前端很難處理。我們把它改成跟其他 API 一樣的 AppResponse 格式。
+
+第三，第 7 點是一個很容易踩的坑：我們的問卷系統同時用了 JWT 和 Session。JWT 用來識別身分，Session 用來暫存作答，兩者並存。這個組合有一個 Spring Security 的預設行為會破壞它，練習解答裡有一頁專門說明。
+
+還有 CORS：Angular 在 localhost:4200，後端在 localhost:8080，是不同的來源，瀏覽器預設會擋。要後端明確允許，而且因為我們用 Cookie 帶 Session，還要 allowCredentials。
 -->
 
 ---
@@ -1172,255 +1200,642 @@ layout: default
 ---
 
 # 練習：解題提示
-### 提示說明
 
 **思考題解答：**
 
 | | Access Token | Refresh Token |
 |---|---|---|
-| 時效 | 短（15分鐘~24小時） | 長（7天） |
+| 時效 | 短（15 分鐘） | 長（7 天） |
 | 儲存 | 客戶端（無需資料庫） | 資料庫（需要廢止能力） |
 | 廢止 | 等待過期即可 | 刪除資料庫記錄即廢止 |
 
-**解題順序建議：** `RefreshToken` Entity → `JwtUtil.generateRefreshToken()` → `LoginResponse` 加欄位 → `AuthController` 的 `/auth/login` 順便存 Refresh Token → 新增 `/auth/refresh`、`/auth/logout`。
+**解題順序建議：** SQL 建表 → 依賴與 `jwt.secret` → `RefreshToken` Entity / Repository → `JwtUtil` → `JwtAuthFilter` → `SecurityConfig` → `AuthController` → Postman。
+
+<div class="mt-2 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>Spring Boot 4 的 Jackson：</b>Spring Boot 4 內建 Jackson 3（<code>tools.jackson</code>），jjwt-jackson 使用的是 Jackson 2（<code>com.fasterxml.jackson</code>）。兩者可以<b>同時存在</b>，jjwt-jackson 會自己帶入 Jackson 2，不用另外處理；jjwt 只用它處理 Token 裡的 JSON，跟我們 API 的 JSON 互不影響。
+</div>
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-Refresh Token 存資料庫是因為它有「廢止」的需求——logout 時要能立刻讓它失效。Access Token 存在客戶端，因為它很短效，等過期就好，不需要主動廢止。
+Refresh Token 存資料庫是因為它有「廢止」的需求：logout 時要能立刻讓它失效。Access Token 存在客戶端，因為它很短效，等過期就好，不需要主動廢止。
 
-這就是 JWT + Refresh Token 架構的核心設計思路。下面幾頁給完整解答程式碼。
+這就是 JWT 加 Refresh Token 架構的核心設計思路。下面幾頁給完整的解答程式碼。
+
+關於 Jackson 的黃色提醒：Spring Boot 4 把預設的 JSON 函式庫，從 Jackson 2 升級到 Jackson 3，套件名稱從 com.fasterxml 換成了 tools.jackson。如果你在 Stack Overflow 看到舊的範例，要注意這一點。jjwt 這個函式庫，目前還是用 Jackson 2，兩個版本可以在同一個專案裡共存，沒有衝突。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.8em !important; line-height: 1.3 !important; }
+layout: default
 ---
 
-# 練習：解答程式碼（1/8）— RefreshToken Entity
+# 練習：解答程式碼（1/7）— RefreshToken Entity 與 Repository
 
 ```java
 @Entity
 @Table(name = "refresh_tokens")
+@Getter
+@Setter
 public class RefreshToken {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     @Column(nullable = false)
-    private String username;
+    private String email;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 500)
     private String token;
 
     @Column(nullable = false)
     private Instant expiryDate;
-
-    // getter / setter 省略
 }
 ```
 
-<!--
-跟 ch44 教的 Entity 套路完全一樣，token 欄位加 unique 約束避免碰撞。
-Repository 見下一頁。
--->
-
----
-style: |
-  pre, code { font-size: 0.8em !important; line-height: 1.3 !important; }
----
-
-# 練習：解答程式碼（2/8）— RefreshTokenRepository
-
 ```java
-public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
+public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Integer> {
     Optional<RefreshToken> findByToken(String token);
 }
 ```
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-findByToken 是 /auth/refresh、/auth/logout 都要用到的核心查詢，
-繼承 JpaRepository 就自動有基本 CRUD，這裡只加一個自訂查詢方法。
+跟 ch44 教的 Entity 套路完全一樣。token 欄位加 unique 約束避免碰撞；expiryDate 用 Instant，對應資料庫的 DATETIME。
+
+因為我們的 ddl-auto 是 validate，Hibernate 不會幫我們建表，所以要先執行 SQL 建立 refresh_tokens 這張表。email 欄位加索引，是因為將來如果要做「登出所有裝置」，會依 email 查詢。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
+layout: default
 ---
 
-# 練習：解答程式碼（3/8）— JwtUtil 新增方法
+# 練習：解答程式碼（1/7）— RefreshToken Entity 與 Repository（續）
 
-在 Part 6 的 `JwtUtil` 裡加一個方法，複製 `generateToken()` 只改過期時間：
+```sql
+CREATE TABLE refresh_tokens (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  email       VARCHAR(100) NOT NULL,
+  token       VARCHAR(500) NOT NULL,
+  expiry_date DATETIME(6)  NOT NULL,
+  UNIQUE KEY uk_refresh_token (token(255)),
+  INDEX idx_refresh_email (email)
+) ENGINE=InnoDB;
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+findByToken 是 /refresh、/logout 都要用到的核心查詢，繼承 JpaRepository 就自動有基本 CRUD，這裡只加一個自訂查詢方法。
+-->
+
+---
+layout: default
+---
+
+# 練習：解答程式碼（2/7）— JwtUtil 與 DTO
 
 ```java
-public String generateRefreshToken(String username) {
-    return Jwts.builder()
-        .subject(username)
-        .issuedAt(new Date())
-        .expiration(new Date(
-            System.currentTimeMillis() + 604_800_000L)) // 7 天
-        .signWith(getSigningKey())
-        .compact();
+@Component
+public class JwtUtil {
+
+    // 密鑰從 application.properties 讀取（Base64 編碼、至少 256-bit）
+    @Value("${jwt.secret}")
+    private String secret;
+
+    private SecretKey getSigningKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(secret);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    // Access Token：15 分鐘
+    public String generateToken(String username) {
+        return build(username, 15 * 60 * 1000L);
+    }
+
+// ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+JwtUtil 跟 Part 6 教的版本幾乎一樣，只是把「產生 Token」抽成一個私有方法 build，接收帳號和有效時間，Access Token 和 Refresh Token 各呼叫一次，差別只在有效時間：15 分鐘對 7 天。這個小重構，避免了兩份幾乎一樣的程式碼。
+
+LoginResponse 用 record，比起 Part 10 的版本，多了 refreshToken 欄位，另外回傳的是完整的使用者資訊 UserInfo，讓前端登入之後不用再多發一次 /me 請求，就知道使用者是誰、是不是管理員。
+-->
+
+---
+layout: default
+---
+
+# 練習：解答程式碼（2/7）— JwtUtil 與 DTO（續）
+
+```java
+// ... 接上一頁
+
+    // Refresh Token：7 天
+    public String generateRefreshToken(String username) {
+        return build(username, 7 * 24 * 60 * 60 * 1000L);
+    }
+
+    private String build(String username, long ttlMs) {
+        return Jwts.builder()
+                .subject(username)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + ttlMs))
+                .signWith(getSigningKey())
+                .compact();
+    }
+    // extractAllClaims、extractUsername、validateToken 同本章 Part 6
 }
 ```
 
-`LoginResponse` 多加一個欄位：
-
 ```java
-public record LoginResponse(
-    String token,
-    String refreshToken,
-    String username,
-    long expiresIn
-) {}
+public record LoginRequest(
+        @NotBlank(message = "請輸入 Email") String email,
+        @NotBlank(message = "請輸入密碼") String password) {}
+
+public record RefreshRequest(@NotBlank String refreshToken) {}
+
+public record LoginResponse(String accessToken, String refreshToken, UserInfo user) {}
 ```
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-generateRefreshToken 跟 generateToken 結構一模一樣，只有過期時間不同（7 天 vs 24 小時），
-再次體現 record 改欄位有多輕鬆——LoginResponse 加一個欄位，其他程式碼不用大改，
-呼叫端 new LoginResponse(...) 補一個參數即可。
+用 record 的好處，這裡就看得出來了：加一個欄位，只要改一行。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.76em !important; line-height: 1.25 !important; }
+layout: default
 ---
 
-# 練習：解答程式碼（4/8）— AuthController：類別骨架
+# 練習：解答程式碼（3/7）— AuthController：類別骨架與 login
 
 ```java
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
     private final AuthenticationManager authManager;
     private final JwtUtil jwtUtil;
+    private final UserService userService;
     private final RefreshTokenRepository refreshTokenRepository;   // ← 新增
 
-    // login 方法見下一頁
-}
+// ... 見下一頁
 ```
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-跟 Part 10 教的 AuthController 比，只多注入一個 RefreshTokenRepository。
-login 方法要改成同時簽發 Access Token 跟 Refresh Token，並把 Refresh Token 存進資料庫。
+跟 Part 10 教的 AuthController 比，多注入一個 RefreshTokenRepository，login 方法多做兩件事。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.76em !important; line-height: 1.25 !important; }
+layout: default
 ---
 
-# 練習：解答程式碼（5/8）— AuthController：login 簽發雙 Token
-
-接續上一頁同一個 `AuthController` 類別：
+# 練習：解答程式碼（3/7）— AuthController：類別骨架與 login（續）
 
 ```java
+    // ... 接上一頁
+
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
-        authManager.authenticate(
-            new UsernamePasswordAuthenticationToken(
-                request.username(), request.password()));
+    public AppResponse<LoginResponse> login(@Valid @RequestBody LoginRequest req) {
+        String email = req.email().trim().toLowerCase();
+        try {
+            // 帳號不存在、密碼錯誤都是 AuthenticationException，一律回同一個訊息
+            authManager.authenticate(new UsernamePasswordAuthenticationToken(email, req.password()));
+        } catch (org.springframework.security.core.AuthenticationException e) {
+            throw new BizException(RspCode.LOGIN_FAILED);
+        }
+        String accessToken = jwtUtil.generateToken(email);
+        String refreshToken = jwtUtil.generateRefreshToken(email);
 
-        String accessToken = jwtUtil.generateToken(request.username());
-        String refreshToken = jwtUtil.generateRefreshToken(request.username());
-        // 存進資料庫、回傳 見下一頁
+    // ... 見下一頁
 ```
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-帳密驗證通過後，同時生成 Access Token 跟 Refresh Token，接下來要把 Refresh Token 存進資料庫。
+第一，authManager.authenticate 有可能丟出 AuthenticationException：帳號不存在、密碼錯誤，都是它的子類別。我們一律接住，轉成同一個 LOGIN_FAILED，訊息是「帳號或密碼錯誤」。為什麼不分開說？因為如果告訴使用者「這個帳號不存在」，攻擊者就可以用這個 API，一個一個猜出系統有哪些帳號，這叫做帳號列舉攻擊。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.78em !important; line-height: 1.3 !important; }
+layout: default
 ---
 
-# 練習：解答程式碼（6/8）— AuthController：存 Refresh Token 並回傳
-
-接續上一頁同一個 `login` 方法：
+# 練習：解答程式碼（3/7）— AuthController：類別骨架與 login（續）
 
 ```java
+// ... 接上一頁
+
         RefreshToken entity = new RefreshToken();
-        entity.setUsername(request.username());
+        entity.setEmail(email);
         entity.setToken(refreshToken);
-        entity.setExpiryDate(Instant.now().plusSeconds(604_800)); // 7 天
+        entity.setExpiryDate(Instant.now().plusSeconds(7 * 24 * 60 * 60)); // 7 天
         refreshTokenRepository.save(entity);
 
-        return ResponseEntity.ok(new LoginResponse(
-            accessToken, refreshToken, request.username(), 86400000));
+        return AppResponse.success(new LoginResponse(accessToken, refreshToken, userService.me(email)));
     }
-    // /auth/refresh、/auth/logout 見下兩頁
+    // /refresh、/logout 見下一頁
 }
 ```
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-login 方法在簽發 Access Token 之外，多做一件事：生成 Refresh Token 並存進資料庫，
-之後 /auth/refresh、/auth/logout 都要靠這筆紀錄運作。
+第二，簽發兩個 Token，並把 Refresh Token 存進資料庫。之後 refresh、logout 都靠這筆紀錄運作。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.8em !important; line-height: 1.3 !important; }
+layout: default
 ---
 
-# 練習：解答程式碼（7/8）— /auth/refresh
-
-接續同一個 `AuthController`：
+# 練習：解答程式碼（4/7）— refresh 與 logout
 
 ```java
-public record RefreshRequest(String refreshToken) {}
-
-@PostMapping("/refresh")
-public ResponseEntity<LoginResponse> refresh(@RequestBody RefreshRequest request) {
-    RefreshToken saved = refreshTokenRepository.findByToken(request.refreshToken())
-        .orElseThrow(() -> new RuntimeException("Refresh Token 無效"));
-
-    if (saved.getExpiryDate().isBefore(Instant.now())) {
-        refreshTokenRepository.delete(saved);           // 過期就順手清掉
-        throw new RuntimeException("Refresh Token 已過期，請重新登入");
+    @PostMapping("/refresh")
+    public AppResponse<LoginResponse> refresh(@Valid @RequestBody RefreshRequest req) {
+        RefreshToken saved = refreshTokenRepository.findByToken(req.refreshToken())
+                .orElseThrow(() -> new BizException(RspCode.INVALID_TOKEN));
+        if (saved.getExpiryDate().isBefore(Instant.now())) {
+            refreshTokenRepository.delete(saved); // 過期就順手清掉
+            throw new BizException(RspCode.INVALID_TOKEN);
+        }
+        String newAccessToken = jwtUtil.generateToken(saved.getEmail());
+        return AppResponse.success(new LoginResponse(newAccessToken, saved.getToken(), userService.me(saved.getEmail())));
     }
 
-    String newAccessToken = jwtUtil.generateToken(saved.getUsername());
-    return ResponseEntity.ok(new LoginResponse(
-        newAccessToken, saved.getToken(), saved.getUsername(), 86400000));
-}
-// /auth/logout 見下一頁
-```
-
-<!--
-查資料庫驗證 Refresh Token 存在且沒過期，通過才簽發新的 Access Token；
-注意這裡不會重新生成 Refresh Token，同一個 Refresh Token 可以一直用到它自己的 7 天期限。
--->
-
----
-style: |
-  pre, code { font-size: 0.8em !important; line-height: 1.3 !important; }
----
-
-# 練習：解答程式碼（8/8）— /auth/logout
-
-接續同一個 `AuthController`：
-
-```java
-@PostMapping("/logout")
-public ResponseEntity<Void> logout(@RequestBody RefreshRequest request) {
-    refreshTokenRepository.findByToken(request.refreshToken())
-        .ifPresent(refreshTokenRepository::delete);      // 刪除 = 廢止
-    return ResponseEntity.ok().build();
-}
+    @PostMapping("/logout")
+    public AppResponse<Void> logout(@Valid @RequestBody RefreshRequest req) {
+        refreshTokenRepository.findByToken(req.refreshToken())
+                .ifPresent(refreshTokenRepository::delete); // 刪除 = 廢止
+        return AppResponse.success();
+    }
 ```
 
 <div class="mt-2 p-2 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>測試流程：</b> ① <code>/auth/login</code> 拿 <code>token</code> + <code>refreshToken</code> ② 等 Access Token 過期（或直接測）③ <code>POST /auth/refresh</code> 帶舊 <code>refreshToken</code> 換新 <code>token</code> ④ <code>POST /auth/logout</code> 後再打 <code>/auth/refresh</code> 應失敗（已被刪除）。
+💡 <b>測試流程：</b> ① <code>/api/auth/login</code> 拿 <code>accessToken</code> + <code>refreshToken</code> ② Access Token 過期後，<code>POST /api/auth/refresh</code> 帶 <code>refreshToken</code> 換新的 ③ <code>POST /api/auth/logout</code> 之後再 <code>/refresh</code> 應失敗（401）。
 </div>
 
-<!--
-/auth/logout：直接從資料庫刪除這筆 Refresh Token 紀錄，之後任何人拿這個 Refresh Token
-來 /auth/refresh 都會查不到、丟 RuntimeException——這就是「廢止」的具體實作。
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
-實務上 RuntimeException 通常會包成自訂例外 + @ExceptionHandler 轉成 401，這裡先簡化處理，
-讓學生聚焦在 Refresh Token 的存取邏輯上。
+<!--
+refresh：查資料庫驗證 Refresh Token 存在且沒過期，通過才簽發新的 Access Token；過期就順手清掉，回 INVALID_TOKEN。注意這裡不會重新生成 Refresh Token，同一個 Refresh Token 可以一直用到它自己的 7 天期限。
+
+logout：直接從資料庫刪除這筆 Refresh Token 紀錄，之後任何人拿這個 Refresh Token 來 refresh，都會查不到，這就是「廢止」的具體實作。找不到也不報錯，因為登出這個動作，重複執行的結果應該一樣：這叫做冪等。
+
+跟 Part 10 的版本比，這裡用的是第 39 章建立的 BizException 和 AppResponse，錯誤就會有統一的格式和正確的 HTTP 狀態碼，不需要再丟 RuntimeException。
+-->
+
+---
+layout: default
+---
+
+# 練習：解答程式碼（5/7）— SecurityConfig：Bean 與 JSON 錯誤回應
+
+```java
+@Configuration
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    private final JwtAuthFilter jwtAuthFilter;
+    private final ObjectMapper objectMapper;
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+// ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+SecurityConfig 依賴 JwtAuthFilter 和 ObjectMapper，用 @RequiredArgsConstructor 注入。這裡的 ObjectMapper 是 Spring Boot 4 的 Jackson 3 版本，套件是 tools.jackson.databind。
+-->
+
+---
+layout: default
+---
+
+# 練習：解答程式碼（5/7）— SecurityConfig：Bean 與 JSON 錯誤回應（續）
+
+```java
+    // ... 接上一頁
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
+    // filterChain 見下一頁
+
+    // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+PasswordEncoder 沿用 ch44。AuthenticationManager 是這一章新增的 Bean：我們要在 AuthController 用它做登入的密碼比對，Spring Security 不會自動把它暴露成 Bean，要自己取出來。
+
+write 方法處理 401 和 403 的回應：Spring Security 的 Filter 在 Controller 之前，所以我們在 Controller 寫的 GlobalExceptionHandler 攔不到這兩種錯誤，要在 Security 這一層自己輸出 JSON。
+-->
+
+---
+layout: default
+---
+
+# 練習：解答程式碼（5/7）— SecurityConfig：Bean 與 JSON 錯誤回應（續）
+
+```java
+    // ... 接上一頁
+
+    // 未登入 401、權限不足 403：回統一的 JSON，而不是 Spring 預設的空 body
+    private void write(jakarta.servlet.http.HttpServletResponse res, RspCode code) throws java.io.IOException {
+        res.setStatus(code.getStatus().value());
+        res.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        res.setCharacterEncoding("UTF-8");
+        res.getWriter().write(objectMapper.writeValueAsString(AppResponse.error(code)));
+    }
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+⚠️ 記得設定 setCharacterEncoding("UTF-8")，否則中文訊息會變成亂碼。
+-->
+
+---
+layout: default
+---
+
+# 練習：解答程式碼（6/7）— SecurityConfig：無狀態 + 授權規則 + Filter
+
+```java
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(Customizer.withDefaults())
+                // 身分靠 JWT，不靠 Session；但 Controller 仍可用 HttpSession 暫存作答
+                .sessionManagement(s -> s
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                        // 不要每個請求都換發新的 JSESSIONID，否則 Session 裡暫存的作答會找不到
+                        .sessionFixation(f -> f.none()))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/users/**").authenticated()
+
+    // ... 見下一頁
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+這是整個練習最重要的一頁。
+
+無狀態：sessionCreationPolicy(STATELESS) 告訴 Spring Security：不要用 Session 保存登入狀態，每個請求都靠 JWT 識別。
+-->
+
+---
+layout: default
+---
+
+# 練習：解答程式碼（6/7）— SecurityConfig：無狀態 + 授權規則 + Filter（續）
+
+```java
+    // ... 接上一頁
+
+                        // 前台：匿名也能瀏覽與填寫
+                        .requestMatchers(HttpMethod.GET, "/api/surveys/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/surveys/*/draft", "/api/surveys/*/submit").permitAll()
+                        .anyRequest().denyAll())
+                .exceptionHandling(e -> e
+                        .authenticationEntryPoint((req, res, ex) -> write(res, RspCode.UNAUTHORIZED))
+                        .accessDeniedHandler((req, res, ex) -> write(res, RspCode.FORBIDDEN)))
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        return http.build();
+    }
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+sessionFixation none：先講這行為什麼存在。Spring Security 有一個預防「Session 固定攻擊」的機制：使用者認證成功之後，會換一個新的 Session ID。這個機制在 JWT 的架構下，每個帶 Token 的請求都會被當成「剛剛認證成功」，所以每個請求都換一次 Session ID。但是我們的問卷系統，用 HttpSession 暫存作答，Session ID 每次都變，暫存就找不到了。你會看到的症狀是：明明剛剛暫存了，一讀取，卻說沒有暫存。因為我們的身分是靠 JWT，而不是靠 Session，所以這個防護沒有意義，可以關掉。
+
+授權規則：跟 ch44 一樣。exceptionHandling 換成我們的 JSON 回應。最後 addFilterBefore，把 JwtAuthFilter 加在 UsernamePasswordAuthenticationFilter 之前，這樣每個請求都會先經過我們的 Token 檢查。
+
+httpBasic 已經拿掉了。
+-->
+
+---
+layout: default
+---
+
+# 練習：解答程式碼（7/7）— CORS 與 jwt.secret
+
+```java
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration c = new CorsConfiguration();
+        c.setAllowedOrigins(List.of("http://localhost:4200"));
+        c.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        c.setAllowedHeaders(List.of("*"));
+        c.setAllowCredentials(true); // 讓瀏覽器帶上 Session Cookie
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", c);
+        return source;
+    }
+```
+
+```properties
+jwt.secret=NDI2ZTQ3M2E0MjY1NTk3MDRlNTgzODJlNmU2MzM0MzQzMzM2MzY3Mzc3
+```
+
+<div class="mt-2 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>CORS 的 <code>allowCredentials(true)</code> 不能搭配 <code>allowedOrigins("*")</code></b>，一定要列出明確的來源。前端 Angular 呼叫時也要設定 <code>withCredentials: true</code>（Angular 課會做）。
+</div>
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+CORS 是「跨來源資源共用」。瀏覽器有同源政策：網頁來自 localhost:4200，它發請求到 localhost:8080，因為埠號不同，算不同來源，瀏覽器預設會擋。要後端明確在回應標頭說「我允許 localhost:4200」，瀏覽器才放行。
+
+這個設定只對 /api/** 生效。allowCredentials 讓瀏覽器可以帶 Cookie，這是我們用 Session 暫存作答的必要條件，但是它有一個限制：不能搭配萬用字元的來源，必須明確列出。
+
+jwt.secret 是 Base64 編碼的開發用密鑰，跟 Part 6 一樣。正式環境不要寫在 properties 裡，改用環境變數。
+-->
+
+---
+layout: default
+---
+
+# 練習：Postman 測試
+
+| 步驟 | 動作 | 預期結果 |
+| --- | --- | --- |
+| 1 | `POST /api/auth/login`：`{"email":"admin@example.com","password":"Passw0rd12"}` | 200，`data` 有 `accessToken`、`refreshToken`、`user.role = "ADMIN"` |
+| 2 | 密碼故意打錯 | **401** `LOGIN_FAILED`（帳號不存在也是同一個訊息） |
+| 3 | `GET /api/admin/surveys`，Header `Authorization: Bearer <accessToken>` | 200 |
+| 4 | 不帶 Token 呼叫同一個 API | **401**，**JSON** 格式（不是空白頁） |
+| 5 | 用 `ming@example.com` 的 Token 呼叫 | **403**，JSON 格式 |
+| 6 | Token 最後面多加一個字元（模擬竄改） | **401**，**不是 500** |
+| 7 | `POST /api/auth/refresh`：`{"refreshToken":"…"}` | 200，新的 `accessToken` |
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+步驟 10 值得大家親手做一次：先照解答設定，確認暫存讀得到；再把 sessionFixation none 那一行註解掉，重新啟動，重複步驟 10，你會看到 GET draft 回傳 409：沒有暫存的資料。那是因為每個請求，Session ID 都被換掉了。
+
+這是整合 JWT 與 Session 時，非常隱蔽的一個問題，因為單獨測試 JWT，或單獨測試 Session，都不會出錯，只有兩個一起用才會發生，第 47 章整合驗收的時候，我們還會再看到它。
+-->
+
+---
+layout: default
+---
+
+# 練習：Postman 測試（續）
+
+| 步驟 | 動作 | 預期結果 |
+| --- | --- | --- |
+| 8 | 拿 **accessToken** 當 refreshToken 送 `/refresh` | **401**（資料庫查不到） |
+| 9 | `POST /api/auth/logout` 之後，再 `/refresh` | **401** |
+| 10 | 不帶 Token：`POST /api/surveys/2/draft`，再 `GET .../draft` | 200；**讀得回暫存**（Session 沒有被 Security 換掉） |
+
+<div class="mt-2 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>驗證重點：</b> 步驟 6 證明 Filter 有 try-catch；步驟 10 證明 <code>sessionFixation(none)</code> 有生效（把那一行註解掉再試一次，就會讀不到暫存）。<br>
+💡 <b>Swagger UI：</b>在 <code>OpenApiConfig</code> 加上 <code>bearerAuth</code>（HTTP bearer / JWT）與後台 Controller 的 <code>@SecurityRequirement</code>，Swagger UI 右上角就會出現 <b>Authorize</b> 按鈕，貼上 accessToken 就能測試後台 API。
+</div>
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+如果大家想在 Swagger UI 測後台 API，可以照最後一個提示做：在 OpenApiConfig 加上 JWT 的 security scheme，後台 Controller 加上 @SecurityRequirement，Swagger UI 右上角就會多一個 Authorize 按鈕。
 -->
 
 ---
@@ -1434,7 +1849,7 @@ public ResponseEntity<Void> logout(@RequestBody RefreshRequest request) {
 | 時效 | 短（15 分鐘~24 小時） | 長（7 天） |
 | 驗證方式 | 只驗簽章，不查表 | 查 DB 確認存在、沒過期 |
 | 廢止需求 | 沒有，等過期就好 | 有，logout / 換裝置要能立刻失效 |
-| 查表頻率 | 每個 API 請求都會用到 | 只有 `/auth/refresh`、`/auth/logout` 才用到 |
+| 查表頻率 | 每個 API 請求都會用到 | 只有 `/api/auth/refresh`、`/api/auth/logout` 才用到 |
 
 <!--
 這頁把思考題從「記憶題」升級成「設計題」：不只是背答案，而是理解背後的取捨——
@@ -1454,7 +1869,7 @@ public ResponseEntity<Void> logout(@RequestBody RefreshRequest request) {
 | 為什麼這樣分工 | 頻率高，查表不划算 | 壽命長、外洩風險高，值得換一次查詢 |
 
 <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>補充：Refresh Token Rotation</b> —— 這裡的解法讓同一個 Refresh Token 能重複用到 7 天期限。業界主流（Auth0、Okta）會做 Rotation：每次 <code>/auth/refresh</code> 用掉舊 token 就刪除、換發新的存回 DB，舊 token 被重放即可偵測外洩。
+⚠️ <b>補充：Refresh Token Rotation</b> —— 這裡的解法讓同一個 Refresh Token 能重複用到 7 天期限。業界主流（Auth0、Okta）會做 Rotation：每次 <code>/api/auth/refresh</code> 用掉舊 token 就刪除、換發新的存回 DB，舊 token 被重放即可偵測外洩。
 </div>
 
 <!--

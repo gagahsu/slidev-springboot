@@ -506,24 +506,107 @@ join 查詢因為不支援 LIMIT，也可以用這個方式限制回傳筆數：
 layout: default
 ---
 
+# 練習準備：連上動態問卷資料庫
+### 從這章開始，練習題都圍繞「動態問卷系統」
+
+承接 MySQL 課，資料庫 `dynamic_survey` 已經有六張表（`sql/schema.sql`、`sql/seed.sql`）。在目前的練習專案：
+
+1. 把 `application.properties` 的資料庫改成 `dynamic_survey`，並讓 Hibernate 只驗證、不建表：
+
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/dynamic_survey?serverTimezone=Asia/Taipei&characterEncoding=utf-8
+spring.jpa.hibernate.ddl-auto=validate
+```
+
+2. 新增 `Survey` Entity（先只對應 `surveys` 這一張表，題目、選項之後再加）：
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+從這一章開始，我們的練習不再用學生、課程，而是換成整個課程的貫穿專案：動態問卷系統。資料庫在 MySQL 課已經建好了，所以這裡的 ddl-auto 我們改成 validate：它不會建表、也不會改表，只會在啟動時檢查你的 Entity 跟資料庫的表對不對得上，對不上就直接報錯。這比 update 安全很多，因為資料庫的結構是我們在 MySQL 課精心設計的，不想被 Hibernate 偷偷改掉。
+
+Entity 的欄位命名是駝峰式，startDate 會自動對應到資料庫的 start_date，這是 Spring Boot 預設的命名策略。
+-->
+
+---
+layout: default
+---
+
+# 練習準備：連上動態問卷資料庫（續）
+### 從這章開始，練習題都圍繞「動態問卷系統」
+
+```java
+@Entity
+@Table(name = "surveys")
+@Getter @Setter
+public class Survey {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+    private String title;
+    private String description;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    @JdbcTypeCode(SqlTypes.TINYINT)   // 資料庫是 TINYINT，Java 用 Boolean
+    private Boolean published;
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+⚠️ 易錯點：published 這個欄位，資料庫是 TINYINT，Java 用 Boolean。如果不加 @JdbcTypeCode(SqlTypes.TINYINT)，Hibernate 預設期待的是 BIT，validate 的時候會報型別對不上。Lombok 的 @Getter @Setter 是第 7 章安裝過的。
+-->
+
+---
+layout: default
+---
+
 # 練習 1：用 @Query 實作複雜查詢
 ### 任務說明
 
-在 `StudentRepository` 中加入以下兩個自訂查詢方法：
+在 `SurveyRepository`（`extends JpaRepository<Survey, Integer>`）中加入以下兩個自訂查詢方法：
 
 | 方法 | 說明 |
 | --- | --- |
-| `findByScoreRange(int min, int max)` | 查詢分數在 min~max 之間的學生（含端點） |
-| `updateScoreById(int id, int score)` | 更新指定 id 的學生分數 |
+| `findOngoing(LocalDate today)` | 查詢「進行中」的問卷：已發佈，且 `today` 介於開始與結束日期之間（含端點），依結束日期排序 |
+| `updatePublished(Integer id, boolean published)` | 更新指定問卷的發佈狀態（後台的「發佈 / 取消發佈」） |
 
 請確認：
-1. 查詢方法使用命名參數 `:min`、`:max`
+1. 查詢方法使用命名參數 `:today`
 2. 更新方法加上 `@Modifying`、`@Transactional`，回傳 `int`
 
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
 <!--
-這個練習把今天學的 @Query、命名參數、@Modifying 全部用上。
+這個練習把今天學的 @Query、命名參數、@Modifying 全部用上，而且是問卷系統前台列表真的會用到的查詢。
+
+「進行中」的定義在課程規格書寫得很清楚：已發佈，並且今天在開始日期和結束日期之間，兩端都包含。
 
 大家先自己寫，思考：查詢用 JPQL 還是 nativeQuery = true？更新呢？
+
+提示：JPQL 裡的 Boolean 條件寫 s.published = true。
 
 想好了再看提示！
 -->
@@ -533,73 +616,136 @@ layout: default
 # 練習 1：解題提示
 
 ```java
-@Query("select s from Student s where s.score between :min and :max")
-List<Student> findByScoreRange(@Param("min") int min,
-                               @Param("max") int max);
+@Query("select s from Survey s where s.published = true "
+     + "and :today between s.startDate and s.endDate "
+     + "order by s.endDate")
+List<Survey> findOngoing(@Param("today") LocalDate today);
 
 @Transactional
 @Modifying
-@Query("update Student set score = :score where id = :id")
-int updateScoreById(@Param("id") int id, @Param("score") int score);
+@Query("update Survey s set s.published = :published where s.id = :id")
+int updatePublished(@Param("id") Integer id, @Param("published") boolean published);
 ```
 
 <div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>成功標準：</b> 用 Postman 呼叫 API，查詢分數 60~80 的學生，以及更新某個學生分數後再查詢確認。
+✅ <b>成功標準：</b> 用範例資料，今天呼叫 <code>findOngoing(LocalDate.now())</code> 會得到 3 份問卷（午餐偏好、新品口味、課程回饋）；<code>updatePublished(5, true)</code> 回傳 1，不存在的 id 回傳 0。
 </div>
 
 <!--
-between :min and :max 是 JPQL 的範圍語法，等同 SQL 的 BETWEEN。
+:today between s.startDate and s.endDate 是 JPQL 的範圍語法，把參數放在前面、欄位放在 between 後面，等同 SQL 的 BETWEEN，兩端都包含。
 
-更新方法加了 @Modifying 和 @Transactional，回傳 int 代表影響行數。如果 id 不存在，回傳 0。
+JPQL 的表名和欄位名用的是 Entity 類別名和屬性名：Survey、startDate，不是資料庫的 surveys、start_date。這是 nativeQuery = false 的特色。
+
+更新方法加了 @Modifying 和 @Transactional，回傳 int 代表影響行數。如果 id 不存在，回傳 0，呼叫端可以用這個數字判斷「有沒有更新到」。
+
+⚠️ 用 @Query 寫日期時，不要自己在 JPQL 裡寫 CURRENT_DATE，而是從參數傳進來。這樣之後寫單元測試時，可以傳入固定的日期，測試結果才穩定。
 -->
 
 ---
 layout: default
 ---
 
-# 練習 2：為查詢加上分頁
+# 練習 2：為查詢加上分頁與搜尋
 ### 任務說明
 
-承接練習 1，將 `findByScoreRange` 改成支援分頁的版本：
+前台列表頁要「標題模糊搜尋 + 開始 / 結束日期區間 + 分頁」。請在 `SurveyRepository` 新增 `search` 方法：
 
-1. 修改方法簽名，加入 `Pageable` 參數，回傳型別改為 `Page<Student>`
-2. 在 Service 層呼叫時，傳入 `PageRequest.of(0, 5)`（第 1 頁，每頁 5 筆）
-3. 在 Controller 回傳 `Page<Student>`，前端可取得 `content`（資料）和 `totalElements`（總筆數）
+1. 三個搜尋條件（`title`、`start`、`end`）**都可以省略**（傳 `null` 就不篩選）；`start`、`end` 的意思是「問卷的起訖日期要包含在這個區間內」
+2. 加入 `Pageable` 參數，回傳型別為 `Page<Survey>`
+3. 在 Service 呼叫時，用 `PageRequest.of(page, size, Sort.by(DESC, "id"))`，`size` 預設 10
+4. Controller：`GET /surveys?title=&startDate=&endDate=&page=0&size=10`，回傳 `Page<Survey>`
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-分頁幾乎是所有清單 API 的標準配備，這個練習讓大家實際體驗一次完整流程。
+分頁幾乎是所有清單 API 的標準配備，這個練習讓大家實際體驗一次完整流程：Repository、Service、Controller 全部串起來。
+
+這題有一個比較進階的技巧：「條件可以省略」。做法是在 JPQL 裡寫 (:title is null or s.title like ...)，當參數是 null 時，整個條件就恆為真，等於沒有這個條件。
+
+日期區間「包含」的意思：問卷的開始日期 >= 搜尋開始日期，並且問卷的結束日期 <= 搜尋結束日期。
 
 用 Postman 呼叫後，觀察回傳的 JSON 結構，看看 Page 物件包含哪些分頁資訊。
 -->
 
 ---
 
-# 練習 2：解題提示
+# 練習 2：解題提示（Repository）
 
 ```java
-@Query("select s from Student s where s.score between :min and :max")
-Page<Student> findByScoreRangePaging(
-    @Param("min") int min,
-    @Param("max") int max,
-    Pageable pageable);
+@Query("""
+        select s from Survey s
+        where (:title is null or s.title like concat('%', :title, '%'))
+          and (:start is null or s.startDate >= :start)
+          and (:end is null or s.endDate <= :end)
+          and s.published = true
+        """)
+Page<Survey> search(@Param("title") String title,
+                    @Param("start") LocalDate start,
+                    @Param("end") LocalDate end,
+                    Pageable pageable);
 ```
 
-Service 呼叫：
-
-```java
-Page<Student> result = studentRepo.findByScoreRangePaging(
-    60, 80, PageRequest.of(0, 5));
-```
-
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>成功標準：</b> 回傳 JSON 含 <code>content</code>（最多 5 筆）、<code>totalElements</code>（符合條件的總筆數）、<code>totalPages</code>。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <code>(:title is null or ...)</code> 是「可省略條件」的慣用寫法：傳 <code>null</code> 時整個括號恆為真。<code>"""</code> 是 Java 的文字區塊，可以直接換行寫長字串。
 </div>
 
 <!--
-Pageable 的 import 是 org.springframework.data.domain.Pageable。
-PageRequest 的 import 是 org.springframework.data.domain.PageRequest。
+Repository 的重點是那三組「參數是 null 就不篩選」的括號。
 
-Page<T> 回傳的 JSON 會包含很多分頁相關的欄位，前端可以直接用 content 取資料、totalPages 知道共幾頁。
+Spring Data 遇到 Pageable 參數，會自動幫你加上 limit 和 offset，還會另外執行一次 count 查詢，取得符合條件的總筆數，所以回傳的 Page 才有 totalElements 和 totalPages。
+
+concat('%', :title, '%') 是 JPQL 寫模糊搜尋的方式，不要直接把 % 寫在參數值裡。
+
+⚠️ 易錯點：這裡把 s.published = true 直接寫在查詢裡，是因為前台只能看到已發佈的問卷。後台的列表要看到全部，之後在正式專案，我們會把它變成參數。
+-->
+
+---
+
+# 練習 2：解題提示（Service 與 Controller）
+
+```java
+// Service
+public Page<Survey> search(String title, LocalDate start, LocalDate end, int page, int size) {
+    String keyword = (title == null || title.isBlank()) ? null : title.trim();
+    Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
+    return surveyRepository.search(keyword, start, end, pageable);
+}
+```
+
+```java
+// Controller
+@GetMapping("/surveys")
+public Page<Survey> list(
+        @RequestParam(name = "title", required = false) String title,
+        @RequestParam(name = "startDate", required = false) LocalDate startDate,
+        @RequestParam(name = "endDate", required = false) LocalDate endDate,
+        @RequestParam(name = "page", defaultValue = "0") int page,
+        @RequestParam(name = "size", defaultValue = "10") int size) {
+    return surveyService.search(title, startDate, endDate, page, size);
+}
+```
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
+✅ <b>成功標準：</b> <code>GET /surveys?title=調查&size=2</code> 回傳 JSON 含 <code>content</code>（最多 2 筆）、<code>totalElements</code>（4）、<code>totalPages</code>（2）；<code>page=1</code> 回傳第二頁。
+</div>
+
+<!--
+Service 有一個小處理：把空白字串轉成 null。前端搜尋框如果什麼都沒輸入，可能送來空字串，如果不處理，like '%%' 雖然結果一樣，但是語意不清楚，轉成 null 更乾淨。
+
+分頁的 page 參數從 0 開始，這是初學者最常搞錯的地方。「第 1 頁」是 PageRequest.of(0, size)，不是 of(1, size)。所以之後 Angular 的畫面顯示「第 1 頁」時，呼叫 API 要傳 page = 0。
+
+Sort.by(DESC, "id") 讓最新的問卷排最前面。注意分頁一定要搭配排序，否則每次查詢的順序不保證一致，換頁時可能看到重複或漏掉的資料。
+
+這裡直接回傳 Page<Survey> 是為了先體驗分頁；下一個練習章節，我們會學到 Entity 不應該直接回傳給前端，要包成 DTO。
+
+日期參數 LocalDate 直接用 yyyy-MM-dd 格式傳，Spring Boot 就能自動轉換。
 -->
 
 ---

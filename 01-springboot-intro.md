@@ -421,6 +421,46 @@ class: flex flex-col justify-center items-center text-center
 -->
 
 ---
+layout: default
+---
+
+# 課程的終點：動態問卷系統
+
+整套課程（MySQL → Spring Boot → Angular）會用同一個專案串起來：**動態問卷系統**。
+
+| 角色 | 能做什麼 |
+| --- | --- |
+| **訪客 / 會員** | 瀏覽進行中的問卷 → 填寫 → 確認頁檢查 → 送出；看統計圓餅圖；會員可看自己的填寫紀錄 |
+| **管理員** | 後台登入 → 新增 / 編輯 / 批次刪除問卷 → 設計題目（單選、多選、文字）→ 發佈 → 看回饋與統計 |
+
+- MySQL 課：設計並建立 `dynamic_survey` 資料庫的六張表
+- Spring Boot 課（本課程）：從 JPA 到 Security + JWT，逐章完成 REST API，第 47 章整合驗收
+- Angular 課：完成前台與後台畫面
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 每章的練習題都是這個系統的一小塊。完整需求、資料表與 API 清單寫在 <code>SURVEY-SPEC.md</code>，做完練習就能拼出整個系統。
+</div>
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+在正式開始之前，先告訴大家整個課程的終點，這樣你每一章做的練習才知道是在幫什麼忙。
+
+我們最後要做出一個「動態問卷系統」：訪客可以填問卷，管理員可以在後台設計問卷、看統計。這個題目很適合當作品集，因為它同時用到資料庫設計、後端 API、登入驗證、前端畫面，是一個完整的全端專案。
+
+課程的分工是這樣：MySQL 課先設計好資料庫，Spring Boot 課寫後端，Angular 課寫前端。所以我們這門課的每一個練習題，都是在為後端的某一塊做準備：例如 JPA 那幾章做問卷的查詢和分頁，Session 那章做作答的暫存，Security 和 JWT 那幾章做登入和後台權限。
+
+大家如果卡住了，隨時可以回來看這個專案的規格文件。
+-->
+
+---
 layout: end
 ---
 

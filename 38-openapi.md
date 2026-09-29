@@ -466,20 +466,32 @@ springdoc.api-docs.enabled=false
 layout: default
 ---
 
-# 練習 1：幫 StudentController 加上 API 文件
+# 練習 1：幫問卷 API 加上文件
 ### 任務說明
 
-替 `StudentController` 加上文件說明：
+在 `dynamic-survey` 專案（ch37 完成的版本）加入 `springdoc-openapi-starter-webmvc-ui:3.0.3`，並替 `SurveyController` 加上文件說明：
 
-1. 在 `StudentController` 類別上加 `@Tag(name = "Student", description = "學生管理 API")`
-2. 在 `createStudent()` 方法上加 `@Operation(summary = "新增學生")`
-3. 在 `getStudentById()` 方法上加 `@ApiResponse(responseCode = "200", description = "查詢成功")`
-4. 啟動 Spring Boot，開啟 `http://localhost:8080/swagger-ui/index.html` 查看結果
+1. 在類別上加 `@Tag(name = "問卷 API", description = "問卷查詢、新增、修改、批次刪除")`
+2. 在前台 `list()` 上加 `@Operation(summary = "前台問卷列表", description = "只列出已發佈的問卷；標題模糊搜尋、日期區間、分頁")`
+3. 在 `page` 參數加 `@Parameter(description = "頁碼，從 0 開始")`，`size` 加 `@Parameter(description = "每頁筆數，預設 10")`
+4. 在後台 `delete()` 上加 `@Operation(summary = "批次刪除問卷")`，說明「只有未發佈、尚未開始的問卷可以刪除」
+5. 啟動 Spring Boot，開啟 `http://localhost:8080/swagger-ui/index.html`，用 Swagger UI 的 **Try it out** 呼叫 `GET /api/surveys`
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-這個練習讓大家在熟悉的 StudentController 上加文件，可以馬上看到 Swagger UI 的變化。
+這個練習讓大家在剛完成的問卷 API 上加文件，可以馬上看到 Swagger UI 的變化。之後前端同學（或是 Angular 課的我們自己）就是照著這份文件呼叫 API，所以文件說明是不是清楚，是很實際的問題。
 
-重點是要有「所見即所得」的感受——加上 Annotation 後重新整理 Swagger UI，說明文字就出現了。
+重點是要有「所見即所得」的感受：加上 Annotation 後重新啟動，Swagger UI 上的說明文字就出現了。
+
+特別是第 5 點：Try it out 可以直接在網頁上發送請求，不需要另外開 Postman。大家試試看，把 size 改成 2、page 改成 1，看看回傳的分頁結果。
 -->
 
 ---
@@ -490,14 +502,63 @@ layout: default
 ### 提示說明
 
 1. `@Tag` 加在 class 層級，`@Operation` 加在方法層級，位置不要放錯
-2. import 路徑：`io.swagger.v3.oas.annotations.tags.Tag`、`io.swagger.v3.oas.annotations.Operation`
+2. import 路徑：`io.swagger.v3.oas.annotations.tags.Tag`、`io.swagger.v3.oas.annotations.Operation`、`io.swagger.v3.oas.annotations.Parameter`
 3. 啟動後如果找不到 Swagger UI，確認 URL 是 `http://localhost:8080/swagger-ui/index.html`（注意是 `index.html`，不是舊版的 `swagger-ui.html`）
-4. 頁面頂部顯示「OpenAPI definition」是正常的——可以建立 `OpenApiConfig` Bean 改掉
+4. 目前前台與後台的方法都在同一個 `SurveyController`，所以會混在同一個 Tag 底下；第 47 章整合時，會拆成 `SurveyController`（前台）與 `AdminSurveyController`（後台），各自有自己的 Tag
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-Annotation 的 import 是最容易出錯的地方——IDE 有時候會提示多個同名的 class，要確認選的是 io.swagger.v3.oas.annotations 開頭的。
+Annotation 的 import 是最容易出錯的地方：IDE 有時候會提示多個同名的 class，要確認選的是 io.swagger.v3.oas.annotations 開頭的。
 
-Swagger UI URL 在 springdoc 2.x / 3.x 都是 /swagger-ui/index.html，不是舊版的 /swagger-ui.html（舊版 URL 會自動 redirect，但記住正確路徑比較保險）。
+@Parameter 加在方法參數上，跟 @RequestParam 並排，順序沒有關係。
+-->
+
+---
+layout: default
+---
+
+# 練習 1：解題提示（續）
+### 提示說明
+
+```java
+@Tag(name = "問卷 API", description = "問卷查詢、新增、修改、批次刪除")
+@RestController
+@RequiredArgsConstructor
+public class SurveyController {
+
+    @Operation(summary = "前台問卷列表",
+               description = "只列出已發佈的問卷；標題模糊搜尋、日期區間、分頁")
+    @GetMapping("/api/surveys")
+    public Page<SurveyDTO> list(
+            /* ... */
+            @Parameter(description = "頁碼，從 0 開始")
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @Parameter(description = "每頁筆數，預設 10")
+            @RequestParam(name = "size", defaultValue = "10") int size) { /* ... */ }
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
+Swagger UI URL 在 springdoc 2.x / 3.x 都是 /swagger-ui/index.html。
+
+⚠️ 實際遇到的一個坑：如果專案裡有兩個類別同名（例如兩個 SurveyDTO，放在不同 package），Swagger 的 schema 是用簡單類別名稱當 key，兩個會互相蓋掉，畫面上看到的說明會錯亂。所以 DTO 命名要避免重複，或是用 @Schema(name = "...") 改名。
 -->
 
 ---
@@ -507,15 +568,27 @@ layout: default
 # 練習 2：替 DTO 加上 @Schema 說明
 ### 任務說明
 
-為 `CreateStudentRequest` 欄位加上 `@Schema` 說明：
+為 `SurveyDTO` 的欄位加上 `@Schema` 說明，並自訂 API 資訊：
 
-1. 在 `name` 欄位加上 `@Schema(description = "學生姓名", example = "王小明")`
-2. 在 `score` 欄位加上 `@Schema(description = "考試分數，需在 0–100 之間", example = "85")`
-3. 建立 `OpenApiConfig` Bean，自訂 API 標題為「學生管理系統 API」
-4. 在 Swagger UI 的 Request Body 區塊確認欄位說明出現
+1. `title`：`@Schema(description = "問卷名稱，最多 50 字", example = "午餐偏好調查")`
+2. `startDate`：`@Schema(description = "開始日期，必須晚於今天", example = "2026-10-01")`
+3. `status`：這個欄位由後端計算、前端不用傳，加上 `accessMode = Schema.AccessMode.READ_ONLY`
+4. 建立 `OpenApiConfig`，把 API 標題改為「動態問卷系統 API」
+5. 在 Swagger UI 展開 `POST /api/admin/surveys` 的 Request Body，確認欄位說明、範例值出現，且 `status` 沒有出現在請求範例中
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
-這個練習讓大家看到 @Schema 的效果——在 Swagger UI 點開 POST /students 的 Request Body，每個欄位旁邊都會有說明文字和範例值。
+這個練習讓大家看到 @Schema 的效果：在 Swagger UI 點開 POST 的 Request Body，每個欄位旁邊都有說明文字和範例值。
+
+第三點很有意思：status 是後端算出來的，前端送了也會被忽略。加上 READ_ONLY，Swagger 就不會把它放進「請求範例」，但仍然會顯示在「回應範例」。這是把「哪些欄位是前端該傳的」直接寫進文件的好方法。
 
 OpenApiConfig 讓大家練習建立一個 @Configuration Bean，並且看到 Swagger UI 頂部的標題改變了。
 -->
@@ -527,20 +600,73 @@ layout: default
 # 練習 2：解題提示
 ### 提示說明
 
-1. `@Schema` 的 import：`io.swagger.v3.oas.annotations.media.Schema`
-2. `OpenApiConfig` 的 import：`io.swagger.v3.oas.models.OpenAPI` 和 `io.swagger.v3.oas.models.info.Info`（注意是 `models`，不是 `annotations`）
-3. `OpenApiConfig` 建立後，重新啟動 Spring Boot，Swagger UI 頂部標題就會更新
-4. `password` 欄位可以加 `@Schema(description = "登入密碼，至少 6 個字元")`，但刻意不填 example
+```java
+public class SurveyDTO {
+    @Schema(description = "問卷名稱，最多 50 字", example = "午餐偏好調查")
+    private String title;
+
+    @Schema(description = "開始日期，必須晚於今天", example = "2026-10-01")
+    private LocalDate startDate;
+
+    @Schema(description = "由後端計算，前端不用傳", accessMode = Schema.AccessMode.READ_ONLY)
+    private String status;
+    // ...
+}
+```
+
+```java
+@Configuration
+public class OpenApiConfig {
+    @Bean
+    public OpenAPI openAPI() {
+        return new OpenAPI().info(new Info()
+                .title("動態問卷系統 API").version("1.0")
+                .description("前台填寫、後台管理、統計與會員"));
+    }
+}
+```
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
 
 <!--
 兩組 import 的套件名不同，第一次使用時容易搞混：
 
 Annotation（加在程式碼上）→ io.swagger.v3.oas.annotations.*
 Model Bean（OpenApiConfig 裡的類別）→ io.swagger.v3.oas.models.*
+-->
 
+---
+layout: default
+---
+
+# 練習 2：解題提示（續）
+### 提示說明
+
+1. `@Schema` 的 import：`io.swagger.v3.oas.annotations.media.Schema`
+2. `OpenApiConfig` 的 import：`io.swagger.v3.oas.models.OpenAPI` 和 `io.swagger.v3.oas.models.info.Info`（注意是 `models`，不是 `annotations`）
+
+<style>
+.slidev-layout p, .slidev-layout li, .slidev-layout td, .slidev-layout th { font-size: 15px !important; line-height: 1.45 !important; }
+.slidev-layout td, .slidev-layout th { padding: 4px 8px !important; }
+.slidev-layout .text-sm { font-size: 14px !important; line-height: 1.4 !important; }
+.slidev-layout .slidev-code-wrapper { max-width: none !important; }
+.slidev-layout pre, .slidev-layout .shiki, .slidev-layout .slidev-code { padding: 0.7rem 1.2rem !important; width: calc(100% + 3rem) !important; margin-right: -3rem !important; }
+.slidev-layout pre code, .slidev-layout .shiki code, .slidev-layout .line { font-size: 12.5px !important; line-height: 1.3 !important; }
+</style>
+
+<!--
 記住這個規律，之後就不容易選錯。
 
-password 的 example 刻意不填，提醒大家：密碼欄位不適合放範例值，安全意識從細節養成。
+還有一個小彩蛋：下一章我們會替 DTO 加上 @Size(max = 50) 這類驗證註解，springdoc 會自動讀取這些註解，把 maxLength: 50 也寫進文件，我們不需要重複寫。「驗證規則」和「文件」會自動一致，這是用標準註解的好處。
+
+在後面的 Security 章節，我們還會在 OpenApiConfig 加上 JWT 的 Authorize 按鈕，讓 Swagger UI 也能測試需要登入的 API。
 -->
 
 ---

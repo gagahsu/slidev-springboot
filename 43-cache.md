@@ -1314,7 +1314,7 @@ class StudentServiceCacheTest {
     @Autowired
     private StudentService studentService;
 
-    @MockBean
+    @MockitoBean
     private StudentRepository studentRepository;
 
     @Test
