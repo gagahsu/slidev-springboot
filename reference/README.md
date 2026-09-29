@@ -40,3 +40,9 @@ cd dynamic-survey
 
 - 這裡是**最終完成版**：投影片各章的解答是逐步累積的（例如 ch40 的 `submit` 還沒有登入者參數，ch44 才加入）。
 - `sql/` 與 `SURVEY-SPEC.md` 的內容與 `slidev-mysql` repo 保持一致。
+
+## Docker 章節用到的部分
+
+- `spring-boot-starter-actuator`：只公開 `/actuator/health`（`application.properties`），並在 `SecurityConfig` 放行，供 Docker healthcheck 使用
+- `bootJar` 固定輸出 `build/libs/survey-api.jar`（`build.gradle`），Dockerfile 才不必猜檔名
+- `spring.datasource.*`、`jwt.secret` 都可以用環境變數覆蓋（`SPRING_DATASOURCE_URL`、`JWT_SECRET`……），見 `slidev-docker/reference/survey`
