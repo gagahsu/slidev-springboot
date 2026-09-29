@@ -126,6 +126,7 @@ users 1 ──< survey_responses >── 1 surveys 1 ──< questions 1 ──<
 | Spring Boot ch38–41 | 文件、驗證、Session 暫存作答、測試 |
 | Spring Boot ch44–45 | 會員註冊登入、`ADMIN` 權限、JWT |
 | Spring Boot ch47 | 整合驗收 |
-| Angular ch23–24、33、35、38、42–43、50–52 | 路由導覽、列表分頁、日期防呆、搜尋、統計圖、對話框、作答表單 |
-| Angular ch57 | 前台 + 後台整合 |
+| Angular ch23–24、29、33、35、38、42–43、50–52 | 路由導覽、元件傳值、串接 API、列表分頁、日期防呆、搜尋、統計圖、對話框、作答表單與驗證 |
+| Angular ch57–58 | 攔截器（Token、withCredentials、401 重試）、路由守衛（登入、管理員） |
+| Angular ch59 | 前台 + 後台整合（綜合練習） |
 | Docker ch01–08 | 以 `dynamic-survey` / `survey-web` / MySQL 三個容器貫穿 |
