@@ -1,11 +1,20 @@
 <script setup lang="ts">
-import { computed, inject, onMounted } from 'vue'
+import { computed, inject, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import Icon from '../components/Icon.vue'
 import { chapterById, chapters, totalSlides } from '../lib/deck'
 import { progress } from '../lib/progress'
+import { normalizeCode } from '../lib/room'
 import { units } from '../lib/units'
 
 const openSearch = inject<() => void>('openSearch')!
+const router = useRouter()
+const joining = ref(false)
+const code = ref('')
+function join() {
+  const c = normalizeCode(code.value)
+  if (c.length === 8) router.push(`/join/${c}`)
+}
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 
 const groups = units.map(u => ({ ...u, chapters: chapters.filter(c => c.num >= u.from && c.num <= u.to) })).filter(g => g.chapters.length)
@@ -34,6 +43,11 @@ onMounted(() => { document.title = 'Spring Boot Backend Masterclass' })
           <p>{{ chapters.length }} 章 · {{ totalSlides.toLocaleString() }} 張投影片</p>
         </div>
       </div>
+      <form v-if="joining" class="join" @submit.prevent="join">
+        <input v-model="code" aria-label="課堂代碼" placeholder="課堂代碼（8 碼）" maxlength="9" autocapitalize="characters" autocomplete="off" autofocus>
+        <button class="btn primary" type="submit" :disabled="normalizeCode(code).length !== 8">加入</button>
+      </form>
+      <button v-else class="btn" @click="joining = true"><Icon name="wifi" /><span>加入課堂</span></button>
       <button class="btn search" @click="openSearch()">
         <Icon name="search" /><span>搜尋教材</span><kbd>{{ isMac ? '⌘' : 'Ctrl' }} K</kbd>
       </button>
@@ -80,6 +94,10 @@ onMounted(() => { document.title = 'Spring Boot Backend Masterclass' })
 .logo { flex: none; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: var(--c-brand); box-shadow: 0 4px 0 var(--c-brand-dark); color: #fff; font-size: 26px; font-weight: 900; }
 .brand h1 { margin: 0; font-size: 20px; font-weight: 900; line-height: 1.2; color: #2b2b2b; }
 .brand p { margin: 2px 0 0; color: var(--c-muted); font-size: 13px; font-weight: 800; }
+.brand { margin-right: auto; }
+.join { display: flex; gap: 8px; }
+.join input { width: 190px; height: 46px; padding: 0 14px; border: 2px solid var(--c-line); border-radius: 14px; font: 800 16px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
+.join input:focus { outline: 3px solid var(--c-blue); outline-offset: 1px; }
 .search { color: var(--c-muted); }
 .search span { margin-right: 20px; }
 
@@ -111,6 +129,8 @@ main { max-width: 1080px; margin: 0 auto; padding: 24px 20px 80px; }
 
 @media (max-width: 640px) {
   .search span, .search kbd { display: none; }
+  .top { flex-wrap: wrap; }
+  .join input { width: 150px; }
   .brand h1 { font-size: 16px; }
 }
 </style>

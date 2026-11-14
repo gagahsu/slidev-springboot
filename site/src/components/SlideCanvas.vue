@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue'
 import { SLIDE_H, SLIDE_W, type Slide } from '../lib/deck'
-import { STEP_CONTEXT, reducedMotion } from '../lib/steps'
+import { SLIDE_KEY, STEP_CONTEXT, reducedMotion } from '../lib/steps'
 import DrawLayer from './DrawLayer.vue'
 
 const CoverBackdrop = defineAsyncComponent(() => import('./CoverBackdrop.vue'))
@@ -25,6 +25,7 @@ provide(STEP_CONTEXT, {
 // components of the new slide claim their steps as they mount, so reset before they do
 watch(() => props.slide, () => { total.value = 0 }, { flush: 'sync' })
 watch(total, n => emit('steps', n), { immediate: true })
+provide(SLIDE_KEY, computed(() => props.slide.key))
 const backdrop = computed(() => live.value && props.slide.layout === 'cover' && !reducedMotion())
 
 

@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { inject, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, inject, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import DrawToolbar from '../components/DrawToolbar.vue'
 import Icon from '../components/Icon.vue'
+import JoinOverlay from '../components/JoinOverlay.vue'
 import Overview from '../components/Overview.vue'
 import Sidebar from '../components/Sidebar.vue'
 import SlideCanvas from '../components/SlideCanvas.vue'
+import PollPad from '../components/PollPad.vue'
+import { activePolls, ask } from '../lib/classroom'
 import { draw } from '../lib/draw'
+import { room } from '../lib/room'
 import { linked } from '../lib/sync'
 import { useDeck } from '../lib/useDeck'
 
@@ -14,6 +18,23 @@ const router = useRouter()
 const openSearch = inject<() => void>('openSearch')!
 const deck = useDeck('audience')
 const { chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, next, prev } = deck
+
+/** a student device: in a room without the presenter key */
+const inClass = computed(() => room.status === 'on' && !room.canControl)
+const asking = ref(false)
+const question = ref('')
+const askNote = ref('')
+function submitQuestion() {
+  if (!question.value.trim()) return
+  if (ask(question.value)) {
+    question.value = ''
+    askNote.value = '已送出，老師會看到你的問題。'
+    setTimeout(() => { asking.value = false; askNote.value = '' }, 1400)
+  }
+  else {
+    askNote.value = '送太快了，請稍等幾秒再送。'
+  }
+}
 
 const sidebar = ref(false)
 const overview = ref(false)
@@ -42,7 +63,7 @@ function onKey(e: KeyboardEvent) {
   const t = e.target as HTMLElement
   if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return
   if (e.key === 'Escape') {
-    if (overview.value || sidebar.value) overview.value = sidebar.value = false
+    if (overview.value || sidebar.value || asking.value) overview.value = sidebar.value = asking.value = false
     else if (drawing.value || draw.tool !== 'none') toggleDrawing(false)
     else if (immersive.value && !document.fullscreenElement) immersive.value = false
     return
@@ -58,7 +79,7 @@ function onKey(e: KeyboardEvent) {
     case 'o': case 'O': overview.value = true; break
     case 't': case 'T': sidebar.value = true; break
     case 'f': case 'F': toggleFullscreen(); break
-    case 'p': case 'P': present(); break
+    case 'p': case 'P': if (!inClass.value) present(); break
   }
 }
 
@@ -91,30 +112,35 @@ onBeforeUnmount(() => {
       <div class="progress" role="progressbar" :aria-valuenow="index + 1" aria-valuemin="1" :aria-valuemax="chapter.count" :aria-label="`第 ${index + 1} 頁，共 ${chapter.count} 頁`">
         <i :style="{ width: `${(index + 1) / chapter.count * 100}%` }" />
       </div>
+      <span v-if="room.status === 'on'" class="room-badge" :title="`課堂代碼 ${room.code}`"><Icon name="wifi" />{{ room.people }}</span>
       <span class="counter">{{ index + 1 }} <small>/ {{ chapter.count }}</small></span>
     </header>
 
     <main class="stage" @touchstart.passive="onTouchStart" @touchend.passive="onTouchEnd">
+      <button v-if="inClass && !room.following" class="btn primary catch-up" @click="deck.catchUp()">你正在自己翻頁 · 跟上老師</button>
       <div class="frame">
         <SlideCanvas v-if="slide" :slide="slide" :draw-key="drawKey" :step="step" @steps="stepTotal = $event" />
         <div v-else class="placeholder" :style="{ aspectRatio: '980 / 552' }">{{ loading ? '載入中…' : '這一章沒有投影片' }}</div>
       </div>
+      <PollPad v-for="p in activePolls" :key="p.id" :poll="p" class="pad" />
+      <JoinOverlay />
     </main>
 
     <footer class="bar bottom">
       <div class="tools">
         <button class="btn" title="章節目錄 (T)" @click="sidebar = true"><Icon name="menu" /><span>目錄</span></button>
-        <button class="btn" title="投影片總覽 (O)" @click="overview = true"><Icon name="grid" /><span>總覽</span></button>
-        <button class="btn" title="搜尋 (/)" @click="openSearch()"><Icon name="search" /><span>搜尋</span></button>
-        <button class="btn" :class="{ on: drawing }" title="畫圖工具 (D)" :aria-pressed="drawing" @click="toggleDrawing()"><Icon name="pen" /><span>畫圖</span></button>
-        <button class="btn" title="講師模式 (P)" @click="present"><Icon name="present" /><span>講師</span></button>
+        <button class="btn hide-phone" title="投影片總覽 (O)" @click="overview = true"><Icon name="grid" /><span>總覽</span></button>
+        <button class="btn hide-phone" title="搜尋 (/)" @click="openSearch()"><Icon name="search" /><span>搜尋</span></button>
+        <button class="btn hide-phone" :class="{ on: drawing }" title="畫圖工具 (D)" :aria-pressed="drawing" @click="toggleDrawing()"><Icon name="pen" /><span>畫圖</span></button>
+        <button v-if="!inClass" class="btn" title="講師模式 (P)" @click="present"><Icon name="present" /><span>講師</span></button>
+        <button v-else class="btn" title="向老師提問" @click="asking = true"><Icon name="chat" /><span>提問</span></button>
       </div>
       <div class="where">
         <small>Ch {{ chapter.num }} · {{ chapter.title }}<template v-if="linked"> · 已連線講師視窗</template></small>
         <strong>{{ slide?.title }}</strong>
       </div>
       <div class="nav">
-        <button class="btn square" title="全螢幕 (F)" aria-label="全螢幕" @click="toggleFullscreen"><Icon name="expand" /></button>
+        <button class="btn square hide-phone" title="全螢幕 (F)" aria-label="全螢幕" @click="toggleFullscreen"><Icon name="expand" /></button>
         <button class="btn square" title="上一頁 (←)" aria-label="上一頁" :disabled="index === 0 && !prevChapter" @click="prev"><Icon name="left" /></button>
         <button class="btn primary" title="下一頁 (→)" :disabled="atEnd && !nextChapter && step >= stepTotal" @click="next">
           <span>{{ step < stepTotal ? '下一步' : atEnd && nextChapter ? '下一章' : '下一頁' }}</span><Icon name="right" />
@@ -123,6 +149,18 @@ onBeforeUnmount(() => {
     </footer>
 
     <div v-if="drawing" class="draw-dock"><DrawToolbar :slide-key="drawKey" /></div>
+
+    <div v-if="asking" class="overlay ask-overlay" @click.self="asking = false">
+      <form class="ask" @submit.prevent="submitQuestion">
+        <label for="ask-text">想問老師什麼？</label>
+        <textarea id="ask-text" v-model="question" rows="3" maxlength="200" placeholder="問題會匿名送到老師的畫面" autofocus />
+        <p v-if="askNote" role="status">{{ askNote }}</p>
+        <div class="row">
+          <button type="button" class="btn" @click="asking = false">取消</button>
+          <button type="submit" class="btn primary" :disabled="!question.trim()">送出</button>
+        </div>
+      </form>
+    </div>
 
     <div v-if="immersive" class="thin-progress"><i :style="{ width: `${(index + 1) / chapter.count * 100}%` }" /></div>
 
@@ -143,7 +181,17 @@ onBeforeUnmount(() => {
 .counter { flex: none; min-width: 74px; text-align: right; color: var(--u-dark); font-size: 19px; font-weight: 900; font-variant-numeric: tabular-nums; }
 .counter small { color: var(--c-muted); font-size: 14px; }
 
-.stage { flex: 1; min-height: 0; display: grid; place-items: center; padding: 18px; }
+.stage { position: relative; flex: 1; min-height: 0; display: grid; place-items: center; padding: 18px; }
+.room-badge { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: #e5f9d3; color: var(--c-brand-dark); font-size: 15px; font-weight: 900; }
+.catch-up { position: absolute; top: 10px; left: 50%; z-index: 25; transform: translateX(-50%); }
+.catch-up:active:not(:disabled) { transform: translate(-50%, 4px); }
+.ask-overlay { z-index: 70; display: grid; place-items: center; padding: 16px; }
+.ask { display: flex; flex-direction: column; gap: 10px; width: min(460px, 100%); padding: 20px; border: 2px solid var(--c-line); border-radius: 20px; background: var(--c-snow); }
+.ask label { font-size: 19px; font-weight: 900; color: #2b2b2b; }
+.ask textarea { padding: 10px 12px; border: 2px solid var(--c-line); border-radius: 14px; font: 600 16px/1.6 var(--font-sans); resize: vertical; }
+.ask textarea:focus { outline: 3px solid var(--c-blue); outline-offset: 1px; }
+.ask p { margin: 0; color: var(--c-ink-soft); font-size: 14px; font-weight: 700; }
+.ask .row { display: flex; justify-content: flex-end; gap: 10px; }
 .frame {
   width: min(100%, calc((100vh - var(--bar-top) - var(--bar-bottom) - 40px) * 980 / 552));
   border: 2px solid var(--c-line);
@@ -173,6 +221,15 @@ onBeforeUnmount(() => {
 .thin-progress { position: fixed; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255, 255, 255, .12); }
 .thin-progress i { display: block; height: 100%; background: var(--u); transition: width .25s ease; }
 
+.pad { display: none; }
+/* phones held upright: the slide is too small to tap, so polls get a full-size answer pad */
+@media (max-width: 640px) and (orientation: portrait) {
+  .stage { display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 12px; overflow-y: auto; }
+  .frame { flex: none; }
+  .pad { display: block; flex: none; }
+  .bar { padding: 0 12px; gap: 10px; }
+  .tools .btn.hide-phone, .nav .btn.hide-phone { display: none; }
+}
 @media (max-width: 1100px) {
   .tools .btn { width: 46px; padding: 0; }
   .tools .btn span, .where { display: none; }

@@ -388,6 +388,26 @@ Status Code 的分組規則很好記：
 -->
 
 ---
+
+# 小測驗：這是誰的問題？
+
+<Poll question="後端程式執行到一半發生錯誤，前端會收到哪一類 Status Code？" options="2xx|4xx|5xx" answer="3" />
+
+<!--
+講完 Status Code，我們來做一個小測驗。
+
+題目是：後端程式執行到一半發生錯誤，前端會收到哪一類 Status Code？請大家選一個。
+
+（等大家作答）
+
+（下一步）公佈結果。答案是 5xx。
+
+記憶的方式就是剛剛那句話：4 開頭是前端，也就是發請求那一方的問題，例如網址打錯是 404、沒登入是 401；5 開頭是後端自己出錯，最常見的就是 500。
+
+以後大家在 Postman 看到 500，第一件事就是回去看後端的 console，錯誤訊息通常就印在那裡。
+-->
+
+---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---

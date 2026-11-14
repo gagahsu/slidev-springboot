@@ -349,6 +349,26 @@ Teacher 不再自己 new HpPrinter()，而是宣告「我需要一個 Printer」
 -->
 
 ---
+
+# 小測驗：換印表機要改哪裡？
+
+<Poll question="老師想把 HP 印表機換成 Canon。用了 IoC 之後，要改哪裡？" options="Teacher 的程式碼|Spring 的設定|每一個用到印表機的類別|Printer 介面" answer="2" />
+
+<!--
+進入優點之前，我們先做一個小測驗，確認大家有跟上。
+
+題目是：老師想把 HP 印表機換成 Canon，用了 IoC 之後，要改哪裡？請大家選一個答案。有開課堂連線的話，用手機直接點選項就可以作答。
+
+（等大家作答，看一下已作答人數）
+
+（下一步）公佈結果。答案是「Spring 的設定」。
+
+因為 Teacher 只宣告了「我需要一個 Printer」，至於實際給它哪一台，是 Spring 容器決定的，所以只要改 Spring 那邊的設定。選「Teacher 的程式碼」的同學，那是傳統寫法才需要做的事。
+
+這個「只改一個地方」的好處，就是我們接下來要講的第一個優點。
+-->
+
+---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---

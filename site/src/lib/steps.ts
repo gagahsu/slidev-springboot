@@ -13,6 +13,8 @@ export interface StepContext {
 }
 
 export const STEP_CONTEXT: InjectionKey<StepContext> = Symbol('deck-steps')
+/** unique key of the slide a component is rendered in (e.g. `ch04-12`) */
+export const SLIDE_KEY: InjectionKey<ComputedRef<string>> = Symbol('deck-slide-key')
 /** "last step" marker that survives JSON (used when navigating backwards into a slide) */
 export const LAST_STEP = 9999
 

@@ -3,9 +3,12 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import DrawToolbar from '../components/DrawToolbar.vue'
 import Icon from '../components/Icon.vue'
 import Overview from '../components/Overview.vue'
+import RoomPanel from '../components/RoomPanel.vue'
 import Sidebar from '../components/Sidebar.vue'
 import SlideCanvas from '../components/SlideCanvas.vue'
+import { questions } from '../lib/classroom'
 import { draw } from '../lib/draw'
+import { room } from '../lib/room'
 import { audienceCount } from '../lib/sync'
 import { useDeck } from '../lib/useDeck'
 
@@ -14,6 +17,9 @@ const { chId, chapter, slides, loading, index, slide, unit, nextChapter, prevCha
 
 const sidebar = ref(false)
 const overview = ref(false)
+const roomPanel = ref(false)
+const tab = ref<'notes' | 'questions'>('notes')
+const openQuestions = computed(() => questions.filter(q => !q.done).length)
 const nextSlide = computed(() => slides.value[index.value + 1])
 
 function go(i: number, ch = chId.value) {
@@ -69,11 +75,11 @@ function onKey(e: KeyboardEvent) {
   const t = e.target as HTMLElement
   if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return
   if (e.key === 'Escape') {
-    if (overview.value || sidebar.value) overview.value = sidebar.value = false
+    if (overview.value || sidebar.value || roomPanel.value) overview.value = sidebar.value = roomPanel.value = false
     else draw.tool = 'none'
     return
   }
-  if (overview.value || sidebar.value) return
+  if (overview.value || sidebar.value || roomPanel.value) return
   if (deck.handleKey(e)) return
   if (e.metaKey || e.ctrlKey || e.altKey) return
   switch (e.key) {
@@ -111,6 +117,9 @@ onBeforeUnmount(() => {
       <div class="status" :class="{ ok: audienceCount > 0 }" role="status">
         <i />{{ audienceCount > 0 ? `已連線 ${audienceCount} 個展示視窗` : '尚未開啟展示視窗' }}
       </div>
+      <button class="pbtn" :class="{ live: room.status === 'on' }" @click="roomPanel = true">
+        <Icon name="wifi" /><span>{{ room.status === 'on' ? `課堂 ${room.people} 人` : '遠端課堂' }}</span>
+      </button>
       <button class="pbtn accent" @click="openAudience"><Icon name="window" /><span>開啟展示視窗</span></button>
       <div class="timer" :class="{ paused: !running }">
         <span class="time" aria-label="已經過時間">{{ elapsedText }}</span>
@@ -144,13 +153,25 @@ onBeforeUnmount(() => {
         </section>
         <section class="notes">
           <div class="label">
-            講稿
+            <span class="tabs" role="tablist">
+              <button role="tab" :aria-selected="tab === 'notes'" :class="{ on: tab === 'notes' }" @click="tab = 'notes'">講稿</button>
+              <button role="tab" :aria-selected="tab === 'questions'" :class="{ on: tab === 'questions' }" @click="tab = 'questions'">
+                學生提問<i v-if="openQuestions">{{ openQuestions }}</i>
+              </button>
+            </span>
             <span class="sizer">
               <button class="pbtn icon" title="縮小講稿字級 (-)" aria-label="縮小講稿字級" @click="resize(-2)"><Icon name="minus" /></button>
               <button class="pbtn icon" title="放大講稿字級 (+)" aria-label="放大講稿字級" @click="resize(2)"><Icon name="plus" /></button>
             </span>
           </div>
-          <div ref="notesBox" class="text" :style="{ fontSize: `${noteSize}px` }" tabindex="0">
+          <div v-if="tab === 'questions'" class="text questions" :style="{ fontSize: `${Math.max(16, noteSize - 2)}px` }" tabindex="0">
+            <p v-if="!questions.length" class="empty">{{ room.status === 'on' ? '還沒有人提問。' : '開啟「遠端課堂」後，學生可以用手機匿名提問。' }}</p>
+            <label v-for="q in questions" :key="q.id" class="q" :class="{ done: q.done }">
+              <input v-model="q.done" type="checkbox" :aria-label="`標記已回答：${q.text}`">
+              <span>{{ q.text }}</span>
+            </label>
+          </div>
+          <div v-else ref="notesBox" class="text" :style="{ fontSize: `${noteSize}px` }" tabindex="0">
             <p v-for="(para, n) in noteParagraphs" :key="n"><template v-for="(seg, k) in para" :key="k"><code v-if="seg.code">{{ seg.text }}</code><template v-else>{{ seg.text }}</template></template></p>
             <p v-if="!noteParagraphs.length" class="empty">這一頁沒有講稿。</p>
           </div>
@@ -170,6 +191,7 @@ onBeforeUnmount(() => {
       </div>
     </footer>
 
+    <RoomPanel v-if="roomPanel" @close="roomPanel = false" />
     <Sidebar v-if="sidebar" :current="chId" :index="index" @close="sidebar = false" @go="(ch, i) => go(i, ch)" />
     <Overview v-if="overview" :slides="slides" :index="index" :title="`Ch ${chapter.num} · ${chapter.title}`" @close="overview = false" @go="go" />
   </div>
@@ -219,6 +241,15 @@ aside { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
 .dock { margin-top: 12px; }
 .notes { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .sizer { display: flex; gap: 6px; }
+.pbtn.live { border-color: var(--c-brand-dark); box-shadow: 0 3px 0 var(--c-brand-dark); color: #9be35a; }
+.tabs { display: flex; gap: 6px; }
+.tabs button { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border: 0; border-radius: 10px; background: none; color: var(--dim); font: 900 13px var(--font-sans); letter-spacing: .08em; cursor: pointer; }
+.tabs button.on { background: var(--panel); color: var(--text); box-shadow: inset 0 0 0 2px var(--edge); }
+.tabs button:focus-visible { outline: 3px solid var(--c-blue); }
+.tabs i { min-width: 20px; padding: 0 6px; border-radius: 999px; background: #ff4b4b; color: #fff; font-style: normal; font-size: 12px; letter-spacing: 0; }
+.q { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 2px solid var(--edge); cursor: pointer; }
+.q input { flex: none; width: 20px; height: 20px; margin-top: .35em; accent-color: var(--c-brand); }
+.q.done span { color: var(--dim); text-decoration: line-through; }
 .text { flex: 1; overflow-y: auto; padding: 14px 18px; border: 2px solid var(--edge); border-radius: 14px; background: var(--panel); line-height: 1.75; font-weight: 600; }
 .text p { margin: 0 0 .8em; }
 .text code { padding: 0 6px; border-radius: 6px; background: #2f424c; color: #8fdcff; font: 700 .9em var(--font-mono); }
@@ -228,7 +259,8 @@ aside { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
 
 @media (max-width: 900px) {
   .presenter { height: auto; min-height: 100%; }
-  main { grid-template-columns: 1fr; }
+  main { grid-template-columns: minmax(0, 1fr); }
+  .dock { overflow-x: auto; }
   .current .frame { width: 100%; }
   .status, .clock, .where, .title { display: none; }
   .top { flex-wrap: wrap; }

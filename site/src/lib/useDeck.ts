@@ -3,6 +3,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { chapterAt, chapterById, loadChapter, type Slide } from './deck'
 import { clearPage, draw, redo, undo } from './draw'
 import { visit } from './progress'
+import { room } from './room'
 import { LAST_STEP } from './steps'
 import { join, linked, on, send, type Role } from './sync'
 import { unitOf } from './units'
@@ -54,6 +55,8 @@ export function useDeck(role: Role) {
   function go(i: number, ch = chId.value, remote = false, toStep = 0) {
     const sameSlide = ch === chId.value && i === index.value
     if (sameSlide && toStep === step.value) return
+    // a student who turns pages on their own stops following until they choose to catch up
+    if (!remote && role === 'audience' && room.status === 'on' && !room.canControl) room.following = false
     if (!sameSlide) {
       stepTotal.value = 0
       router.push(`${prefix}/${ch}/${i + 1}`)
@@ -107,11 +110,27 @@ export function useDeck(role: Role) {
   let offHere: (() => void) | undefined
   onMounted(() => {
     leave = join(role)
-    offNav = on('nav', m => go(m.i, m.ch, true, m.step ?? 0))
+    // arriving from the join page: start on the presenter's animation step, not at step 0
+    const at = room.presenterAt
+    if (at && at.ch === chId.value && at.i === index.value) step.value = at.step
+    offNav = on('nav', (m, _e, origin) => {
+      if (origin.remote) {
+        room.presenterAt = { ch: m.ch, i: m.i, step: m.step ?? 0 }
+        if (!room.following && !room.canControl) return
+      }
+      go(m.i, m.ch, true, m.step ?? 0)
+    })
     // a newly opened audience window is brought to the presenter's current slide
     if (role === 'presenter') offHere = on('here', () => send({ t: 'nav', ch: chId.value, i: index.value, step: step.value }))
   })
   onBeforeUnmount(() => { leave?.(); offNav?.(); offHere?.() })
 
-  return { chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, go, next, prev, handleKey }
+  /** student: jump back to where the presenter is */
+  function catchUp() {
+    room.following = true
+    const at = room.presenterAt
+    if (at) go(at.i, at.ch, true, at.step)
+  }
+
+  return { catchUp, chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, go, next, prev, handleKey }
 }
