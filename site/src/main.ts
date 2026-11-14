@@ -25,6 +25,7 @@ const router = createRouter({
     { path: '/', component: () => import('./pages/Home.vue') },
     { path: '/:ch(ch\\d+)/:n(\\d+)?', component: () => import('./pages/Deck.vue') },
     { path: '/presenter/:ch(ch\\d+)/:n(\\d+)?', component: () => import('./pages/Presenter.vue') },
+    { path: '/print/:ch(ch\\d+)', component: () => import('./pages/Print.vue') },
     { path: '/join/:code/:key?', component: () => import('./pages/Join.vue') },
     { path: '/:rest(.*)*', redirect: '/' },
   ],

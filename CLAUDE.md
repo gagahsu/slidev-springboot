@@ -46,6 +46,7 @@ Package manager is `pnpm` (v10.33.0). Do not use `npm` or `yarn`.
 pnpm site:dev      # dev server at http://localhost:3040 (first run: pnpm -C site install)
 pnpm site:build    # static build to site/dist
 pnpm -C site audit # with the dev server running: visit every slide, report overflow / errors
+pnpm site:export    # PDFs to site/export/ (all chapters + merged); `pnpm -C site export ch04 ch13 --no-merge` for a subset
 ```
 
 - `site/plugins/deck.ts` — Vite plugin: splits each chapter into slides (`plugins/parse.ts`), renders Markdown + Shiki, compiles each slide to a Vue render function, and exposes `virtual:deck` (manifest), `virtual:deck-chapter:chNN` (lazy per chapter) and `virtual:deck-search` (search index). Chapter titles/subtitles are read from the cards in `index.md`.
@@ -62,6 +63,7 @@ pnpm -C site audit # with the dev server running: visit every slide, report over
   - `<IocDemo mode="traditional|ioc" />`, `<HttpExchange />` — concept animations (built on `anim/poses.ts` + Motion)
   - Cover slides get a Three.js backdrop automatically (`components/CoverBackdrop.vue`).
   - Chapters animated so far: ch04, ch13. Slidev does not know the custom tags, so those chapters degrade there.
+- `site/src/pages/Print.vue` (`#/print/chNN`) + `site/scripts/export-pdf.mjs` — PDF export: one slide per 980x552 page in its final animation state, vector text. The script starts its own Vite server and uses Playwright from the repo root's `playwright-chromium`.
 - `site/src/lib/units.ts` — how chapters are grouped into units on the home page and sidebar.
 - Supported Markdown syntax: `---` separators, per-slide frontmatter (`layout`, `class`), trailing `<!-- -->` speaker notes, `<Link to="chNN">`, `::right::`, ```` ```mermaid ````, utility classes in `class="..."`.
 

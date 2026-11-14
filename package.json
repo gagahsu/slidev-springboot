@@ -8,6 +8,7 @@
     "build": "slidev build index.md",
     "site:dev": "pnpm -C site dev",
     "site:build": "pnpm -C site build",
+    "site:export": "pnpm -C site export",
     "export": "slidev export index.md --format pdf --with-toc false --timeout 60000",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

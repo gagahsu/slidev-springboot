@@ -165,7 +165,7 @@ onBeforeUnmount(() => {
     <div v-if="immersive" class="thin-progress"><i :style="{ width: `${(index + 1) / chapter.count * 100}%` }" /></div>
 
     <Sidebar v-if="sidebar" :current="chId" :index="index" @close="sidebar = false" @go="(ch, i) => go(i, ch)" />
-    <Overview v-if="overview" :slides="slides" :index="index" :title="`Ch ${chapter.num} · ${chapter.title}`" @close="overview = false" @go="go" />
+    <Overview v-if="overview" :slides="slides" :index="index" :title="`Ch ${chapter.num} · ${chapter.title}`" :chapter-id="chId" @close="overview = false" @go="go" />
   </div>
 </template>
 
