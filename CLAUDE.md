@@ -50,6 +50,8 @@ pnpm -C site audit # with the dev server running: visit every slide, report over
 
 - `site/plugins/deck.ts` — Vite plugin: splits each chapter into slides (`plugins/parse.ts`), renders Markdown + Shiki, compiles each slide to a Vue render function, and exposes `virtual:deck` (manifest), `virtual:deck-chapter:chNN` (lazy per chapter) and `virtual:deck-search` (search index). Chapter titles/subtitles are read from the cards in `index.md`.
 - `site/src/styles/theme.css` / `slide.css` — design tokens and slide typography/layouts (`cover`, `default`, `section`, `two-cols`, `end`). The old teal hex colours in inline styles are remapped to theme tokens at build time; do not edit the Markdown for colours.
+- `site/src/lib/sync.ts` — presenter/audience messaging behind a small transport interface (BroadcastChannel today, same browser only). `lib/useDeck.ts` holds navigation shared by `pages/Deck.vue` (audience, `#/chNN/n`) and `pages/Presenter.vue` (`#/presenter/chNN/n`).
+- `site/src/lib/draw.ts` + `components/DrawLayer.vue` / `DrawToolbar.vue` — per-slide drawings in slide coordinates (980x552), stored in localStorage and synced between windows.
 - `site/src/lib/units.ts` — how chapters are grouped into units on the home page and sidebar.
 - Supported Markdown syntax: `---` separators, per-slide frontmatter (`layout`, `class`), trailing `<!-- -->` speaker notes, `<Link to="chNN">`, `::right::`, ```` ```mermaid ````, utility classes in `class="..."`.
 

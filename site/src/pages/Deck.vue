@@ -1,63 +1,35 @@
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { inject, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import DrawToolbar from '../components/DrawToolbar.vue'
 import Icon from '../components/Icon.vue'
 import Overview from '../components/Overview.vue'
 import Sidebar from '../components/Sidebar.vue'
 import SlideCanvas from '../components/SlideCanvas.vue'
-import { chapterAt, chapterById, loadChapter, type Slide } from '../lib/deck'
-import { visit } from '../lib/progress'
-import { unitOf } from '../lib/units'
+import { draw } from '../lib/draw'
+import { linked } from '../lib/sync'
+import { useDeck } from '../lib/useDeck'
 
-const route = useRoute()
 const router = useRouter()
 const openSearch = inject<() => void>('openSearch')!
-
-const chId = computed(() => String(route.params.ch))
-const chapter = computed(() => chapterById(chId.value))
-const slides = shallowRef<Slide[]>([])
-const loading = ref(true)
-const index = computed(() => {
-  const n = Number(route.params.n || 1) - 1
-  const max = Math.max(0, (chapter.value?.count ?? 1) - 1)
-  return Math.min(Math.max(0, Number.isFinite(n) ? n : 0), max)
-})
-const slide = computed(() => slides.value[index.value])
-const unit = computed(() => unitOf(chapter.value?.num ?? 1))
-const nextChapter = computed(() => chapterAt(1, chId.value))
-const prevChapter = computed(() => chapterAt(-1, chId.value))
-const atEnd = computed(() => index.value >= slides.value.length - 1)
+const deck = useDeck('audience')
+const { chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, next, prev } = deck
 
 const sidebar = ref(false)
 const overview = ref(false)
 const immersive = ref(false)
-
-watch(chId, async (id) => {
-  if (!chapterById(id)) { router.replace('/'); return }
-  loading.value = true
-  const loaded = await loadChapter(id)
-  if (id !== chId.value) return
-  slides.value = loaded
-  loading.value = false
-}, { immediate: true })
-
-watch([chId, index, chapter], () => {
-  if (!chapter.value) return
-  visit(chId.value, index.value)
-  document.title = `Ch ${chapter.value.num} ${chapter.value.title} · ${index.value + 1}/${chapter.value.count}`
-}, { immediate: true })
+const drawing = ref(false)
 
 function go(i: number, ch = chId.value) {
   sidebar.value = overview.value = false
-  router.push(`/${ch}/${i + 1}`)
+  deck.go(i, ch)
 }
-function next() {
-  if (!atEnd.value) go(index.value + 1)
-  else if (nextChapter.value) go(0, nextChapter.value.id)
+function toggleDrawing(force?: boolean) {
+  drawing.value = force ?? !drawing.value
+  draw.tool = drawing.value ? 'pen' : 'none'
 }
-function prev() {
-  if (index.value > 0) go(index.value - 1)
-  else if (prevChapter.value) go(prevChapter.value.count - 1, prevChapter.value.id)
+function present() {
+  router.push(`/presenter/${chId.value}/${index.value + 1}`)
 }
 
 function toggleFullscreen() {
@@ -68,24 +40,25 @@ function onFullscreenChange() { immersive.value = !!document.fullscreenElement }
 
 function onKey(e: KeyboardEvent) {
   const t = e.target as HTMLElement
-  if (e.metaKey || e.ctrlKey || e.altKey || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return
+  if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return
   if (e.key === 'Escape') {
     if (overview.value || sidebar.value) overview.value = sidebar.value = false
+    else if (drawing.value || draw.tool !== 'none') toggleDrawing(false)
     else if (immersive.value && !document.fullscreenElement) immersive.value = false
     return
   }
   if (overview.value || sidebar.value) return
+  if (deck.handleKey(e)) {
+    // a drawing shortcut opens the toolbar so the active tool is visible
+    if (draw.tool !== 'none') drawing.value = true
+    return
+  }
+  if (e.metaKey || e.ctrlKey || e.altKey) return
   switch (e.key) {
-    case 'ArrowRight': case 'ArrowDown': case 'PageDown': case ' ': case 'Enter':
-      if ((e.key === ' ' || e.key === 'Enter') && t.closest('button, a')) return
-      e.preventDefault(); next(); break
-    case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
-      e.preventDefault(); prev(); break
-    case 'Home': e.preventDefault(); go(0); break
-    case 'End': e.preventDefault(); go(slides.value.length - 1); break
     case 'o': case 'O': overview.value = true; break
     case 't': case 'T': sidebar.value = true; break
     case 'f': case 'F': toggleFullscreen(); break
+    case 'p': case 'P': present(); break
   }
 }
 
@@ -94,6 +67,7 @@ let touchX = 0
 let touchY = 0
 function onTouchStart(e: TouchEvent) { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY }
 function onTouchEnd(e: TouchEvent) {
+  if (draw.tool !== 'none') return
   const dx = e.changedTouches[0].clientX - touchX
   const dy = e.changedTouches[0].clientY - touchY
   if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) dx < 0 ? next() : prev()
@@ -104,6 +78,7 @@ onMounted(() => {
   document.addEventListener('fullscreenchange', onFullscreenChange)
 })
 onBeforeUnmount(() => {
+  draw.tool = 'none'
   window.removeEventListener('keydown', onKey)
   document.removeEventListener('fullscreenchange', onFullscreenChange)
 })
@@ -121,7 +96,7 @@ onBeforeUnmount(() => {
 
     <main class="stage" @touchstart.passive="onTouchStart" @touchend.passive="onTouchEnd">
       <div class="frame">
-        <SlideCanvas v-if="slide" :slide="slide" />
+        <SlideCanvas v-if="slide" :slide="slide" :draw-key="drawKey" />
         <div v-else class="placeholder" :style="{ aspectRatio: '980 / 552' }">{{ loading ? '載入中…' : '這一章沒有投影片' }}</div>
       </div>
     </main>
@@ -131,9 +106,11 @@ onBeforeUnmount(() => {
         <button class="btn" title="章節目錄 (T)" @click="sidebar = true"><Icon name="menu" /><span>目錄</span></button>
         <button class="btn" title="投影片總覽 (O)" @click="overview = true"><Icon name="grid" /><span>總覽</span></button>
         <button class="btn" title="搜尋 (/)" @click="openSearch()"><Icon name="search" /><span>搜尋</span></button>
+        <button class="btn" :class="{ on: drawing }" title="畫圖工具 (D)" :aria-pressed="drawing" @click="toggleDrawing()"><Icon name="pen" /><span>畫圖</span></button>
+        <button class="btn" title="講師模式 (P)" @click="present"><Icon name="present" /><span>講師</span></button>
       </div>
       <div class="where">
-        <small>Ch {{ chapter.num }} · {{ chapter.title }}</small>
+        <small>Ch {{ chapter.num }} · {{ chapter.title }}<template v-if="linked"> · 已連線講師視窗</template></small>
         <strong>{{ slide?.title }}</strong>
       </div>
       <div class="nav">
@@ -144,6 +121,8 @@ onBeforeUnmount(() => {
         </button>
       </div>
     </footer>
+
+    <div v-if="drawing" class="draw-dock"><DrawToolbar :slide-key="drawKey" /></div>
 
     <div v-if="immersive" class="thin-progress"><i :style="{ width: `${(index + 1) / chapter.count * 100}%` }" /></div>
 
@@ -181,6 +160,11 @@ onBeforeUnmount(() => {
 .where strong { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 800; color: var(--c-ink); }
 .where small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+.btn.on { border-color: #84d8ff; box-shadow: 0 3px 0 #84d8ff; background: var(--c-blue-soft); color: var(--c-blue-dark); }
+.draw-dock { position: fixed; left: 0; right: 0; bottom: calc(var(--bar-bottom) + 10px); z-index: 20; display: flex; justify-content: center; padding: 0 12px; pointer-events: none; }
+.draw-dock > * { pointer-events: auto; }
+.immersive .draw-dock { bottom: 14px; }
+
 /* presentation (fullscreen) mode: slide only */
 .immersive { background: var(--c-night); }
 .immersive .bar { display: none; }
@@ -189,7 +173,7 @@ onBeforeUnmount(() => {
 .thin-progress { position: fixed; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255, 255, 255, .12); }
 .thin-progress i { display: block; height: 100%; background: var(--u); transition: width .25s ease; }
 
-@media (max-width: 860px) {
+@media (max-width: 1100px) {
   .tools .btn { width: 46px; padding: 0; }
   .tools .btn span, .where { display: none; }
   .bottom { gap: 8px; }

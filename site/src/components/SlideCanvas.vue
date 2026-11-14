@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { SLIDE_H, SLIDE_W, type Slide } from '../lib/deck'
+import DrawLayer from './DrawLayer.vue'
 
-const props = defineProps<{ slide: Slide }>()
+// drawKey: when set, drawings for that key are shown on top of the slide (and editable when a tool is active)
+const props = defineProps<{ slide: Slide, drawKey?: string }>()
 
 const SECTION_COLORS = ['green', 'blue', 'purple', 'orange']
 
@@ -56,6 +58,7 @@ watch(() => props.slide, refit)
         <component :is="slide.comp" :key="slide.index" />
       </div>
     </div>
+    <DrawLayer v-if="drawKey" :slide-key="drawKey" />
   </div>
 </template>
 

@@ -14,6 +14,7 @@ const router = createRouter({
   routes: [
     { path: '/', component: () => import('./pages/Home.vue') },
     { path: '/:ch(ch\\d+)/:n(\\d+)?', component: () => import('./pages/Deck.vue') },
+    { path: '/presenter/:ch(ch\\d+)/:n(\\d+)?', component: () => import('./pages/Presenter.vue') },
     { path: '/:rest(.*)*', redirect: '/' },
   ],
 })
