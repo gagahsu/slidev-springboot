@@ -38,6 +38,21 @@ Package manager is `pnpm` (v10.33.0). Do not use `npm` or `yarn`.
 
 **Theme:** `slidev-theme-penguin` with the teal/turquoise palette: primary `#5eada0`, dark `#1a5c5c`, light `#a7d9d0`.
 
+## New site (`site/`) — in progress
+
+`site/` is a self-built Vue 3 + Vite replacement for Slidev that renders the same chapter Markdown (`NN-topic.md` in the repo root). It is a separate pnpm package; the Slidev setup stays working until the new site is finished.
+
+```bash
+pnpm site:dev      # dev server at http://localhost:3040 (first run: pnpm -C site install)
+pnpm site:build    # static build to site/dist
+pnpm -C site audit # with the dev server running: visit every slide, report overflow / errors
+```
+
+- `site/plugins/deck.ts` — Vite plugin: splits each chapter into slides (`plugins/parse.ts`), renders Markdown + Shiki, compiles each slide to a Vue render function, and exposes `virtual:deck` (manifest), `virtual:deck-chapter:chNN` (lazy per chapter) and `virtual:deck-search` (search index). Chapter titles/subtitles are read from the cards in `index.md`.
+- `site/src/styles/theme.css` / `slide.css` — design tokens and slide typography/layouts (`cover`, `default`, `section`, `two-cols`, `end`). The old teal hex colours in inline styles are remapped to theme tokens at build time; do not edit the Markdown for colours.
+- `site/src/lib/units.ts` — how chapters are grouped into units on the home page and sidebar.
+- Supported Markdown syntax: `---` separators, per-slide frontmatter (`layout`, `class`), trailing `<!-- -->` speaker notes, `<Link to="chNN">`, `::right::`, ```` ```mermaid ````, utility classes in `class="..."`.
+
 ## Slide Authoring Conventions
 
 - **Language:** Traditional Chinese (zh-TW) for all slide text; English for code identifiers and technical terms
