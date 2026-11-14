@@ -48,30 +48,33 @@ style: |
 <!--
 大家好，歡迎來到第十三章！
 
-上一章我們知道了 Spring MVC 是用來讓前後端溝通的，但前後端溝通要有一套共同遵守的格式規範，這套規範就叫做 Http 協議。
+上一章我們知道了網站分成前端和後端。前端是使用者看到的畫面，後端是我們用 Spring Boot 寫的程式。
 
-今天這章以概念和格式規範為主，學完之後你會清楚了解每次 API 請求和回應的背後長什麼樣子，也會學會用工具來模擬發送 Http request。
+那前端和後端之間，到底是怎麼「講話」的？這就是今天的主題：Http 協議。
+
+名字聽起來很硬，但它做的事情，跟你去手搖飲店點一杯飲料幾乎一模一樣。所以今天我們先去買飲料。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要搞懂的三件事
 
 <v-clicks>
 
-- **什麼是 Http 協議？** — 前後端為什麼需要共同規範
-- **Http Request 的格式規範** — 請求由哪些部分組成、Http Method 的種類
-- **Http Response 的格式規範** — 回應由哪些部分組成、常見 Status Code
-- **Postman 介紹、安裝與使用** — 用業界最主流的工具發起請求、查看完整回應
+- **前端和後端怎麼「講話」？** 用手搖飲店點飲料的故事來理解
+- **一次請求、一次回應裡面裝了什麼？** 其實就是一張點單、一張取餐單
+- **親手發一次請求**：用 Postman 這個工具試試看
 
 </v-clicks>
 
 <!--
-今天的章節涵蓋的內容比較廣，但每個部分都很直覺。
+今天要搞懂三件事。
 
-Http Request 和 Http Response 是這章最核心的兩個概念，搞清楚這兩者的格式，後面學 @RequestParam、@RequestBody 時就會知道這些 Annotation 是在對應 Request 的哪個部分。
+（下一步）第一，前端和後端是怎麼講話的。我們用手搖飲店點飲料的故事來理解。
+
+（下一步）第二，一次請求、一次回應裡面到底裝了什麼。先劇透：其實就是一張點單，和一張取餐單。
+
+（下一步）第三，我們會用一個叫 Postman 的工具，親手發一次請求給後端。
 -->
 
 ---
@@ -80,94 +83,106 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-# 什麼是 Http 協議？
+# 先去買一杯飲料
 
 <!--
-在進入 Request 和 Response 的格式之前，先來理解「Http 協議」存在的意義。
+我們先不講網路，先去買飲料。
+
+大家都點過手搖飲吧？請回想一下點飲料的過程，等一下會一直用到。
 -->
 
 ---
 
-# 為什麼需要 Http 協議？
+# 如果每個人都用自己的方式點…
 
-前端和後端要溝通，但如果沒有統一的格式規範，溝通就會變成這樣：
-
-<v-clicks>
-
-| 情境 | 問題 |
-| --- | --- |
-| 前端說「給我商品清單」 | 後端不知道這是哪種類型的請求 |
-| 後端回傳資料 | 前端不知道這次請求是成功還是失敗 |
-| 前端傳參數 | 後端不知道參數放在哪裡、格式是什麼 |
-
-</v-clicks>
-
-<v-click>
-
-Http 協議就是為了解決這個問題——**規定資料的傳輸格式，讓前端和後端有效地進行資料溝通。**
-
-</v-click>
+<DrinkShop mode="chaos" />
 
 <!--
-想像兩個人要溝通，但一個說中文、一個說英文，結果就是雞同鴨講。
+想像有一間飲料店，它沒有菜單、也沒有點單，客人想怎麼點就怎麼點。
 
-前端和後端之間也有同樣的問題：前端要怎麼表達「我想取得商品清單」？後端要怎麼告訴前端「這次請求成功了，這是資料」？
+第一位客人說「那個綠綠的那個」。第二位說「老樣子」。第三位說「隨便來一杯」。
 
-Http 協議就是前後端共同說好的「語言格式」——雙方都照這個格式來，就能順暢溝通。
+（下一步）店員聽得懂嗎？完全聽不懂。綠綠的是哪一杯？老樣子是什麼？結果一杯都做不出來。
+
+（下一步）所以店家規定：不管你是誰，通通照同一張點單寫。格式統一了，店員才看得懂。
+
+請記住這個結論：兩邊要溝通，就要先約好同一種格式。
 -->
 
 ---
 
-# Http 協議的定義
+# 點單：客人交給店員
 
-**「Http 協議負責規定資料的傳輸格式，讓前端和後端能有效地進行資料溝通。」**
-
-<v-clicks>
-
-| 概念 | 說明 |
-| --- | --- |
-| **Http** | HyperText Transfer Protocol，超文字傳輸協定 |
-| **協議（Protocol）** | 雙方都同意遵守的規則和格式 |
-| **兩大組成** | Http Request（前端發送給後端）+ Http Response（後端回傳給前端） |
-
-</v-clicks>
-
-<v-click>
-
-Http 是目前 Web 開發中最主流的前後端通訊協定，Spring MVC 就是建立在 Http 協議之上的。
-
-</v-click>
+<DrinkShop mode="request" />
 
 <!--
-Http 全名是 HyperText Transfer Protocol，翻譯成「超文字傳輸協定」。這個名字聽起來很學術，但理解它的概念非常直覺。
+我們來看這張點單長什麼樣子。它總共有四格，客人要一格一格填。
 
-「協議」就是一種約定，就像開車要靠右走、紅燈停綠燈行——大家都同意遵守，就能避免混亂。
+（下一步）第一格：我要做什麼。是要點一杯新的？還是要改剛剛那杯？還是要取消？這裡是「點一杯新的」。
 
-Http 協議的核心就是兩件事：一個 Request（前端問後端）和一個 Response（後端答前端）。
+（下一步）第二格：要找哪個品項。這裡是珍珠奶茶。
 
-整個 Spring MVC 的運作，底層都遵守這套 Http 的格式規範。所以搞清楚 Http，你就搞清楚了 Spring MVC 的底層邏輯。
+（下一步）第三格：備註。少冰、半糖。
+
+（下一步）第四格：詳細內容。大杯、加椰果。四格都填好了，就把點單交給店員。
+
+請大家記住「四格」這個數字，等一下會再出現。
 -->
 
 ---
 
-# 圖解：一次 Http 請求的來回
+# 取餐單：店員交回給客人
 
-<HttpExchange />
+<DrinkShop mode="response" />
 
 <!--
-在看格式的細節之前，我們先用動畫看一次完整的來回，讓大家心裡有個畫面。
+店員收到點單、把飲料做好之後，也會交回一張東西給你，我們叫它取餐單。它有三格。
 
-左邊是前端，可以是瀏覽器，也可以是等一下會用到的 Postman。右邊是後端，也就是我們的 Spring Boot 程式。
+（下一步）第一格：結果。做好了。
 
-（下一步）前端想要資料的時候，會把需求寫成一份 Http Request。它固定有四個部分：Method、URL、Header、Body。這四個名字先有印象就好，下一個 Part 會一個一個講。
+（下一步）第二格：備註。店員提醒你小心冰、盡快喝完。
 
-（下一步）Request 送到後端，後端會依照裡面的內容去處理。
+（下一步）第三格：你要的東西，也就是那杯珍珠奶茶。這一格最重要，因為這才是你真正想要的。
 
-（下一步）處理完之後，後端把結果寫成一份 Http Response。它有三個部分：Status Code、Header、Body。
+所以一來一回，就是一張四格的點單，換回一張三格的取餐單。
+-->
 
-（下一步）Response 回到前端，這一次請求就完成了。
+---
 
-所以 Http 協議規定的，其實就是這兩張「單子」要怎麼填。接下來我們就分別來看這兩張單子。
+# 不是每次都拿得到飲料
+
+<DrinkShop mode="status" />
+
+<!--
+不過，點了飲料，不一定每次都拿得到。我們來看四種可能的結果。
+
+（下一步）最好的情況：店員說「做好了」。一切順利。
+
+（下一步）第二種：店員說「我們沒有賣這個」。你點了一杯店裡根本沒有的飲料。這是誰的問題？是客人這邊的問題。
+
+（下一步）第三種：店員說「點單寫錯了，看不懂」。這也是客人這邊的問題。
+
+（下一步）第四種：店員說「抱歉，機器壞了」。點單沒寫錯、品項也有賣，但店裡的機器壞了。這就是店家這邊的問題，不是你的錯。
+
+所以拿不到飲料的時候，要先分清楚：是客人這邊的問題，還是店家這邊的問題。
+-->
+
+---
+
+# 小測驗：這是誰的問題？
+
+<Poll question="你點了一杯這間店根本沒有賣的飲料，當然拿不到。這是誰的問題？" options="客人這邊的問題|店家這邊的問題|沒有人有問題" answer="1" />
+
+<!--
+來一題暖身題。
+
+你點了一杯這間店根本沒有賣的飲料，當然拿不到。這是誰的問題？
+
+（等大家作答）
+
+（下一步）答案是客人這邊的問題。店家沒有做錯任何事，是點的人點錯了。
+
+請記住這題，等一下我們會用同一個邏輯來看網站的錯誤。
 -->
 
 ---
@@ -176,50 +191,125 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-# Http Request 的格式規範
+# 把飲料店換成網站
 
 <!--
-了解了 Http 協議是什麼，我們來仔細看第一個組成：Http Request，也就是前端送給後端的「請求」長什麼樣子。
+故事講完了。現在我們把飲料店換成網站。
+
+一樣的，故事的結構不變，只是把角色換掉。
 -->
 
 ---
 
-# Http Request 的四個組成部分
+# 角色對照：飲料店 = 網站
 
-前端發送給後端的 Http Request，由以下四個部分組成：
+<Pairs left="飲料店" right="網站" rows="customer,客人=browser,前端（瀏覽器、手機 App）|shop,飲料店=server,後端（我們寫的 Spring Boot）|form,點單=code,Http Request（請求）|cup,取餐單和飲料=code,Http Response（回應）" />
+
+<!--
+我們一個一個對照。
+
+（下一步）客人，對應到前端。也就是瀏覽器，或是手機上的 App。
+
+（下一步）飲料店，對應到後端。也就是我們用 Spring Boot 寫的程式。
+
+（下一步）點單，對應到 Http Request，中文叫「請求」。前端想要什麼，就寫一張請求送給後端。
+
+（下一步）取餐單和飲料，對應到 Http Response，中文叫「回應」。後端處理完，就寫一張回應送回給前端。
+
+Request 和 Response 這兩個英文字，之後每一堂課都會出現，請大家先跟它們混熟。
+-->
+
+---
+
+# 所以，什麼是 Http 協議？
 
 <v-clicks>
 
-| 部分 | 說明 | 例子 |
-| --- | --- | --- |
-| **Http Method** | 請求的動作類型 | `GET`、`POST`、`PUT`、`DELETE` |
-| **URL** | 請求的目標網址 | `http://localhost:8080/test` |
-| **Request Header** | 請求的附加資訊，以 key-value 格式傳遞 | `Content-Type: application/json` |
-| **Request Body** | 請求夾帶的資料（僅 POST / PUT 可用） | `{"name": "Alice", "age": 20}` |
+- **協議**：大家事先約好、一起遵守的規則
+- **Http**：網路世界裡最常用的那一套規則
+- 它規定了 **Request（請求）** 和 **Response（回應）** 各自要怎麼寫
 
 </v-clicks>
 
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>一句話記起來：</b> Http 協議就是前端和後端共用的「點單格式」。Spring MVC 就是照著這套規則在運作的。
+</div>
+
+</v-click>
+
 <!--
-Http Request 就像寄一封信：你要說明寄的是什麼類型的信（Method）、寄給誰（URL）、信封上的資訊（Header），以及信的內容（Body）。
+現在可以回答今天的第一個問題了：什麼是 Http 協議？
 
-其中 Request Body 只有 POST 和 PUT 可以帶，GET 和 DELETE 沒有 Body。
+（下一步）「協議」這兩個字，意思就是大家事先約好、一起遵守的規則。就像飲料店規定大家要用同一張點單。
 
-這個結構非常重要——後面學 @RequestParam、@PathVariable、@RequestBody 時，你會發現這些 Annotation 分別對應到 Request 的不同部分。
+（下一步）Http，是網路世界裡最常用的那一套規則。
+
+（下一步）它規定的內容，就是請求和回應各自要怎麼寫。
+
+（下一步）一句話記起來：Http 協議就是前端和後端共用的點單格式。我們之後要學的 Spring MVC，就是照著這套規則在運作的。
 -->
 
 ---
 
-# Http Request 格式範例
+# 圖解：一次請求的來回
 
-一個向後端取得資料的 GET 請求，格式如下：
+<HttpExchange />
 
-```
-GET /test HTTP/1.1
-Host: localhost:8080
-Content-Type: application/json
-```
+<!--
+我們用動畫把整個過程看一次，這次是網站的版本。
 
-一個帶有資料的 POST 請求，格式如下：
+左邊是前端，右邊是後端。
+
+（下一步）前端想要資料，就把需求寫成一張 Http Request。看到了嗎？它有四個部分，就是點單的那四格。
+
+（下一步）Request 送到後端，後端依照內容去處理。
+
+（下一步）處理完，後端把結果寫成一張 Http Response。它有三個部分，就是取餐單的那三格。
+
+（下一步）Response 回到前端，一次請求就完成了。
+
+接下來我們把這兩張單子分別打開來看。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 3
+# 請求（Request）裡面有什麼
+
+<!--
+先看請求，也就是前端交給後端的那張點單。
+-->
+
+---
+
+# 請求的四個部分
+
+<DrinkShop mode="request" terms />
+
+<!--
+還記得點單有四格嗎？Http Request 也是四個部分，而且一格對一格。這次我把它們真正的名字寫在右邊。
+
+（下一步）第一格「我要做什麼」，真正的名字叫 Http Method。Method 就是「方法、動作」的意思。這裡的 POST 代表新增。
+
+（下一步）第二格「找哪個品項」，真正的名字叫 URL，也就是網址。它告訴後端，我要找你的哪一個功能。
+
+（下一步）第三格「備註」，叫做 Header。它放的是一些附加資訊，例如「我送過去的資料是什麼格式」。
+
+（下一步）第四格「詳細內容」，叫做 Body。它放的是要一起送過去的資料。
+
+Method、URL、Header、Body。這四個名字請多念幾次。
+-->
+
+---
+
+# 真正的請求長這樣
+
+不用背，只要看得出「哪一塊是哪一塊」就好：
 
 <CodeSteps>
 
@@ -231,58 +321,44 @@ Content-Type: application/json
 {"name": "Alice", "age": 20}
 ```
 
-- 第一行：**Http Method** 和請求的路徑
-- 接著是 **Request Header**，一行一組 key-value
-- 空一行之後是 **Request Body**，也就是夾帶的資料
+- 第一行：**Method**（`POST`）和要找的路徑（`/users`）
+- 中間幾行：**Header**，一行寫一個備註
+- 空一行之後：**Body**，要送過去的資料
 
 </CodeSteps>
 
 <!--
-看這兩個範例，GET 請求沒有 Body，只有 Method、URL、Header。
+這是一張真正的 Http Request 寫出來的樣子。先說，這個不用背，只要看得出哪一塊是哪一塊就好。
 
-POST 請求在 Header 之後空一行，然後才是 Body——Body 裡放的是我們要傳給後端的 JSON 資料。
+第一行，最前面的 POST 就是 Method。後面的 /users 是要找的路徑，也就是 URL 的一部分。
 
-注意這個格式規範是固定的：Method 和 URL 在第一行，Header 緊接在後，Body 在空行之後。這個格式是 Http 協議規定的，Spring MVC 就是按照這個格式來解析請求的。
+（下一步）中間這幾行是 Header。一行寫一個備註，格式是「名稱、冒號、內容」。
+
+（下一步）空一行之後，就是 Body。這裡送了一筆資料：名字是 Alice，年齡是 20。
+
+是不是跟點單一樣，只是寫法比較像電腦在看的樣子。
 -->
 
 ---
 
-# Http Method — 常見的請求動作
+# Http Method：這次要做什麼
 
-Http Method 用來表達「這次請求想做什麼事」：
-
-<v-clicks>
-
-| Method | 對應動作 | 說明 |
-| --- | --- | --- |
-| **GET** | 取得資料 | 最常見，不帶 Request Body |
-| **POST** | 新增資料 | 帶 Request Body，傳遞要新增的資料 |
-| **PUT** | 修改資料（完整替換） | 帶 Request Body，傳遞完整的修改後資料 |
-| **PATCH** | 修改資料（部分更新） | 帶 Request Body，只傳遞要修改的欄位 |
-| **DELETE** | 刪除資料 | 不帶 Request Body |
-
-</v-clicks>
-
-<v-click>
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>記憶方式：</b> GET 取、POST 增、PUT 改（整個換掉）、PATCH 改（只換一部分）、DELETE 刪——對應 CRUD 操作。
-</div>
-
-</v-click>
+<Pairs left="在飲料店" right="Http Method" rows="form,看一下菜單=,GET：取得資料|cup,點一杯新的=,POST：新增資料|cup,整杯重新做一杯=,PUT：修改資料（整個換掉）|what,只改甜度=,PATCH：修改資料（只改一部分）|no,取消訂單=,DELETE：刪除資料" />
 
 <!--
-Http Method 用來表示這次請求的「意圖」——你想取得資料？新增資料？修改還是刪除？
+四個部分裡，Method 最常被問到，我們多看一下。Method 表達的是「這次要做什麼」，最常用的有五種。
 
-GET 是最常見的，每次你在瀏覽器輸入網址按 Enter，其實就是發出一個 GET 請求。
+（下一步）看一下菜單，對應到 GET，取得資料。這是最常用的一種，你平常打開任何網頁，都是在發 GET。
 
-POST 用來新增，通常 Request Body 裡帶著要新增的資料（JSON 格式）。
+（下一步）點一杯新的，對應到 POST，新增資料。
 
-PUT 和 PATCH 都是修改，差別在於 PUT 是完整替換整筆資料，PATCH 是只更新其中幾個欄位。
+（下一步）整杯重新做一杯，對應到 PUT，修改資料，而且是整個換掉。
 
-DELETE 顧名思義是刪除，通常透過 URL 傳遞要刪除的 ID，不需要 Body。
+（下一步）只改甜度，對應到 PATCH，一樣是修改，但只改其中一部分。
 
-這五個 Method 和資料庫的 CRUD（Create、Read、Update、Delete）操作一一對應，後面學 RESTful API 時會更深入地用到它們。
+（下一步）取消訂單，對應到 DELETE，刪除資料。
+
+GET 取、POST 增、PUT 整個改、PATCH 改一點、DELETE 刪。另外補充一點，GET 和 DELETE 通常不需要帶 Body，就像看菜單不需要填詳細內容一樣。
 -->
 
 ---
@@ -290,42 +366,34 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# Part 3
-# Http Response 的格式規範
+# Part 4
+# 回應（Response）裡面有什麼
 
 <!--
-有 Request 就有 Response。後端接收到請求、處理完之後，要把結果回傳給前端，這個回傳的內容就是 Http Response。
+接著看回應，也就是後端交回給前端的那張取餐單。
 -->
 
 ---
 
-# Http Response 的三個組成部分
+# 回應的三個部分
 
-後端回傳給前端的 Http Response，由以下三個部分組成：
-
-<v-clicks>
-
-| 部分 | 說明 | 例子 |
-| --- | --- | --- |
-| **Http Status Code** | 表達這次請求的結果（成功 / 失敗 / 錯誤類型） | `200`、`404`、`500` |
-| **Response Header** | 回應的附加資訊，以 key-value 格式傳遞 | `Content-Type: application/json` |
-| **Response Body** | 後端要回傳給前端的資料，是 Response 中最重要的部分 | `"Hello World"`、`{"id": 1, "name": "Alice"}` |
-
-</v-clicks>
+<DrinkShop mode="response" terms />
 
 <!--
-Response 的結構比 Request 少一個 Method 和 URL（因為這是「答」，不是「問」），多了 Status Code 來表達結果。
+取餐單有三格，Http Response 也是三個部分。
 
-其中 Response Body 是最重要的部分——這就是前端真正需要的資料，可能是一個字串、一個 JSON 物件、或一整個 JSON 陣列。
+（下一步）第一格「結果」，真正的名字叫 Status Code，狀態碼。它用一個數字告訴你這次請求的結果。這裡的 200 OK 代表成功。
 
-Spring MVC 的 @RestController 自動幫我們把 Java 物件轉成 JSON 格式放進 Response Body 回傳給前端。
+（下一步）第二格「備註」，一樣叫 Header。
+
+（下一步）第三格「你要的東西」，一樣叫 Body。這是整個回應裡最重要的部分，因為它就是後端真正要給你的資料。
+
+所以 Header 和 Body 在請求和回應裡都有，只有第一格不一樣：請求是 Method，回應是 Status Code。
 -->
 
 ---
 
-# Http Response 格式範例
-
-一個成功的 GET 請求回應，格式如下：
+# 真正的回應長這樣
 
 <CodeSteps>
 
@@ -337,90 +405,95 @@ Hello World
 ```
 
 - 第一行：**Status Code**，`200 OK` 代表成功
-- 接著是 **Response Header**
-- 空一行之後是 **Response Body**，後端真正要回傳的資料
+- 中間：**Header**，一樣是備註
+- 空一行之後：**Body**，後端真正要給你的資料
 
 </CodeSteps>
 
-一個資源不存在的錯誤回應，格式如下：
-
-```
-HTTP/1.1 404 Not Found
-Content-Type: application/json
-
-{"error": "Resource not found"}
-```
-
 <!--
-看第一個範例：第一行是 Http 版本加上 Status Code（200 OK），接著是 Header，空一行後是 Body（Hello World）。
+這是一張真正的 Http Response。
 
-第二個範例是 404 錯誤：Status Code 是 404 Not Found，Body 是一個 JSON 格式的錯誤訊息。
+第一行就是 Status Code，200 OK，代表成功。
 
-這個結構和 Request 很像：版本 + 狀態碼在第一行，Header 緊接在後，Body 在空行之後。
+（下一步）中間是 Header。
 
-在 Spring Boot 裡，我們不需要手動組裝這個格式——Spring MVC 幫我們搞定了，我們只需要在 Controller 方法裡 return 資料就好。
+（下一步）空一行之後是 Body。這裡後端回傳的資料是 Hello World 這幾個字。
+
+格式跟請求幾乎一樣，都是「第一行、Header、空一行、Body」。
 -->
 
 ---
 
-# Http Status Code — 常見狀態碼
+# Status Code：結果怎麼樣
 
-Status Code 用三位數字表達「這次請求的結果」：
+<DrinkShop mode="status" terms />
+
+<!--
+還記得「不是每次都拿得到飲料」嗎？網站也一樣，結果有好幾種。後端會用一個三位數字來表示，這個數字就叫 Status Code。
+
+（下一步）店員說「做好了」，對應到 200。只要是 2 開頭，就代表成功。
+
+（下一步）店員說「我們沒有賣這個」，對應到 404。這個數字大家一定看過，網頁找不到的時候就會出現。4 開頭代表是前端，也就是發請求那一方的問題。
+
+（下一步）「點單寫錯了，看不懂」，對應到 400。一樣是 4 開頭，一樣是前端的問題。
+
+（下一步）「抱歉，機器壞了」，對應到 500。5 開頭代表後端自己出錯了。
+
+所以看到 Status Code，先看第一個數字：2 是成功，4 是前端的問題，5 是後端的問題。
+-->
+
+---
+
+# 常見的 Status Code
 
 <v-clicks>
 
-| 狀態碼 | 名稱 | 意義 |
+| 狀態碼 | 意思 | 飲料店會怎麼說 |
 | --- | --- | --- |
-| **200** | OK | 請求成功 |
-| **201** | Created | 新增成功 |
-| **400** | Bad Request | 請求格式有誤（前端的問題） |
-| **401** | Unauthorized | 未登入，需要先驗證身份 |
-| **403** | Forbidden | 已登入但無此操作的權限 |
-| **404** | Not Found | 請求的資源不存在 |
-| **500** | Internal Server Error | 後端程式發生錯誤 |
+| **200** OK | 成功 | 「做好了」 |
+| **201** Created | 新增成功 | 「新訂單收到了」 |
+| **400** Bad Request | 請求寫錯了 | 「點單看不懂」 |
+| **401** Unauthorized | 還沒登入 | 「請先出示會員卡」 |
+| **403** Forbidden | 登入了，但沒有權限 | 「這是員工限定的」 |
+| **404** Not Found | 找不到 | 「我們沒有賣這個」 |
+| **500** Internal Server Error | 後端程式出錯 | 「機器壞了」 |
 
 </v-clicks>
 
 <v-click>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>記憶方式：</b> 2xx = 成功；4xx = 前端（請求方）的問題；5xx = 後端（伺服器）的問題。
+💡 <b>先看第一個數字：</b> 2 開頭是成功；4 開頭是前端（發請求的人）的問題；5 開頭是後端的問題。
 </div>
 
 </v-click>
 
 <!--
-Status Code 的分組規則很好記：
+這張表是最常見的幾個 Status Code。不用今天全部背起來，以後常常會遇到，自然就記得了。
 
-2xx 代表成功：200 是一般的成功，201 是新增成功。
+（依序按下一步，每個唸過去）200 是成功。201 是新增成功。400 是請求寫錯了。401 是還沒登入，就像店員請你先出示會員卡。403 是登入了但沒有權限，就像這杯是員工限定的。404 是找不到。500 是後端程式出錯。
 
-4xx 代表前端請求有問題：400 是格式錯誤，401 是沒登入，403 是沒權限，404 是找不到。
-
-5xx 代表後端出了問題：500 是後端程式崩了，通常是 bug 或例外沒有被正確處理。
-
-開發時最常看到的是 200（成功）、400（參數傳錯了）、404（URL 打錯或資源不存在）、500（後端有 bug）。
-
-記住這個分組邏輯，以後看到 Status Code 就知道問題出在哪裡。
+（最後一步）最重要的還是這句：先看第一個數字。2 開頭成功，4 開頭是前端的問題，5 開頭是後端的問題。
 -->
 
 ---
 
-# 小測驗：這是誰的問題？
+# 小測驗：這次是誰的問題？
 
-<Poll question="後端程式執行到一半發生錯誤，前端會收到哪一類 Status Code？" options="2xx|4xx|5xx" answer="3" />
+<Poll question="後端程式執行到一半出錯了。前端會收到哪一種開頭的 Status Code？" options="2 開頭|4 開頭|5 開頭" answer="3" />
 
 <!--
-講完 Status Code，我們來做一個小測驗。
+再來一題，這次是網站的版本。
 
-題目是：後端程式執行到一半發生錯誤，前端會收到哪一類 Status Code？請大家選一個。
+後端程式執行到一半出錯了，前端會收到哪一種開頭的 Status Code？
 
 （等大家作答）
 
-（下一步）公佈結果。答案是 5xx。
+（下一步）答案是 5 開頭。
 
-記憶的方式就是剛剛那句話：4 開頭是前端，也就是發請求那一方的問題，例如網址打錯是 404、沒登入是 401；5 開頭是後端自己出錯，最常見的就是 500。
+這就是「機器壞了」的情況。請求本身沒有寫錯，是後端自己出了問題。
 
-以後大家在 Postman 看到 500，第一件事就是回去看後端的 console，錯誤訊息通常就印在那裡。
+以後你在開發的時候看到 500，第一件事就是回去看後端的 console，錯誤訊息通常就印在那裡。
 -->
 
 ---
@@ -428,40 +501,47 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# Part 4
-# 用 Postman 練習發起 Http Request
+# Part 5
+# 親手發一次請求
 
 <!--
-概念都清楚了，現在我們來實際動手，用工具發起一個 Http request，觀察完整的 Request 和 Response 格式。
+觀念都講完了，最後我們親手發一次請求。
 
-這個工具就是 Postman——業界最主流的 API 測試工具。
+問題是，我們現在還沒有做前端畫面，要怎麼發請求給後端？這就需要一個工具。
 -->
 
 ---
 
 # Postman 是什麼？
 
-**Postman** 是業界最主流的 API 測試工具，讓我們能在沒有前端的情況下，直接發起 Http request 測試後端 API：
+**Postman** 是一個可以「假裝成前端」的工具，讓我們自己填點單、送給後端。
 
 <v-clicks>
 
-| 項目 | 說明 |
-| --- | --- |
-| **用途** | 模擬前端發送 Http request，查看後端的完整 Http response |
-| **為什麼需要** | 瀏覽器網址列只能發 `GET` 請求，無法測試 `POST`、`PUT`、`DELETE` |
-| **業界地位** | 幾乎每個後端團隊都在用，實際工作中每天都會碰到 |
-| **進階功能** | Collection 管理 API、環境變數（開發/測試/正式）、測試腳本、團隊共享 |
+- 我們還沒有做前端畫面，但想先測試後端有沒有寫對
+- 瀏覽器的網址列只能發 `GET`，發不了 `POST`、`PUT`、`DELETE`
+- Postman 可以把請求的四個部分都自己填好，再送出去
 
 </v-clicks>
 
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>值得學：</b> Postman 是業界最常用的 API 測試工具，後端工程師幾乎每天都會用到。
+</div>
+
+</v-click>
+
 <!--
-在開發後端 API 的時候，我們需要一個方式來測試「這個 API 有沒有正常運作」。
+這個工具叫做 Postman。你可以把它想成一個「假裝成前端」的工具，讓我們自己填點單，然後送給後端。
 
-最直覺的方式是用瀏覽器輸入網址——但瀏覽器只能發 GET 請求，沒辦法發 POST、PUT、DELETE，也看不到完整的 Status Code 和 Header。
+（下一步）為什麼需要它？第一，我們還沒有做前端畫面，但想先測試後端有沒有寫對。
 
-Postman 就解決了這個問題：自由選擇 Http Method、填入 URL 和 Body，模擬各種類型的 Http request，然後直接看到後端回傳的完整 Response。
+（下一步）第二，瀏覽器的網址列只能發 GET。你想發 POST、PUT、DELETE，瀏覽器的網址列做不到。
 
-選 Postman 的理由很簡單：它是業界最主流的工具，幾乎每個公司都在用。現在學會，之後工作直接無縫接軌。它還有很多進階功能——把 API 整理成 Collection、切換環境、寫測試腳本——這些之後用到再學，今天先掌握最核心的「發請求、看回應」。
+（下一步）Postman 可以把請求的四個部分，Method、URL、Header、Body，都自己填好再送出去。
+
+（下一步）而且它是業界最常用的 API 測試工具，後端工程師幾乎每天都會用到，所以很值得現在就學起來。
 -->
 
 ---
@@ -472,20 +552,18 @@ Postman 就解決了這個問題：自由選擇 Http Method、填入 URL 和 Bod
 | --- | --- |
 | **① 下載** | 到 [postman.com/downloads](https://www.postman.com/downloads/) 下載對應作業系統的版本（Windows / macOS / Linux） |
 | **② 安裝** | 執行安裝程式，依預設選項完成安裝 |
-| **③ 首次開啟** | 會出現登入畫面——可以註冊免費帳號，或選擇不登入直接使用 |
+| **③ 首次開啟** | 會出現登入畫面，可以註冊免費帳號，或選擇不登入直接使用 |
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>要不要註冊帳號？</b> 不登入也能發請求（輕量模式）。註冊免費帳號後，Collection 會雲端同步、可跨裝置使用——建議註冊，工作上一定用得到。
+💡 <b>要不要註冊帳號？</b> 不登入也能發請求。註冊免費帳號後，存下來的請求可以跨裝置使用，建議註冊。
 </div>
 
 <!--
-安裝很簡單，三步：官網下載、安裝、開啟。
+安裝很簡單，三個步驟。
 
-第一次打開 Postman 會請你登入。這裡很多人卡住——其實可以不登入，選擇輕量模式（lightweight API client）直接用，發請求的核心功能都在。
+到 Postman 的官網下載對應你作業系統的版本，執行安裝程式，一路用預設選項就可以了。
 
-不過建議大家還是註冊一個免費帳號：註冊之後你整理的 API 請求會同步到雲端，換電腦也能用，之後工作上跟團隊共享 Collection 也需要帳號。免費版對個人使用完全夠用。
-
-裝好之後，下一頁先認識一下介面。
+第一次打開會出現登入畫面。不登入也可以發請求，但我建議註冊一個免費帳號，這樣你存下來的請求換一台電腦也還在。
 -->
 
 ---
@@ -494,54 +572,50 @@ Postman 就解決了這個問題：自由選擇 Http Method、填入 URL 和 Bod
 
 <img src="/screenshots/ch13-postman-interface.png" alt="Postman 介面總覽" style="width:100%; max-height:440px; object-fit:contain; margin-top:8px;" />
 
-<p class="text-sm text-gray-500 text-center mt-1">今天會用到的是 <b>Sidebar</b>（儲存的請求）和 <b>Workbench</b>（發請求、看回應的主工作區）</p>
+<p class="text-sm text-gray-500 text-center mt-1">今天會用到的是 <b>Sidebar</b>（存下來的請求）和 <b>Workbench</b>（發請求、看回應的主要區域）</p>
 
 <!--
-這是 Postman 官方的介面總覽圖，五個區域：Sidebar、Header、Workbench、Right Sidebar、Footer。
+這是 Postman 打開之後的畫面。第一次看可能覺得東西很多，其實今天只會用到兩個區域。
 
-今天真正會用到的只有兩塊：左邊的 Sidebar 放你儲存過的請求（Collections），中間的 Workbench 是主要工作區——所有「發請求、看回應」的動作都在這裡完成。
+左邊的 Sidebar，放的是你存下來的請求。
 
-看圖中間的 Workbench：最上面 GET 下拉選單選 Method，旁邊填 URL，右邊藍色的 Send 按鈕送出。URL 下方的 Params、Headers、Body 頁籤用來設定請求內容。下半部就是回應區——圖裡可以看到 200 OK 的 Status、耗時 144ms、回傳的 JSON Body。
-
-右邊的 Right Sidebar 是文件和 AI 助手，Footer 有 Console 可以看原始的請求記錄——這些之後用到再說。
-
-下一頁看 Workbench 裡發請求會用到的每個元件。
+中間最大的這一塊叫 Workbench，是我們發請求、看回應的主要區域。等一下的操作都在這裡。
 -->
 
 ---
 
-# Workbench — 發起請求會用到的區域
+# Postman 的畫面，就是一張點單
 
-| 區域 | 位置 | 功能 |
-| --- | --- | --- |
-| **New / +** | 分頁列 | 建立新的請求分頁 |
-| **Method 下拉選單** | URL 列左側 | 選擇 `GET`、`POST`、`PUT`、`DELETE` 等 |
-| **URL 輸入框** | 中間 | 填入請求的目標網址 |
-| **Send 按鈕** | URL 列右側 | 送出請求 |
-| **Params / Headers / Body 頁籤** | URL 列下方 | 設定請求的參數、Header、Body |
-| **Response 區域** | 下半部 | 顯示回應的 Body、Status Code、Header、耗時 |
+| Postman 上的位置 | 對應到什麼 |
+| --- | --- |
+| **Method 下拉選單** | Http Method：`GET`、`POST`… |
+| **URL 輸入框** | URL：要找後端的哪個功能 |
+| **Headers 頁籤** | Header：備註 |
+| **Body 頁籤** | Body：要送過去的資料 |
+| **Send 按鈕** | 把請求送出去 |
+| **下半部的 Response 區** | 後端的回應：Status Code、Header、Body |
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>對照 Http 協議：</b> 上半部請求區對應 Http Request 的四個組成部分；下半部回應區對應 Http Response 的三個組成部分——介面就是照著協議設計的。
+💡 <b>有沒有發現：</b> 上半部就是請求的四個部分，下半部就是回應的三個部分。Postman 的畫面是照著 Http 協議設計的。
 </div>
 
 <!--
-把 Workbench 拆開來看，發一個請求會用到這幾個元件。
+我們把 Workbench 放大來看。你會發現，它其實就是一張點單。
 
-上半部是「請求區」：點 + 開新分頁，左邊下拉選 Method，中間填 URL，右邊按 Send。URL 下方的頁籤可以設定參數、Header、Body——這些後面章節學 @RequestParam、@RequestBody 的時候會大量用到。
+最左邊的下拉選單選 Method。旁邊的輸入框填 URL。下面有 Headers 頁籤和 Body 頁籤，分別填 Header 和 Body。這不就是請求的四個部分嗎？
 
-下半部是「回應區」：送出請求後，這裡會顯示 Response Body，右上角有 Status Code、耗時、回應大小，切換頁籤可以看 Response Header。
+填好之後按 Send，把請求送出去。
 
-對照一下前面學的格式：請求區的每個欄位對應 Http Request 的四個組成部分，回應區對應 Http Response 的三個組成部分——工具介面就是照著 Http 協議設計的。
+送出去之後，下半部會顯示後端的回應，裡面有 Status Code、Header、Body，也就是回應的三個部分。
 
-下一頁實際發一個請求。
+所以今天學的觀念，在這個工具上一格一格都找得到。
 -->
 
 ---
 
 # 練習：發起請求並查看回應
 
-確認後端有以下 Controller 在運行：
+確認後端有以下這段程式在執行（上一章寫過的）：
 
 ```java
 @RestController
@@ -555,42 +629,64 @@ public class MyController {
 }
 ```
 
-在 Postman 中：Method 選 `GET`，URL 填 `http://localhost:8080/test`，點擊 **Send**。
+在 Postman 中：Method 選 `GET`，URL 填 `http://localhost:8080/test`，按下 **Send**。
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>預期結果：</b> Status 顯示 <b>200 OK</b>，Response Body 顯示 <b>Hello World</b>，後端 console 印出 <b>Hi!</b>
+💡 <b>預期結果：</b> Status 顯示 <b>200 OK</b>，Body 顯示 <b>Hello World</b>，後端的 console 印出 <b>Hi!</b>
 </div>
 
 <!--
-這是我們一直在用的 MyController，現在用 Postman 來發送請求，可以看到完整的 Http Response。
+現在請大家跟著做一次。
 
-操作步驟：開新分頁，Method 選 GET，URL 填 http://localhost:8080/test，按 Send。
+先確認後端有這段程式在執行。這是我們之前寫過的，現在不用看懂每一行，只要知道兩件事：有人來找 /test 的時候，它會印出 Hi，然後回傳 Hello World。
 
-送出之後，下半部的回應區會顯示：右上角 Status 是 200 OK，Body 頁籤顯示 Hello World，同時後端的 console 也會印出 Hi!。可以再點 Headers 頁籤，看看 Response Header 裡的 Content-Type。
+接著打開 Postman。Method 選 GET，URL 填 localhost 8080 斜線 test，然後按 Send。
 
-這次練習的目的是讓大家親眼看到「一個完整的 Http request 和 response 長什麼樣子」。這個直覺建立好了，後面學各種 @RequestParam、@RequestBody 時，你會很清楚它們對應的是 Request 的哪個部分。
+如果一切順利，你會看到 Status 是 200 OK，Body 是 Hello World，而且後端的 console 會印出 Hi。
+
+（給大家時間操作，走下去看看有沒有人卡住）
 -->
 
 ---
 
 # 圖解：按下 Send 之後發生什麼事
 
-<Flow nodes="Postman:模擬前端|MyController:Spring Boot 後端|Console:後端的輸出視窗" steps="1>2:GET http://localhost:8080/test|2>3:印出 Hi!|2>1:200 OK ・ Hello World" />
+<Flow nodes="Postman:假裝成前端|MyController:我們的後端程式|Console:後端的輸出視窗" steps="1>2:GET http://localhost:8080/test|2>3:印出 Hi!|2>1:200 OK ・ Hello World" />
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>對照剛剛的練習：</b> 第一條線是 Http Request，最後一條線是 Http Response；中間那一步只發生在後端，前端看不到。
+💡 <b>對照剛剛的練習：</b> 第一條線是 Http Request，最後一條線是 Http Response。中間那一步只發生在後端，前端看不到。
 </div>
 
 <!--
-剛剛大家按下 Send 之後，其實背後發生了三件事，我們用動畫一步一步看。
+剛剛按下 Send 之後，背後其實發生了三件事。
 
-（下一步）第一步，Postman 發出一個 Http Request：Method 是 GET，URL 是 localhost:8080/test。這個請求被送到我們的 MyController。
+（下一步）第一，Postman 發出一張 Http Request：Method 是 GET，URL 是 localhost 8080 斜線 test。它被送到我們的後端程式。
 
-（下一步）第二步，Controller 裡的 test 方法被執行，它先在後端的 console 印出 Hi!。注意，這一步只發生在後端，Postman 那邊是看不到的。
+（下一步）第二，後端程式開始執行，先在 console 印出 Hi。請注意，這一步只發生在後端，Postman 那邊是看不到的。就像你在櫃台看不到廚房裡的事。
 
-（下一步）第三步，方法 return 了 Hello World，Spring Boot 把它包成 Http Response 送回去：Status Code 是 200 OK，Body 是 Hello World。
+（下一步）第三，後端把 Hello World 包成一張 Http Response 送回去，Status Code 是 200 OK。
 
-所以如果你的 Postman 看到 200 和 Hello World，console 也有印出 Hi!，就代表整條路都走通了。
+所以如果 Postman 看到 200 和 Hello World，console 也印出了 Hi，就代表整條路都走通了。
+-->
+
+---
+
+# 一張圖複習今天的內容
+
+<Pairs left="飲料店" right="網站" rows="form,統一的點單格式=code,Http 協議|form,點單的四格=code,Request：Method、URL、Header、Body|cup,取餐單的三格=code,Response：Status Code、Header、Body|what,客人點錯 / 店家出包=code,4 開頭 / 5 開頭的 Status Code" />
+
+<!--
+我們用一張圖複習今天的內容。
+
+（下一步）統一的點單格式，就是 Http 協議。
+
+（下一步）點單的四格，就是 Request 的四個部分：Method、URL、Header、Body。
+
+（下一步）取餐單的三格，就是 Response 的三個部分：Status Code、Header、Body。
+
+（下一步）客人點錯，是 4 開頭的 Status Code；店家出包，是 5 開頭。
+
+以後忘記的時候，就回想一下點飲料的過程。
 -->
 
 ---
@@ -599,33 +695,26 @@ public class MyController {
 
 <v-clicks>
 
-- **Http 協議**：規定前後端資料傳輸格式的規範；前端請求 = Http Request，後端回應 = Http Response
-- **Http Request**：Method（動作）+ URL（目標）+ Header（附加資訊）+ Body（資料，POST/PUT 限定）
-- **Http Method**：GET 取、POST 增、PUT 改（整體）、PATCH 改（部分）、DELETE 刪
-- **Http Response**：Status Code（結果）+ Header（附加資訊）+ Body（回傳資料）
-- **Status Code**：2xx 成功、4xx 前端問題（401 未登入、403 無權限、404 不存在）、5xx 後端問題
-- **Postman**：業界最主流的 API 測試工具——選 Method、填 URL、按 Send，即可查看完整的 Response
+- **Http 協議**：前端和後端共用的「點單格式」
+- **Request（請求）** 有四個部分：Method、URL、Header、Body
+- **Response（回應）** 有三個部分：Status Code、Header、Body
+- **Status Code** 先看第一個數字：2 成功、4 前端的問題、5 後端的問題
+- **Postman**：假裝成前端，讓我們自己發請求來測試後端
 
 </v-clicks>
 
 <v-click>
 
-下一章我們會學 `@RequestMapping` 的詳細用法，深入了解如何在 Spring Boot 中設定 URL 路徑對應。
+下一章我們會學怎麼在 Spring Boot 裡設定「哪個網址，要交給哪一段程式處理」。
 
 </v-click>
 
 <!--
-好，今天的內容我們來整理一下。
+最後整理今天的重點。
 
-Http 協議是前後端溝通的基礎規範，每一次 API 呼叫都在遵守這套格式。
+（依序按下一步）Http 協議是前端和後端共用的點單格式。Request 有四個部分。Response 有三個部分。Status Code 先看第一個數字。Postman 可以假裝成前端，讓我們自己發請求來測試後端。
 
-Request 有四個部分：Method、URL、Header、Body。Method 告訴後端你想做什麼事，Body 只有 POST 和 PUT 可以帶。
-
-Response 有三個部分：Status Code、Header、Body。Status Code 是最重要的——2xx 代表成功，4xx 代表前端請求有問題，5xx 代表後端出錯了。
-
-學完今天這章，後面每次看到 @RequestParam、@RequestBody 的時候，你就知道它們分別是在對應 Request 的哪個部分了。
-
-有問題嗎？
+（最後一步）今天我們是直接用了一段寫好的後端程式。下一章，我們會學怎麼自己設定「哪個網址，要交給哪一段程式處理」。
 -->
 
 ---
@@ -637,11 +726,9 @@ layout: end
 有任何問題嗎？
 
 <!--
-大家今天把 Http 協議的完整格式都搞清楚了。
+今天的內容到這邊。
 
-課後建議：用 Postman 多發幾次請求，試試看 GET 和 POST 有什麼不同，看看 Status Code 在什麼情況下會出現 404 或 500。
+如果名詞一下子太多記不住，沒關係。只要記得「一張四格的點單，換回一張三格的取餐單」，其他的之後每一章都會反覆出現。
 
-動手試過之後，這些格式會記得更清楚。
-
-有問題嗎？
+有任何問題歡迎現在提出來。
 -->

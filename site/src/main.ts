@@ -10,7 +10,11 @@ import './lib/classroom'
 import { restoreRoom } from './lib/room'
 import Link from './components/Link.vue'
 import Mermaid from './components/Mermaid.vue'
+import Art from './anim/Art.vue'
 import CodeSteps from './anim/CodeSteps.vue'
+import DrinkShop from './anim/DrinkShop.vue'
+import LifeIoc from './anim/LifeIoc.vue'
+import Pairs from './anim/Pairs.vue'
 import Flow from './anim/Flow.vue'
 import HttpExchange from './anim/HttpExchange.vue'
 import IocDemo from './anim/IocDemo.vue'
@@ -46,4 +50,8 @@ createApp(App)
   .component('IocDemo', IocDemo)
   .component('HttpExchange', HttpExchange)
   .component('Poll', Poll)
+  .component('Art', Art)
+  .component('LifeIoc', LifeIoc)
+  .component('Pairs', Pairs)
+  .component('DrinkShop', DrinkShop)
   .mount('#app')
