@@ -3,6 +3,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { chapterAt, chapterById, loadChapter, type Slide } from './deck'
 import { clearPage, draw, redo, undo } from './draw'
 import { visit } from './progress'
+import { LAST_STEP } from './steps'
 import { join, linked, on, send, type Role } from './sync'
 import { unitOf } from './units'
 
@@ -45,19 +46,33 @@ export function useDeck(role: Role) {
     document.title = `${tag}Ch ${chapter.value.num} ${chapter.value.title} · ${index.value + 1}/${chapter.value.count}`
   }, { immediate: true })
 
-  function go(i: number, ch = chId.value, remote = false) {
-    if (ch === chId.value && i === index.value) return
-    router.push(`${prefix}/${ch}/${i + 1}`)
+  /** animation step inside the current slide, and how many steps the slide has (reported by SlideCanvas) */
+  const step = ref(0)
+  const stepTotal = ref(0)
+  const stepShown = computed(() => Math.min(step.value, stepTotal.value))
+
+  function go(i: number, ch = chId.value, remote = false, toStep = 0) {
+    const sameSlide = ch === chId.value && i === index.value
+    if (sameSlide && toStep === step.value) return
+    if (!sameSlide) {
+      stepTotal.value = 0
+      router.push(`${prefix}/${ch}/${i + 1}`)
+    }
+    step.value = toStep
     // the presenter always drives; an audience window only talks back while a presenter is open
-    if (!remote && (role === 'presenter' || linked.value)) send({ t: 'nav', ch, i })
+    if (!remote && (role === 'presenter' || linked.value)) send({ t: 'nav', ch, i, step: toStep })
   }
+  /** next step, or the next slide once the steps are used up */
   function next() {
-    if (!atEnd.value) go(index.value + 1)
+    if (step.value < stepTotal.value) go(index.value, chId.value, false, step.value + 1)
+    else if (!atEnd.value) go(index.value + 1)
     else if (nextChapter.value) go(0, nextChapter.value.id)
   }
+  /** previous step, or the previous slide in its final state */
   function prev() {
-    if (index.value > 0) go(index.value - 1)
-    else if (prevChapter.value) go(prevChapter.value.count - 1, prevChapter.value.id)
+    if (stepShown.value > 0) go(index.value, chId.value, false, stepShown.value - 1)
+    else if (index.value > 0) go(index.value - 1, chId.value, false, LAST_STEP)
+    else if (prevChapter.value) go(prevChapter.value.count - 1, prevChapter.value.id, false, LAST_STEP)
   }
 
   /** Handles navigation and drawing shortcuts. Returns true when the key was used. */
@@ -92,11 +107,11 @@ export function useDeck(role: Role) {
   let offHere: (() => void) | undefined
   onMounted(() => {
     leave = join(role)
-    offNav = on('nav', m => go(m.i, m.ch, true))
+    offNav = on('nav', m => go(m.i, m.ch, true, m.step ?? 0))
     // a newly opened audience window is brought to the presenter's current slide
-    if (role === 'presenter') offHere = on('here', () => send({ t: 'nav', ch: chId.value, i: index.value }))
+    if (role === 'presenter') offHere = on('here', () => send({ t: 'nav', ch: chId.value, i: index.value, step: step.value }))
   })
   onBeforeUnmount(() => { leave?.(); offNav?.(); offHere?.() })
 
-  return { chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, go, next, prev, handleKey }
+  return { chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, go, next, prev, handleKey }
 }

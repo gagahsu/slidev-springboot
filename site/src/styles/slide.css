@@ -188,3 +188,68 @@
 
 .slide .slide-error { margin-bottom: 12px; padding: 10px 14px; border: 2px solid #ff4b4b; border-radius: 12px; background: #ffdfe0; color: #b3261e; font-size: 14px; }
 .slide .slide-error pre { white-space: pre-wrap; font: 12px/1.5 var(--font-mono); }
+
+/* ---------- animation components ---------- */
+.slide .step-hidden { visibility: hidden; opacity: 0; }
+.slide .v-clicks > :first-child, .slide .v-click > :first-child { margin-top: 0; }
+
+/* stepped code: highlighted lines stay sharp, the rest fades back */
+.slide .step-code .line { transition: opacity .25s, background-color .25s; }
+.slide .step-code .line.dim { opacity: .28; }
+.slide .step-code .line.hl { background: #fff3c4; box-shadow: inset 4px 0 0 #ffc800; }
+.slide .code-steps .captions { display: grid; margin: 10px 0 0; padding: 0; list-style: none; }
+.slide .code-steps .captions > li {
+  grid-area: 1 / 1;
+  visibility: hidden;
+  margin: 0;
+  padding: 9px 16px;
+  border: 2px solid #ffc800;
+  border-radius: 14px;
+  background: #fff8dc;
+  font-size: 16px;
+  font-weight: 700;
+}
+.slide .code-steps .captions > li.active { visibility: visible; }
+.slide .code-steps .captions > li::before {
+  content: attr(data-n);
+  display: inline-block;
+  margin-right: 10px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #ffc800;
+  color: #5c4300;
+  font-size: 12.5px;
+  font-weight: 900;
+}
+
+/* shared stage for concept animations */
+.slide .anim-stage { position: relative; width: 876px; height: 350px; margin: 6px 0 0; }
+.slide .anim-stage .caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #2b2b2b;
+}
+.slide .anim-stage .caption span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--c-brand);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+/* cover: content above the 3D backdrop, hand-authored white background made transparent */
+.slide.layout-cover .slide-inner { z-index: 1; }
+.slide.layout-cover .slide-inner > div { background: transparent !important; }

@@ -10,7 +10,7 @@ import { audienceCount } from '../lib/sync'
 import { useDeck } from '../lib/useDeck'
 
 const deck = useDeck('presenter')
-const { chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, next, prev } = deck
+const { chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, next, prev } = deck
 
 const sidebar = ref(false)
 const overview = ref(false)
@@ -123,9 +123,9 @@ onBeforeUnmount(() => {
 
     <main>
       <section class="current">
-        <div class="label">目前 <b>{{ index + 1 }}</b> / {{ chapter.count }}</div>
+        <div class="label">目前 <b>{{ index + 1 }}</b> / {{ chapter.count }}<span v-if="stepTotal" class="steps">動畫步驟 {{ stepShown }} / {{ stepTotal }}</span></div>
         <div class="frame">
-          <SlideCanvas v-if="slide" :slide="slide" :draw-key="drawKey" />
+          <SlideCanvas v-if="slide" :slide="slide" :draw-key="drawKey" :step="step" @steps="stepTotal = $event" />
           <div v-else class="placeholder">{{ loading ? '載入中…' : '' }}</div>
         </div>
         <div class="dock"><DrawToolbar :slide-key="drawKey" /></div>
@@ -166,7 +166,7 @@ onBeforeUnmount(() => {
       <div class="where">{{ slide?.title }}</div>
       <div class="side">
         <button class="pbtn big" title="上一頁 (←)" :disabled="index === 0 && !prevChapter" @click="prev"><Icon name="left" /><span>上一頁</span></button>
-        <button class="pbtn big primary" title="下一頁 (→)" :disabled="atEnd && !nextChapter" @click="next"><span>{{ atEnd && nextChapter ? '下一章' : '下一頁' }}</span><Icon name="right" /></button>
+        <button class="pbtn big primary" title="下一頁 (→)" :disabled="atEnd && !nextChapter && step >= stepTotal" @click="next"><span>{{ step < stepTotal ? '下一步' : atEnd && nextChapter ? '下一章' : '下一頁' }}</span><Icon name="right" /></button>
       </div>
     </footer>
 
@@ -211,6 +211,7 @@ aside { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
 .label { display: flex; align-items: center; justify-content: space-between; min-height: 30px; margin-bottom: 6px; color: var(--dim); font-size: 13px; font-weight: 900; letter-spacing: .08em; }
 .label b { color: var(--text); font-size: 16px; }
 .current .label { justify-content: flex-start; gap: 6px; }
+.steps { margin-left: 12px; padding: 2px 10px; border-radius: 999px; background: var(--c-blue); color: #fff; letter-spacing: .02em; }
 .frame { border: 2px solid var(--edge); border-radius: 14px; background: var(--c-snow); overflow: hidden; }
 .current .frame { width: min(100%, calc((100vh - 300px) * 980 / 552)); }
 .frame.small { width: min(100%, 420px); }

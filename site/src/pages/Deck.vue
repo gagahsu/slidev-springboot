@@ -13,7 +13,7 @@ import { useDeck } from '../lib/useDeck'
 const router = useRouter()
 const openSearch = inject<() => void>('openSearch')!
 const deck = useDeck('audience')
-const { chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, next, prev } = deck
+const { chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, next, prev } = deck
 
 const sidebar = ref(false)
 const overview = ref(false)
@@ -96,7 +96,7 @@ onBeforeUnmount(() => {
 
     <main class="stage" @touchstart.passive="onTouchStart" @touchend.passive="onTouchEnd">
       <div class="frame">
-        <SlideCanvas v-if="slide" :slide="slide" :draw-key="drawKey" />
+        <SlideCanvas v-if="slide" :slide="slide" :draw-key="drawKey" :step="step" @steps="stepTotal = $event" />
         <div v-else class="placeholder" :style="{ aspectRatio: '980 / 552' }">{{ loading ? '載入中…' : '這一章沒有投影片' }}</div>
       </div>
     </main>
@@ -116,8 +116,8 @@ onBeforeUnmount(() => {
       <div class="nav">
         <button class="btn square" title="全螢幕 (F)" aria-label="全螢幕" @click="toggleFullscreen"><Icon name="expand" /></button>
         <button class="btn square" title="上一頁 (←)" aria-label="上一頁" :disabled="index === 0 && !prevChapter" @click="prev"><Icon name="left" /></button>
-        <button class="btn primary" title="下一頁 (→)" :disabled="atEnd && !nextChapter" @click="next">
-          <span>{{ atEnd && nextChapter ? '下一章' : '下一頁' }}</span><Icon name="right" />
+        <button class="btn primary" title="下一頁 (→)" :disabled="atEnd && !nextChapter && step >= stepTotal" @click="next">
+          <span>{{ step < stepTotal ? '下一步' : atEnd && nextChapter ? '下一章' : '下一頁' }}</span><Icon name="right" />
         </button>
       </div>
     </footer>

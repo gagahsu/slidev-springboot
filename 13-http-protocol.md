@@ -59,10 +59,14 @@ layout: default
 
 # Outline
 
+<v-clicks>
+
 - **什麼是 Http 協議？** — 前後端為什麼需要共同規範
 - **Http Request 的格式規範** — 請求由哪些部分組成、Http Method 的種類
 - **Http Response 的格式規範** — 回應由哪些部分組成、常見 Status Code
 - **Postman 介紹、安裝與使用** — 用業界最主流的工具發起請求、查看完整回應
+
+</v-clicks>
 
 <!--
 今天的章節涵蓋的內容比較廣，但每個部分都很直覺。
@@ -88,11 +92,15 @@ class: flex flex-col justify-center items-center text-center
 
 前端和後端要溝通，但如果沒有統一的格式規範，溝通就會變成這樣：
 
+<v-clicks>
+
 | 情境 | 問題 |
 | --- | --- |
 | 前端說「給我商品清單」 | 後端不知道這是哪種類型的請求 |
 | 後端回傳資料 | 前端不知道這次請求是成功還是失敗 |
 | 前端傳參數 | 後端不知道參數放在哪裡、格式是什麼 |
+
+</v-clicks>
 
 Http 協議就是為了解決這個問題——**規定資料的傳輸格式，讓前端和後端有效地進行資料溝通。**
 
@@ -110,11 +118,15 @@ Http 協議就是前後端共同說好的「語言格式」——雙方都照這
 
 **「Http 協議負責規定資料的傳輸格式，讓前端和後端能有效地進行資料溝通。」**
 
+<v-clicks>
+
 | 概念 | 說明 |
 | --- | --- |
 | **Http** | HyperText Transfer Protocol，超文字傳輸協定 |
 | **協議（Protocol）** | 雙方都同意遵守的規則和格式 |
 | **兩大組成** | Http Request（前端發送給後端）+ Http Response（後端回傳給前端） |
+
+</v-clicks>
 
 Http 是目前 Web 開發中最主流的前後端通訊協定，Spring MVC 就是建立在 Http 協議之上的。
 
@@ -126,6 +138,28 @@ Http 全名是 HyperText Transfer Protocol，翻譯成「超文字傳輸協定�
 Http 協議的核心就是兩件事：一個 Request（前端問後端）和一個 Response（後端答前端）。
 
 整個 Spring MVC 的運作，底層都遵守這套 Http 的格式規範。所以搞清楚 Http，你就搞清楚了 Spring MVC 的底層邏輯。
+-->
+
+---
+
+# 圖解：一次 Http 請求的來回
+
+<HttpExchange />
+
+<!--
+在看格式的細節之前，我們先用動畫看一次完整的來回，讓大家心裡有個畫面。
+
+左邊是前端，可以是瀏覽器，也可以是等一下會用到的 Postman。右邊是後端，也就是我們的 Spring Boot 程式。
+
+（下一步）前端想要資料的時候，會把需求寫成一份 Http Request。它固定有四個部分：Method、URL、Header、Body。這四個名字先有印象就好，下一個 Part 會一個一個講。
+
+（下一步）Request 送到後端，後端會依照裡面的內容去處理。
+
+（下一步）處理完之後，後端把結果寫成一份 Http Response。它有三個部分：Status Code、Header、Body。
+
+（下一步）Response 回到前端，這一次請求就完成了。
+
+所以 Http 協議規定的，其實就是這兩張「單子」要怎麼填。接下來我們就分別來看這兩張單子。
 -->
 
 ---
@@ -146,12 +180,16 @@ class: flex flex-col justify-center items-center text-center
 
 前端發送給後端的 Http Request，由以下四個部分組成：
 
+<v-clicks>
+
 | 部分 | 說明 | 例子 |
 | --- | --- | --- |
 | **Http Method** | 請求的動作類型 | `GET`、`POST`、`PUT`、`DELETE` |
 | **URL** | 請求的目標網址 | `http://localhost:8080/test` |
 | **Request Header** | 請求的附加資訊，以 key-value 格式傳遞 | `Content-Type: application/json` |
 | **Request Body** | 請求夾帶的資料（僅 POST / PUT 可用） | `{"name": "Alice", "age": 20}` |
+
+</v-clicks>
 
 <!--
 Http Request 就像寄一封信：你要說明寄的是什麼類型的信（Method）、寄給誰（URL）、信封上的資訊（Header），以及信的內容（Body）。
@@ -175,13 +213,21 @@ Content-Type: application/json
 
 一個帶有資料的 POST 請求，格式如下：
 
-```
+<CodeSteps>
+
+```text {1|2-3|5}
 POST /users HTTP/1.1
 Host: localhost:8080
 Content-Type: application/json
 
 {"name": "Alice", "age": 20}
 ```
+
+- 第一行：**Http Method** 和請求的路徑
+- 接著是 **Request Header**，一行一組 key-value
+- 空一行之後是 **Request Body**，也就是夾帶的資料
+
+</CodeSteps>
 
 <!--
 看這兩個範例，GET 請求沒有 Body，只有 Method、URL、Header。
@@ -197,6 +243,8 @@ POST 請求在 Header 之後空一行，然後才是 Body——Body 裡放的是
 
 Http Method 用來表達「這次請求想做什麼事」：
 
+<v-clicks>
+
 | Method | 對應動作 | 說明 |
 | --- | --- | --- |
 | **GET** | 取得資料 | 最常見，不帶 Request Body |
@@ -204,6 +252,8 @@ Http Method 用來表達「這次請求想做什麼事」：
 | **PUT** | 修改資料（完整替換） | 帶 Request Body，傳遞完整的修改後資料 |
 | **PATCH** | 修改資料（部分更新） | 帶 Request Body，只傳遞要修改的欄位 |
 | **DELETE** | 刪除資料 | 不帶 Request Body |
+
+</v-clicks>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>記憶方式：</b> GET 取、POST 增、PUT 改（整個換掉）、PATCH 改（只換一部分）、DELETE 刪——對應 CRUD 操作。
@@ -241,11 +291,15 @@ class: flex flex-col justify-center items-center text-center
 
 後端回傳給前端的 Http Response，由以下三個部分組成：
 
+<v-clicks>
+
 | 部分 | 說明 | 例子 |
 | --- | --- | --- |
 | **Http Status Code** | 表達這次請求的結果（成功 / 失敗 / 錯誤類型） | `200`、`404`、`500` |
 | **Response Header** | 回應的附加資訊，以 key-value 格式傳遞 | `Content-Type: application/json` |
 | **Response Body** | 後端要回傳給前端的資料，是 Response 中最重要的部分 | `"Hello World"`、`{"id": 1, "name": "Alice"}` |
+
+</v-clicks>
 
 <!--
 Response 的結構比 Request 少一個 Method 和 URL（因為這是「答」，不是「問」），多了 Status Code 來表達結果。
@@ -261,12 +315,20 @@ Spring MVC 的 @RestController 自動幫我們把 Java 物件轉成 JSON 格式�
 
 一個成功的 GET 請求回應，格式如下：
 
-```
+<CodeSteps>
+
+```text {1|2|4}
 HTTP/1.1 200 OK
 Content-Type: text/plain;charset=UTF-8
 
 Hello World
 ```
+
+- 第一行：**Status Code**，`200 OK` 代表成功
+- 接著是 **Response Header**
+- 空一行之後是 **Response Body**，後端真正要回傳的資料
+
+</CodeSteps>
 
 一個資源不存在的錯誤回應，格式如下：
 
@@ -293,6 +355,8 @@ Content-Type: application/json
 
 Status Code 用三位數字表達「這次請求的結果」：
 
+<v-clicks>
+
 | 狀態碼 | 名稱 | 意義 |
 | --- | --- | --- |
 | **200** | OK | 請求成功 |
@@ -302,6 +366,8 @@ Status Code 用三位數字表達「這次請求的結果」：
 | **403** | Forbidden | 已登入但無此操作的權限 |
 | **404** | Not Found | 請求的資源不存在 |
 | **500** | Internal Server Error | 後端程式發生錯誤 |
+
+</v-clicks>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>記憶方式：</b> 2xx = 成功；4xx = 前端（請求方）的問題；5xx = 後端（伺服器）的問題。
@@ -341,12 +407,16 @@ class: flex flex-col justify-center items-center text-center
 
 **Postman** 是業界最主流的 API 測試工具，讓我們能在沒有前端的情況下，直接發起 Http request 測試後端 API：
 
+<v-clicks>
+
 | 項目 | 說明 |
 | --- | --- |
 | **用途** | 模擬前端發送 Http request，查看後端的完整 Http response |
 | **為什麼需要** | 瀏覽器網址列只能發 `GET` 請求，無法測試 `POST`、`PUT`、`DELETE` |
 | **業界地位** | 幾乎每個後端團隊都在用，實際工作中每天都會碰到 |
 | **進階功能** | Collection 管理 API、環境變數（開發/測試/正式）、測試腳本、團隊共享 |
+
+</v-clicks>
 
 <!--
 在開發後端 API 的時候，我們需要一個方式來測試「這個 API 有沒有正常運作」。
@@ -467,7 +537,31 @@ public class MyController {
 
 ---
 
+# 圖解：按下 Send 之後發生什麼事
+
+<Flow nodes="Postman:模擬前端|MyController:Spring Boot 後端|Console:後端的輸出視窗" steps="1>2:GET http://localhost:8080/test|2>3:印出 Hi!|2>1:200 OK ・ Hello World" />
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>對照剛剛的練習：</b> 第一條線是 Http Request，最後一條線是 Http Response；中間那一步只發生在後端，前端看不到。
+</div>
+
+<!--
+剛剛大家按下 Send 之後，其實背後發生了三件事，我們用動畫一步一步看。
+
+（下一步）第一步，Postman 發出一個 Http Request：Method 是 GET，URL 是 localhost:8080/test。這個請求被送到我們的 MyController。
+
+（下一步）第二步，Controller 裡的 test 方法被執行，它先在後端的 console 印出 Hi!。注意，這一步只發生在後端，Postman 那邊是看不到的。
+
+（下一步）第三步，方法 return 了 Hello World，Spring Boot 把它包成 Http Response 送回去：Status Code 是 200 OK，Body 是 Hello World。
+
+所以如果你的 Postman 看到 200 和 Hello World，console 也有印出 Hi!，就代表整條路都走通了。
+-->
+
+---
+
 # 章節總結
+
+<v-clicks>
 
 - **Http 協議**：規定前後端資料傳輸格式的規範；前端請求 = Http Request，後端回應 = Http Response
 - **Http Request**：Method（動作）+ URL（目標）+ Header（附加資訊）+ Body（資料，POST/PUT 限定）
@@ -475,6 +569,8 @@ public class MyController {
 - **Http Response**：Status Code（結果）+ Header（附加資訊）+ Body（回傳資料）
 - **Status Code**：2xx 成功、4xx 前端問題（401 未登入、403 無權限、404 不存在）、5xx 後端問題
 - **Postman**：業界最主流的 API 測試工具——選 Method、填 URL、按 Send，即可查看完整的 Response
+
+</v-clicks>
 
 下一章我們會學 `@RequestMapping` 的詳細用法，深入了解如何在 Spring Boot 中設定 URL 路徑對應。
 

@@ -1,10 +1,32 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue'
 import { SLIDE_H, SLIDE_W, type Slide } from '../lib/deck'
+import { STEP_CONTEXT, reducedMotion } from '../lib/steps'
 import DrawLayer from './DrawLayer.vue'
 
+const CoverBackdrop = defineAsyncComponent(() => import('./CoverBackdrop.vue'))
+
 // drawKey: when set, drawings for that key are shown on top of the slide (and editable when a tool is active)
-const props = defineProps<{ slide: Slide, drawKey?: string }>()
+// step: current animation step of the slide. Omit it to show the slide in its final state (previews, thumbnails).
+const props = defineProps<{ slide: Slide, drawKey?: string, step?: number }>()
+const emit = defineEmits<{ steps: [total: number] }>()
+
+const total = ref(0)
+const live = computed(() => props.step !== undefined)
+provide(STEP_CONTEXT, {
+  step: computed(() => props.step ?? Number.POSITIVE_INFINITY),
+  live,
+  claim(count) {
+    const start = total.value
+    total.value += count
+    return start
+  },
+})
+// components of the new slide claim their steps as they mount, so reset before they do
+watch(() => props.slide, () => { total.value = 0 }, { flush: 'sync' })
+watch(total, n => emit('steps', n), { immediate: true })
+const backdrop = computed(() => live.value && props.slide.layout === 'cover' && !reducedMotion())
+
 
 const SECTION_COLORS = ['green', 'blue', 'purple', 'orange']
 
@@ -55,8 +77,9 @@ watch(() => props.slide, refit)
   <div ref="box" class="slide-canvas" :style="{ aspectRatio: `${SLIDE_W} / ${SLIDE_H}` }">
     <div class="slide" :class="classes" :style="{ transform: `scale(${scale})` }">
       <div ref="inner" class="slide-inner" :class="slide.class" :style="{ zoom: fit }" @load.capture="refit">
-        <component :is="slide.comp" :key="slide.index" />
+        <component :is="slide.comp" :key="slide.key" />
       </div>
+      <CoverBackdrop v-if="backdrop" />
     </div>
     <DrawLayer v-if="drawKey" :slide-key="drawKey" />
   </div>

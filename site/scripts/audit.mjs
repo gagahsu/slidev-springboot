@@ -29,7 +29,8 @@ for (const ch of chapters) {
   const count = Number((await page.textContent('.counter small')).replace(/\D/g, ''))
   for (let n = 1; n <= count; n++) {
     where = `${ch}/${n}`
-    if (n > 1) await page.keyboard.press('ArrowRight')
+    // jump by URL: arrow keys would play the slide's animation steps first
+    if (n > 1) await page.evaluate(h => { location.hash = h }, `#/${ch}/${n}`)
     await page.waitForFunction(n => location.hash.endsWith(`/${n}`), n)
     await page.waitForTimeout(60)
     const r = await page.evaluate(async () => {

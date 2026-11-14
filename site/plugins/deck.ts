@@ -2,13 +2,14 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import MarkdownIt from 'markdown-it'
+import cjkFriendly from 'markdown-it-cjk-friendly'
 import { createHighlighter, type Highlighter } from 'shiki'
 import { compile } from '@vue/compiler-dom'
 import { plain, slideTitle, splitSlides, type RawSlide } from './parse.ts'
 
 const LANGS = ['java', 'typescript', 'javascript', 'html', 'css', 'scss', 'properties', 'bash', 'json', 'groovy', 'xml', 'sql', 'yaml', 'powershell']
 const CODE_THEME = 'github-light'
-const KNOWN_COMPONENTS = new Set(['Link', 'Mermaid'])
+const KNOWN_COMPONENTS = new Set(['Link', 'Mermaid', 'v-clicks', 'v-click', 'StepCode', 'CodeSteps', 'Flow', 'IocDemo', 'HttpExchange'])
 
 /** Old Slidev palette (hard-coded in inline styles) → theme tokens. */
 const PALETTE: Record<string, string> = {
@@ -87,7 +88,8 @@ export default function deck(opts: { contentDir: string }): Plugin {
   const layoutOf = (s: RawSlide, i: number) => String(s.frontmatter.layout ?? (i === 0 ? 'cover' : 'default'))
 
   function setupMarkdown() {
-    md = new MarkdownIt({ html: true, linkify: true, breaks: false })
+    // cjk-friendly: `**粗體（註）**的` style emphasis next to full-width punctuation renders as bold
+    md = new MarkdownIt({ html: true, linkify: true, breaks: false }).use(cjkFriendly)
     md.renderer.rules.code_inline = (tokens, idx) => `<code v-pre>${esc(tokens[idx].content)}</code>`
     md.renderer.rules.code_block = (tokens, idx) => `<div class="code-block"><pre v-pre><code>${esc(tokens[idx].content)}</code></pre></div>\n`
     md.renderer.rules.fence = (tokens, idx) => {
@@ -103,7 +105,10 @@ export default function deck(opts: { contentDir: string }): Plugin {
         // lines are block elements in our CSS, so drop the newlines between them
         .replace(/<\/span>\n<span class="line">/g, '</span><span class="line">')
       const label = lang && lang !== 'text' ? `<span class="code-lang">${esc(lang)}</span>` : ''
-      return `<div class="code-block" data-lang="${esc(lang)}">${label}${html}</div>\n`
+      const block = `<div class="code-block" data-lang="${esc(lang)}">${label}${html}</div>`
+      // ```java {1|3-4|all}  → line highlights that advance with each step (Slidev-compatible syntax)
+      const steps = token.info.match(/\{([^}]*)\}/)?.[1].trim()
+      return steps ? `<StepCode steps="${esc(steps)}">${block}</StepCode>\n` : `${block}\n`
     }
     const defaultLinkOpen = md.renderer.rules.link_open ?? ((t, i, o, _e, self) => self.renderToken(t, i, o))
     md.renderer.rules.link_open = (tokens, idx, options, env, self) => {

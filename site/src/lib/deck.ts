@@ -3,6 +3,8 @@ import { chapters, loaders, type ChapterInfo } from 'virtual:deck'
 
 export interface Slide {
   index: number
+  /** unique across chapters */
+  key: string
   layout: string
   class: string
   title: string
@@ -29,7 +31,7 @@ export function loadChapter(id: string): Promise<Slide[]> {
   if (!p) {
     const loader = loaders[id]
     p = loader
-      ? loader().then(m => m.default.map(s => markRaw({ ...s, comp: markRaw({ name: 'SlideContent', render: s.render }) }) as Slide))
+      ? loader().then(m => m.default.map(s => markRaw({ ...s, key: `${id}-${s.index}`, comp: markRaw({ name: 'SlideContent', render: s.render }) }) as Slide))
       : Promise.resolve([])
     cache.set(id, p)
   }

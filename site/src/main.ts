@@ -8,6 +8,13 @@ import 'virtual:uno.css'
 import App from './App.vue'
 import Link from './components/Link.vue'
 import Mermaid from './components/Mermaid.vue'
+import CodeSteps from './anim/CodeSteps.vue'
+import Flow from './anim/Flow.vue'
+import HttpExchange from './anim/HttpExchange.vue'
+import IocDemo from './anim/IocDemo.vue'
+import StepCode from './anim/StepCode.vue'
+import VClick from './anim/VClick.vue'
+import VClicks from './anim/VClicks.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -23,4 +30,12 @@ createApp(App)
   .use(router)
   .component('Link', Link)
   .component('Mermaid', Mermaid)
+  // animation components usable inside chapter markdown
+  .component('VClicks', VClicks)
+  .component('VClick', VClick)
+  .component('StepCode', StepCode)
+  .component('CodeSteps', CodeSteps)
+  .component('Flow', Flow)
+  .component('IocDemo', IocDemo)
+  .component('HttpExchange', HttpExchange)
   .mount('#app')

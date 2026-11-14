@@ -59,10 +59,14 @@ layout: default
 
 # Outline
 
+<v-clicks>
+
 - **什麼是 IoC？** — 從傳統寫法的問題切入，理解「控制反轉」的意義
 - **Spring IoC 的定義** — Spring 容器扮演的角色，以及 IoC 寫法的程式碼對比
 - **Spring IoC 的優點** — 鬆耦合、生命週期管理、方便測試
 - **章節總結** — 掌握本章三個核心觀念
+
+</v-clicks>
 
 <!--
 今天的章節結構很清楚，分成三個部分。
@@ -92,11 +96,15 @@ class: flex flex-col justify-center items-center text-center
 
 假設有一位老師，他想要印講義，所以他「自己買了一台 HP 印表機」放在辦公桌上。
 
+<v-clicks>
+
 | 角色 | 說明 |
 | --- | --- |
 | `Teacher`（老師） | 需要印講義的人 |
 | `HpPrinter`（HP 印表機） | 提供列印功能的工具 |
 | `Printer`（印表機介面） | 定義印表機必須有的能力 |
+
+</v-clicks>
 
 用傳統 Java 寫法，老師自己決定要買哪台印表機：
 
@@ -126,13 +134,20 @@ public class Teacher {
 
 如果有一天 HP 印表機壞了，老師想換成 Canon，就**必須修改 Teacher 的程式碼**：
 
-```java
+<CodeSteps>
+
+```java {1-2|4-5}
 // 原本：HP 印表機
 private Printer printer = new HpPrinter();
 
 // 換成：Canon 印表機（要改程式碼！）
 private Printer printer = new CanonPrinter();
 ```
+
+- 原本 `Teacher` 裡寫死了 `new HpPrinter()`
+- 想換成 Canon，就得打開 `Teacher` 把這一行改掉
+
+</CodeSteps>
 
 這就是**緊耦合（Tight Coupling）**的問題：`Teacher` 和 `HpPrinter` 綁死了。
 
@@ -154,9 +169,31 @@ private Printer printer = new CanonPrinter();
 
 ---
 
+# 圖解：傳統寫法為什麼麻煩
+
+<IocDemo mode="traditional" />
+
+<!--
+剛剛的程式碼，我們用動畫再看一次，請大家注意 Teacher 和印表機之間的關係。
+
+一開始，Teacher 想印講義，需要一台印表機。
+
+（下一步）傳統寫法是 Teacher 自己 new 一台 HpPrinter。注意中間這條線，Teacher 跟 HpPrinter 被綁在一起了，這就是緊耦合。
+
+（下一步）有一天 HP 印表機壞了，老師想換成 Canon。
+
+（下一步）這時候唯一的辦法，就是打開 Teacher 這個類別，把程式碼改掉。一個類別還好，如果有一百個類別都自己 new 了 HpPrinter，就要改一百個地方。
+
+所以問題的根源是：「要用哪一台印表機」這件事，是 Teacher 自己決定的。
+-->
+
+---
+
 # 什麼是 IoC？
 
 **IoC** 全名是 **Inversion of Control**，中文叫做**控制反轉**。
+
+<v-clicks>
 
 | 概念 | 說明 |
 | --- | --- |
@@ -164,6 +201,8 @@ private Printer printer = new CanonPrinter();
 | **反轉** | 把這個控制權「從類別本身」反轉交給「外部容器」 |
 | **傳統方式** | `Teacher` 自己控制：`new HpPrinter()` |
 | **IoC 方式** | 由外部的 **Spring 容器**統一管理，`Teacher` 不用自己 new |
+
+</v-clicks>
 
 「IoC 的核心概念，就是將物件的控制權，**交給外部的 Spring 容器來管理**。」
 
@@ -197,11 +236,15 @@ Spring 有一個東西叫做「Spring 容器」，它就是那個負責統一管
 
 Spring 就像公司的「行政部門」，它預先準備好印表機，放在儲藏室（Spring 容器）：
 
+<v-clicks>
+
 | 問題 | 傳統寫法 | IoC 寫法 |
 | --- | --- | --- |
 | 誰負責建立印表機？ | `Teacher` 自己 `new` | **Spring 容器**自動建立 |
 | 誰管理印表機？ | 每個類別各自管 | **Spring 容器**統一管 |
 | 換印表機要改哪裡？ | 每個用到的類別 | **只改 Spring 設定** |
+
+</v-clicks>
 
 比喻：「Spring 預先買好印表機，放在『Spring 容器』裡，誰想要印東西，就去跟 Spring 借。」
 
@@ -213,6 +256,26 @@ Spring 就像公司的「行政部門」，它預先準備好印表機，放在�
 這就是 Spring 容器做的事：它統一管理所有物件（在 Spring 裡稱為 Bean），誰需要就來借，不需要自己 new，也不需要自己管。
 
 這樣一來，換印表機（換實作類別）只需要改 Spring 的設定，所有使用者的程式碼都不用動。
+-->
+
+---
+
+# 圖解：把控制權交給 Spring 容器
+
+<IocDemo mode="ioc" />
+
+<!--
+同樣的故事，這次換成 IoC 的做法，我們一樣用動畫來看。
+
+左邊綠色的框就是 Spring 容器，它預先把 HpPrinter 和 CanonPrinter 都準備好了。右邊是 Teacher，注意它的程式碼只有宣告 `private Printer printer;`，沒有 new 任何東西，所以那個位置現在是空的。
+
+（下一步）Teacher 只需要說一句話：「我需要一個 Printer」。它不管是哪個牌子。
+
+（下一步）Spring 容器聽到之後，把 HpPrinter 送進 Teacher 的空位裡。這個動作就叫做「注入」，下一章我們會正式介紹它。
+
+（下一步）如果想換成 Canon 呢？只要改 Spring 的設定，容器就改送 CanonPrinter 過去。請看 Teacher 的程式碼，一行都沒有改。
+
+這就是「控制反轉」：決定用哪台印表機的控制權，從 Teacher 手上反轉到 Spring 容器手上。
 -->
 
 ---
@@ -257,7 +320,9 @@ public class HpPrinter implements Printer {
 
 使用 IoC 寫法，`Teacher` 只需宣告「我需要一個 Printer」，由 Spring 容器決定要提供哪一個：
 
-```java
+<CodeSteps>
+
+```java {all|2|4-6}
 public class Teacher {
     private Printer printer; // 不自己 new，等 Spring 來注入
 
@@ -266,6 +331,12 @@ public class Teacher {
     }
 }
 ```
+
+- 整個 `Teacher` 類別裡，找不到任何一個 `new`
+- 只宣告「我需要一個 `Printer`」，由 Spring 容器注入
+- 使用時照常呼叫，不必知道拿到的是 HP 還是 Canon
+
+</CodeSteps>
 
 <!--
 這就是 IoC 寫法的核心差異。
@@ -295,11 +366,15 @@ Spring IoC 有三個主要優點，每一個都直接解決了傳統寫法的痛
 
 # Spring IoC 的三大優點
 
+<v-clicks>
+
 | 優點 | 說明 |
 | --- | --- |
 | **1. 鬆耦合（Loose Coupling）** | 各類別不再緊密依賴具體實作，換實作只需改 Spring 設定 |
 | **2. 生命週期管理** | Spring 統一負責 Bean 的建立、初始化與銷毀 |
 | **3. 方便測試** | 測試時可用 Mock 物件替換 Spring 容器中的真實物件 |
+
+</v-clicks>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>最重要的優點：</b> 鬆耦合是 IoC 最核心的價值，它讓程式碼更容易維護與擴展。
@@ -345,11 +420,15 @@ IoC 寫法則讓 Teacher 只依賴 Printer 這個介面，由 Spring 決定要�
 
 # 優點 2：生命週期管理
 
+<v-clicks>
+
 | 階段 | 傳統寫法 | IoC 寫法（Spring 負責） |
 | --- | --- | --- |
 | **建立** | 開發者手動 `new` | Spring 容器自動建立 |
 | **初始化** | 開發者自己呼叫初始化方法 | 可用 `@PostConstruct` 自動觸發 |
 | **銷毀** | 容易忘記釋放資源 | Spring 容器統一管理銷毀 |
+
+</v-clicks>
 
 Spring 替我們管理 Bean 的整個生命週期，讓我們只需要專注在業務邏輯。
 
@@ -369,11 +448,15 @@ Spring 幫你把這些都接管了。你只需要告訴 Spring「這個類別我
 
 使用 IoC 後，測試時可以用 **Mock 物件**替換真實的 Bean：
 
+<v-clicks>
+
 | 情境 | 傳統寫法 | IoC 寫法 |
 | --- | --- | --- |
 | 單元測試 | 必須準備真實的 `HpPrinter` 物件 | 只需注入一個 `MockPrinter` |
 | 測試隔離 | `Teacher` 和 `HpPrinter` 的測試互相干擾 | 各自獨立，互不影響 |
 | 測試成本 | 高（可能需要硬體或外部資源） | 低（全部在 JVM 內完成） |
+
+</v-clicks>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>補充：</b> Mock 的概念在這裡先了解就好，測試的深入用法會在後面的章節介紹。
@@ -395,11 +478,15 @@ Spring 幫你把這些都接管了。你只需要告訴 Spring「這個類別我
 
 # 章節總結
 
+<v-clicks>
+
 - **IoC（控制反轉）**：將物件的控制權，從類別本身交給外部的 Spring 容器管理
 - **Spring 容器**：預先建立並保管所有 Bean，誰需要就去借，不用自己 `new`
 - **鬆耦合**：類別只依賴介面，不依賴具體實作，換實作只需改 Spring 設定
 - **生命週期管理**：Spring 負責 Bean 的建立、初始化與銷毀
 - **方便測試**：IoC 讓各類別可以獨立測試，用 Mock 物件替換真實依賴
+
+</v-clicks>
 
 下一章我們會介紹 IoC、DI 和 Bean 三者的關係，以及 Spring 是怎麼實際把物件注入進去的。
 
