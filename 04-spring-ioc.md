@@ -106,6 +106,8 @@ class: flex flex-col justify-center items-center text-center
 
 </v-clicks>
 
+<v-click>
+
 用傳統 Java 寫法，老師自己決定要買哪台印表機：
 
 ```java
@@ -117,6 +119,8 @@ public class Teacher {
     }
 }
 ```
+
+</v-click>
 
 <!--
 我們先來看一個貼近生活的場景。
@@ -204,7 +208,11 @@ private Printer printer = new CanonPrinter();
 
 </v-clicks>
 
+<v-click>
+
 「IoC 的核心概念，就是將物件的控制權，**交給外部的 Spring 容器來管理**。」
+
+</v-click>
 
 <!--
 IoC，Inversion of Control，控制反轉。
@@ -246,7 +254,11 @@ Spring 就像公司的「行政部門」，它預先準備好印表機，放在�
 
 </v-clicks>
 
+<v-click>
+
 比喻：「Spring 預先買好印表機，放在『Spring 容器』裡，誰想要印東西，就去跟 Spring 借。」
+
+</v-click>
 
 <!--
 用公司的場景來理解就很清楚了。
@@ -396,9 +408,13 @@ Spring IoC 有三個主要優點，每一個都直接解決了傳統寫法的痛
 
 </v-clicks>
 
+<v-click>
+
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>最重要的優點：</b> 鬆耦合是 IoC 最核心的價值，它讓程式碼更容易維護與擴展。
 </div>
+
+</v-click>
 
 <!--
 IoC 帶來三個主要優點，我們一個一個來看。
@@ -450,7 +466,11 @@ IoC 寫法則讓 Teacher 只依賴 Printer 這個介面，由 Spring 決定要�
 
 </v-clicks>
 
+<v-click>
+
 Spring 替我們管理 Bean 的整個生命週期，讓我們只需要專注在業務邏輯。
+
+</v-click>
 
 <!--
 第二個優點是生命週期管理。
@@ -478,9 +498,13 @@ Spring 幫你把這些都接管了。你只需要告訴 Spring「這個類別我
 
 </v-clicks>
 
+<v-click>
+
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>補充：</b> Mock 的概念在這裡先了解就好，測試的深入用法會在後面的章節介紹。
 </div>
+
+</v-click>
 
 <!--
 第三個優點是方便測試，這在企業開發中非常重要。
@@ -508,7 +532,11 @@ Spring 幫你把這些都接管了。你只需要告訴 Spring「這個類別我
 
 </v-clicks>
 
+<v-click>
+
 下一章我們會介紹 IoC、DI 和 Bean 三者的關係，以及 Spring 是怎麼實際把物件注入進去的。
+
+</v-click>
 
 <!--
 好，我們來整理今天學到的東西。

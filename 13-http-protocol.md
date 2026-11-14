@@ -102,7 +102,11 @@ class: flex flex-col justify-center items-center text-center
 
 </v-clicks>
 
+<v-click>
+
 Http 協議就是為了解決這個問題——**規定資料的傳輸格式，讓前端和後端有效地進行資料溝通。**
+
+</v-click>
 
 <!--
 想像兩個人要溝通，但一個說中文、一個說英文，結果就是雞同鴨講。
@@ -128,7 +132,11 @@ Http 協議就是前後端共同說好的「語言格式」——雙方都照這
 
 </v-clicks>
 
+<v-click>
+
 Http 是目前 Web 開發中最主流的前後端通訊協定，Spring MVC 就是建立在 Http 協議之上的。
+
+</v-click>
 
 <!--
 Http 全名是 HyperText Transfer Protocol，翻譯成「超文字傳輸協定」。這個名字聽起來很學術，但理解它的概念非常直覺。
@@ -255,9 +263,13 @@ Http Method 用來表達「這次請求想做什麼事」：
 
 </v-clicks>
 
+<v-click>
+
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>記憶方式：</b> GET 取、POST 增、PUT 改（整個換掉）、PATCH 改（只換一部分）、DELETE 刪——對應 CRUD 操作。
 </div>
+
+</v-click>
 
 <!--
 Http Method 用來表示這次請求的「意圖」——你想取得資料？新增資料？修改還是刪除？
@@ -369,9 +381,13 @@ Status Code 用三位數字表達「這次請求的結果」：
 
 </v-clicks>
 
+<v-click>
+
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>記憶方式：</b> 2xx = 成功；4xx = 前端（請求方）的問題；5xx = 後端（伺服器）的問題。
 </div>
+
+</v-click>
 
 <!--
 Status Code 的分組規則很好記：
@@ -592,7 +608,11 @@ public class MyController {
 
 </v-clicks>
 
+<v-click>
+
 下一章我們會學 `@RequestMapping` 的詳細用法，深入了解如何在 Spring Boot 中設定 URL 路徑對應。
+
+</v-click>
 
 <!--
 好，今天的內容我們來整理一下。

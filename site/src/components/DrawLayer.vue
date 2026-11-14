@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { SLIDE_H, SLIDE_W } from '../lib/deck'
 import { arrowHead, draw, erase, hits, newId, pointLaser, strokePath, strokesOf, upsert, type Stroke } from '../lib/draw'
 
@@ -32,13 +32,14 @@ function down(e: PointerEvent) {
   svg.value!.setPointerCapture(e.pointerId)
   if (tool === 'eraser') { erasing = true; eraseAt(x, y); return }
   if (tool === 'none') return
-  current = {
+  // reactive, so every added point repaints the stroke while it is being drawn
+  current = reactive({
     id: newId(),
     tool,
     color: draw.color,
     size: tool === 'marker' ? draw.size * 3.2 : draw.size,
     pts: tool === 'pen' || tool === 'marker' ? [x, y] : [x, y, x, y],
-  }
+  })
   upsert(props.slideKey, current, false)
 }
 
