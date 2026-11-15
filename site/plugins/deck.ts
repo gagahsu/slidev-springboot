@@ -9,7 +9,7 @@ import { plain, slideTitle, splitSlides, type RawSlide } from './parse.ts'
 
 const LANGS = ['java', 'typescript', 'javascript', 'html', 'css', 'scss', 'properties', 'bash', 'json', 'groovy', 'xml', 'sql', 'yaml', 'powershell']
 const CODE_THEME = 'github-light'
-const KNOWN_COMPONENTS = new Set(['Link', 'Mermaid', 'v-clicks', 'v-click', 'StepCode', 'CodeSteps', 'Flow', 'IocDemo', 'HttpExchange', 'Poll', 'Art', 'LifeIoc', 'Pairs', 'DrinkShop', 'PickPrinter', 'StoreOpening', 'NoticeBoard'])
+const KNOWN_COMPONENTS = new Set(['Link', 'Mermaid', 'v-clicks', 'v-click', 'StepCode', 'CodeSteps', 'Flow', 'IocDemo', 'HttpExchange', 'Poll', 'Art', 'LifeIoc', 'Pairs', 'DrinkShop', 'PickPrinter', 'StoreOpening', 'NoticeBoard', 'Counter'])
 
 /** Old Slidev palette (hard-coded in inline styles) → theme tokens. */
 const PALETTE: Record<string, string> = {
