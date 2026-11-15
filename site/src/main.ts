@@ -19,6 +19,7 @@ import PickPrinter from './anim/PickPrinter.vue'
 import StoreOpening from './anim/StoreOpening.vue'
 import NoticeBoard from './anim/NoticeBoard.vue'
 import Counter from './anim/Counter.vue'
+import AspectTimeline from './anim/AspectTimeline.vue'
 import Flow from './anim/Flow.vue'
 import HttpExchange from './anim/HttpExchange.vue'
 import IocDemo from './anim/IocDemo.vue'
@@ -62,4 +63,5 @@ createApp(App)
   .component('StoreOpening', StoreOpening)
   .component('NoticeBoard', NoticeBoard)
   .component('Counter', Counter)
+  .component('AspectTimeline', AspectTimeline)
   .mount('#app')
