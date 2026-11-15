@@ -17,6 +17,7 @@ import LifeIoc from './anim/LifeIoc.vue'
 import Pairs from './anim/Pairs.vue'
 import PickPrinter from './anim/PickPrinter.vue'
 import StoreOpening from './anim/StoreOpening.vue'
+import NoticeBoard from './anim/NoticeBoard.vue'
 import Flow from './anim/Flow.vue'
 import HttpExchange from './anim/HttpExchange.vue'
 import IocDemo from './anim/IocDemo.vue'
@@ -58,4 +59,5 @@ createApp(App)
   .component('DrinkShop', DrinkShop)
   .component('PickPrinter', PickPrinter)
   .component('StoreOpening', StoreOpening)
+  .component('NoticeBoard', NoticeBoard)
   .mount('#app')
