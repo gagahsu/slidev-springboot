@@ -15,6 +15,7 @@ import CodeSteps from './anim/CodeSteps.vue'
 import DrinkShop from './anim/DrinkShop.vue'
 import LifeIoc from './anim/LifeIoc.vue'
 import Pairs from './anim/Pairs.vue'
+import PickPrinter from './anim/PickPrinter.vue'
 import Flow from './anim/Flow.vue'
 import HttpExchange from './anim/HttpExchange.vue'
 import IocDemo from './anim/IocDemo.vue'
@@ -54,4 +55,5 @@ createApp(App)
   .component('LifeIoc', LifeIoc)
   .component('Pairs', Pairs)
   .component('DrinkShop', DrinkShop)
+  .component('PickPrinter', PickPrinter)
   .mount('#app')
