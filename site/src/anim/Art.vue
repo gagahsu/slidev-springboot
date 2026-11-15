@@ -67,6 +67,31 @@ defineProps<{ name: string, size?: number | string }>()
       <path d="M45 14v14M50 14v14M55 14v14" stroke="#84d8ff" stroke-width="2.5" stroke-linecap="round" />
     </g>
 
+    <!-- printing at home / at the store -->
+    <g v-else-if="name === 'store'">
+      <rect x="8" y="30" width="84" height="62" rx="6" fill="#fff" stroke="#e5e5e5" stroke-width="2" />
+      <rect x="4" y="14" width="92" height="20" rx="5" fill="#58cc02" /><rect x="4" y="27" width="92" height="7" fill="#ff9600" />
+      <rect x="16" y="42" width="30" height="24" rx="3" fill="#ddf4ff" /><rect x="54" y="42" width="30" height="50" rx="3" fill="#ddf4ff" stroke="#84d8ff" stroke-width="2" />
+      <path d="M69 44 V90" stroke="#84d8ff" stroke-width="2" /><rect x="16" y="72" width="30" height="6" rx="3" fill="#ffc800" />
+    </g>
+    <g v-else-if="name === 'paper'">
+      <rect x="26" y="30" width="56" height="62" rx="4" fill="#e5e5e5" transform="rotate(6 54 61)" />
+      <rect x="22" y="24" width="56" height="62" rx="4" fill="#f7f7f7" stroke="#d6d6d6" stroke-width="2" transform="rotate(-4 50 55)" />
+      <rect x="20" y="16" width="56" height="66" rx="4" fill="#fff" stroke="#d6d6d6" stroke-width="2" />
+    </g>
+    <g v-else-if="name === 'ink' || name === 'ink-empty'">
+      <rect x="28" y="22" width="44" height="68" rx="10" fill="#fff" stroke="#8b9aa3" stroke-width="4" />
+      <rect x="40" y="10" width="20" height="14" rx="4" fill="#8b9aa3" />
+      <rect v-if="name === 'ink'" x="32" y="44" width="36" height="42" rx="7" fill="#1cb0f6" />
+      <rect v-else x="32" y="78" width="36" height="8" rx="4" fill="#84d8ff" />
+      <path v-if="name === 'ink'" d="M50 52 Q58 62 50 70 Q42 62 50 52Z" fill="#fff" opacity=".85" />
+    </g>
+    <g v-else-if="name === 'doc'">
+      <rect x="20" y="8" width="60" height="84" rx="6" fill="#fff" stroke="#1cb0f6" stroke-width="4" />
+      <rect x="30" y="20" width="26" height="7" rx="3.5" fill="#1cb0f6" /><path d="M30 38h40M30 50h40M30 62h28" stroke="#d6d6d6" stroke-width="5" stroke-linecap="round" />
+      <circle cx="66" cy="76" r="11" fill="#58cc02" /><path d="M60 76 L65 81 L73 71" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+
     <!-- school / code world -->
     <g v-else-if="name === 'printer' || name === 'printer2'">
       <rect x="28" y="12" width="44" height="30" rx="4" fill="#fff" stroke="#e5e5e5" stroke-width="2" />

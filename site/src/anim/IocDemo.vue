@@ -4,7 +4,7 @@ import { useFixedSteps } from '../lib/steps'
 import Art from './Art.vue'
 import { usePoses, type Pose } from './poses'
 
-// Animated comparison for chapter 4: who creates the printer, Teacher itself or the Spring container?
+// Animated comparison for chapter 4: who prepares the printer, XiaoMing himself or the Spring container?
 const props = withDefaults(defineProps<{ mode?: 'traditional' | 'ioc' }>(), { mode: 'traditional' })
 const ioc = computed(() => props.mode === 'ioc')
 const root = ref<HTMLElement>()
@@ -26,8 +26,8 @@ const withContainer: Record<string, Pose[]> = {
 usePoses(root, local, ioc.value ? withContainer : traditional, animated)
 
 const captions = computed(() => ioc.value
-  ? ['Spring 容器先把印表機準備好了，老師手上還是空的', '老師只說一句：「我需要一台印表機」', 'Spring 容器把 HP 印表機交到老師手上', '想換成 Canon？改 Spring 的設定就好，老師完全沒動']
-  : ['老師想印講義，需要一台印表機', '老師自己準備了一台 HP 印表機，兩者綁在一起', 'HP 印表機壞了，想換成 Canon…', '只能回頭改老師自己：每個自己準備的地方都要改'])
+  ? ['Spring 容器先把印表機準備好了，小明手上還是空的', '小明只說一句：「我需要一台印表機」', 'Spring 容器把 HP 印表機交到小明手上', '想換成 Canon？改 Spring 的設定就好，小明完全沒動']
+  : ['小明要印作業，需要一台印表機', '小明自己準備了一台 HP 印表機，兩者綁在一起', 'HP 印表機壞了，想換成 Canon…', '只能回頭改小明自己：每個自己準備的地方都要改'])
 // what the teacher "says" about the printer, in plain words (the real code comes later in the chapter)
 const codeLine = computed(() => {
   if (ioc.value) return '我的印表機：誰給我都可以'
@@ -39,19 +39,19 @@ const codeLine = computed(() => {
   <div ref="root" class="anim-stage ioc-demo" :class="[mode, `s${local}`]">
     <div v-if="ioc" class="container-box">
       <span class="tag">Spring 容器</span>
-      <small>程式世界裡的「飯店」</small>
+      <small>程式世界裡的「便利商店」</small>
     </div>
 
     <div class="teacher" :class="{ changed: !ioc && local >= 3, ok: ioc && local >= 3 }">
-      <span class="tag"><Art name="teacher" size="26" />老師 Teacher</span>
+      <span class="tag"><Art name="you" size="26" />小明 XiaoMing</span>
       <span class="line">{{ codeLine }}</span>
       <div v-if="ioc" class="slot">{{ local >= 2 ? '' : '印表機 ?' }}</div>
-      <span v-if="!ioc && local >= 3" class="badge bad">要改老師的程式！</span>
-      <span v-if="ioc && local >= 3" class="badge good">老師完全沒改 ✓</span>
+      <span v-if="!ioc && local >= 3" class="badge bad">要改小明的程式！</span>
+      <span v-if="ioc && local >= 3" class="badge good">小明完全沒改 ✓</span>
     </div>
 
     <div v-if="ioc" class="ask" data-actor="ask">「我需要一台印表機」</div>
-    <div v-if="ioc && local >= 2" class="inject">交給老師</div>
+    <div v-if="ioc && local >= 2" class="inject">交給小明</div>
     <div v-if="!ioc" class="link" data-actor="link">{{ local >= 1 ? '綁在一起' : '' }}</div>
 
     <div class="bean hp" data-actor="hp" :class="{ broken: !ioc && local >= 2 }">
