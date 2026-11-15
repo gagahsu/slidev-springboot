@@ -48,27 +48,31 @@ style: |
 <!--
 大家好，歡迎來到第六章！
 
-上一章我們搞清楚了 IoC、DI、Bean 三個名詞的意義。今天我們要學的是兩個非常重要的 Annotation：@Component 和 @Autowired。
+上一章我們知道了：交給 Spring 管的東西叫 Bean，Spring 把 Bean 交到你手上叫 DI。但我們一直只是「說」交給 Spring，還沒有真的寫出來。
 
-@Component 負責「把物件交給 Spring 管理」，@Autowired 負責「跟 Spring 借回來用」。這兩個 Annotation 幾乎每個 Spring Boot 專案都會用到，一定要熟悉。
+今天就要動手了。我們會學兩個記號，一個用來把印表機交給 Spring 管，一個用來請 Spring 把印表機交給小明。故事一樣是小明和便利商店。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要搞懂的三件事
 
-- **@Component — 創建 Bean** — 如何把一個類別交給 Spring 容器管理、Bean 的命名規則
-- **@Autowired — 注入 Bean** — 如何讓 Spring 自動注入所需的 Bean、使用前提與匹配機制
-- **完整實作練習** — 結合 Printer 介面、HpPrinter、MyController，從頭走一遍完整流程
-- **補充：建構子注入** — Spring 官方建議的注入方式、多個依賴的寫法
-- **章節總結** — 掌握兩個 Annotation 的核心用法
+<v-clicks>
+
+- **`@Component`**：在印表機貼上「本店設備」的標籤
+- **`@Autowired`**：小明說「請給我一台印表機」
+- **實際寫一次**：讓小明在 Spring Boot 裡真的拿到印表機
+
+</v-clicks>
 
 <!--
-今天的章節直接進入實作，不會有太多純概念說明。
+今天要搞懂三件事。
 
-學完這章之後，你就能真正寫出一個使用 IoC 和 DI 的 Spring Boot 程式——不只是看懂，是自己能從零開始寫出來。
+（下一步）第一個記號 @Component，就像在印表機貼上「本店設備」的標籤。
+
+（下一步）第二個記號 @Autowired，就像小明跟店員說「請給我一台印表機」。
+
+（下一步）最後我們實際寫一次，讓小明在 Spring Boot 裡真的拿到印表機、印出作業。
 -->
 
 ---
@@ -77,42 +81,47 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-# 創建 Bean 的方法：@Component
+# @Component：貼上「本店設備」標籤
 
 <!--
-第一個 Annotation：@Component。
+上一章說，店裡由店家在管的機器就叫 Bean。
 
-它的功能很單純：告訴 Spring「這個類別請你幫我管理」，Spring 就會在啟動時把這個類別的實例建立起來，放進 Spring 容器裡，成為一個 Bean。
+但是問題來了：店家怎麼知道哪些機器歸它管？
 -->
 
 ---
 
-# 什麼是 @Component？
+# 店家怎麼知道哪些機器歸它管？
 
-| 項目 | 說明 |
-| --- | --- |
-| **用途** | 將一個類別標記為 Spring 容器管理的 Bean |
-| **加在哪裡** | 加在 **class 宣告上方** |
-| **Spring 的反應** | 啟動時自動建立該類別的實例，存入容器 |
-| **效果** | 這個類別的物件可以被 `@Autowired` 注入到其他地方 |
+<Pairs left="便利商店" right="Spring" rows="printer,在印表機貼上「本店設備」標籤=code,在 class 上面加 @Component|store,開店時照標籤清點，把機器擺進店裡=spring,Spring 啟動時建立物件，放進容器|clerk,之後店員就能拿給客人用=spring,可以被注入到需要的地方" />
 
-「在 class 上面加上 `@Component`，就可以將這個 class 變成一個由 Spring 容器所管理的 Bean。」
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>一句話記起來：</b> 在 class 上面加 <code>@Component</code>，這個 class 就會交給 Spring 管理，變成一個 Bean。
+</div>
+
+</v-click>
 
 <!--
-@Component 就是 IoC 的實踐起點。
+店家的做法很簡單：貼標籤。
 
-你在類別上加一行 @Component，Spring 就知道「這個物件我來管」。啟動應用程式時，Spring 會掃描所有帶有 @Component 的類別，幫你把物件建立好，存進容器裡。
+（下一步）在印表機貼上一張「本店設備」的標籤。在程式裡，就是在 class 上面加一個記號，叫做 @Component。
 
-之後任何人想用這個物件，就可以用 @Autowired 跟 Spring 借，不需要自己 new。
+（下一步）開店的時候，店家照標籤清點，把有貼標籤的機器都擺進店裡。在程式裡，就是 Spring 啟動的時候，會把加了 @Component 的 class 建立出來，放進 Spring 容器。
+
+（下一步）之後店員就能拿這台機器給客人用。在程式裡，就是它可以被注入到需要的地方。
+
+（下一步）一句話記起來：在 class 上面加 @Component，這個 class 就會交給 Spring 管理，變成一個 Bean。
 -->
 
 ---
 
-# @Component — 程式碼範例
+# @Component 寫起來長這樣
 
-在 `HpPrinter` 上加上 `@Component`，它就成為 Spring 管理的 Bean：
+<CodeSteps>
 
-```java
+```java {1|2|4-7}
 @Component
 public class HpPrinter implements Printer {
 
@@ -123,41 +132,68 @@ public class HpPrinter implements Printer {
 }
 ```
 
-Spring 啟動時，會自動建立 `HpPrinter` 的實例，存入 Spring 容器，等待被注入。
+- 這一行就是「本店設備」的標籤
+- `HpPrinter` 是一台印表機（`implements Printer` 的意思是「它是一種印表機」）
+- 叫它印東西時，它會印出「HP印表機：」加上內容
+
+</CodeSteps>
 
 <!--
-非常簡單——只加一行 @Component，其他程式碼完全不用動。
+@Component 寫起來長這樣。
 
-Spring Boot 啟動的時候，它會自動掃描整個 package，找到所有加了 @Component 的類別，幫你建立物件實例，放進容器裡。
+第一行就是那張「本店設備」的標籤。只要加上這一行，Spring 啟動時就會把 HpPrinter 擺進店裡。
 
-注意這裡繼承了 Printer 介面，這是讓 @Autowired 能用型別匹配找到它的關鍵，後面會說明。
+（下一步）第二行說的是，HpPrinter 是一台印表機。implements Printer 的意思，就是「它是一種印表機」。
+
+（下一步）下面這段是它的功能：叫它印東西的時候，它會印出「HP印表機：」再加上你要印的內容。
 -->
 
 ---
 
-# Bean 的命名規則
+# Bean 的名字：機器上的編號貼紙
 
-Spring 建立 Bean 之後，會幫它取一個預設的名字：
+Spring 把機器擺進店裡時，會順便貼上一張編號貼紙：
 
-| 類別名稱 | Bean 名稱（預設） |
+| class 的名字 | Bean 的名字（預設） |
 | --- | --- |
 | `HpPrinter` | `hpPrinter` |
 | `CanonPrinter` | `canonPrinter` |
-| `MyController` | `myController` |
-| `UserService` | `userService` |
+| `XiaoMingController` | `xiaoMingController` |
 
-規則：「Bean 的名字，會是**類別名稱的第一個字母轉成小寫**。」
+<v-click>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>補充：</b> 後面學到 <code>@Qualifier</code> 時，這個 Bean 名字會派上用場，讓你指定要注入哪一個特定的 Bean。
+💡 <b>規則：</b> 把 class 名字的<b>第一個字母改成小寫</b>，就是 Bean 的名字。下一章店裡有兩台印表機時，就要靠這個編號來指定。
 </div>
 
+</v-click>
+
 <!--
-Spring 幫 Bean 取名字的規則很簡單：把類別名稱的第一個字母轉成小寫。
+Spring 把機器擺進店裡的時候，還會順便貼上一張編號貼紙，也就是 Bean 的名字。
 
-HpPrinter → hpPrinter，UserService → userService，以此類推。
+規則很簡單，請看這張表。HpPrinter 會變成小寫 h 開頭的 hpPrinter；CanonPrinter 變成 canonPrinter。
 
-現在你先記住這個規則就好。下一章學 @Qualifier 的時候，你需要用到 Bean 的名字來指定要注入哪一個，到時候就知道為什麼要了解這個規則了。
+（下一步）規則就是：把 class 名字的第一個字母改成小寫。
+
+這個編號現在用不到，但下一章很重要。下一章店裡會同時有兩台印表機，那時候就要靠這個編號來指定要哪一台。
+-->
+
+---
+
+# 小測驗：@Component 像什麼？
+
+<Poll question="在 class 上面加 @Component，最像便利商店的哪個動作？" options="在機器貼上「本店設備」標籤|請客人自己帶印表機來|把機器送去修理" answer="1" />
+
+<!--
+來一題確認一下。
+
+在 class 上面加 @Component，最像便利商店的哪個動作？
+
+（等大家作答）
+
+（下一步）答案是在機器貼上「本店設備」標籤。
+
+貼了標籤，店家開店時就會把它擺進店裡管理。在程式裡，加了 @Component，Spring 啟動時就會把它變成 Bean。
 -->
 
 ---
@@ -166,80 +202,100 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-# 注入 Bean 的方法：@Autowired
+# @Autowired：請給我一台印表機
 
 <!--
-Bean 已經存進 Spring 容器了，現在要怎麼把它拿出來用？
-
-這就是 @Autowired 的工作：它告訴 Spring「這個欄位請你幫我注入對應的 Bean」。
+印表機已經擺進店裡了。接下來的問題是：要怎麼讓它到小明手上？
 -->
 
 ---
 
-# 什麼是 @Autowired？
+# 小明怎麼拿到印表機？
 
-| 項目 | 說明 |
-| --- | --- |
-| **用途** | 讓 Spring 自動找到對應的 Bean，注入到欄位中 |
-| **加在哪裡** | 加在**欄位（field）宣告上方** |
-| **Spring 的反應** | 在容器中找到型別匹配的 Bean，注入到該欄位 |
-| **結果** | 欄位不再是 `null`，可以直接使用 |
+<Pairs left="便利商店" right="Spring" rows="you,小明說：「請給我一台印表機」=code,在變數上面加 @Autowired|clerk,店員從店裡找一台，交給小明=spring,Spring 從容器找到 Bean，注入進來|doc,小明拿到就能印作業=code,變數裡有東西了，可以直接用" />
 
-「在變數上面加上 `@Autowired`，就可以將 Spring 容器中的 Bean 給注入進來。」
-
-<!--
-@Autowired 就是 DI 依賴注入的實踐手段。
-
-你在欄位上加一行 @Autowired，Spring 就知道「這個欄位需要一個 Bean，我來幫你找並注入」。Spring 啟動後，注入完成，你就可以直接用這個欄位，不需要自己 new。
-
-注意：Spring 是找「型別匹配」的 Bean，不是找名稱匹配，下面會說明。
--->
-
----
-
-# @Autowired 的兩個前提條件
-
-使用 `@Autowired` 之前，必須確認以下兩件事：
-
-| 前提 | 說明 |
-| --- | --- |
-| **1. 使用者本身也要是 Bean** | 加了 `@Autowired` 的類別，自己也必須是 Spring 管理的 Bean（例如加了 `@Component` 或 `@RestController`） |
-| **2. 要注入的東西也要是 Bean** | `@Autowired` 只能注入 Spring 容器中的 Bean，不能注入普通物件 |
+<v-click>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>記憶方式：</b> 雙方都要是 Bean，Spring 才能完成注入。借書要兩個人都在圖書館，才借得到。
+💡 <b>一句話記起來：</b> 在變數上面加 <code>@Autowired</code>，Spring 就會把容器裡的 Bean 注入進來。
 </div>
 
+</v-click>
+
 <!--
-這兩個前提很重要，忘記任何一個都會出錯。
+答案是：小明要開口。
 
-第一個前提：如果 MyController 想用 @Autowired 注入 Printer，那 MyController 自己也要是 Bean。MyController 加了 @RestController，這個 Annotation 本身就會讓 MyController 成為 Bean，所以第一個前提已經滿足了。
+（下一步）小明跟店員說：「請給我一台印表機」。在程式裡，就是在小明的印表機變數上面，加一個記號叫 @Autowired。
 
-第二個前提：要注入的 HpPrinter 也要是 Bean，也就是它要加了 @Component。如果 HpPrinter 忘了加 @Component，Spring 找不到對應的 Bean，就會報錯。
+（下一步）店員聽到之後，從店裡找一台印表機交給小明。在程式裡，就是 Spring 從容器裡找到對應的 Bean，注入進來。
 
-⚠️ 最常見的錯誤：忘了在 HpPrinter 上加 @Component，結果 Spring 說「沒有 Printer 型別的 Bean 可以注入」。
+（下一步）小明拿到之後就能印作業了。在程式裡，這個變數裡面就有東西了，可以直接拿來用。
+
+（下一步）一句話記起來：在變數上面加 @Autowired，Spring 就會把容器裡的 Bean 注入進來。
 -->
 
 ---
 
-# @Autowired 的匹配機制
+# @Autowired 的兩個前提
 
-Spring 注入時，是根據**變數的型別**來尋找對應的 Bean：
+<v-clicks>
 
-| 欄位宣告 | Spring 的搜尋邏輯 |
-| --- | --- |
-| `private Printer printer` | 找容器中型別是 `Printer` 或其子類別的 Bean |
-| `HpPrinter` 實作了 `Printer` | 型別匹配成功，注入 `HpPrinter` 的 Bean |
-| `CanonPrinter` 也實作了 `Printer` | 若同時存在兩個，Spring 會報錯（下一章解決） |
+- **小明也要在店裡**：店員只服務店裡的客人。所以加了 `@Autowired` 的 class，自己也要是 Bean
+- **店裡要有這台機器**：店員不可能把小明家裡的印表機拿來。所以被注入的東西，也要是 Bean
 
-底層是透過 **Java 多型**（`HpPrinter` 可向上轉型為 `Printer`）讓型別匹配成立。
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>記憶方式：</b> 雙方都要在店裡，也就是<b>雙方都要是 Bean</b>，Spring 才能完成注入。
+</div>
+
+</v-click>
 
 <!--
-@Autowired 是根據型別來找 Bean，不是根據變數名稱。
+用 @Autowired 之前，有兩個前提一定要成立。
 
-欄位宣告是 `private Printer printer`，Spring 就去容器裡找「型別是 Printer，或者實作了 Printer 介面的 Bean」。HpPrinter 實作了 Printer 介面，向上轉型為 Printer 型別，所以匹配成功，注入進來。
+（下一步）第一，小明也要在店裡。店員只服務走進店裡的客人，小明在家裡喊「給我印表機」，店員是聽不到的。在程式裡，加了 @Autowired 的那個 class，自己也必須是 Bean。
 
-但如果容器裡同時有 HpPrinter 和 CanonPrinter，Spring 就不知道該注入哪一個，會報錯。這個問題的解法是 @Qualifier，下一章我們會學到。
+（下一步）第二，店裡要有這台機器。店員只能拿店裡的機器，不可能跑去小明家把他的印表機拿來。在程式裡，被注入的東西也必須是 Bean，也就是要有加 @Component。
+
+（下一步）所以記住：雙方都要在店裡，也就是雙方都要是 Bean，Spring 才能完成注入。
+-->
+
+---
+
+# 店員怎麼找？照「種類」找
+
+<v-clicks>
+
+- 小明說要的是「**印表機**」（`private Printer printer`）
+- 店員就去店裡找：哪一台是印表機？
+- `HpPrinter` 是一種印表機，找到了，就交給小明
+- 如果店裡**同時有 HP 和 Canon** 兩台，店員不知道要給哪一台，就會卡住（報錯）
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>預告：</b> 兩台印表機要怎麼指定？這就是下一章 <code>@Qualifier</code> 要解決的問題。
+</div>
+
+</v-click>
+
+<!--
+店員是怎麼決定要拿哪台機器給小明的？答案是：照「種類」找。
+
+（下一步）小明的變數寫的是 Printer，意思是他要的是「印表機」這個種類。
+
+（下一步）店員就去店裡找：哪一台是印表機？
+
+（下一步）HpPrinter 是一種印表機，找到了，就交給小明。
+
+（下一步）那如果店裡同時有 HP 和 Canon 兩台印表機呢？兩台都是印表機，店員不知道要給哪一台，就會卡住。在程式裡，這時候 Spring 會報錯。
+
+（下一步）這個問題要怎麼解決？就是下一章 @Qualifier 的內容。
 -->
 
 ---
@@ -248,20 +304,17 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 3
-# 在 Spring Boot 中練習
-# @Component 和 @Autowired 的用法
+# 實際寫一次
 
 <!--
-概念說完了，我們來實際走一遍完整的程式碼流程。
+觀念都講完了，我們在 Spring Boot 裡實際寫一次。
 
-這是今天最重要的部分：把 Printer 介面、HpPrinter、MyController 合在一起，跑出「HP印表機: Hello World」這個結果。
+總共三個步驟：先規定什麼是印表機、再準備一台 HP 印表機放進店裡、最後讓小明拿到它。
 -->
 
 ---
 
-# 完整範例 — Step 1：Printer 介面
-
-定義 `Printer` 介面，讓 `HpPrinter` 和未來的其他印表機都實作它：
+# Step 1：先規定「什麼叫印表機」
 
 ```java
 package com.example.demo;
@@ -271,23 +324,36 @@ public interface Printer {
 }
 ```
 
+<v-clicks>
+
+- `interface` 是一份「規定」：只要是印表機，就一定要會 `print`（印東西）
+- HP、Canon 都照這份規定做，所以它們都算是 `Printer`
+
+</v-clicks>
+
+<v-click>
+
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>為什麼用介面？</b> <code>@Autowired</code> 宣告 <code>Printer</code> 型別，而不是 <code>HpPrinter</code> 型別。未來換成 Canon 只需改 Spring 設定，Controller 不用動——這就是鬆耦合的實踐。
+💡 <b>為什麼要這樣做？</b> 小明只說「我要一台印表機」，不指定牌子。之後換成 Canon，小明的程式不用改，這就是第四章說的鬆耦合。
 </div>
 
+</v-click>
+
 <!--
-我們先建立 Printer 這個介面。
+第一步，先規定什麼叫做印表機。
 
-介面本身不加 @Component，因為介面不能被實例化，Spring 沒辦法直接管理它。我們管理的是實作了介面的 HpPrinter。
+我們建立一個叫 Printer 的檔案。
 
-為什麼要用介面？因為之後 @Autowired 宣告的型別是 Printer，不是 HpPrinter，這樣可以讓 MyController 和具體的印表機型號解耦。換印表機只改 Spring 設定，Controller 完全不用動。
+（下一步）這裡用的是 interface，你可以把它想成一份規定：只要是印表機，就一定要會 print，也就是印東西。
+
+（下一步）HP 印表機、Canon 印表機都照這份規定做，所以它們都算是 Printer。
+
+（下一步）為什麼要多這一步？因為小明只說「我要一台印表機」，不指定牌子。之後要換成 Canon，小明的程式完全不用改。這就是第四章講的鬆耦合。
 -->
 
 ---
 
-# 完整範例 — Step 2：HpPrinter 加 @Component
-
-在 `HpPrinter` 上加上 `@Component`，讓它成為 Spring 管理的 Bean：
+# Step 2：準備一台 HP 印表機，貼上標籤
 
 ```java
 package com.example.demo;
@@ -303,229 +369,278 @@ public class HpPrinter implements Printer {
 }
 ```
 
-Spring 啟動後，會自動建立名為 `hpPrinter` 的 Bean，存入容器。
+<v-click>
+
+Spring 啟動後，就會把 `HpPrinter` 擺進店裡，編號是 `hpPrinter`。
+
+</v-click>
 
 <!--
-加上 @Component，這個動作就是在對 Spring 說：「嘿，HpPrinter 請你幫我管理！」
+第二步，準備一台 HP 印表機，並且貼上「本店設備」的標籤。
 
-需要 import org.springframework.stereotype.Component，記得讓 IDE 自動幫你補 import。
+這段程式剛剛看過了。上面多了一行 import，那是告訴 Java「@Component 這個記號從哪裡來」，Eclipse 通常會自動幫你加。
 
-Spring 啟動後，會掃描到 HpPrinter，建立一個實例，取名 hpPrinter，放進容器。等一下 MyController 說「我需要 Printer 型別的 Bean」，Spring 就會把這個 hpPrinter 注入進去。
+（下一步）Spring 啟動之後，就會把 HpPrinter 擺進店裡，編號是 hpPrinter。
 -->
 
 ---
 
-# 完整範例 — Step 3：MyController 加 @Autowired
+# Step 3：程式裡的小明：XiaoMingController
 
-在 `MyController` 的 `printer` 欄位上加 `@Autowired`，Spring 會自動注入 `HpPrinter`：
+為了能用瀏覽器測試，我們讓小明當一個 Controller（第三章寫過 `MyController`）：
 
-```java
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RestController;
+<CodeSteps>
 
+```java {1|2|3-4}
 @RestController
-public class MyController {
+public class XiaoMingController {
     @Autowired
     private Printer printer;
 }
 ```
 
+- `@RestController`：小明也在店裡了（他自己也是 Bean）
+- 這就是程式裡的小明
+- 小明說：「請給我一台印表機」
+
+</CodeSteps>
+
 <!--
-MyController 上面的 @RestController 本身就會讓它成為 Bean，所以第一個前提已經滿足了。
+第三步，寫出程式裡的小明。
 
-在 printer 欄位上加 @Autowired，Spring 看到這個欄位型別是 Printer，就去容器找「Printer 型別或其子類別的 Bean」，找到 hpPrinter，把它注入進來。
+為了可以用瀏覽器測試，我們讓小明當一個 Controller。還記得第三章寫過的 MyController 嗎？就是同一種東西，只是這次我們叫它 XiaoMingController。
 
-注入完成之後，printer 欄位就不再是 null，可以直接呼叫 printer.print() 了。
+第一行 @RestController。它除了讓小明可以接網址之外，也代表小明自己也是一個 Bean。還記得兩個前提嗎？小明也要在店裡，這一行就做到了。
+
+（下一步）這就是程式裡的小明。
+
+（下一步）最重要的是這兩行：@Autowired 加上 private Printer printer。這就是小明在說：「請給我一台印表機」。
 -->
 
 ---
 
-# 完整範例 — Step 3：MyController 完整程式碼
+# Step 3：讓小明印作業
 
 ```java
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 @RestController
-public class MyController {
+public class XiaoMingController {
     @Autowired
     private Printer printer;
 
-    @RequestMapping("/test")
-    public String test() {
-        printer.print("Hello World");
-        return "Hello World";
+    @RequestMapping("/homework")
+    public String doHomework() {
+        printer.print("小明的作業");
+        return "作業印好了";
     }
 }
 ```
 
-瀏覽器存取 `http://localhost:8080/test`，console 輸出：
+<v-click>
+
+瀏覽器打開 `http://localhost:8080/homework`，Console 會印出：
 
 ```
-HP印表機: Hello World
+HP印表機: 小明的作業
 ```
 
+</v-click>
+
 <!--
-這就是完整的 MyController。
+最後，我們讓小明真的印一次作業。
 
-注意 @Autowired 的 printer 欄位直接被 test() 方法使用，因為 Spring 在 MyController 初始化的時候就已經把 HpPrinter 注入進去了，所以 printer 不是 null。
+下面加了一段：有人打開 /homework 這個網址的時候，小明就叫印表機印出「小明的作業」，然後回傳「作業印好了」。
 
-執行後，你在 Eclipse Console 會看到 "HP印表機: Hello World"，這代表整個 IoC + DI 的流程已經成功跑起來了！
+請注意，整段程式裡，小明完全沒有 new 印表機。印表機是 Spring 注入給他的。
 
-⚠️ 提醒：如果忘了在 HpPrinter 加 @Component，Spring 找不到 Printer 型別的 Bean，啟動就會失敗，console 會看到 NoSuchBeanDefinitionException。
+（下一步）把程式跑起來，用瀏覽器打開 localhost 8080 斜線 homework。Console 就會印出「HP印表機：小明的作業」。
+
+看到這行字，就代表 Spring 真的把 HP 印表機交到小明手上了。
 -->
 
 ---
 
-# Spring Boot 啟動流程
+# 按下執行之後，Spring 做了什麼？
 
-啟動應用程式後，Spring 在背後做了以下幾件事：
+<v-clicks>
 
-| 步驟 | Spring 做的事 |
-| --- | --- |
-| **① 元件掃描** | 掃描 `com.example.demo` 及其子 package，找到所有 `@Component`、`@RestController` 等 |
-| **② 建立 Bean** | 建立 `HpPrinter` 實例（名稱：`hpPrinter`），存入容器 |
-| **③ 初始化 Bean** | 建立 `MyController` 實例，發現其中有 `@Autowired` 欄位 |
-| **④ 注入依賴** | 從容器中找到 `Printer` 型別的 Bean（`hpPrinter`），注入到 `printer` 欄位 |
+- **① 開店清點**：找出所有貼了標籤的 class（`@Component`、`@RestController`），這叫做**元件掃描**
+- **② 擺好機器**：建立 `HpPrinter`，編號 `hpPrinter`，放進容器
+- **③ 小明進門**：建立 `XiaoMingController`，發現他說「請給我一台印表機」
+- **④ 交到手上**：找到一台印表機（`hpPrinter`），注入給小明
+
+</v-clicks>
 
 <!--
-讓我們看看啟動後 Spring 在背後做了哪些事。
+按下執行之後，Spring 在背後做了四件事。我們用開店的流程來看。
 
-Spring Boot 啟動的時候，會從 DemoApplication 所在的 package 開始，往下掃描所有帶有特定 Annotation 的類別。
+（下一步）第一，開店清點。Spring 會找出所有貼了標籤的 class，包括 @Component 和 @RestController。這個動作有個正式名稱，叫做元件掃描。
 
-找到 @Component → 建立 Bean 存入容器；找到 @RestController → 也建立 Bean，並且檢查裡面有沒有 @Autowired → 有的話就去容器找對應型別的 Bean 注入進去。
+（下一步）第二，擺好機器。建立 HpPrinter，編號 hpPrinter，放進容器。
 
-整個流程 Spring 幫我們自動完成，我們只需要加對 Annotation，剩下的交給 Spring。
+（下一步）第三，小明進門。建立 XiaoMingController，並且發現他有一個 @Autowired，也就是他說了「請給我一台印表機」。
 
-流程都通了之後，要補充一個重要的實務建議：注入其實還有另一種官方更推薦的寫法。
+（下一步）第四，交到手上。Spring 去容器裡找一台印表機，找到 hpPrinter，就注入給小明。
+
+這四件事都是 Spring 自動做的，我們只需要貼標籤、開口要東西就好。
 -->
 
 ---
 
-# 補充：官方建議使用建構子注入
+# 小測驗：小明拿得到印表機嗎？
 
-前面我們用 `@Autowired` 欄位注入。Spring 官方（含 Spring Boot 4.x）**建議改用建構子注入（Constructor Injection）**：
-
-| 比較項目 | `@Autowired` 欄位注入 | 建構子注入 |
-| --- | --- | --- |
-| **欄位可否 `final`** | ❌ 不行，注入後仍可被改動 | ✅ 可以，依賴不可變 |
-| **單元測試** | 需靠 Spring 或反射才能塞入依賴 | 直接 `new` 並傳入 mock 即可 |
-| **依賴透明度** | 依賴散落各欄位，不易察覺過多依賴 | 建構子參數一目了然 |
-| **官方態度** | 未棄用，仍完全可用 | **官方建議寫法** |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>注意：</b> <code>@Autowired</code> 欄位注入<b>沒有被棄用</b>，大量既有專案仍在使用，看懂它依然必要；但<b>新專案建議用建構子注入</b>。
-</div>
+<Poll question="如果 XiaoMingController 上面沒有 @RestController，也沒有 @Component，只有 @Autowired 那一行，會怎樣？" options="一樣拿得到印表機|拿不到，因為小明自己不是 Bean|會拿到兩台印表機" answer="2" />
 
 <!--
-今天教的 @Autowired 加在欄位上的寫法，叫做「欄位注入」。但要跟大家補充：Spring 官方——包含最新的 Spring Boot 4.x——其實建議大家改用「建構子注入」。
+最後一題，來確認大家有沒有記住兩個前提。
 
-三個理由：第一，建構子注入可以把欄位宣告成 final，注入後不會被改動；第二，單元測試時可以直接 new 物件、傳入假的依賴，不需要啟動 Spring；第三，所有依賴都列在建構子參數上，一眼就能看出這個類別依賴了多少東西。
+如果 XiaoMingController 上面沒有 @RestController，也沒有 @Component，只有 @Autowired 那一行，會怎樣？
 
-要強調的是：@Autowired 欄位注入沒有被棄用，還是完全可以用，而且大量既有程式碼都是這樣寫的，所以今天教的內容依然重要。只是你們自己寫新程式時，建議用接下來這頁的寫法。
+（等大家作答）
+
+（下一步）答案是拿不到，因為小明自己不是 Bean。
+
+用故事來說，小明沒有走進店裡，他在家裡喊「給我印表機」，店員根本聽不到。雙方都要在店裡，注入才會成功。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 補充
+# 官方建議的寫法：建構子注入
+
+<!--
+最後補充一個實務上很重要的寫法：建構子注入。
+
+剛剛的寫法完全可以用，但 Spring 官方比較建議另一種寫法，大家之後在公司的專案裡會常常看到。
 -->
 
 ---
 
-# 補充：建構子注入寫法
+# 建構子注入：一進門就交出需求清單
 
-把剛剛的 `MyController` 改成建構子注入：
+<Pairs left="便利商店" right="程式" rows="you,小明一進門，就把需要的東西寫成清單交給店員=code,把需要的東西寫在建構子的參數裡|clerk,店員在小明進門時一次給齊=spring,Spring 建立小明時，一次注入|printer,拿到的機器就固定，不會被換掉=code,變數可以加上 final" />
+
+<v-click>
 
 ```java
 @RestController
-public class MyController {
-
+public class XiaoMingController {
     private final Printer printer;
 
-    public MyController(Printer printer) { // 只有一個建構子時，@Autowired 可省略
+    public XiaoMingController(Printer printer) { // 只有一個建構子時，@Autowired 可省略
         this.printer = printer;
-    }
-
-    @RequestMapping("/test")
-    public String test() {
-        printer.print("Hello World");
-        return "Hello World";
     }
 }
 ```
 
-依賴改由**建構子參數**傳入，欄位可宣告為 `final`，Spring 建立 `MyController` 時會自動傳入 `Printer` Bean。
+</v-click>
 
 <!--
-這就是建構子注入的寫法，改動有三個地方。
+建構子注入，用故事來說是這樣的。
 
-第一，欄位改成 private final Printer printer——加上 final，代表這個依賴設定好之後就不會變。
+（下一步）小明一進門，就把需要的東西寫成一張清單交給店員。在程式裡，就是把需要的東西寫在建構子的參數裡。建構子就是「建立小明的時候會執行的那段程式」。
 
-第二，新增一個建構子，參數是 Printer，在裡面做 this.printer = printer。
+（下一步）店員在小明進門的時候，就一次把東西給齊。在程式裡，Spring 建立小明的時候，就會把印表機一起傳進來。
 
-第三，注意建構子上面完全不用加 @Autowired——當類別只有一個建構子時，Spring 會自動用它來注入，這是 Spring 4.3 之後的行為。
+（下一步）拿到的機器就固定了，不會被別人偷偷換掉。在程式裡，這個變數可以加上 final，代表之後不能再被改。
 
-Spring 建立 MyController 的時候，看到建構子需要一個 Printer，就會去容器裡找 Printer 型別的 Bean 傳進來，效果和欄位注入一樣，但程式碼更安全、更好測試。
-
-那如果一個類別需要注入的不只一個 Bean 呢？下一頁來看多個依賴的寫法。
+（下一步）寫起來就是這樣。印表機寫在建構子的括號裡，Spring 會自動傳進來。只有一個建構子的時候，連 @Autowired 都可以省略。
 -->
 
 ---
 
-# 補充：多個依賴的建構子注入
+# 為什麼官方比較建議建構子注入？
 
-實務上一個類別常常依賴多個 Bean，全部放進**同一個建構子**即可：
+<v-clicks>
+
+- **不會被換掉**：變數可以加 `final`，拿到之後就固定
+- **測試很方便**：測試時直接把一台假的印表機傳進去就好
+- **需要什麼一目了然**：看建構子就知道小明需要哪些東西
+
+</v-clicks>
+
+<v-click>
 
 ```java
-@RestController
-public class MyController {
-
-    private final Printer printer;
-    private final UserService userService;
-    private final MailService mailService;
-
-    public MyController(Printer printer, UserService userService,
-                        MailService mailService) {
-        this.printer = printer;
-        this.userService = userService;
-        this.mailService = mailService;
-    }
+public XiaoMingController(Printer printer, Stapler stapler) { // 要印表機，也要釘書機
+    this.printer = printer;
+    this.stapler = stapler;
 }
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>附帶好處：</b> 建構子參數超過 4、5 個時會「看起來很痛」——這是類別責任太多的警訊，提醒你該拆分了。欄位注入看不到這個警訊。
+💡 <b>注意：</b> <code>@Autowired</code> 寫在變數上的方式<b>沒有被淘汰</b>，很多專案還在用，一定要看得懂；但<b>新專案建議用建構子注入</b>。
 </div>
 
+</v-click>
+
 <!--
-實務上，一個 Controller 或 Service 很少只依賴一個東西，常常同時需要好幾個 Bean。
+為什麼官方比較建議建構子注入？有三個原因。
 
-寫法很單純：每個依賴都宣告成 private final 欄位，然後全部放進同一個建構子的參數，一一指派。Spring 會根據每個參數的型別，分別去容器裡找對應的 Bean 傳進來。
+（下一步）第一，不會被換掉。變數可以加 final，拿到之後就固定了。
 
-注意一樣不用加 @Autowired，因為還是只有一個建構子。
+（下一步）第二，測試很方便。還記得第四章說的「假的印表機」嗎？用建構子注入的話，測試時直接把假印表機傳進去就好。
 
-這裡有個隱藏的好處：如果你發現建構子參數越來越多，多到五六個，程式碼看起來很擁擠——這其實是好事，它在提醒你「這個類別管太多事了，該拆了」。欄位注入因為每個依賴各自一行，反而看不出這個問題。
+（下一步）第三，需要什麼一目了然。看建構子的括號，就知道小明需要哪些東西。
 
-不過每個依賴都要寫「宣告欄位＋建構子參數＋指派」三個地方，有點囉嗦。下一章我們會介紹 Lombok，一個 Annotation 就把建構子全部省掉。
+（下一步）如果小明除了印表機，還需要一台釘書機，就一起寫在括號裡。清單如果變得很長，也是一個警訊，代表小明一個人做太多事了。
+
+最後提醒，@Autowired 寫在變數上的方式沒有被淘汰，很多專案還在用，一定要看得懂。但如果是新專案，建議用建構子注入。
+-->
+
+---
+
+# 一張圖複習今天的內容
+
+<Pairs left="便利商店" right="程式" rows="printer,在機器貼上「本店設備」標籤=code,@Component：變成 Bean|store,機器上的編號貼紙=code,Bean 名字：第一個字母小寫|you,小明說「請給我一台印表機」=code,@Autowired：請 Spring 注入|clerk,雙方都要在店裡=spring,兩個前提：雙方都要是 Bean|you,一進門就交出需求清單=code,建構子注入" />
+
+<!--
+我們用一張圖複習今天的內容。
+
+（下一步）在機器貼上「本店設備」標籤，就是 @Component，讓它變成 Bean。
+
+（下一步）機器上的編號貼紙，就是 Bean 的名字，class 名字第一個字母改小寫。
+
+（下一步）小明說「請給我一台印表機」，就是 @Autowired，請 Spring 注入。
+
+（下一步）雙方都要在店裡，就是兩個前提：雙方都要是 Bean。
+
+（下一步）一進門就交出需求清單，就是建構子注入。
 -->
 
 ---
 
 # 章節總結
 
-- **@Component**：加在 class 上方，將該類別交給 Spring 容器管理，成為 Bean
-- **Bean 命名規則**：預設名稱為類別名稱第一個字母轉小寫（`HpPrinter` → `hpPrinter`）
-- **@Autowired**：加在欄位上方，Spring 自動從容器找到型別匹配的 Bean 並注入
-- **兩個前提**：使用 `@Autowired` 的類別本身要是 Bean，被注入的物件也要是 Bean
-- **匹配機制**：根據**變數的型別**尋找 Bean，底層是 Java 多型向上轉型
-- **建構子注入**：Spring 官方建議的注入方式——`private final` 欄位＋建構子參數；`@Autowired` 欄位注入未棄用，讀懂既有程式碼仍必要
+<v-clicks>
 
-下一章我們會介紹 `@Qualifier`（解決「同一型別有多個 Bean 時，要注入哪一個」的問題），以及用 Lombok 簡化建構子注入。
+- **`@Component`**：加在 class 上，交給 Spring 管理，變成 Bean（`HpPrinter` 的名字是 `hpPrinter`）
+- **`@Autowired`**：加在變數上，Spring 照種類找到 Bean，注入進來
+- **兩個前提**：用 `@Autowired` 的 class 和被注入的東西，都要是 Bean
+- **建構子注入**：官方建議的寫法，把需要的東西寫在建構子參數裡
+
+</v-clicks>
+
+<v-click>
+
+下一章：店裡同時有 HP 和 Canon 兩台印表機時，小明要怎麼指定要哪一台？
+
+</v-click>
 
 <!--
-我們來整理今天學到的東西。
+最後整理今天的重點。
 
-@Component 和 @Autowired 是 Spring Boot 最常用的兩個 Annotation，幾乎每個專案都會用到。
+（下一步）@Component 加在 class 上，交給 Spring 管理，變成 Bean。名字是 class 名字第一個字母改小寫。
 
-@Component 是「存進去」——把物件交給 Spring 管。@Autowired 是「拿回來」——讓 Spring 把 Bean 注入進欄位。兩者搭配，就是 IoC + DI 的完整實踐。
+（下一步）@Autowired 加在變數上，Spring 會照種類找到 Bean，注入進來。
 
-大家今天可以回去練習：建立一個 CanonPrinter，加上 @Component，然後把 @Component 從 HpPrinter 移掉，看看 MyController 的 printer 會不會自動切換成 Canon 的輸出——這樣就能體會到鬆耦合的威力了！
+（下一步）兩個前提：用 @Autowired 的 class，和被注入的東西，都要是 Bean。
+
+（下一步）建構子注入是官方建議的寫法，把需要的東西寫在建構子參數裡。
+
+（下一步）下一章，店裡會同時有 HP 和 Canon 兩台印表機。小明要怎麼指定要哪一台？我們下一章見。
 -->
 
 ---
@@ -537,9 +652,9 @@ layout: end
 有任何問題嗎？
 
 <!--
-大家今天學會了 @Component 和 @Autowired，已經能寫出一個真正使用 IoC 和 DI 的 Spring Boot 程式了。
+今天的內容到這邊。
 
-如果有遇到 NoSuchBeanDefinitionException 的錯誤，通常是忘了在某個類別加 @Component，或者 @Autowired 的欄位型別找不到對應的 Bean，仔細檢查一下就能解決。
+今天第一次真的讓 Spring 把東西注入給小明，建議大家回去自己再寫一次，看到 Console 印出「HP印表機：小明的作業」，就代表你成功了。
 
-有問題的同學現在可以提問！
+有任何問題歡迎現在提出來。
 -->
