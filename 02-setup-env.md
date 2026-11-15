@@ -419,7 +419,7 @@ GitHub 是基於 Git 的**雲端程式碼托管平台**，讓開發者可以將�
 | 使用方式 | 指令列 / GitHub Desktop | 瀏覽器 |
 
 <div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>一句話記住：</b>Git 是工具，GitHub 是放程式碼的地方。就像 Word 是軟體，Google Drive 是雲端空間。
+💡 <b>用小明的作業來想：</b>Git 幫小明記住作業改過的每一個版本，想回到昨天的版本隨時可以；GitHub 是把作業放到網路上的地方，換電腦、給老師同學看都方便。
 </div>
 
 <!--

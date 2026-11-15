@@ -546,28 +546,30 @@ http://localhost:8080/test
 
 ---
 
-# 補充：程式運作原理
+# 補充：按下 Enter 之後發生什麼事
 
-| 步驟 | 說明 |
-| --- | --- |
-| ① 瀏覽器發出請求 | 瀏覽器對 `localhost:8080/test` 發出 HTTP GET 請求 |
-| ② Spring 接收請求 | Spring 的 **DispatcherServlet** 接收並分派這個請求 |
-| ③ 比對路徑 | Spring 找到 `@RequestMapping("/test")`，交給 `test()` 處理 |
-| ④ 回傳結果 | `test()` 回傳 `"Hello World"`，Spring 將它寫入 HTTP 回應 |
-| ⑤ 瀏覽器顯示 | 瀏覽器收到回應，顯示在頁面上 |
+<Flow nodes="瀏覽器:你打網址的地方|Spring Boot:幫你接電話的總機|test():MyController 裡的方法" steps="1>2:打開 localhost:8080/test|2>3:這個網址，交給 test() 處理|3>2:回傳 Hello World|2>1:畫面顯示 Hello World" />
+
+<v-click>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>重要 Annotation：</b> <code>@RestController</code> 標記此類別為 REST 控制器；<code>@RequestMapping</code> 綁定 URL 路徑到對應方法
+💡 <b>兩個關鍵字：</b> <code>@RestController</code> 讓 Spring Boot 知道「這個類別負責接網址」；<code>@RequestMapping("/test")</code> 告訴它「/test 這個網址交給下面這個方法」。
 </div>
 
+</v-click>
+
 <!--
-現在讓我們來看看這整個過程背後發生了什麼事。
+最後我們用動畫看一下，剛剛在瀏覽器按下 Enter 之後，背後發生了什麼事。
 
-從瀏覽器輸入網址到看到 Hello World，中間 Spring 幫我們做了很多事情：它接收了 HTTP 請求，比對了我們設定的路徑 /test，找到對應的 test() 方法並執行，最後把回傳值轉換成 HTTP 回應送回去。
+（下一步）第一步，瀏覽器打開 localhost 8080 斜線 test，這個請求被送到我們的 Spring Boot 程式。
 
-這個流程在往後的章節我們會更詳細地學習，現在先有個概念就好。
+（下一步）第二步，Spring Boot 看到網址是 /test，就去找誰負責這個網址。它找到 MyController 裡的 test 方法，就把工作交給它。
 
-重點是：@RestController 和 @RequestMapping 這兩個 Annotation 是 Spring MVC 的核心，幾乎每個 Controller 都會用到，後面我們會非常熟悉它們。
+（下一步）第三步，test 方法印出 Hi，然後回傳 Hello World。
+
+（下一步）第四步，Spring Boot 把 Hello World 送回瀏覽器，畫面上就出現了。
+
+（下一步）這裡面有兩個關鍵字。@RestController 是讓 Spring Boot 知道「這個類別負責接網址」；@RequestMapping 斜線 test，是告訴它「這個網址交給下面這個方法」。這兩個之後的章節都會詳細介紹，今天先有印象就好。
 -->
 
 ---
