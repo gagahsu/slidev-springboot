@@ -6,7 +6,8 @@ import { usePoses, type Pose } from './poses'
 
 // Everyday story for IoC: 小明 prints his homework at home (buys and looks after everything himself)
 // or at a convenience store (everything is ready; the store looks after it).
-const props = withDefaults(defineProps<{ mode?: 'home' | 'store' }>(), { mode: 'home' })
+// variant="framework" (ch01) tells the same story with the focus on where 小明's time goes.
+const props = withDefaults(defineProps<{ mode?: 'home' | 'store', variant?: 'ioc' | 'framework' }>(), { mode: 'home', variant: 'ioc' })
 const store = computed(() => props.mode === 'store')
 const root = ref<HTMLElement>()
 const { local, animated } = useFixedSteps(3)
@@ -25,9 +26,17 @@ const atStore: Record<string, Pose[]> = {
 }
 usePoses(root, local, store.value ? atStore : atHome, animated)
 
-const captions = computed(() => store.value
-  ? ['便利商店早就把印表機、紙、墨水準備好了', '小明只要跟店員說：「我要印這份作業」', '幾秒鐘就印好了，小明拿了就走', '沒墨水、機器壞了？店家會處理，小明不用管']
-  : ['小明要印作業，可是家裡什麼都沒有', '印表機、紙、墨水，全部要自己買回家', '印到一半沒墨水了…只能自己再去買', '印表機壞了？只能自己修、自己重買'])
+const CAPTIONS = {
+  ioc: {
+    store: ['便利商店早就把印表機、紙、墨水準備好了', '小明只要跟店員說：「我要印這份作業」', '幾秒鐘就印好了，小明拿了就走', '沒墨水、機器壞了？店家會處理，小明不用管'],
+    home: ['小明要印作業，可是家裡什麼都沒有', '印表機、紙、墨水，全部要自己買回家', '印到一半沒墨水了…只能自己再去買', '印表機壞了？只能自己修、自己重買'],
+  },
+  framework: {
+    store: ['便利商店把印表機、紙、墨水都準備好了', '小明只要說「我要印這份作業」', '幾秒鐘就印好，時間都花在作業本身', '機器的事店家顧，小明只要專心寫作業'],
+    home: ['小明要印作業，可是家裡什麼都沒有', '先研究、比價，把印表機、紙、墨水買回家', '印到一半沒墨水，又要自己處理', '機器壞了也要自己修。一整晚都在弄機器，作業還沒寫'],
+  },
+}
+const captions = computed(() => CAPTIONS[props.variant][store.value ? 'store' : 'home'])
 </script>
 
 <template>
