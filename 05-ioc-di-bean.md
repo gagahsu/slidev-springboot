@@ -48,27 +48,33 @@ style: |
 <!--
 大家好，歡迎來到第五章！
 
-上一章我們學了 IoC 的概念——把物件的控制權交給 Spring 容器管理。今天我們要把 IoC 周邊的兩個常見名詞也一起搞清楚：DI 和 Bean。
+上一章我們用小明印作業的故事認識了 IoC：在家自己印，什麼都自己來；去便利商店印，東西都準備好了。
 
-這三個名詞在 Spring 的文件、面試題、技術文章裡到處都會看到，今天把它們全部釐清，後面學習就不會被名詞搞混了。
+今天故事繼續。我們要認識另外兩個常常跟 IoC 一起出現的名詞：DI 和 Bean。主角一樣是小明和便利商店，沒有新的例子。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要搞懂的三件事
 
-- **回顧：什麼是 IoC？** — 複習控制反轉的核心概念與印表機類比
-- **什麼是 DI？** — 依賴注入的定義、生活類比、與 IoC 的關係
-- **什麼是 Bean？** — Bean 的定義、與普通物件的差異
-- **三者關係總覽** — IoC、DI、Bean 如何相互配合
-- **章節總結** — 一張表說清楚三個名詞
+<v-clicks>
+
+- **回顧 IoC**：在家印和去便利商店印，差在哪裡
+- **什麼是 DI？** 店員把印表機交到小明手上
+- **什麼是 Bean？** 店裡由店家管理的那台印表機
+
+</v-clicks>
 
 <!--
-今天的章節比較輕鬆，主要是概念釐清，沒有太多新的程式碼。
+今天要搞懂三件事。
 
-我們先快速回顧 IoC，然後把 DI 和 Bean 一起補齊。這三個概念合在一起才算是真正理解 Spring 的核心設計，後面不管學什麼功能，都是在這個基礎上延伸出去的。
+（下一步）先花一點時間回顧上一章的 IoC。
+
+（下一步）接著認識 DI。先劇透，它就是故事裡「店員把印表機交到小明手上」這個動作。
+
+（下一步）最後認識 Bean。它就是便利商店裡、由店家管理的那台印表機。
+
+你會發現，今天的兩個新名詞，其實都藏在上一章的故事裡。
 -->
 
 ---
@@ -77,66 +83,28 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-# 回顧：什麼是 IoC？
+# 回顧：小明印作業
 
 <!--
-我們先快速複習上一章的重點。
-
-IoC 是今天所有內容的基礎，搞清楚 IoC 之後，DI 和 Bean 就很容易理解了。
+我們先快速回顧上一章的故事。
 -->
 
 ---
 
-# 回顧：IoC 解決什麼問題？
+# 回顧：在家印 vs 去便利商店印
 
-沒有 IoC 的世界，`Teacher` 自己 `new` 印表機——換印表機就要改程式碼：
-
-```java
-public class Teacher {
-    private Printer printer = new HpPrinter(); // 緊耦合
-
-    public void teach() {
-        printer.print("I'm a teacher");
-    }
-}
-```
-
-| 問題 | 傳統寫法的困境 |
-| --- | --- |
-| 換印表機品牌 | 必須修改 `Teacher` 程式碼 |
-| 100 個類別都用了 `HpPrinter` | 要改 100 個地方 |
-| 測試時不想用真印表機 | 沒辦法替換 |
+<Pairs left="印作業" right="寫程式" rows="you,在家自己印：印表機自己買=code,自己 new 一台印表機|store,去便利商店印：店家都準備好了=spring,交給 Spring 容器準備|clerk,準備印表機的主導權，交給店家=spring,IoC 控制反轉" />
 
 <!--
-快速複習一下上一章的核心問題。
+上一章的故事是這樣的。
 
-傳統寫法是 Teacher 自己 new HpPrinter()，這讓 Teacher 和 HpPrinter 「綁死」了。換印表機要改程式碼，有多少個類別用到就要改多少個地方，這就是緊耦合的問題。
+（下一步）在家自己印，印表機要自己買。在程式裡，就是自己 new 一台印表機。
 
-IoC 的解法是：把印表機的建立與管理，交給外部的 Spring 容器，Teacher 只需要說「我需要一台印表機」，由 Spring 決定給哪一台。
--->
+（下一步）去便利商店印，店家都準備好了。在程式裡，就是交給 Spring 容器準備。
 
----
+（下一步）「準備印表機」的主導權，從小明交到店家手上，這就叫做 IoC，控制反轉。
 
-# 回顧：IoC 的核心定義
-
-| 名詞 | 說明 |
-| --- | --- |
-| **IoC** | Inversion of Control，控制反轉 |
-| **控制** | 物件的控制權——誰來決定建立哪個物件 |
-| **反轉** | 控制權從「類別本身」反轉給「外部的 Spring 容器」 |
-
-「IoC 的核心概念，就是將物件的控制權，**交給外部的 Spring 容器來管理**。」
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 Spring 容器就像公司的行政部門，預先採購好印表機放在儲藏室，誰需要就去借，不用自己買。
-</div>
-
-<!--
-記住這個核心定義：「將物件的控制權，交給外部的 Spring 容器來管理。」
-
-IoC 是一個設計概念，不是一個具體的 API 或 Annotation。Spring 框架的整個設計，都是圍繞著 IoC 這個概念建立起來的。
-
-好，IoC 複習完了，接下來我們來看 DI。
+很好，大家都還記得。今天我們要把這個故事再看仔細一點。
 -->
 
 ---
@@ -148,113 +116,135 @@ class: flex flex-col justify-center items-center text-center
 # 什麼是 DI？
 
 <!--
-IoC 說的是「控制權轉移」，但控制權轉移之後，Spring 容器要怎麼把物件給你用呢？
+請大家回想便利商店的故事。印表機是店家準備的，但它最後是怎麼跑到小明手上的？
 
-這個「把物件給你用」的動作，就是 DI——依賴注入。
+這個「交到手上」的動作，就是我們今天的第一個新名詞。
 -->
 
 ---
 
-# 什麼是 DI？
+# 圖解：店員把印表機交到小明手上
 
-**DI** 全名是 **Dependency Injection**，中文叫做**依賴注入**。
-
-| 名詞 | 說明 |
-| --- | --- |
-| **Dependency（依賴）** | `Teacher` 需要 `Printer`，所以 `Teacher` 依賴 `Printer` |
-| **Injection（注入）** | Spring 容器把 `HpPrinter` 放入 `Teacher` 裡面 |
-| **DI** | Spring 容器主動把所需的物件注入給使用者 |
-
-「DI 的定義，就是 Spring 容器把 `HpPrinter` 給**注入**到 `Teacher` 這個 class 裡面。」
+<IocDemo mode="ioc" label="注入（DI）" />
 
 <!--
-我們來拆解 Dependency Injection 這個詞。
+我們再看一次上一章的這張圖，這次請大家注意中間那支箭頭。
 
-Dependency 是依賴——Teacher 想要印東西，它需要一個 Printer，所以說 Teacher 依賴 Printer。
+左邊是 Spring 容器，也就是便利商店，裡面有準備好的印表機。右邊是小明，他手上是空的。
 
-Injection 是注入——Spring 容器把 Printer 的實例「注射」進 Teacher 裡面，讓 Teacher 能夠使用它。
+（下一步）小明說：「我需要一台印表機」。
 
-合在一起：DI 就是「Spring 容器主動把所需的物件注入給使用者」。
+（下一步）Spring 容器把 HP 印表機交到小明手上。請看箭頭上的字，這個動作有一個正式的名字，叫做「注入」，英文縮寫是 DI。
+
+（下一步）想換 Canon，Spring 就改把 Canon 注入給小明，小明完全不用動。
 -->
 
 ---
 
-# DI 的生活類比：打針
+# 所以，什麼是 DI？
 
-想像你生病了，去診所打針：
+**DI** 是 **Dependency Injection** 的縮寫，中文叫做**依賴注入**。
 
-| 角色 | 打針的比喻 | DI 的對應 |
-| --- | --- | --- |
-| 病人 | 你（需要藥物） | `Teacher`（需要 `Printer`） |
-| 藥物 | 針筒裡的藥 | `HpPrinter` 物件 |
-| 護理師 | 幫你打針的人 | **Spring 容器** |
-| 打針的動作 | 把藥注射進你體內 | 把 `HpPrinter` 注入到 `Teacher` |
+<Pairs left="印作業" right="寫程式" rows="you,小明要印作業，一定要有印表機=code,依賴：XiaoMing 需要 Printer|clerk,店員把印表機交到小明手上=spring,注入：Spring 把 HpPrinter 放進 XiaoMing" />
 
-你不需要自己把藥「打進」自己身體——Spring 幫你做這件事。
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>一句話記起來：</b> DI 就是 Spring 主動把你需要的東西，送到你手上。
+</div>
+
+</v-click>
 
 <!--
-用打針來理解 DI 非常直觀。
+DI 是兩個英文字的縮寫，中文叫做依賴注入。我們把它拆成兩半來看。
 
-你生病了（你依賴藥物），但你不會自己幫自己打針（不會自己 new 物件）。護理師（Spring 容器）幫你把藥（HpPrinter）注射進你的身體（Teacher）。
+（下一步）前半段「依賴」。小明要印作業，一定要有印表機，沒有印表機就做不了事。這種「少了它就不行」的關係，就叫做依賴。在程式裡，我們會說 XiaoMing 依賴 Printer。
 
-整個過程，你只需要伸出手臂（宣告你需要 Printer），不需要管藥從哪裡來、怎麼調配——Spring 都幫你處理好了。
+（下一步）後半段「注入」。店員把印表機交到小明手上，這個動作就叫注入。在程式裡，就是 Spring 把 HpPrinter 放進 XiaoMing 裡面。
 
-這個「注射」的動作，就是 Dependency Injection，依賴注入。
+（下一步）一句話記起來：DI 就是 Spring 主動把你需要的東西，送到你手上。
 -->
 
 ---
 
-# DI 的程式碼概念
+# DI 在程式裡長什麼樣子？
 
-使用 DI 之後，`Teacher` 不自己 `new`，Spring 負責把 `HpPrinter` 注入進來：
+<CodeSteps>
 
-```java
-public class Teacher {
-    private Printer printer; // 我需要一個 Printer，Spring 幫我注入
+```java {all|2|4-6}
+public class XiaoMing {
+    private Printer printer;
 
-    public void teach() {
-        printer.print("I'm a teacher");
+    public void doHomework() {
+        printer.print("小明的作業");
     }
 }
 ```
 
+- 這就是上一章「去便利商店印」的小明
+- 這一行是小明在說：「我需要一台印表機」。Spring 會把印表機注入到這裡
+- 印表機送到之後，小明就能拿來印作業了
+
+</CodeSteps>
+
+<v-click>
+
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-⚠️ <b>注意：</b> 這裡的 <code>printer</code> 欄位還沒有指定哪個 Annotation，下一章我們會用 <code>@Autowired</code> 告訴 Spring 要在這個欄位執行注入。
+⚠️ <b>還差一步：</b> 現在 Spring 還不知道要把印表機注入到這一行。下一章會學到 <code>@Autowired</code>，就是用來告訴 Spring「請注入到這裡」。
 </div>
 
+</v-click>
+
 <!--
-這段程式碼跟上一章看到的一樣，Teacher 裡面只宣告 private Printer printer，沒有 new HpPrinter()。
+DI 在程式裡長什麼樣子？其實就是上一章「去便利商店印」的小明。
 
-Spring 容器在背後把 HpPrinter 的實例放進這個 printer 欄位裡——這個放入的動作就叫做「注入」。
+（下一步）重點是第二行。這一行是小明在說：「我需要一台印表機」。DI 就是 Spring 把印表機注入到這裡。
 
-你現在先有這個概念就好：Teacher 宣告需求，Spring 負責提供。下一章我們加上 @Autowired，程式就能真正跑起來了。
+（下一步）印表機送到之後，下面寫作業的時候，小明就能拿來印了。
+
+（下一步）不過要先說清楚，現在這樣寫還差一步。Spring 還不知道要把印表機注入到這一行，我們要做一個記號告訴它。這個記號叫做 @Autowired，是下一章的內容。
 -->
 
 ---
 
-# IoC 與 DI 的關係
+# IoC 和 DI，是一起出現的
 
-| 概念 | 說明 | 角色 |
-| --- | --- | --- |
-| **IoC（控制反轉）** | 把物件的控制權交給 Spring 容器 | 設計哲學 |
-| **DI（依賴注入）** | Spring 容器把所需物件注入給使用者 | 實踐手段 |
+<Pairs left="印作業" right="寫程式" rows="store,把準備印表機的事，交給便利商店=spring,IoC：把控制權交給 Spring（交出去）|clerk,店員再把印表機交到小明手上=spring,DI：Spring 把東西注入給你（送回來）" />
 
-「只要有用到 **IoC 控制反轉**的地方，一定就要搭配 **DI 依賴注入**。」
-
-兩者相輔相成：IoC 把控制權交出去，DI 再把物件注入回來。
+<v-click>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>記憶方式：</b> IoC 是「交出去」，DI 是「送回來」。Spring 先接管物件（IoC），再把物件給需要的人用（DI）。
+💡 <b>記憶方式：</b> IoC 是「交出去」，DI 是「送回來」。只把事情交給店家、店員卻不把印表機給小明，小明還是印不了作業，所以兩個一定一起出現。
 </div>
 
+</v-click>
+
 <!--
-IoC 和 DI 是捆綁在一起的概念，兩者缺一不可。
+IoC 和 DI 常常被放在一起講，因為它們是一起出現的。
 
-IoC 說的是「控制權轉移」——把 new 物件的責任交給 Spring 容器。但 Spring 接管了物件之後，怎麼讓 Teacher 使用到 Printer 呢？這就靠 DI。
+（下一步）IoC 是把準備印表機的事，交給便利商店。在程式裡，就是把控制權交給 Spring，我們可以想成「交出去」。
 
-DI 說的是「注入」——Spring 把管理好的物件注射進需要它的類別裡。
+（下一步）DI 是店員再把印表機交到小明手上。在程式裡，就是 Spring 把東西注入給你，可以想成「送回來」。
 
-所以 IoC 是「交出去」，DI 是「送回來」，兩者合作才能讓整個機制運作。
+（下一步）想一想，如果只做了 IoC，把事情交給店家，但店員從來不把印表機給小明，那小明還是印不了作業。所以只要有 IoC，就一定要有 DI，兩個一定一起出現。
+-->
+
+---
+
+# 小測驗：這個動作叫什麼？
+
+<Poll question="店員把準備好的印表機，交到小明手上。這個動作在 Spring 裡叫做什麼？" options="IoC 控制反轉|DI 依賴注入|Bean" answer="2" />
+
+<!--
+來確認一下大家有沒有分清楚。
+
+店員把準備好的印表機，交到小明手上。這個動作在 Spring 裡叫做什麼？
+
+（等大家作答）
+
+（下一步）答案是 DI，依賴注入。
+
+IoC 是「把準備的工作交給店家」這個決定，DI 是「把東西交到手上」這個動作。至於第三個選項 Bean，就是我們接下來要講的。
 -->
 
 ---
@@ -266,110 +256,165 @@ class: flex flex-col justify-center items-center text-center
 # 什麼是 Bean？
 
 <!--
-最後一個名詞：Bean。
+最後一個新名詞：Bean。
 
-這個名詞第一次看到的時候很讓人困惑——它跟咖啡豆有關係嗎？答案是沒有。Bean 其實是一個很簡單的概念，我們一起來看看。
+請大家想一想，小明家裡那台印表機，和便利商店裡那台印表機，有什麼不一樣？
 -->
 
 ---
 
-# 什麼是 Bean？
+# Bean：店家在管的那台印表機
 
-| 概念 | 說明 |
-| --- | --- |
-| **Bean** | 由 Spring 容器所管理的物件，我們賦予它一個新名字，叫做 Bean |
-| **普通物件** | 開發者自己 `new` 出來的物件，Spring 不知道它的存在 |
-| **Bean** | Spring 容器建立並管理的物件，Spring 知道它、管理它 |
+<Pairs left="印作業" right="寫程式" rows="store,便利商店裡、店家在管的印表機=spring,Bean：Spring 容器在管的物件|you,小明家裡自己買的印表機=code,普通物件：自己 new 出來的" />
 
-「Bean 說穿了，其實就只是一個 **object（物件）** 而已。」
+<v-click>
 
-唯一的差別是：**誰來管理它**——是開發者自己，還是 Spring 容器。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>Bean 說穿了就是物件：</b> 兩台都是印表機，差別只在「誰在管它」。店家在管的叫 Bean，自己管的就是普通物件。
+</div>
+
+</v-click>
 
 <!--
-Bean 這個名字聽起來很神秘，但其實它只是一個普通的 Java 物件。
+兩台都是印表機，功能一樣，那差別在哪裡？
 
-唯一讓它「特別」的地方，是它的管理者是 Spring 容器，而不是開發者自己。
+（下一步）便利商店裡的印表機，是店家在管的。店家知道它在那裡、會幫它補紙換墨水、壞了會修。在程式裡，像這樣由 Spring 容器在管的物件，我們幫它取了一個新名字，叫做 Bean。
 
-就好像同一台印表機，放在你自己辦公桌上（普通物件），跟放在行政部門的儲藏室（Bean），本質上是同一台印表機，只是管理的人不同。
+（下一步）小明家裡自己買的印表機，店家根本不知道它存在。在程式裡，這就是自己 new 出來的普通物件。
+
+（下一步）所以 Bean 說穿了，其實就是一個物件。兩台都是印表機，差別只在「誰在管它」。店家在管的叫 Bean，自己管的就是普通物件。
 -->
 
 ---
 
-# Bean vs 普通物件
+# Bean 和普通物件，差在哪裡？
 
-| 比較項目 | 普通物件 | Bean |
+| | 普通物件（小明家那台） | Bean（便利商店那台） |
 | --- | --- | --- |
-| 誰建立 | 開發者手動 `new` | Spring 容器自動建立 |
-| 誰管理生命週期 | 開發者自己 | Spring 容器 |
-| Spring 知道它嗎？ | 不知道 | 知道，並統一管理 |
-| 可以被注入嗎？ | 不行 | 可以，DI 就是在注入 Bean |
+| **誰準備？** | 自己 `new` | Spring 容器 |
+| **誰來顧？** | 自己 | Spring 容器 |
+| **能被交到別人手上嗎？** | 不行，店員不知道它 | 可以，DI 注入的就是 Bean |
+
+<v-click>
 
 ```java
-// 普通物件：Spring 不認識它
+// 普通物件：Spring 不知道它
 Printer printer = new HpPrinter();
 
-// Bean：Spring 建立並管理，可以被注入到其他類別
-// （下一章會用 @Component 告訴 Spring 要把它變成 Bean）
+// Bean：交給 Spring 管理（下一章會用 @Component 做到）
 ```
 
+</v-click>
+
 <!--
-這張表格清楚說明了 Bean 和普通物件的差異。
+我們用一張表整理 Bean 和普通物件的差別。
 
-左邊是你自己 new 出來的物件，Spring 不知道它的存在，也無法把它注入到其他類別。
+誰準備？普通物件是自己 new 的，Bean 是 Spring 容器準備的。
 
-右邊是 Bean，由 Spring 容器建立並管理，Spring 認識它、管理它的生命週期，也可以在需要的時候把它注入到其他類別。
+誰來顧？普通物件自己顧，Bean 由 Spring 容器顧。
 
-所以，DI 注入的東西，本質上就是 Bean——Spring 管理的物件。
+最後一列最重要：能被交到別人手上嗎？小明家那台，店員根本不知道它，當然沒辦法拿去給別人。便利商店那台可以。在程式裡，DI 注入的東西，一定是 Bean。
 
-⚠️ 大家先有概念就好，下一章我們會學 @Component，它就是把普通類別宣告成 Bean 的 Annotation。
+（下一步）寫成程式的話，自己 new 出來的就是普通物件，Spring 不知道它。要把它變成 Bean，需要一個叫 @Component 的記號，這也是下一章的內容。
 -->
 
 ---
 
-# IoC、DI、Bean 三者關係總覽
+# 小測驗：這台是 Bean 嗎？
 
-| 名詞 | 中文 | 說明 | 比喻 |
-| --- | --- | --- | --- |
-| **IoC** | 控制反轉 | 把物件控制權交給 Spring 容器 | 行政部門統一採購印表機 |
-| **DI** | 依賴注入 | Spring 把所需物件注入給使用者 | 行政部門把印表機送到你辦公桌 |
-| **Bean** | — | Spring 容器管理的物件 | 儲藏室裡那台由行政管理的印表機 |
-
-三者的合作流程：
-
-1. `HpPrinter` 被交給 Spring 管理，成為一個 **Bean**（IoC）
-2. `Teacher` 宣告「我需要一個 Printer」
-3. Spring 把 `HpPrinter` 這個 Bean **注入**到 `Teacher`（DI）
+<Poll question="小明在自己的程式裡寫了 new HpPrinter()，做出一台印表機。這台印表機是 Bean 嗎？" options="是，所有印表機都是 Bean|不是，它是小明自己 new 的普通物件" answer="2" />
 
 <!--
-我們用一張表把三個名詞整合起來。
+再來一題。
 
-IoC 說的是「控制權轉移」，DI 說的是「注入的動作」，Bean 說的是「被管理的物件」。
+小明在自己的程式裡寫了 new HpPrinter，做出一台印表機。這台印表機是 Bean 嗎？
 
-三者的合作流程：HpPrinter 被 Spring 接管成為 Bean（IoC），Teacher 需要 Printer，Spring 把 HpPrinter 這個 Bean 注入進去（DI）。
+（等大家作答）
 
-記住這個流程，後面不管學什麼 Annotation，都是在這個框架裡面運作的。
+（下一步）答案是「不是」。它是小明自己 new 的，就像他在家自己買的印表機，Spring 不知道它，所以只是普通物件。
+
+只有交給 Spring 容器管理的，才叫做 Bean。
+-->
+
+---
+
+# 三個名詞，一起看
+
+<Flow nodes="Spring 容器:便利商店|HpPrinter:店裡的機器 = Bean|XiaoMing:小明" steps="2>1:交給 Spring 管理（IoC），成為 Bean|3>1:我需要一台 Printer|1>3:把 HpPrinter 交給小明（DI）" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>順序：</b> 先把 HpPrinter 交給 Spring 管（IoC），它就成了 Bean；小明需要時，Spring 再把這個 Bean 注入給他（DI）。
+</div>
+
+</v-click>
+
+<!--
+最後我們把三個名詞放在一起，看它們是怎麼合作的。
+
+左邊是 Spring 容器，也就是便利商店。中間是 HpPrinter，右邊是小明。
+
+（下一步）第一步，HpPrinter 交給 Spring 管理。這就是 IoC。交給 Spring 管之後，它就變成了一個 Bean，就像店裡的機器。
+
+（下一步）第二步，小明說：「我需要一台 Printer」。
+
+（下一步）第三步，Spring 把 HpPrinter 這個 Bean 交給小明。這就是 DI。
+
+（下一步）所以順序是：先交給 Spring 管，變成 Bean；有人需要的時候，Spring 再把 Bean 注入給他。
+-->
+
+---
+
+# 一張圖複習今天的內容
+
+<Pairs left="印作業" right="寫程式" rows="store,準備印表機的事，交給便利商店=spring,IoC 控制反轉|clerk,店員把印表機交到小明手上=spring,DI 依賴注入|printer,店裡、店家在管的印表機=spring,Bean|you,小明家裡自己買的印表機=code,普通物件" />
+
+<!--
+我們用一張圖複習今天的內容。
+
+（下一步）把準備印表機的事交給便利商店，就是 IoC。
+
+（下一步）店員把印表機交到小明手上，就是 DI。
+
+（下一步）店裡、店家在管的印表機，就是 Bean。
+
+（下一步）小明家裡自己買的印表機，就是普通物件。
+
+四個名詞，全部都在同一個故事裡。
 -->
 
 ---
 
 # 章節總結
 
-- **IoC（控制反轉）**：將物件的控制權交給 Spring 容器，不再自己 `new`
-- **DI（依賴注入）**：Spring 容器把所需的物件注入到對應的類別中
-- **IoC + DI**：相輔相成——IoC 把控制權「交出去」，DI 再把物件「送回來」
-- **Bean**：由 Spring 容器所管理的物件，本質上就是一個普通 Java 物件
-- **三者關係**：Spring 接管物件成為 Bean（IoC）→ 有人需要時注入（DI）
+<v-clicks>
 
-下一章我們會介紹 `@Component` 和 `@Autowired`，學會怎麼讓 Spring 真正接管物件，並把它注入到需要的地方。
+- **IoC（控制反轉）**：把準備東西的事交給 Spring 容器（交出去）
+- **DI（依賴注入）**：Spring 把你需要的東西送到你手上（送回來）
+- **Bean**：由 Spring 容器在管的物件；自己 `new` 的只是普通物件
+- **IoC 和 DI 一定一起出現**：交出去之後，還要有人送回來
+
+</v-clicks>
+
+<v-click>
+
+下一章我們會學兩個記號：用 `@Component` 把印表機變成 Bean，用 `@Autowired` 請 Spring 把它注入給小明。
+
+</v-click>
 
 <!--
-好，我們來整理今天學到的三個名詞。
+最後整理今天的重點。
 
-IoC、DI、Bean 其實都是在描述同一套機制的不同面向：IoC 是設計哲學，DI 是實踐手段，Bean 是被管理的對象。
+（下一步）IoC 控制反轉，是把準備東西的事交給 Spring 容器，交出去。
 
-今天我們都是在談概念，還沒有真正寫出讓 Spring 注入的程式碼。下一章加上 @Component 和 @Autowired，這個機制就真正活起來了！
+（下一步）DI 依賴注入，是 Spring 把你需要的東西送到你手上，送回來。
 
-有任何問題嗎？
+（下一步）Bean，是由 Spring 容器在管的物件。自己 new 的，只是普通物件。
+
+（下一步）IoC 和 DI 一定一起出現：交出去之後，還要有人送回來。
+
+（下一步）今天我們一直說「交給 Spring 管」、「請 Spring 注入」，但還沒說要怎麼寫。下一章會學兩個記號：用 @Component 把印表機變成 Bean，用 @Autowired 請 Spring 把它注入給小明。
 -->
 
 ---
@@ -381,9 +426,9 @@ layout: end
 有任何問題嗎？
 
 <!--
-大家今天把 IoC、DI、Bean 這三個常見名詞都釐清了。
+今天的內容到這邊。
 
-如果現在還有點模糊也沒關係，下一章實際加上 @Component 和 @Autowired 跑起程式碼之後，你就會有那個「啊，原來這就是 IoC 和 DI 的實際運作方式」的感覺。
+如果名詞有點多，只要回想故事就好：交給便利商店是 IoC，店員交到手上是 DI，店裡的機器是 Bean。
 
-有問題的同學現在可以提問！
+有任何問題歡迎現在提出來。
 -->

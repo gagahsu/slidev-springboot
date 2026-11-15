@@ -5,7 +5,8 @@ import Art from './Art.vue'
 import { usePoses, type Pose } from './poses'
 
 // Animated comparison for chapter 4: who prepares the printer, XiaoMing himself or the Spring container?
-const props = withDefaults(defineProps<{ mode?: 'traditional' | 'ioc' }>(), { mode: 'traditional' })
+// label: text on the hand-over arrow (ch05 uses it to name the hand-over "DI")
+const props = withDefaults(defineProps<{ mode?: 'traditional' | 'ioc', label?: string }>(), { mode: 'traditional', label: '交給小明' })
 const ioc = computed(() => props.mode === 'ioc')
 const root = ref<HTMLElement>()
 const { local, animated } = useFixedSteps(3)
@@ -51,7 +52,7 @@ const codeLine = computed(() => {
     </div>
 
     <div v-if="ioc" class="ask" data-actor="ask">「我需要一台印表機」</div>
-    <div v-if="ioc && local >= 2" class="inject">交給小明</div>
+    <div v-if="ioc && local >= 2" class="inject">{{ label }}</div>
     <div v-if="!ioc" class="link" data-actor="link">{{ local >= 1 ? '綁在一起' : '' }}</div>
 
     <div class="bean hp" data-actor="hp" :class="{ broken: !ioc && local >= 2 }">
