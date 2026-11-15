@@ -48,29 +48,31 @@ style: |
 <!--
 大家好，歡迎來到第八章！
 
-前幾章我們學了怎麼建立 Bean（@Component）、注入 Bean（@Autowired）、指定 Bean（@Qualifier）。今天要學的是 Bean 生命週期裡的下一個環節：初始化。
+前幾章，我們已經可以把印表機擺進便利商店（@Component），也可以讓小明拿到印表機（@Autowired），還能指名要哪一台（@Qualifier）。
 
-Bean 被 Spring 建立出來之後，有時候我們需要在它開始被使用前，先做一些準備工作，例如設定初始值、讀取設定、建立連線。@PostConstruct 就是做這件事的 Annotation。
+今天要看的是一個小細節：印表機擺進店裡之後、小明來印之前，店員通常還會先做一些準備。這就是今天的主題：初始化。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要搞懂的三件事
 
-- **什麼是 Bean 的初始化？** — Bean 建立後需要做哪些準備，以及為什麼需要初始化
-- **@PostConstruct** — 定義、程式碼範例、方法格式要求、注意事項
-- **補充一：真的需要 @PostConstruct 嗎？** — 直接賦值 vs @PostConstruct 的比較與適用場景
-- **補充二：afterPropertiesSet()** — InitializingBean 介面的初始化方式與現況
-- **章節總結** — 掌握 @PostConstruct 的時機與格式
+<v-clicks>
+
+- **什麼是初始化？** 開店前，店員先把機器準備好
+- **`@PostConstruct`**：寫下「開店前要做的事」
+- **什麼時候才需要它？** 有時候直接寫就好
+
+</v-clicks>
 
 <!--
-今天的章節除了主要的 @PostConstruct 之外，還有兩個補充。
+今天要搞懂三件事。
 
-補充一討論「什麼時候真的需要用 @PostConstruct，什麼時候直接賦值就夠了」，這是實際開發常見的判斷題。
+（下一步）第一，什麼是初始化。用故事來說，就是開店前，店員先把機器準備好。
 
-補充二介紹另一種初始化方式 afterPropertiesSet()，在舊專案裡可能會看到，了解一下就好。
+（下一步）第二，@PostConstruct，用來寫下「開店前要做的事」。
+
+（下一步）第三，什麼時候才需要它。我們會看到，有時候根本不用它，直接寫就好。
 -->
 
 ---
@@ -79,60 +81,105 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-# 什麼是 Bean 的初始化？
+# 開店前的準備
 
 <!--
-在學 @PostConstruct 之前，我們先搞清楚「初始化」這件事是什麼，以及在什麼情境下我們會需要它。
+我們先回到便利商店。
+
+一台新的印表機擺進店裡之後，可以馬上給客人用嗎？
 -->
 
 ---
 
-# 什麼是 Bean 的初始化？
+# 從擺進店裡，到小明來印
 
-| 概念 | 說明 |
-| --- | --- |
-| **Bean 的初始化** | 在 Bean 被建立出來之後，對它設定初始值或執行準備邏輯 |
-| **發生時機** | Spring 建立 Bean 實例之後，Bean 開始被使用之前 |
-| **目的** | 確保 Bean 在第一次被呼叫時，內部狀態已經準備好 |
-
-「Bean 的初始化，就是在 Bean 被創建出來之後，對這個 Bean 做一些初始值的設定。」
+<StoreOpening />
 
 <!--
-初始化這個概念不難理解。
+我們看一台印表機從擺進店裡，到小明來印的過程。
 
-就好像你剛買了一台新印表機，你要先幫它裝墨水、設定語言、設定紙張大小，才能開始印東西。這個「開始使用前的準備動作」，就是初始化。
+一開始，店家把印表機擺進店裡。但是紙匣還是空的，這時候小明來了也印不出東西。
 
-Bean 也一樣，Spring 建立 HpPrinter 實例之後，可能需要設定初始使用次數、讀取設定檔裡的參數，或是建立資料庫連線，這些都是初始化要做的事。
+（下一步）所以開店前，店員會先做準備：開機、放進 5 張紙。
+
+（下一步）開門營業之後，小明來印作業，印了一張，剩下 4 張。
+
+（下一步）之後每印一張，剩下的張數就少一張。
+
+請大家注意中間那一步：擺進店裡之後、開始營業之前，先把機器準備好。這就是今天的主角。
 -->
 
 ---
 
-# 情境：印表機的使用次數
+# 把故事搬進程式裡
 
-想像 `HpPrinter` 有個 `count` 欄位，記錄剩餘使用次數。每次列印後 `count` 減 1：
+<Pairs left="便利商店" right="Spring" rows="store,店家把印表機擺進店裡=spring,Spring 建立 Bean|paper,開店前，店員先開機、放 5 張紙=code,初始化：幫 Bean 設定好初始值|you,開門營業，小明來印=code,Bean 開始被使用" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>一句話記起來：</b> 初始化就是在 Bean 建立之後、被使用之前，先把它準備好。
+</div>
+
+</v-click>
+
+<!--
+把故事搬進程式裡。
+
+（下一步）店家把印表機擺進店裡，就是 Spring 建立 Bean。這是前兩章學過的。
+
+（下一步）開店前，店員先開機、放 5 張紙，就是初始化，幫 Bean 設定好一開始的值。
+
+（下一步）開門營業，小明來印，就是 Bean 開始被使用。
+
+（下一步）一句話記起來：初始化，就是在 Bean 建立之後、被使用之前，先把它準備好。
+-->
+
+---
+
+# 程式裡的情境：剩下幾張紙？
+
+我們幫 `HpPrinter` 加一個變數 `count`，記錄剩下幾張紙：
 
 ```java
 @Component
 public class HpPrinter implements Printer {
-    private int count; // 需要初始值，但 Spring new 出來時預設是 0
+    private int count; // 剩下幾張紙
 }
 ```
 
-**問題**：`count` 初始值該怎麼設定？
+<v-click>
 
-| 選項 | 說明 |
-| --- | --- |
-| 直接賦值 `= 5` | 簡單固定值，可行 |
-| 用 **@PostConstruct** | Bean 建立後自動執行，適合複雜邏輯 |
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+⚠️ <b>問題：</b> Spring 剛建立 <code>HpPrinter</code> 時，<code>count</code> 是 <b>0</b>，就像紙匣是空的。我們要在開店前，先把它設成 5。
+</div>
+
+</v-click>
 
 <!--
-我們用一個具體的情境來說明初始化的需求。
+我們把這個情境寫成程式。幫 HpPrinter 加一個變數，叫做 count，用來記錄剩下幾張紙。
 
-假設 HpPrinter 有個 count 欄位，代表剩餘使用次數，初始值是 5，每次 print() 被呼叫就減 1。
+（下一步）問題來了：Spring 剛建立 HpPrinter 的時候，count 的值是 0。在 Java 裡，數字變數沒有給值的話，預設就是 0。這就像紙匣是空的。
 
-問題是：count 的初始值怎麼設定？最簡單的方法是直接寫 private int count = 5，但如果初始值需要從設定檔讀取、或是需要複雜的計算邏輯，就需要 @PostConstruct。
+所以我們要在開店前，先把它設成 5。要怎麼做？
+-->
 
-我們先來看 @PostConstruct 怎麼用，補充一再來討論什麼情況才真的需要它。
+---
+
+# 小測驗：這叫做什麼？
+
+<Poll question="印表機擺進店裡之後、開門營業之前，店員先放進 5 張紙。這個動作在 Spring 裡叫做什麼？" options="注入|初始化|@Qualifier 指名" answer="2" />
+
+<!--
+來一題確認一下。
+
+印表機擺進店裡之後、開門營業之前，店員先放進 5 張紙。這個動作在 Spring 裡叫做什麼？
+
+（等大家作答）
+
+（下一步）答案是初始化。
+
+注入是把印表機交到小明手上；@Qualifier 是指名要哪一台。在開店前先準備好機器，叫做初始化。
 -->
 
 ---
@@ -141,44 +188,25 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-# 初始化 Bean 的方法：@PostConstruct
+# @PostConstruct：開店前要做的事
 
 <!--
-@PostConstruct 是一個非常直覺的 Annotation：加在方法上，Spring 建立 Bean 之後就會自動執行這個方法。
+知道什麼是初始化之後，我們來看要怎麼寫。
+
+Spring 提供了一個記號，叫做 @PostConstruct。
 -->
 
 ---
 
-# 什麼是 @PostConstruct？
-
-| 項目 | 說明 |
-| --- | --- |
-| **用途** | 讓 Spring 在 Bean 建立完成後，自動執行指定的初始化方法 |
-| **加在哪裡** | 加在**方法**上方（不是 class，不是欄位） |
-| **執行時機** | Bean 實例建立完成、所有 `@Autowired` 注入完成後，才執行 |
-| **import（Spring Boot 3.x）** | `jakarta.annotation.PostConstruct` |
-
-「在方法上加上 `@PostConstruct`，Spring 建立這個 Bean 之後，就會自動呼叫這個方法。」
-
-<!--
-@PostConstruct 的概念很簡單：你在某個方法上面貼一個標籤，告訴 Spring「這個 Bean 建立好之後，記得先執行這個方法」。
-
-有一個很重要的細節：@PostConstruct 是在所有 @Autowired 注入完成之後才執行的。這表示如果你的初始化邏輯需要用到其他注入的 Bean，@PostConstruct 是安全的選擇；但如果你在 constructor 裡做初始化，那時候 @Autowired 還沒完成，可能拿到 null。
-
-這就是 @PostConstruct 比 constructor 更適合做初始化的原因。
--->
-
----
-
-# @PostConstruct 程式碼範例
-
-在 `HpPrinter` 的初始化方法上加 `@PostConstruct`：
+# @PostConstruct：寫下「開店前要做的事」
 
 ```java
 import jakarta.annotation.PostConstruct;
+
 @Component
 public class HpPrinter implements Printer {
     private int count;
+
     @PostConstruct
     public void initialize() {
         count = 5;
@@ -186,122 +214,105 @@ public class HpPrinter implements Printer {
 }
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-⚠️ <b>Spring Boot 3.x 版本注意：</b> import 路徑已從 <code>javax.annotation.PostConstruct</code> 改為 <code>jakarta.annotation.PostConstruct</code>。Spring Boot 2.x 舊程式碼若直接升版，這裡會編譯失敗。
-</div>
-
-<!--
-看這段程式碼，initialize() 方法上面加了 @PostConstruct。
-
-Spring 建立 HpPrinter 實例的時候，會在建立完成後自動去找有 @PostConstruct 的方法並執行，所以 initialize() 會被自動呼叫，count 就被設定為 5 了。
-
-你不需要自己呼叫 initialize()，Spring 幫你做。這就是「自動」的意思。
-
-方法名稱可以自己取，initialize、setup、init 都可以，重要的是 @PostConstruct 這個 Annotation 要加對地方。
--->
-
----
-
-# @PostConstruct 方法格式要求
-
-被 `@PostConstruct` 標註的方法，必須符合以下格式，否則 Spring 無法識別：
-
-| 要求 | 正確 | 錯誤範例 |
-| --- | --- | --- |
-| **存取修飾子** | `public` | `private`、`protected` |
-| **回傳型別** | `void` | `int`、`String` 等 |
-| **參數** | 無（不能有任何參數） | `public void init(int n)` |
-| **方法名稱** | 任意 | 無限制 |
-
-標準格式：`public void methodName() { ... }`
-
-<!--
-@PostConstruct 對方法的格式有三個限制，缺一不可。
-
-第一：必須是 public 方法，Spring 需要能夠存取並呼叫它。
-
-第二：回傳型別必須是 void，Spring 呼叫完之後不需要回傳值。
-
-第三：不能有任何參數，Spring 呼叫時不知道要傳什麼參數進去，所以不接受有參數的方法。
-
-方法名稱則沒有限制，任意取名都可以。
-
-⚠️ 格式不對的話，Spring Boot 在啟動時可能不會呼叫這個方法，初始化就失效了，而且不一定會報錯，很難排查。
--->
-
----
-
-# 使用 @PostConstruct 的注意事項
-
-| 注意事項 | 說明 |
-| --- | --- |
-| **同一類別只加一個** | 若同一個類別有多個方法都加了 `@PostConstruct`，Spring 會隨機執行其中一個，結果不可預測 |
-| **執行順序在注入之後** | `@PostConstruct` 在所有 `@Autowired` 注入完成後才執行，可以安全使用注入的 Bean |
-| **不能手動呼叫** | `@PostConstruct` 方法是由 Spring 呼叫的，不應在程式碼中手動呼叫 |
+<v-click>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-⚠️ <b>常見錯誤：</b> 在同一個類別裡加了兩個 <code>@PostConstruct</code> 方法，Spring 只會執行其中一個，哪個被執行是不確定的。
+💡 <b>一句話記起來：</b> 在方法上加 <code>@PostConstruct</code>，Spring 建立好這個 Bean 之後，就會自動執行這個方法一次。
 </div>
 
+</v-click>
+
 <!--
-有三個注意事項要記住。
+這就是 @PostConstruct 的寫法。
 
-第一：同一個類別只能有一個 @PostConstruct 方法。如果你加了兩個，Spring 不會報錯，但只會執行其中一個，執行哪個是不確定的，這種 bug 非常難追查。
+我們寫了一個方法叫 initialize，裡面只做一件事：把 count 設成 5。然後在這個方法上面，加上 @PostConstruct。
 
-第二：@PostConstruct 執行時，所有 @Autowired 注入都已完成。所以如果你的初始化邏輯需要用到其他 Bean（例如讀取設定值的 Bean），在 @PostConstruct 裡用是安全的。
+你可以把這個方法想成一張「開店前要做的事」清單。上面寫著：放進 5 張紙。
 
-第三：@PostConstruct 方法是給 Spring 自動呼叫的，你不應該在自己的程式碼裡手動呼叫它，那樣就失去了「自動」的意義。
+（下一步）一句話記起來：在方法上加 @PostConstruct，Spring 建立好這個 Bean 之後，就會自動執行這個方法一次。
+
+另外提醒，上面 import 的路徑是 jakarta 開頭。如果你在網路上看到 javax 開頭的寫法，那是舊版 Spring Boot 的，新版要用 jakarta。
 -->
 
 ---
 
-# HpPrinter — 完整的 print() 方法
+# 使用 @PostConstruct 的四個規則
 
-`@PostConstruct` 設定初始值後，`print()` 每次呼叫將 `count` 遞減再輸出：
+<v-clicks>
+
+- **寫法固定**：`public void 方法名稱()`，不能有參數，名字隨便取
+- **一個 class 只放一個**：開店準備清單只能有一張，放兩張的話，Spring 只會挑一張做
+- **在注入之後才執行**：店員都到齊了才開始準備，所以可以放心使用注入進來的東西
+- **不要自己呼叫它**：店員會自己做，程式裡不用、也不應該自己去呼叫
+
+</v-clicks>
+
+<!--
+使用 @PostConstruct 有四個規則。
+
+（下一步）第一，寫法是固定的：public void，加上方法名稱和一對空括號。不能有參數，但名字可以隨便取。
+
+（下一步）第二，一個 class 只放一個。開店準備清單只能有一張。如果你放了兩個 @PostConstruct，Spring 只會挑其中一個執行，而且挑哪一個不一定，結果會很難預測。
+
+（下一步）第三，它在注入之後才執行。就像店員都到齊了才開始準備。所以在這個方法裡，可以放心使用 @Autowired 注入進來的東西。
+
+（下一步）第四，不要自己呼叫它。開店準備是店員自己會做的事，Spring 會自動執行，程式裡不用、也不應該自己去呼叫。
+-->
+
+---
+
+# 開門營業：每印一張，少一張
 
 ```java
 @Override
 public void print(String message) {
     count--;
     System.out.println("HP印表機: " + message);
-    System.out.println("剩餘使用次數: " + count);
+    System.out.println("剩下幾張紙: " + count);
 }
 ```
 
-`count` 在 `@PostConstruct` 初始化為 `5`，每次呼叫 `print()` 先減 1 再輸出。
+<v-click>
+
+小明連續印三次作業，Console 會印出：
+
+```
+HP印表機: 小明的作業
+剩下幾張紙: 4
+HP印表機: 小明的作業
+剩下幾張紙: 3
+HP印表機: 小明的作業
+剩下幾張紙: 2
+```
+
+</v-click>
 
 <!--
-現在把兩個部分合在一起看：@PostConstruct 把 count 設為 5，print() 每次被呼叫就把 count 減 1 再輸出。
+開門營業之後，每印一張，紙就少一張。
 
-第一次呼叫 print()：count 從 5 變成 4，輸出「剩餘使用次數: 4」。
-第二次呼叫：count 從 4 變成 3，輸出「剩餘使用次數: 3」。
+在 print 方法的第一行，我們寫了 count 減減，意思是把 count 減 1。然後印出內容，再印出剩下幾張紙。
 
-這就是 @PostConstruct 初始化加上業務邏輯方法搭配起來的完整效果。
+（下一步）小明連續印三次作業，Console 就會印出剩下 4 張、3 張、2 張。
+
+為什麼是從 4 開始？因為開店前，@PostConstruct 已經把 count 設成 5 了，第一次印完就剩 4 張。
 -->
 
 ---
 
-# 執行結果
+# 小測驗：什麼時候執行？
 
-完整的 `HpPrinter`（含 `@PostConstruct` 和 `print()` 方法），呼叫三次 `print()` 後：
-
-```
-HP印表機: Hello World
-剩餘使用次數: 4
-HP印表機: Hello World
-剩餘使用次數: 3
-HP印表機: Hello World
-剩餘使用次數: 2
-```
-
-`count` 從 `@PostConstruct` 設定的初始值 5 開始，每次 `print()` 遞減 1。
+<Poll question="加了 @PostConstruct 的方法，會在什麼時候執行？" options="每次呼叫 print 印東西的時候|Bean 建立好、注入完成之後，執行一次|小明自己呼叫它的時候" answer="2" />
 
 <!--
-這個執行結果說明了 @PostConstruct 的效果：count 的初始值是 5，每次 print() 被呼叫，count 先遞減再輸出。
+再來一題。
 
-如果沒有 @PostConstruct，count 的初始值會是 Java 的預設值 0，遞減之後就會變成 -1、-2，這顯然不是我們要的結果。
+加了 @PostConstruct 的方法，會在什麼時候執行？
 
-透過 @PostConstruct，我們確保了 Bean 在第一次被使用前，內部狀態已經正確初始化。
+（等大家作答）
+
+（下一步）答案是 Bean 建立好、注入完成之後，執行一次。
+
+就像開店前的準備，只做一次。之後每次印東西，就不會再重新放 5 張紙了。也不需要小明自己去呼叫它。
 -->
 
 ---
@@ -309,101 +320,96 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# 補充一
-# 我們真的需要 @PostConstruct 嗎？
+# 補充
+# 一定要用 @PostConstruct 嗎？
 
 <!--
-學完 @PostConstruct，一個很自然的問題是：既然直接寫 private int count = 5 也能初始化，那 @PostConstruct 到底什麼時候才是必要的？
+最後補充一個實務上的問題：初始化一定要用 @PostConstruct 嗎？
+
+答案是：不一定。
 -->
 
 ---
 
-# 直接賦值 vs @PostConstruct
+# 直接寫就好 vs 需要 @PostConstruct
 
-| 方式 | 程式碼 | 適合情境 |
-| --- | --- | --- |
-| **直接賦值** | `private int count = 5;` | 簡單的固定值，編譯時就確定 |
-| **@PostConstruct** | 方法內執行邏輯 | 複雜邏輯，或需要用到注入的 Bean |
+<v-clicks>
 
-簡單固定值，直接賦值就夠了：
+- **每次都固定放 5 張**：直接寫在機器上就好
 
 ```java
-private int count = 5; // 直接賦值，完全可行
+private int count = 5;
 ```
 
-需要複雜邏輯時，改用 `@PostConstruct`：
+- **要看「今天倉庫送來幾張」才知道**：開店前得先去問另一個人，這時候用 `@PostConstruct`
 
 ```java
 @PostConstruct
 public void initialize() {
-    count = someBean.getInitialCount(); // 從另一個 Bean 讀取初始值
+    count = warehouse.getPaperCount(); // warehouse 是注入進來的另一個 Bean
 }
 ```
 
+</v-clicks>
+
 <!--
-這是個很好的問題，也是實際開發中常需要做的判斷。
+判斷的方法很簡單。
 
-如果初始值就是一個固定的數字，直接寫 private int count = 5 完全沒問題，簡單直覺，不需要大費周章用 @PostConstruct。
+（下一步）如果每次都固定放 5 張紙，那直接寫在機器上就好。
 
-但如果初始值需要從設定檔讀取、從資料庫查詢、或是需要用到其他注入的 Bean 的話，這時候直接賦值就做不到了——因為在欄位宣告的時候，@Autowired 的 Bean 還沒有注入進來。
+（下一步）在程式裡，就是直接寫 private int count = 5。完全不需要 @PostConstruct。
 
-@PostConstruct 的執行時機是「所有注入完成之後」，所以在這裡可以安全地使用注入的 Bean，這是它最大的優勢。
+（下一步）但如果要看「今天倉庫送來幾張紙」才知道要放幾張，那開店前就得先去問另一個人。
+
+（下一步）在程式裡，就是要先問另一個注入進來的 Bean，這裡叫 warehouse，倉庫。這時候就要用 @PostConstruct，因為它會等注入完成才執行，這時候 warehouse 已經在了。
 -->
 
 ---
 
-# @PostConstruct 的適用場景
+# @PostConstruct 適合用在哪裡？
 
-| 場景 | 說明 |
-| --- | --- |
-| **使用注入的 Bean 設定初始值** | 初始值來自另一個 Bean，需要等注入完成才能讀取 |
-| **初始化 Map 或 List** | 需要用迴圈或複雜邏輯填入初始資料 |
-| **驗證注入的 Bean 是否正常** | 檢查注入物件是否為 `null` 或符合預期狀態 |
-| **建立連線或資源** | 建立資料庫連線池、讀取外部設定檔等啟動準備 |
+<v-clicks>
+
+- **初始值要問另一個 Bean**：像剛剛的倉庫
+- **要準備一整份資料**：例如用迴圈先準備好一份價目表
+- **開店前檢查一下**：確認注入進來的東西都正常
+- **事先建立連線**：例如連上資料庫，之後的章節會遇到
+
+</v-clicks>
+
+<v-click>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>判斷原則：</b> 初始化邏輯只是設定固定值 → 直接賦值。需要執行邏輯、或需要用到注入的 Bean → 用 <code>@PostConstruct</code>。
+💡 <b>判斷原則：</b> 只是固定的值 → 直接寫。需要執行一段邏輯，或要用到注入的 Bean → 用 <code>@PostConstruct</code>。
 </div>
 
-<!--
-整理一下 @PostConstruct 最適合的四種場景。
-
-最常見的是第一種：初始值需要從其他 Bean 讀取。例如從 @Value 注入的 application.properties 設定值來決定初始 count 是多少。
-
-第二種是初始化集合型別，例如要在 Map 裡預先填入幾筆測試資料，這種用直接賦值的語法會很醜，用 @PostConstruct 可以寫成清晰的迴圈。
-
-第三種是驗證注入結果，確保注入進來的 Bean 是正常的，不是 null。
-
-第四種是啟動時的準備工作，例如建立連線池、讀取外部設定檔，這些都必須等 Spring 容器準備好才能做。
-
-記住那個判斷原則：固定值 → 直接賦值；需要邏輯或需要用其他 Bean → @PostConstruct。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# 補充二
-# 初始化 Bean 的另一種方法：afterPropertiesSet()
+</v-click>
 
 <!--
-除了 @PostConstruct，Spring 還有另一種初始化方式：讓類別實作 InitializingBean 介面並覆寫 afterPropertiesSet() 方法。
+@PostConstruct 適合用在哪些地方？
 
-這個方法在舊版 Spring 專案裡比較常見，現代開發已經幾乎都改用 @PostConstruct，但舊專案可能會看到，了解一下就好。
+（下一步）第一，初始值要問另一個 Bean，像剛剛的倉庫。
+
+（下一步）第二，要準備一整份資料，例如用迴圈先準備好一份價目表。
+
+（下一步）第三，開店前檢查一下，確認注入進來的東西都正常。
+
+（下一步）第四，事先建立連線，例如連上資料庫。這個之後的章節會遇到。
+
+（下一步）判斷原則：只是固定的值，直接寫。需要執行一段邏輯，或要用到注入的 Bean，就用 @PostConstruct。
 -->
 
 ---
 
-# afterPropertiesSet() — InitializingBean 介面
+# 你可能會看到的另一種寫法
 
-讓類別實作 `InitializingBean` 介面，覆寫 `afterPropertiesSet()` 方法：
+舊專案裡，有時會看到用 `afterPropertiesSet()` 做初始化：
 
 ```java
-import org.springframework.beans.factory.InitializingBean;
 @Component
 public class HpPrinter implements Printer, InitializingBean {
     private int count;
+
     @Override
     public void afterPropertiesSet() throws Exception {
         count = 5;
@@ -411,42 +417,69 @@ public class HpPrinter implements Printer, InitializingBean {
 }
 ```
 
-| 比較項目 | `@PostConstruct` | `afterPropertiesSet()` |
-| --- | --- | --- |
-| **方式** | Annotation（Jakarta EE 標準） | 實作 Spring 專屬介面 |
-| **與 Spring 耦合** | 低 | 高 |
-| **業界現況** | 主流，推薦使用 | 較少使用，見於舊專案 |
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>看得懂就好：</b> 效果跟 <code>@PostConstruct</code> 一樣，但寫法比較麻煩。新專案請用 <code>@PostConstruct</code>。
+</div>
+
+</v-click>
 
 <!--
-afterPropertiesSet() 是 InitializingBean 介面定義的方法，讓類別實作這個介面，Spring 建立 Bean 後就會自動呼叫 afterPropertiesSet()，效果和 @PostConstruct 一樣。
+最後補充一下，舊專案裡你可能會看到另一種寫法：實作一個叫 InitializingBean 的介面，然後把初始化寫在 afterPropertiesSet 這個方法裡。
 
-但比較兩者，@PostConstruct 有一個明顯的優勢：它是 Jakarta EE 的標準 Annotation，不綁定 Spring。如果你的程式碼有一天要搬到其他框架，@PostConstruct 可以繼續用；但 InitializingBean 是 Spring 專屬的，搬到其他框架就沒有了。
+（下一步）它的效果跟 @PostConstruct 一樣，但寫法比較麻煩，現在已經比較少人用了。大家看得懂就好，新專案請用 @PostConstruct。
+-->
 
-現代 Spring Boot 專案幾乎都用 @PostConstruct，afterPropertiesSet() 只在維護舊專案時才會碰到。了解它的存在就好，自己寫新程式碼時選 @PostConstruct 就行。
+---
+
+# 一張圖複習今天的內容
+
+<Pairs left="便利商店" right="Spring" rows="store,印表機擺進店裡=spring,Spring 建立 Bean|paper,開店前：開機、放 5 張紙=code,初始化|doc,寫下「開店前要做的事」=code,@PostConstruct 方法|printer,每次都固定 5 張，直接寫在機器上=code,直接寫：count = 5" />
+
+<!--
+我們用一張圖複習今天的內容。
+
+（下一步）印表機擺進店裡，就是 Spring 建立 Bean。
+
+（下一步）開店前開機、放 5 張紙，就是初始化。
+
+（下一步）寫下「開店前要做的事」，就是 @PostConstruct 方法。
+
+（下一步）如果每次都固定 5 張，直接寫在機器上就好，也就是 count 等於 5。
 -->
 
 ---
 
 # 章節總結
 
-- **Bean 初始化**：Bean 建立後、被使用前，設定初始值或執行準備邏輯的過程
-- **@PostConstruct**：加在方法上，Spring 建立 Bean 且完成所有注入後，自動呼叫該方法
-- **方法格式**：必須是 `public void methodName()`，不能有參數；同一類別只能有一個
-- **直接賦值 vs @PostConstruct**：固定值直接賦值即可；需要複雜邏輯或使用注入 Bean 時用 @PostConstruct
-- **afterPropertiesSet()**：另一種初始化方式（實作 InitializingBean），見於舊專案，現代開發優先選 @PostConstruct
+<v-clicks>
 
-下一章我們會介紹 `@Value`，學習如何從 `application.properties` 讀取設定值，注入到 Bean 的欄位中。
+- **初始化**：Bean 建立之後、被使用之前，先把它準備好
+- **`@PostConstruct`**：加在方法上，Spring 建立好 Bean、注入完成後，自動執行一次
+- **規則**：`public void 名稱()`、不能有參數、一個 class 只放一個、不要自己呼叫
+- **不一定要用**：固定值直接寫；要執行邏輯或用到注入的 Bean，才用 `@PostConstruct`
+
+</v-clicks>
+
+<v-click>
+
+下一章：便利商店門口貼著價目表，要改價錢只要改公告。在 Spring 裡，這就是設定檔。
+
+</v-click>
 
 <!--
-好，我們來整理今天學到的東西。
+最後整理今天的重點。
 
-@PostConstruct 是 Bean 生命週期裡一個很實用的工具，讓你能在 Bean 被使用前做好準備工作。
+（下一步）初始化，就是 Bean 建立之後、被使用之前，先把它準備好。
 
-記住兩個最重要的點：第一，方法格式是 public void，不能有參數；第二，同一個類別只能有一個 @PostConstruct。
+（下一步）@PostConstruct 加在方法上，Spring 建立好 Bean、注入完成之後，會自動執行一次。
 
-下一章的 @Value 跟 @PostConstruct 是很好的搭配：先用 @Value 從 application.properties 讀取設定值，再用 @PostConstruct 把讀進來的值做進一步的初始化處理。
+（下一步）規則有四個：public void 加名稱、不能有參數、一個 class 只放一個、不要自己呼叫。
 
-有問題的同學現在可以提問！
+（下一步）它不一定要用。固定值直接寫就好；要執行邏輯或用到注入的 Bean，才用 @PostConstruct。
+
+（下一步）下一章，我們看便利商店門口的價目表。要改價錢，只要改公告，不用拆機器。在 Spring 裡，這就是設定檔。
 -->
 
 ---
@@ -458,9 +491,9 @@ layout: end
 有任何問題嗎？
 
 <!--
-大家今天學會了 @PostConstruct，知道怎麼讓 Spring 在 Bean 建立後自動執行初始化邏輯了。
+今天的內容到這邊。
 
-課後可以試試看：在 HpPrinter 的 @PostConstruct 裡用 @Autowired 注入的 Bean 來設定初始值，確認執行順序是正確的（注入先完成，然後才執行 @PostConstruct）。
+記住一個畫面：擺進店裡之後、開門營業之前，店員會先把機器準備好。這就是初始化。
 
-有問題嗎？
+有任何問題歡迎現在提出來。
 -->
