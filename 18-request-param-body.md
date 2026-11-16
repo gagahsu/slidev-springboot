@@ -46,65 +46,33 @@ style: |
 </div>
 
 <!--
-大家好，上一章我們學了 GET 和 POST 的差別——GET 把參數放在 URL 後面，POST 把參數放在 Request Body 裡。
+大家好，歡迎來到第十八章。
 
-但學完之後，大家可能會有一個問題：前端把參數傳過來了，那後端的 Spring Boot 要怎麼「接住」這些參數呢？
+上一章，店員已經能分辨客人是「開口問」還是「填單交出去」。但是他還沒有真的去聽客人問了什麼，也沒有去看單子上寫了什麼。
 
-這一章就是要解決這個問題。我們會介紹四個取得請求參數的 Annotation，並重點學習其中最常用的兩個：@RequestParam 和 @RequestBody。
--->
-
----
-layout: default
----
-
-# Outline
-
-- **四個取得請求參數的 Annotation** — 全貌總覽，對應不同的參數來源
-- **@RequestParam** — 接住 URL Query String 的參數、必填與選填設定
-- **@RequestBody** — 接住 Request Body 的 JSON，自動反序列化成 Java 物件
-- **章節總結** — 兩者對應關係整理，下一章預告
-
-<!--
-今天的大綱很清楚。先介紹四個 Annotation 的全貌，然後分別深入 @RequestParam 和 @RequestBody。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# 前言
-
-## 在 Spring Boot 中取得請求參數的四個 Annotation
-
-<!--
-首先，讓我們先看看 Spring Boot 提供了哪些工具來接收前端傳來的參數。
+今天就來學，怎麼在程式裡把前端帶來的資料讀出來。
 -->
 
 ---
 
-# 取得請求參數的四個 Annotation
+# 今天要搞懂的三件事
 
-| Annotation | 用途 | 對應來源 |
-| --- | --- | --- |
-| `@RequestParam` | 接住 URL 後面的 Query String 參數 | GET 的 `?id=123` |
-| `@RequestBody` | 接住 Request Body 的 JSON 資料 | POST 的 Body |
-| `@RequestHeader` | 接住 Request Header 的值 | `Content-Type`, `Authorization` |
-| `@PathVariable` | 接住 URL 路徑中的變數 | `/users/{id}` 的 `{id}` |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>本章重點：</b> @RequestParam 和 @RequestBody。下一章介紹 @RequestHeader 和 @PathVariable。
-</div>
+- **客人的資料會出現在哪些地方？** 總共四個地方，今天先學兩個
+- **`@RequestParam`**：聽懂客人「開口問」的內容
+- **`@RequestBody`**：讀懂客人交出來的「整張點單」
+
+</v-clicks>
 
 <!--
-Spring Boot 提供四個 Annotation 來接收前端傳來的參數，分別對應不同的來源。
+今天要搞懂三件事。
 
-@RequestParam 對應 GET 的 Query String，就是 URL 問號後面的參數。
-@RequestBody 對應 POST 的 Request Body，通常是 JSON 格式。
-@RequestHeader 讀取 Http Request 的 Header。
-@PathVariable 讀取 URL 路徑本身的變數，例如 /users/123 裡的 123。
+（下一步）第一，客人帶來的資料會出現在哪些地方。總共有四個地方，今天先學其中兩個。
 
-這章我們先學前兩個，它們也是最常用的。
+（下一步）第二，@RequestParam，讓店員聽懂客人開口問的內容。
+
+（下一步）第三，@RequestBody，讓店員讀懂客人交出來的整張點單。
 -->
 
 ---
@@ -113,110 +81,38 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-
-## 接住添加在 URL 後面的參數<br>@RequestParam
+# 客人的資料在哪裡？
 
 <!--
-先來看 @RequestParam。
+先看全貌。
 -->
 
 ---
 
-# @RequestParam 的定義
+# 資料會出現在四個地方
 
-| 項目 | 說明 |
-| --- | --- |
-| 用途 | 接收 URL Query String 中的參數 |
-| 使用情境 | 搭配 GET 請求（參數放在 URL 後面） |
-| 參數格式 | `?key=value`，多個用 `&` |
-| 命名規則 | 用 `@RequestParam("id")` **明確指定**對應 URL 的 key |
+<Pairs left="飲料店" right="Spring Boot" rows="what,客人開口問的話=code,@RequestParam：讀 URL 後面的參數|form,客人交出來的整張點單=code,@RequestBody：讀 Request Body 的 JSON|doc,客人出示的會員卡=code,@RequestHeader：讀 Request Header|ok,客人手上的取餐號碼=code,@PathVariable：讀 URL 路徑裡的值" />
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>注意：</b> Spring Boot 3.2 起，只寫 <code>@RequestParam</code> 不指定名稱，需依賴編譯時的 <code>-parameters</code> 參數才能運作，否則會拋出 <code>Name for argument ... not specified</code> 錯誤。<b>建議一律明確寫出名稱</b>。
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 今天學前兩個。會員卡和取餐號碼，留到下一章。
 </div>
 
-<!--
-@RequestParam 的用途是接收 URL 後面的 Query String 參數。
-
-最重要的規則是：在 @RequestParam 的括號裡明確指定要對應 URL 的哪個 key。
-例如 URL 是 ?id=123，就寫 @RequestParam("id")。
-
-有些教材會只寫 @RequestParam 不加名稱，讓 Spring 用方法參數名稱去對應。但 Spring Boot 3.2（Spring Framework 6.1）之後，這種寫法需要編譯時加上 -parameters 參數保留參數名稱，不然啟動或呼叫時會報錯。用 IDE 直接編譯常常沒有帶這個參數，所以建議大家一律明確寫出名稱，最不容易踩雷。
--->
-
----
-
-# @RequestParam 基本用法
-
-當前端發送 `GET http://localhost:8080/test1?id=123` 時，用 `@RequestParam("id")` 接住 `id`：
-
-```java
-@RestController
-public class MyController {
-
-    @RequestMapping("/test1")
-    public String test1(@RequestParam("id") Integer id) {
-        System.out.println("id: " + id);
-        return "請求成功";
-    }
-}
-```
+</v-click>
 
 <!--
-看這個例子。我們在方法參數前面加上 @RequestParam("id")，括號裡的 "id" 告訴 Spring Boot 要去 URL 找名叫 id 的參數，把值塞進這個方法參數。
+客人帶來的資料，會出現在四個地方。Spring Boot 幫每個地方都準備了一個工具。
 
-注意參數類型是 Integer，因為 URL 傳來的 id 是一個整數。
-如果你把類型設成 String 也可以，Spring Boot 會幫你轉換，但如果設成 Integer 就更精確。
+（下一步）客人開口問的話，用 @RequestParam 來讀。它讀的是 URL 後面的參數。
 
-執行後，console 會印出 "id: 123"，說明 Spring Boot 成功讀取到 URL 的參數了。
--->
+（下一步）客人交出來的整張點單，用 @RequestBody 來讀。它讀的是 Request Body 裡的 JSON。
 
----
+（下一步）客人出示的會員卡，用 @RequestHeader 來讀。
 
-# @RequestParam 執行結果
+（下一步）客人手上的取餐號碼，用 @PathVariable 來讀。
 
-| 前端發送的 URL | 後端讀取到的值 | Console 輸出 |
-| --- | --- | --- |
-| `/test1?id=123` | `id = 123` | `id: 123` |
-| `/test1?id=456` | `id = 456` | `id: 456` |
-| `/test1`（沒帶參數） | — | `400 Bad Request` |
-
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>注意：</b> @RequestParam 預設是必填的，前端若沒帶這個參數，Spring Boot 會回傳 400 Bad Request。
-</div>
-
-<!--
-看執行結果。
-
-URL 帶了 ?id=123，後端就讀到 123；帶了 ?id=456，就讀到 456。
-
-但如果前端完全沒帶 id 參數，Spring Boot 預設會回傳 400 Bad Request，因為 @RequestParam 預設是必填的。
-
-這個行為可以透過 required = false 修改，讓參數變成選填，但初學階段先記住預設是必填就好。
--->
-
----
-
-# @RequestParam：括號裡的名稱對應 URL 的 key
-
-括號裡的名稱決定去 URL 找哪個 key，方法參數名稱可以不同：
-
-| URL key | 寫法 | 方法參數名稱 |
-| --- | --- | --- |
-| `id` | `@RequestParam("id")` | `id`（建議一致，好讀） |
-| `myId` | `@RequestParam("myId")` | `id`（也能運作） |
-
-```java
-// URL: /test1?myId=123
-@RequestParam("myId") Integer id
-```
-
-<!--
-括號裡的名稱才是 Spring Boot 對應 URL key 的依據，方法參數叫什麼名字其實不影響。
-
-例如 URL 的 key 是 myId，寫 @RequestParam("myId")，值就會放進後面的方法參數，即使參數叫 id 也沒問題。
-
-實務上，建議讓括號裡的名稱和方法參數名稱一致，程式碼更容易讀懂。
+（下一步）今天學前兩個。會員卡和取餐號碼，留到下一章。
 -->
 
 ---
@@ -225,138 +121,319 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-
-## 接住放在 Request Body 中的參數<br>@RequestBody
+# @RequestParam：聽懂客人問的話
 
 <!--
-了解了 @RequestParam，現在來看 @RequestBody。
+先看第一個，@RequestParam。
 -->
 
 ---
 
-# @RequestBody 的定義
+# 客人問了什麼？
 
-| 項目 | 說明 |
-| --- | --- |
-| 用途 | 接收 Request Body 中的 JSON 資料 |
-| 使用情境 | 搭配 POST 請求（資料放在 Body） |
-| 資料格式 | JSON 格式，需要設定 `Content-Type: application/json` |
-| 接收方式 | 建立一個對應的 Java 類別來接住 JSON |
+<UrlParts parts="localhost:8080/price;;網址本體;;問價格的窗口;;客人來到「問價格」的窗口，Path 是 /price||?;;問號;;參數開始;;問號後面是參數，也就是客人問的內容||name;;key;;問的項目;;key 是 name：客人說的是「飲料名稱」||=;;等號;; ;;等號把 key 和 value 連起來||milktea;;value;;問的內容;;value 是 milktea：他問的是珍珠奶茶" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 店員要做的事：從這句話裡，把 <code>name</code> 的值 <code>milktea</code> 聽出來。
+</div>
+
+</v-click>
 
 <!--
-@RequestBody 用來接收 POST 請求的 Request Body 裡的 JSON 資料。
+小明走到櫃台問：珍珠奶茶多少錢？寫成網址就是這樣。
 
-和 @RequestParam 不同的是，@RequestBody 不是接收一個個的值，而是接收整個 JSON 物件。
-因此我們需要建立一個對應的 Java 類別，讓 Spring Boot 自動把 JSON 轉換成這個類別的物件。
+（下一步）前面是網址本體，Path 是 /price，代表問價格的窗口。
 
-這個概念和第十六章我們讓 Java 物件自動轉成 JSON 相反——現在是 JSON 轉成 Java 物件。
+（下一步）問號後面是參數，也就是客人問的內容。
+
+（下一步）key 是 name，代表客人說的是飲料名稱。
+
+（下一步）等號把 key 和 value 連起來。
+
+（下一步）value 是 milktea，他問的是珍珠奶茶。
+
+（下一步）店員要做的事，就是從這句話裡，把 name 的值 milktea 聽出來。
 -->
 
 ---
 
-# 建立對應的 Java 類別
+# @RequestParam 的寫法
 
-建立一個 `Student.java`，欄位和 JSON 的 key **名稱與類型**必須一一對應：
+<CodeSteps>
 
-```java
-public class Student {
-    private Integer id;
-    private String name;
-    // 需要加上 Getter 和 Setter（參考第十六章）
+```java {1|2|2|3-4|all}
+@RequestMapping("/price")
+public String price(@RequestParam("name") String name) {
+    System.out.println("客人問的是：" + name);
+    return name + " 的價格是 50 元";
 }
 ```
 
-| JSON key | Java 欄位 | 類型 |
-| --- | --- | --- |
-| `"id"` | `id` | `Integer` |
-| `"name"` | `name` | `String` |
+- Path 是 `/price`：問價格的窗口
+- `@RequestParam("name")`：到 URL 裡找 key 叫 `name` 的參數
+- `String name`：把找到的值，放進這個叫 `name` 的變數
+- 接下來就可以在方法裡使用它
+- 請求 `/price?name=milktea`，會回傳「milktea 的價格是 50 元」
+
+</CodeSteps>
 
 <!--
-使用 @RequestBody 之前，需要先建立一個對應的 Java 類別。
+程式這樣寫。
 
-這個類別的欄位名稱和類型，必須和前端傳來的 JSON 的 key 完全對應。
-例如 JSON 是 {"id": 123, "name": "Judy"}，那 Java 類別就要有 Integer id 和 String name 兩個欄位。
+（第一步）Path 是 /price，問價格的窗口。
 
-另外記得加上 Getter 和 Setter，Spring Boot 的 Jackson 需要透過 Setter 把 JSON 的值寫進物件的欄位裡。
+（下一步）重點在方法的括號裡。@RequestParam("name") 的意思是：到 URL 裡找一個 key 叫 name 的參數。
+
+（下一步）後面的 String name，是把找到的值放進一個叫 name 的變數。型別是 String，因為飲料名稱是文字。
+
+（下一步）接下來，方法裡就可以使用這個變數了。這裡我們把它印出來，再組成一句話回傳。
+
+（下一步）所以請求 /price?name=milktea，就會回傳「milktea 的價格是 50 元」。
 -->
 
 ---
 
-# @RequestBody 基本用法
+# 試試看不同的問法
 
-當前端發送 POST 請求並帶 JSON Body 時，用 `@RequestBody` 接住整個 JSON 物件：
+<v-clicks>
+
+- `/price?name=milktea` → **milktea 的價格是 50 元**
+- `/price?name=greentea` → **greentea 的價格是 50 元**
+- `/price`（什麼都沒帶） → **400 Bad Request**
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ <code>@RequestParam</code> 預設是<b>必填</b>的。客人沒說要問哪一杯，店員沒辦法回答，就回 400。
+</div>
+
+</v-click>
+
+<!--
+用 Postman 試試看不同的問法。
+
+（下一步）問 milktea，回傳 milktea 的價格。
+
+（下一步）問 greentea，回傳 greentea 的價格。店員真的有聽進去客人問的是什麼。
+
+（下一步）如果只請求 /price，什麼參數都沒帶呢？會得到 400 Bad Request。
+
+（下一步）因為 @RequestParam 預設是必填的。客人只說「多少錢」，沒說要問哪一杯，店員沒辦法回答。400 是 4 開頭，代表是前端這邊少給了東西。
+-->
+
+---
+
+# 括號裡的名稱，對應的是 URL 的 key
 
 ```java
-@RestController
-public class MyController {
-
-    @RequestMapping("/test2")
-    public String test2(@RequestBody Student student) {
-        System.out.println("id: " + student.getId());
-        System.out.println("name: " + student.getName());
-        return "請求成功";
-    }
-}
+// URL：/price?drinkName=milktea
+public String price(@RequestParam("drinkName") String name) {
 ```
 
+<v-clicks>
+
+- 括號裡的 `"drinkName"`：決定去 URL 找**哪一個 key**
+- 後面的變數 `name`：只是方法裡用的名字，可以不一樣
+- 建議兩個取一樣的名字，比較好讀
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 括號裡的名稱請<b>每次都寫</b>。Spring Boot 3.2 之後，省略它在某些環境下會出錯。
+</div>
+
+</v-click>
+
 <!--
-看這個例子。在方法參數前加上 @RequestBody，Spring Boot 就會自動把 Request Body 的 JSON 轉成 Student 物件。
+補充一個細節。
 
-我們可以直接用 student.getId() 和 student.getName() 讀取值。
+（下一步）@RequestParam 括號裡的名稱，決定去 URL 找哪一個 key。這個例子裡，URL 的 key 是 drinkName。
 
-完全不需要手動解析 JSON 字串，Spring Boot 的 Jackson 全部幫我們處理好了。
+（下一步）後面的變數 name，只是方法裡面用的名字，可以跟 key 不一樣。
 
-⚠️ 注意方法參數是 Student student，不是 Integer 或 String。@RequestBody 是對應整個 JSON 物件，所以需要一個類別來承接。
+（下一步）不過建議兩個取一樣的名字，讀程式的人比較不會搞混。
+
+（下一步）另外，括號裡的名稱請每次都寫。Spring Boot 3.2 之後，如果省略它，在某些環境下會出錯。養成習慣寫清楚最安全。
 -->
 
 ---
 
-# @RequestBody 執行結果
+# 小測驗：少帶了參數
 
-前端發送 `POST http://localhost:8080/test2`，Body 為：
+<Poll question="方法寫了 @RequestParam(&quot;name&quot;)，但前端只請求 /price，沒有帶 name。會發生什麼事？" options="name 變成空白，照常執行|回應 400 Bad Request|回應 404 Not Found|Spring Boot 當掉" answer="2" />
+
+<!--
+來一題確認一下。
+
+方法寫了 @RequestParam("name")，但前端只請求 /price，沒有帶 name。會發生什麼事？
+
+（等大家作答）
+
+（下一步）答案是 400 Bad Request。
+
+不是 404。路徑 /price 是存在的，只是前端少給了必填的資料。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 3
+# @RequestBody：讀懂整張點單
+
+<!--
+接著看第二個，@RequestBody。
+-->
+
+---
+
+# 客人交出一整張單子
+
+前端用 POST，把這張 JSON 放在 Request Body 裡：
 
 ```json
 {
-    "id": 123,
-    "name": "Judy"
+    "id": 7,
+    "name": "珍珠奶茶"
 }
 ```
 
-| 後端讀取到的值 | Console 輸出 |
-| --- | --- |
-| `student.getId()` → `123` | `id: 123` |
-| `student.getName()` → `"Judy"` | `name: Judy` |
+<v-clicks>
+
+- 資料不只一項，不適合一個一個用 `@RequestParam` 去聽
+- 店員需要一個「**跟單子長得一樣的表格**」，把內容整張抄下來
+
+</v-clicks>
 
 <!--
-執行結果：後端成功讀到了前端傳來的 id 和 name。
+這次客人不是用問的，而是交出一整張單子。前端用 POST，把這張 JSON 放在 Request Body 裡。
 
-流程是這樣的：前端發送 POST 請求，把 JSON 放在 Body 裡；
-Spring Boot 的 Jackson 把 JSON 解析成 Student 物件；
-我們用 getter 方法取值，印在 console 上。
+（下一步）單子上的資料不只一項。真實的點單可能有十幾項，不適合一個一個用 @RequestParam 去聽。
 
-到這裡，我們已經能做到雙向的 JSON 處理了——第十六章是 Java 物件轉 JSON 送出，這章是 JSON 接進來轉成 Java 物件。
+（下一步）所以店員需要一個跟單子長得一樣的表格，把內容整張抄下來。
 -->
 
 ---
 
-# 章節總結
+# 先準備一個「跟單子一樣」的類別
 
-| 重點 | 說明 |
-| --- | --- |
-| 四個取得參數的 Annotation | `@RequestParam`、`@RequestBody`、`@RequestHeader`、`@PathVariable` |
-| `@RequestParam` | 接 URL Query String，用 `@RequestParam("xxx")` 明確指定 key，預設必填 |
-| `@RequestBody` | 接 Request Body 的 JSON，需建立對應 Java 類別 |
-| 為何要明確指定名稱 | Spring Boot 3.2 起省略名稱需依賴 `-parameters` 編譯參數，容易踩雷 |
-| 下一步 | 學習 `@RequestHeader` 和 `@PathVariable` |
+<CodeSteps>
+
+```java {1-2|3|4|all}
+@Data
+public class Drink {
+    private Integer id;
+    private String name;
+}
+```
+
+- 這就是第十六章建立的 `Drink`，不用重寫
+- JSON 的 `"id"` 會填進變數 `id`
+- JSON 的 `"name"` 會填進變數 `name`
+- **名稱要一模一樣**，Spring Boot 才知道哪一項填到哪一格
+
+</CodeSteps>
 
 <!--
-今天的重點總結。
+這個表格，就是一個 Java 類別。
 
-第一，Spring Boot 提供四個取得請求參數的 Annotation，分別對應不同的來源。
-第二，@RequestParam 接 URL 後面的 Query String，記得在括號裡明確指定 key 的名稱。
-第三，@RequestBody 接 Request Body 的 JSON，需要建立對應的 Java 類別。
-第四，明確指定名稱是為了避開 Spring Boot 3.2 之後對 -parameters 編譯參數的依賴。
-第五，下一章我們繼續學 @RequestHeader 和 @PathVariable。
+（第一步）其實第十六章已經建立過了，就是 Drink，不用重寫。
+
+（下一步）JSON 裡的 id，會填進變數 id。
+
+（下一步）JSON 裡的 name，會填進變數 name。
+
+（下一步）重點是名稱要一模一樣。Spring Boot 就是靠名稱，來決定哪一項資料填到哪一格。
+-->
+
+---
+
+# @RequestBody 的寫法
+
+<CodeSteps>
+
+```java {1|2|3-4|5|all}
+@RequestMapping("/drink/new")
+public String newDrink(@RequestBody Drink drink) {
+    System.out.println("編號：" + drink.getId());
+    System.out.println("名稱：" + drink.getName());
+    return "收到一杯新飲料：" + drink.getName();
+}
+```
+
+- Path 是 `/drink/new`
+- `@RequestBody Drink drink`：把 Body 裡的 JSON，整張填進一個 `Drink` 物件
+- 用 Getter 把每一項拿出來用
+- 回傳一句話，讓前端知道收到了
+- 第十六章是「物件 → JSON」，這裡是反過來「JSON → 物件」
+
+</CodeSteps>
+
+<!--
+程式這樣寫。
+
+（第一步）Path 是 /drink/new。
+
+（下一步）方法的括號裡寫 @RequestBody Drink drink。意思是：把 Request Body 裡的 JSON，整張填進一個 Drink 物件。
+
+（下一步）填好之後，就可以用 Getter 把每一項拿出來用。
+
+（下一步）最後回傳一句話，讓前端知道我們收到了。
+
+（下一步）還記得第十六章的標籤機嗎？那時候是把物件變成 JSON。這裡是反過來，把 JSON 變回物件。做這件事的同樣是 Jackson。
+-->
+
+---
+
+# 執行結果
+
+用 Postman 發送 `POST http://localhost:8080/drink/new`，Body 選 raw + JSON：
+
+```json
+{
+    "id": 7,
+    "name": "珍珠奶茶"
+}
+```
+
+<v-clicks>
+
+- Postman 收到回應：**收到一杯新飲料：珍珠奶茶**
+- Eclipse 的 Console 印出：`編號：7`、`名稱：珍珠奶茶`
+
+</v-clicks>
+
+<!--
+用 Postman 測試。Method 選 POST，Body 選 raw 和 JSON，填入這張單子。
+
+（下一步）Postman 會收到回應：收到一杯新飲料，珍珠奶茶。
+
+（下一步）回到 Eclipse 看 Console，會看到印出編號 7、名稱珍珠奶茶。代表單子上的兩項資料，都正確填進 Drink 物件了。
+-->
+
+---
+
+# 小測驗：該用哪一個？
+
+<Poll question="前端用 POST 送來一張 JSON，裡面有飲料名稱、甜度、冰塊、加料。後端要用哪一個來接？" options="@RequestParam|@RequestBody|@RequestMapping" answer="2" />
+
+<!--
+再來一題。
+
+前端用 POST 送來一張 JSON，裡面有飲料名稱、甜度、冰塊、加料。後端要用哪一個來接？
+
+（等大家作答）
+
+（下一步）答案是 @RequestBody。
+
+資料放在 Request Body 裡，而且是一整張 JSON，就用 @RequestBody。
 -->
 
 ---
@@ -365,129 +442,170 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # 實作練習
-
-## 會員系統：搜尋與註冊
+# 搜尋飲料、建立訂單
 
 <!--
-學完了 @RequestParam 和 @RequestBody，我們用一個會員系統的情境來練習。
+換大家動手做。今天有兩題。
 -->
 
 ---
 
-# 實作題目（1/2）：搜尋會員 API
+# 題目（1/2）：搜尋飲料
 
-請實作一個簡單的會員系統，包含兩個 API。第一個是搜尋會員：
+<v-clicks>
 
-| 項目 | 內容 |
-| --- | --- |
-| 請求 | `GET /members/search?keyword=judy&limit=5` |
-| 要求 | 用 `@RequestParam` 接住 `keyword`（字串）和 `limit`（整數） |
-| 回傳 | 字串 `"搜尋關鍵字: judy, 最多回傳 5 筆"` |
+- 請求：`GET /drinks/search?keyword=tea&limit=5`
+- 用 `@RequestParam` 接住 `keyword`（文字）和 `limit`（整數）
+- 回傳文字：「搜尋關鍵字: tea, 最多回傳 5 筆」
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>提示：</b> 這次要一次接住<b>兩個</b>參數，想想 @RequestParam 該怎麼寫？
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 提示：這次要一次接住<b>兩個</b>參數。方法的括號裡，可以寫不只一個 <code>@RequestParam</code>。
 </div>
 
+</v-click>
+
 <!--
-這個題目模擬真實的會員系統場景，共有兩個 API。
+第一題，搜尋飲料。
 
-第一個 API 是搜尋，參數放在 URL——注意這次要一次接兩個參數：keyword 和 limit，練習 @RequestParam 同時使用多次。
+（下一步）請求是 GET /drinks/search，後面帶兩個參數：keyword 和 limit。
 
-下一頁是第二個 API 的需求。
+（下一步）請用 @RequestParam 接住它們。keyword 是文字，limit 是整數。
+
+（下一步）回傳一句話：搜尋關鍵字是什麼，最多回傳幾筆。
+
+（下一步）提示：這次要一次接住兩個參數。方法的括號裡，可以寫不只一個 @RequestParam，中間用逗號隔開。
 -->
 
 ---
 
-# 實作題目（2/2）：註冊會員 API
+# 題目（2/2）：建立訂單
 
-第二個 API 是註冊會員：
+<v-clicks>
 
-| 項目 | 內容 |
-| --- | --- |
-| 請求 | `POST /members/register`，Body 為 `{"email": "judy@gmail.com", "password": "abc123"}` |
-| 要求 | 建立 `Member` 類別（用 Lombok `@Data`），用 `@RequestBody` 接住 |
-| 回傳 | 字串 `"註冊成功, email: judy@gmail.com"` |
+- 請求：`POST /orders/create`
+- Body：`{"drinkName": "珍珠奶茶", "price": 50.0}`
+- 用 `@RequestBody` 搭配第十六章的 `Order` 類別來接
+- 回傳文字：「訂單成立: 珍珠奶茶」
 
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>想一想：</b> 為什麼註冊（帳號密碼）要用 POST 放在 Body，而不是用 GET 放在 URL？
-</div>
+</v-clicks>
 
 <!--
-第二個 API 是註冊，帳號密碼是敏感資訊，所以用 POST 放在 Body 裡，正好呼應上一章「密碼不要放 URL」的觀念。
+第二題，建立訂單。
 
-記得 Member 類別要用 Lombok 的 @Data，別再手寫 Getter/Setter 了。
-大家先動手做，再看下一頁的參考解答。
+（下一步）請求是 POST /orders/create。
+
+（下一步）Body 是一張 JSON，有飲料名稱和價格。
+
+（下一步）請用 @RequestBody，搭配第十六章練習時建立的 Order 類別來接。
+
+（下一步）回傳一句話：訂單成立，加上飲料名稱。
+
+請先暫停，兩題都自己寫寫看。
 -->
 
 ---
 
-# 參考解答（1/2）：搜尋會員
-
-一個方法可以同時使用多個 `@RequestParam`：
+# 參考解答（1/2）：搜尋飲料
 
 ```java
-@RestController
-public class MemberController {
-
-    @RequestMapping("/members/search")
-    public String search(@RequestParam("keyword") String keyword,
-                         @RequestParam("limit") Integer limit) {
-        return "搜尋關鍵字: " + keyword + ", 最多回傳 " + limit + " 筆";
-    }
+@RequestMapping("/drinks/search")
+public String search(@RequestParam("keyword") String keyword,
+                     @RequestParam("limit") Integer limit) {
+    return "搜尋關鍵字: " + keyword + ", 最多回傳 " + limit + " 筆";
 }
 ```
 
-| 測試 | 結果 |
-| --- | --- |
-| `GET /members/search?keyword=judy&limit=5` | `搜尋關鍵字: judy, 最多回傳 5 筆` |
-| `GET /members/search?keyword=judy`（少了 limit） | `400 Bad Request` |
+<v-clicks>
+
+- `/drinks/search?keyword=tea&limit=5` → **搜尋關鍵字: tea, 最多回傳 5 筆**
+- `/drinks/search?keyword=tea`（少了 limit） → **400 Bad Request**
+
+</v-clicks>
 
 <!--
-第一個 API 的解答。
+第一題的解答。把這個方法加進 DrinkController。
 
-重點是：一個方法可以同時放多個 @RequestParam，每個參數各自對應 URL 裡的一個 key。
-keyword 對應 ?keyword=judy，limit 對應 &limit=5。
+括號裡寫了兩個 @RequestParam，一個接 keyword，一個接 limit，中間用逗號隔開。limit 的型別是 Integer，Spring Boot 會自動把網址上的 5 轉成數字。
 
-注意第二列的測試：因為 @RequestParam 預設必填，少帶了 limit 就會收到 400 Bad Request。
+（下一步）兩個參數都帶，就會得到正確的回應。
+
+（下一步）少帶一個 limit，就會得到 400。因為兩個都是必填的。
 -->
 
 ---
 
-# 參考解答（2/2）：註冊會員
-
-**Step 1：建立 `Member` 類別**
+# 參考解答（2/2）：建立訂單
 
 ```java
-import lombok.Data;
-
-@Data
-public class Member {
-    private String email;
-    private String password;
+@RequestMapping("/orders/create")
+public String create(@RequestBody Order order) {
+    return "訂單成立: " + order.getDrinkName();
 }
 ```
 
-**Step 2：用 `@RequestBody` 接住 JSON**
+<v-click>
 
-```java
-@RequestMapping("/members/register")
-public String register(@RequestBody Member member) {
-    return "註冊成功, email: " + member.getEmail();
-}
-```
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 測試時記得 Method 選 <code>POST</code>、Body 填入 JSON：<code>{"email": "judy@gmail.com", "password": "abc123"}</code>。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 JSON 裡沒有給 <code>id</code> 和 <code>paid</code> 也沒關係，沒給的那幾格會是空的（<code>null</code>）。
 </div>
 
+</v-click>
+
 <!--
-第二個 API 的解答。
+第二題的解答。把這個方法加進 OrderController。
 
-先建立 Member 類別，欄位名稱 email、password 必須和 JSON 的 key 完全一致。用 @Data 讓 Lombok 生成 Getter/Setter，Jackson 才能透過 Setter 把 JSON 的值寫進欄位。
+@RequestBody Order order，把整張 JSON 填進 Order 物件，再用 getDrinkName 把飲料名稱拿出來。
 
-Controller 方法用 @RequestBody Member member 接住整個 JSON 物件，再用 getEmail() 取值組出回應字串。
+（下一步）你可能注意到，Order 有四個變數，但這次的 JSON 只給了兩項。沒有關係，沒給的那幾格會是空的，在 Java 裡叫做 null。
+-->
 
-測試時記得：Method 選 POST，Body 填 JSON。如果收到 400 或 415，先檢查 Content-Type 是不是 application/json。
+---
+
+# 複習：飲料店對照表
+
+<Pairs left="飲料店" right="程式" rows="what,聽懂客人問的話=code,@RequestParam：讀 URL 的參數|no,客人沒說要問哪一杯=code,少了必填參數：400 Bad Request|form,把整張點單抄進表格=code,@RequestBody：JSON 變成 Java 物件|doc,跟單子長得一樣的表格=code,變數名稱和 JSON 的 key 一樣的類別" />
+
+<!--
+我們用一張圖複習今天的內容。
+
+（下一步）聽懂客人問的話，是 @RequestParam，讀 URL 的參數。
+
+（下一步）客人沒說要問哪一杯，就是少了必填參數，回 400 Bad Request。
+
+（下一步）把整張點單抄進表格，是 @RequestBody，把 JSON 變成 Java 物件。
+
+（下一步）跟單子長得一樣的表格，就是變數名稱和 JSON 的 key 一樣的類別。
+-->
+
+---
+
+# 章節總結
+
+<v-clicks>
+
+- **四個讀資料的工具**：`@RequestParam`、`@RequestBody`、`@RequestHeader`、`@PathVariable`
+- **`@RequestParam("xxx")`**：讀 URL 後面的參數，預設必填，沒帶會回 400
+- **`@RequestBody`**：讀 Request Body 的 JSON，自動填進對應的 Java 物件
+- **名稱要對上**：類別的變數名稱，要和 JSON 的 key 一樣
+
+</v-clicks>
+
+<v-click>
+
+下一章我們會學另外兩個：`@RequestHeader` 和 `@PathVariable`。
+
+</v-click>
+
+<!--
+最後整理今天的重點。
+
+（依序按下一步）讀資料的工具有四個。@RequestParam 讀 URL 後面的參數，預設必填。@RequestBody 讀 Request Body 的 JSON，自動填進 Java 物件。類別的變數名稱，要和 JSON 的 key 一樣。
+
+（最後一步）下一章，我們會學另外兩個：會員卡和取餐號碼，也就是 @RequestHeader 和 @PathVariable。
 -->
 
 ---
@@ -496,6 +614,12 @@ layout: end
 
 # Q & A
 
+有任何問題嗎？
+
 <!--
-今天的內容就到這裡。大家有任何問題嗎？
+今天的內容到這邊。
+
+記得：用問的，就用 @RequestParam 去聽；交單子，就用 @RequestBody 去讀。
+
+有任何問題歡迎提出來。
 -->
