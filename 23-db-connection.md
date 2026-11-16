@@ -235,7 +235,7 @@ id 那一列要勾兩個選項。PK 是 Primary Key，意思是這個欄位用�
 
 | 欄位 | 資料型態 | 設定 | 說明 |
 | --- | --- | --- | --- |
-| `id` | `INT` | PK、AI | 學號：自動編號，不用自己填 |
+| `id` | `INT` | PK、AI | 學號：可以不填，資料庫會自動編號 |
 | `name` | `VARCHAR(256)` | | 學生姓名 |
 
 <img src="/screenshots/ch23-workbench-table-result.png" class="rounded border mt-4 mx-auto" style="max-height: 250px;" />
@@ -247,7 +247,7 @@ id 是整數，設定了 PK 和 AI，所以是自動編號。
 
 name 是文字，最多 256 個字，用來放學生姓名。
 
-因為 id 會自動編號，之後新增學生的時候，只要給 name 就可以了。
+因為 id 設定了自動編號，新增學生的時候就算不給 id，資料庫也會自動給一個號碼。
 -->
 
 ---

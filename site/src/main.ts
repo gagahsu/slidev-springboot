@@ -24,6 +24,7 @@ import UrlParts from './anim/UrlParts.vue'
 import Dispatch from './anim/Dispatch.vue'
 import CupLabel from './anim/CupLabel.vue'
 import FileRoom from './anim/FileRoom.vue'
+import SqlSlip from './anim/SqlSlip.vue'
 import AskOrOrder from './anim/AskOrOrder.vue'
 import AspectTimeline from './anim/AspectTimeline.vue'
 import Flow from './anim/Flow.vue'
@@ -74,6 +75,7 @@ createApp(App)
   .component('Dispatch', Dispatch)
   .component('CupLabel', CupLabel)
   .component('FileRoom', FileRoom)
+  .component('SqlSlip', SqlSlip)
   .component('AskOrOrder', AskOrOrder)
   .component('AspectTimeline', AspectTimeline)
   .mount('#app')
