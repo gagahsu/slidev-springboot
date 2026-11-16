@@ -243,12 +243,9 @@ class: flex flex-col justify-center items-center text-center
 
 ---
 
-# 承辦人員和組長
+# 承辦人員：StudentDao
 
-<CodeSteps>
-
-```java {1-12|14-25|all}
-// StudentDao：加三個方法
+```java
 public List<Student> getStudentList() {
     return studentMapper.findAll();
 }
@@ -260,8 +257,17 @@ public Student getStudentById(Integer studentId) {
 public Student getStudentByIdAndName(Integer id, String name) {
     return studentMapper.findByIdAndName(id, name);
 }
+```
 
-// StudentService：加三個方法
+<!--
+先看承辦人員。在 StudentDao 加三個方法，各自呼叫 StudentMapper 的三個查詢方法。
+-->
+
+---
+
+# 組長：StudentService
+
+```java
 public List<Student> getStudentList() {
     return studentDao.getStudentList();
 }
@@ -275,17 +281,8 @@ public Student getStudentByIdAndName(Integer studentId, String name) {
 }
 ```
 
-- 承辦人員（Dao）：呼叫 `StudentMapper` 的三個查詢方法
-- 組長（Service）：轉交給承辦人員，把結果 `return` 回來
-
-</CodeSteps>
-
 <!--
-承辦人員和組長各加三個方法。
-
-（下一步）上半部是 StudentDao，呼叫 StudentMapper 的三個查詢方法。
-
-（下一步）下半部是 StudentService，轉交給承辦人員，再把結果 return 回來。
+再看組長。在 StudentService 加三個方法，轉交給承辦人員，再把結果 return 回來。
 
 這些結構前面寫過很多次了。
 -->

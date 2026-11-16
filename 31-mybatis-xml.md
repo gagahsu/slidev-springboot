@@ -46,34 +46,36 @@ style: |
 </div>
 
 <!--
-大家好，上兩章我們學了 MyBatis 的 Annotation 寫法——@Insert、@Update、@Delete、@Select。
+大家好，歡迎來到第三十一章。
 
-但在實務上，SQL 有時候會很長、很複雜，例如「有條件才加 WHERE 篩選」這種動態查詢。
-如果 SQL 很長，直接寫在 Annotation 字串裡會難以閱讀和維護。
+前兩章，我們把 MyBatis 的申請單直接貼在方法上面。簡單的 SQL 這樣寫很方便。
 
-今天要介紹 MyBatis 的另一種寫法：XML Mapper。
-把 SQL 寫在獨立的 XML 檔案裡，配合動態 SQL 語法（`<if>`、`<where>`、`<foreach>`），讓複雜查詢變得清晰易維護。
+但是申請單越寫越多、越寫越長之後，就會遇到問題。今天學另一種放法：把申請單收進一本範本夾，也就是 XML Mapper。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要搞懂的四件事
 
-- **為什麼需要 XML Mapper？** — Annotation 的限制、XML 的優勢
-- **設定 XML Mapper** — application.properties、mapper.xml 結構說明
-- **基本 CRUD in XML** — `<insert>`、`<update>`、`<delete>`、`<select>`
-- **resultMap** — 解決資料庫欄位和 Java 屬性名稱不一致的問題
-- **動態 SQL** — `<if>`、`<where>`、`<set>`、`<foreach>` IN 查詢、`<foreach>` 批次 INSERT
-- **Annotation vs XML 選擇建議** — 各自適用場景
-- **串接三層式架構** — CUD／查詢完全不用改；動態 SQL 補一個搜尋 API，Postman 測試驗證
-- **章節總結** — XML Mapper 核心觀念整理
+<v-clicks>
+
+- **為什麼要範本夾？** 貼在方法上的寫法有它做不到的事
+- **範本夾怎麼做？** 一個 XML 檔，和介面用名字對起來
+- **會自己變化的申請單**：動態 SQL，`<if>`、`<where>`、`<set>`、`<foreach>`
+- **換了放法，哪裡要改？** 這次連 Dao 都不用改
+
+</v-clicks>
 
 <!--
-今天的重點是 XML Mapper 的寫法，以及動態 SQL 這個非常實用的功能。
+今天要搞懂四件事。
 
-學完之後，你就能寫出業界真實專案中常見的複雜查詢，不再受限於 Annotation 字串的長度和可讀性。
+（下一步）第一，為什麼要範本夾。貼在方法上的寫法，有它做不到的事。
+
+（下一步）第二，範本夾怎麼做。它是一個 XML 檔，和介面用名字對起來。
+
+（下一步）第三，會自己變化的申請單，叫做動態 SQL。這是今天的重點。
+
+（下一步）第四，換了放法之後，程式哪裡要改。這次連 Dao 都不用改。
 -->
 
 ---
@@ -82,55 +84,70 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-
-## 為什麼需要 XML Mapper？
+# 為什麼需要範本夾？
 
 <!--
-先來理解：Annotation 有什麼限制，XML Mapper 解決了什麼問題。
+先看貼在方法上的寫法，會遇到什麼問題。
 -->
 
 ---
 
-# Annotation 寫法的限制
+# 貼在方法上的申請單，有三個麻煩
 
-| 情境 | Annotation 寫法的問題 |
-| --- | --- |
-| SQL 很長（20+ 行） | 字串很長，難以閱讀、排版混亂 |
-| 動態條件（有時候才加 WHERE） | Annotation 無法做到，需要在 Java 程式碼拼接 SQL |
-| 複雜的欄位映射 | 欄位名稱不一致時，Annotation 處理較麻煩 |
-| SQL 需要集中管理 | SQL 散落在各個 @Mapper 方法上，不易統一審查 |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>XML Mapper 的優勢：</b> SQL 寫在獨立 XML 檔案中，支援動態 SQL 語法，適合管理複雜查詢。
+- **太長**：SQL 一長，要用加號把好幾段字串接起來，很難讀
+- **不會變化**：老師查同學，有時只給名字、有時只給編號。一張寫死的申請單應付不了
+- **太分散**：SQL 散在每個方法上面，想一次檢查全部很不方便
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <b>XML Mapper</b>：把 SQL 從 Java 檔搬出來，集中寫在一個 XML 檔裡。可以自由換行，還能寫出「會依情況變化」的 SQL。
 </div>
 
+</v-click>
+
 <!--
-Annotation 寫法非常適合簡單的 CRUD——SQL 短、邏輯直接、一目了然。
+貼在方法上的申請單，有三個麻煩。
 
-但當 SQL 開始變複雜，例如多個 JOIN、多個動態條件（有帶參數才過濾、沒帶就查全部），Annotation 字串就會變得很難維護。
+（下一步）第一，太長。SQL 一長，在 Java 裡要用加號把好幾段字串接起來，很難讀。
 
-XML Mapper 把 SQL 搬到獨立的 .xml 檔案裡，可以好好排版，還支援 MyBatis 內建的動態 SQL 語法，讓複雜查詢清晰得多。
+（下一步）第二，不會變化。舉個例子：老師來查同學，有時候只給名字，有時候只給編號，有時候兩個都給。一張寫死的申請單應付不了這麼多種情況。
+
+（下一步）第三，太分散。SQL 散在每個方法上面，想一次檢查全部很不方便。
+
+（下一步）所以 MyBatis 提供另一種放法，叫 XML Mapper。把 SQL 從 Java 檔搬出來，集中寫在一個 XML 檔裡。在那裡可以自由換行，還能寫出會依情況變化的 SQL。
 -->
 
 ---
 
-# Annotation vs XML Mapper 比較
+# 把故事對應到程式
 
-| 比較項目 | Annotation 寫法 | XML Mapper |
-| --- | --- | --- |
-| SQL 位置 | 直接在 @Mapper 介面方法上 | 獨立 XML 檔案 |
-| 適合場景 | 簡單的 CRUD | 複雜 SQL、動態條件 |
-| 可讀性（長 SQL） | 差（字串排版困難） | 好（XML 可自由排版） |
-| 動態 SQL | 不支援 | 支援（`<if>`、`<foreach>` 等） |
-| 同一個 @Mapper | 可以混搭使用 | ✓ |
+<Pairs left="教務處" right="程式" rows="form,申請單貼在方法上=code,Annotation 寫法：@Select、@Insert…|book,申請單收進一本範本夾=doc,XML Mapper：StudentMapper.xml|what,範本夾封面寫「這是誰的」=code,namespace：介面完整的名稱|doc,每張範本的編號=code,id：和介面的方法名稱一樣" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 兩種放法可以混用：同一個介面裡，簡單的貼在方法上，複雜的收進範本夾。
+</div>
+
+</v-click>
 
 <!--
-重要：Annotation 和 XML 可以在同一個 @Mapper 介面裡混搭使用。
+把故事對應到程式。
 
-簡單的方法用 @Select / @Insert Annotation，複雜的查詢改用 XML。
-不需要把所有 SQL 都搬到 XML，選擇最適合的方式即可。
+（下一步）申請單貼在方法上，是前兩章的 Annotation 寫法。
 
-業界的實際專案通常是混搭的：基本 CRUD 用 Annotation，複雜的搜尋查詢用 XML。
+（下一步）申請單收進一本範本夾，是 XML Mapper。我們會建立一個 StudentMapper.xml。
+
+（下一步）範本夾的封面要寫清楚「這是誰的」。對應到 XML 裡的 namespace，寫的是介面完整的名稱。
+
+（下一步）夾子裡每張範本都有編號。對應到 id，要和介面的方法名稱一樣。MyBatis 就是靠這兩個名字，把方法和 SQL 對起來。
+
+（下一步）兩種放法可以混用。同一個介面裡，簡單的貼在方法上，複雜的收進範本夾。只是同一個方法不能兩邊都寫。
 -->
 
 ---
@@ -139,117 +156,203 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-
-## 設定 XML Mapper
+# 做一本範本夾
 
 <!--
-來看怎麼設定 XML Mapper 的環境。
+來動手做。
 -->
 
 ---
 
-# Step 1：application.properties 設定
+# Step 1：告訴 MyBatis 範本夾放在哪
 
-在 `application.properties` 加入 mapper 檔案的位置設定：
+在 `application.properties` 加入：
 
 ```properties
 mybatis.mapper-locations=classpath:mappers/*.xml
 mybatis.configuration.map-underscore-to-camel-case=true
 ```
 
-| 設定 | 說明 |
-| --- | --- |
-| `mapper-locations` | 告訴 MyBatis 去哪裡找 XML mapper 檔案 |
-| `classpath:mappers/*.xml` | 在 `src/main/resources/mappers/` 目錄下的所有 .xml |
-| `map-underscore-to-camel-case` | 自動把 `student_name` 映射到 `studentName`（可選） |
+<v-clicks>
+
+- 第一行：範本夾都放在 `src/main/resources/mappers/` 資料夾，副檔名是 `.xml`
+- 第二行：上一章介紹過，底線的欄位名稱自動對應駝峰的變數名稱
+
+</v-clicks>
 
 <!--
-第一步是設定 MyBatis 要去哪裡找 XML 檔案。
+第一步，告訴 MyBatis 範本夾放在哪。在 application.properties 加入兩行。
 
-`classpath:mappers/*.xml` 表示放在 `src/main/resources/mappers/` 目錄下的所有 XML 檔案都會被讀取。
+（下一步）第一行，mapper-locations。意思是範本夾都放在 src/main/resources 底下的 mappers 資料夾，副檔名是 xml。classpath 可以先理解成 resources 這個資料夾。
 
-`map-underscore-to-camel-case=true` 是一個很方便的設定：資料庫欄位名稱通常用底線（student_name），Java 屬性名稱通常用駝峰（studentName），開啟這個設定，MyBatis 自動幫你轉換，不需要手動寫映射。
-
-建立 `src/main/resources/mappers/` 目錄，把 XML 檔案放進去就好。
+（下一步）第二行上一章介紹過，讓底線的欄位名稱自動對應駝峰的變數名稱。
 -->
 
 ---
 
-# Step 2：在 Eclipse 建立 mapper.xml
+# Step 2：在 Eclipse 建立 XML 檔
 
-| 步驟 | 操作 |
-| --- | --- |
-| 1 | 右鍵 `src/main/resources` → **New → Folder** → 輸入 `mappers` → Finish |
-| 2 | 右鍵 `mappers` 資料夾 → **New → File** |
-| 3 | 檔名輸入 `StudentMapper.xml` → Finish |
-| 4 | 將下一頁模板貼入，`namespace` 改成 `package名稱.StudentMapper`（開啟 `StudentMapper.java` 看第一行 `package`） |
-| 5 | Eclipse 顯示 XML 紅色 error 屬正常，不影響執行（可在 Window → Preferences → XML → XML Files → Validation 關閉驗證） |
+1. 在 `src/main/resources` 上按右鍵 → **New → Folder**，名稱填 `mappers`
+2. 在 `mappers` 資料夾上按右鍵 → **New → File**，檔名填 `StudentMapper.xml`
+3. 把下一頁的內容貼進去
+4. 把 `namespace` 改成你自己的 `package名稱.StudentMapper`
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ Eclipse 可能會在 XML 上顯示紅色的錯誤標記，那是它檢查不到格式定義檔，不影響執行。
+</div>
 
 <!--
-在 Eclipse 建立 XML 檔案的方式：右鍵資料夾 → New → File，直接輸入 .xml 副檔名就好，不需要找 XML 專用精靈。
+第二步，建立 XML 檔。
+
+在 src/main/resources 上按右鍵，New，Folder，名稱填 mappers。
+
+在 mappers 資料夾上按右鍵，New，File，檔名填 StudentMapper.xml。
+
+把下一頁的內容貼進去。
+
+再把 namespace 改成你自己的 package 名稱加上 StudentMapper。package 名稱可以打開 StudentMapper.java，看第一行就知道。
+
+提醒一下，Eclipse 可能會在 XML 上顯示紅色的錯誤標記。那是它檢查不到格式的定義檔，不影響執行，可以不用理它。
 -->
 
 ---
 
-# Step 2：mapper.xml 基本結構
+# 範本夾的基本樣子
 
-```xml
+<CodeSteps>
+
+```xml {1-3|4,8|5-7|all}
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.mapper.StudentMapper">
-
-    <select id="findAll" resultType="com.example.model.Student">
+<mapper namespace="com.example.demo.StudentMapper">
+    <select id="findAll" resultType="com.example.demo.Student">
         SELECT id, name FROM student
     </select>
-
 </mapper>
 ```
 
-| 說明 | 詳情 |
-| --- | --- |
-| `namespace` | @Mapper 介面的完整類別名稱（含 package） |
-| `id` | 必須和 @Mapper 介面的方法名稱完全一致 |
+- 前三行是固定的開頭，照抄就好
+- `<mapper namespace="…">`：封面，寫 `StudentMapper` 介面完整的名稱（包含 package）
+- `<select id="findAll" …>`：一張查詢的範本，`id` 要和方法名稱一樣；中間就是 SQL
+- `resultType`：查回來的每一列，要抄成哪一種資料卡
+
+</CodeSteps>
 
 <!--
-這是 mapper.xml 的基本結構。
+範本夾的基本樣子是這樣。
 
-最重要的是 `namespace`：必須填寫 @Mapper 介面的完整類別名稱（包含 package）。
-MyBatis 用 namespace 把 XML 裡的 SQL 和 @Mapper 介面的方法對應起來。
+（下一步）前三行是固定的開頭，告訴大家這是一個 MyBatis 的 XML 檔。照抄就好。
 
-`<select>` 裡的 `id` 必須和 @Mapper 介面的方法名稱完全一致——例如介面有 `findAll()` 方法，id 就要是 `findAll`。
+（下一步）mapper 這個標籤是封面。namespace 寫 StudentMapper 介面完整的名稱，包含 package。所有的範本都放在 mapper 的開頭和結尾之間。
+
+（下一步）裡面的 select 是一張查詢的範本。id 是 findAll，要和介面裡的方法名稱一模一樣。標籤中間就是 SQL，可以自由換行。
+
+（下一步）resultType 是告訴 MyBatis：查回來的每一列，要抄成哪一種資料卡。這裡也要寫完整的名稱。就算方法回傳的是 List，這裡還是寫 Student。
 -->
 
 ---
 
-# @Mapper 介面和 XML 的對應關係
+# 介面只留下方法
 
-`@Mapper` 介面只寫方法簽名，SQL 在 XML 裡：
+<CodeSteps>
 
-```java
+```java {1-8|10-15|all}
+// 之前：SQL 貼在方法上
 @Mapper
 public interface StudentMapper {
-    List<Student> findAll();
-    Student findById(Integer id);
+    @Insert("INSERT INTO student(id, name) VALUES (#{id}, #{name})")
     int insert(Student student);
+    @Select("SELECT id, name FROM student")
+    List<Student> findAll();
+}
+
+// 現在：SQL 搬到 XML，介面只留方法
+@Mapper
+public interface StudentMapper {
+    int insert(Student student);
+    List<Student> findAll();
 }
 ```
 
-| @Mapper 方法 | XML 中對應的元素 |
-| --- | --- |
-| `findAll()` | `<select id="findAll" ...>` |
-| `findById(Integer id)` | `<select id="findById" ...>` |
-| `insert(Student student)` | `<insert id="insert" ...>` |
+- 之前：每個方法上面都貼著 SQL
+- 現在：把 `@Insert`、`@Select` 這些標註拿掉，SQL 改寫在 XML 裡
+- 方法的名稱、參數、回傳型別**完全沒變**
+
+</CodeSteps>
 
 <!--
-@Mapper 介面和 XML 的分工很清楚：
+SQL 搬到 XML 之後，介面要跟著改。
 
-介面只定義「有哪些操作、參數型別、回傳型別」，不寫任何 SQL。
-XML 裡用對應的 id 寫 SQL。
+（下一步）之前，每個方法上面都貼著 SQL。
 
-MyBatis 在啟動時，把 namespace 指向的介面和 XML 裡的 id 自動配對，完成整個 Mapper 的組裝。
+（下一步）現在，把 @Insert、@Select 這些標註拿掉，SQL 改寫在 XML 裡。介面只留下方法。
 
-如果 id 不對或 namespace 不對，啟動時就會報錯，及早發現問題。
+（下一步）注意，方法的名稱、參數、回傳型別完全沒變。這一點很重要，等一下會用到。
+-->
+
+---
+
+# 四種範本
+
+<CodeSteps>
+
+```xml {1-3|5-7|9-11|13-15|all}
+<insert id="insert" parameterType="com.example.demo.Student">
+    INSERT INTO student(id, name) VALUES (#{id}, #{name})
+</insert>
+
+<update id="update" parameterType="com.example.demo.Student">
+    UPDATE student SET name = #{name} WHERE id = #{id}
+</update>
+
+<delete id="deleteById">
+    DELETE FROM student WHERE id = #{id}
+</delete>
+
+<select id="findById" resultType="com.example.demo.Student">
+    SELECT id, name FROM student WHERE id = #{id}
+</select>
+```
+
+- `<insert>`：`parameterType` 是傳進來的參數型別；空格一樣用 `#{}`
+- `<update>`：寫法相同
+- `<delete>`：參數只是一個編號，`parameterType` 可以不寫
+- `<select>`：要寫 `resultType`
+- SQL 和前兩章一模一樣，只是換了地方放
+
+</CodeSteps>
+
+<!--
+新增、修改、刪除、查詢，各有一種標籤。
+
+（下一步）insert。parameterType 是傳進來的參數型別，這裡是 Student。空格一樣用 #{}。
+
+（下一步）update。寫法相同。
+
+（下一步）delete。參數只是一個編號，parameterType 可以不寫。
+
+（下一步）select。要寫 resultType。
+
+（下一步）你會發現，SQL 和前兩章一模一樣，只是換了地方放。
+-->
+
+---
+
+# 想一想
+
+<Poll question='介面裡的方法是 List&lt;Student&gt; findAll();，XML 裡對應的範本，id 應該寫什麼？' options="StudentMapper|findAll|Student|可以隨便取" answer="2" />
+
+<!--
+確認一下。
+
+介面裡的方法叫 findAll。XML 裡對應的範本，id 應該寫什麼？
+
+（等大家作答）
+
+（下一步）答案是 findAll。
+
+id 要和方法名稱一模一樣。namespace 對介面，id 對方法，MyBatis 靠這兩個名字找到 SQL。
 -->
 
 ---
@@ -258,117 +361,22 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 3
-
-## 基本 CRUD in XML
+# 欄位名稱完全不一樣：resultMap
 
 <!--
-來看四個 CRUD 操作在 XML 裡怎麼寫。
+先插一個小主題。
 -->
 
 ---
 
-# `<insert>` 和 `<delete>`
+# 自己寫一份對照表
 
-```xml
-<insert id="insert" parameterType="com.example.model.Student">
-    INSERT INTO student(id, name) VALUES (#{id}, #{name})
-</insert>
+如果資料表的欄位叫 `s_id`、`s_name`，和變數 `id`、`name` 完全對不上：
 
-<delete id="deleteById">
-    DELETE FROM student WHERE id = #{id}
-</delete>
-```
+<CodeSteps>
 
-| 說明 | 詳情 |
-| --- | --- |
-| `parameterType` | 指定傳入參數的型別（物件時必填，primitive 可省略） |
-| `#{id}`、`#{name}` | 和 Annotation 寫法完全相同，對應物件欄位或方法參數 |
-| `<delete>` 回傳 | 影響行數（int），和 Annotation 相同 |
-
-<!--
-INSERT 和 DELETE 的 XML 寫法和 Annotation 寫法非常相似，#{} 語法完全一樣。
-
-差別只是 SQL 從字串搬到了 XML 元素裡，好處是排版更自由、多行 SQL 更好讀。
-
-`parameterType` 告訴 MyBatis 傳進來的參數型別，MyBatis 才知道 #{id} 要從哪個類別的哪個 getter 取值。
--->
-
----
-
-# `<update>` 和 `<select>`
-
-```xml
-<update id="update" parameterType="com.example.model.Student">
-    UPDATE student SET name = #{name} WHERE id = #{id}
-</update>
-
-<select id="findById" resultType="com.example.model.Student">
-    SELECT id, name FROM student WHERE id = #{id}
-</select>
-```
-
-| 說明 | 詳情 |
-| --- | --- |
-| `<update>` | UPDATE SQL，回傳影響行數（int） |
-| `<select>` 的 `resultType` | 查詢結果映射的 Java 類別 |
-| 回傳 `List` 時 | `resultType` 仍填元素型別（MyBatis 自動包成 List） |
-
-<!--
-UPDATE 和 SELECT 的寫法和 INSERT/DELETE 一樣的模式。
-
-特別注意 `<select>` 的 `resultType`：當回傳的是 `List<Student>` 時，resultType 只需要填 `Student` 的類別名，不需要寫 `List`，MyBatis 根據 @Mapper 介面的回傳型別自動判斷是要單筆還是清單。
-
-⚠️ UPDATE 和 DELETE 一定要加 WHERE，否則會更新或刪除整張表！
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# Part 4
-
-## resultMap — 解決欄位名稱不一致
-
-<!--
-資料庫欄位和 Java 屬性名稱不一致時，resultType 無法自動映射，這時候需要 resultMap。
--->
-
----
-
-# 什麼時候需要 resultMap？
-
-| 情境 | 說明 |
-| --- | --- |
-| 欄位名稱一致 | `student_id` vs `studentId`（開啟 `map-underscore-to-camel-case` 可自動處理） |
-| 欄位名稱完全不同 | 資料庫 `s_name`，Java 屬性 `name`，無法自動對應，需要 resultMap |
-| 複雜映射 | 一對多、巢狀物件等進階場景 |
-
-```xml
-<resultMap id="studentResultMap" type="com.example.model.Student">
-    <id     column="s_id"   property="id"/>
-    <result column="s_name" property="name"/>
-</resultMap>
-```
-
-<!--
-當資料庫欄位名稱和 Java 物件屬性名稱不同，而且不是單純的底線 vs 駝峰的差別，就需要用 resultMap 手動指定映射關係。
-
-resultMap 的結構：
-- `<id>` 對應主鍵欄位
-- `<result>` 對應其他欄位
-- `column` 是資料庫欄位名稱
-- `property` 是 Java 屬性名稱
-
-定義好 resultMap 之後，在 `<select>` 裡用 `resultMap="studentResultMap"` 取代 `resultType` 就好。
--->
-
----
-
-# 使用 resultMap 取代 resultType
-
-```xml
-<resultMap id="studentResultMap" type="com.example.model.Student">
+```xml {1-4|6-8|all}
+<resultMap id="studentResultMap" type="com.example.demo.Student">
     <id     column="s_id"   property="id"/>
     <result column="s_name" property="name"/>
 </resultMap>
@@ -378,13 +386,24 @@ resultMap 的結構：
 </select>
 ```
 
+- `<resultMap>`：一份對照表。`column` 是欄位名稱，`property` 是變數名稱；主鍵用 `<id>`，其他用 `<result>`
+- 查詢時把 `resultType` 換成 `resultMap`，指向這份對照表
+- 只是底線和駝峰的差別，用上一章那行設定就好，不用寫這個
+
+</CodeSteps>
+
 <!--
-這段 XML 展示了 resultMap 的完整使用方式。
+上一章說過，欄位名稱和變數名稱一樣，MyBatis 才會自動抄。底線和駝峰的差別，可以用一行設定解決。
 
-先在上方定義 resultMap，給它一個 id（例如 studentResultMap）。
-在 `<select>` 裡，用 `resultMap="studentResultMap"` 指定使用這個映射，不用 resultType。
+但是如果名字完全不一樣呢？例如資料表的欄位叫 s_id、s_name，變數叫 id、name。這時候要自己寫一份對照表。
 
-這樣即使資料庫欄位叫 `s_id`，MyBatis 也能正確地把它映射到 Java 物件的 `id` 屬性上。
+（下一步）這份對照表叫 resultMap。type 是要抄成哪一種資料卡。裡面每一行，column 是欄位名稱，property 是變數名稱。主鍵那一行用 id 標籤，其他用 result 標籤。
+
+這其實就是第二十五章的 RowMapper，只是換成用 XML 寫。
+
+（下一步）查詢的時候，把 resultType 換成 resultMap，指向這份對照表的 id。
+
+（下一步）如果只是底線和駝峰的差別，用上一章那行設定就好，不用寫這個。我們的 student 表欄位名稱沒有問題，所以這一頁知道有這個寫法就可以。
 -->
 
 ---
@@ -392,46 +411,60 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# Part 5
-
-## 動態 SQL
+# Part 4
+# 會自己變化的申請單：動態 SQL
 
 <!--
-這是 XML Mapper 最強大的功能——根據條件動態組合 SQL。
+接下來是今天的重點。
 -->
 
 ---
 
-# 什麼是動態 SQL？
+# 一張申請單，四種情況
 
-想像一個學生搜尋功能：前端可以選擇「只填姓名」、「只填 id」或「兩者都填」。
+老師到教務處查同學。名字和編號，他可能**有給，也可能沒給**：
 
-| 情境 | 應該執行的 SQL |
-| --- | --- |
-| 只填姓名 | `SELECT ... WHERE name = ?` |
-| 只填 id | `SELECT ... WHERE id = ?` |
-| 兩者都填 | `SELECT ... WHERE name = ? AND id = ?` |
-| 都不填 | `SELECT ...`（查全部） |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>動態 SQL：</b> MyBatis 的 <code>&lt;if&gt;</code>、<code>&lt;where&gt;</code> 等標籤，可以根據參數是否為 null，自動決定是否加入 SQL 片段。
+- 只給名字 → `SELECT … WHERE name = ?`
+- 只給編號 → `SELECT … WHERE id = ?`
+- 兩個都給 → `SELECT … WHERE name = ? AND id = ?`
+- 都沒給 → `SELECT …`（查全部）
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <b>動態 SQL</b>：在範本上註明「有填這一格，才加這一句」。MyBatis 會依照實際傳進來的值，組出該執行的 SQL。
 </div>
 
+</v-click>
+
 <!--
-動態 SQL 是 MyBatis 最強大也最實用的功能之一。
+老師到教務處查同學。名字和編號這兩個條件，他可能有給，也可能沒給。
 
-在真實的業界專案中，搜尋 API 通常有很多可選的篩選條件。
-如果用 Java 字串拼接 SQL，程式碼會非常複雜，容易出錯。
+（下一步）只給名字，SQL 的條件只有 name。
 
-MyBatis 的動態 SQL 標籤讓你直接在 XML 裡寫「如果這個條件有值，就加進 WHERE」，非常直觀。
+（下一步）只給編號，條件只有 id。
+
+（下一步）兩個都給，兩個條件用 AND 接起來。
+
+（下一步）都沒給，就沒有 WHERE，查全部。
+
+四種情況，要執行的 SQL 都不一樣。難道要寫四張申請單、四個方法嗎？
+
+（下一步）不用。我們可以在範本上註明：「有填這一格，才加這一句」。MyBatis 會依照實際傳進來的值，組出該執行的 SQL。這就是動態 SQL。
 -->
 
 ---
 
-# `<if>` + `<where>` — 動態 WHERE 條件
+# `<if>` 和 `<where>`：有填才加條件
 
-```xml
-<select id="findByCondition" resultType="com.example.model.Student">
+<CodeSteps>
+
+```xml {2|4-6|7-9|3,10|all}
+<select id="findByCondition" resultType="com.example.demo.Student">
     SELECT id, name FROM student
     <where>
         <if test="name != null">
@@ -444,61 +477,86 @@ MyBatis 的動態 SQL 標籤讓你直接在 XML 裡寫「如果這個條件有�
 </select>
 ```
 
+- 固定的部分：不管怎樣都要查 `student`
+- `<if test="name != null">`：有給名字，才加上這一句
+- 有給編號，才加上這一句
+- `<where>`：裡面有條件時才補上 `WHERE`，並且自動去掉最前面多出來的 `AND`
+
+</CodeSteps>
+
 <!--
-看這個動態 SQL 的範例。
+寫成 XML 是這樣。
 
-`<where>` 標籤非常聰明：
-- 如果裡面至少有一個 `<if>` 成立，它自動加上 `WHERE` 關鍵字。
-- 如果沒有任何 `<if>` 成立，它什麼都不加（查全部）。
-- 如果第一個成立的條件前面有 `AND`，它自動把多餘的 `AND` 移除。
+（下一步）第一行 SQL 是固定的部分，不管怎樣都要查 student。
 
-所以你不需要擔心「第一個條件前面不應該有 AND」的問題，`<where>` 幫你處理好了。
+（下一步）第一個 if。test 裡寫的是判斷的條件：name 不等於 null，也就是有給名字。條件成立，才會加上裡面那一句 AND name = #{name}。
 
-`<if test="name != null">` 是判斷條件，當 name 參數不為 null 時，這段 SQL 才會加進去。
+（下一步）第二個 if 一樣：有給編號，才加上這一句。
+
+（下一步）外面包著的 where 標籤很貼心，它做兩件事。第一，裡面有任何一句條件的時候，才幫我們補上 WHERE 這個字；都沒有的話就不補。第二，自動去掉最前面多出來的 AND。所以每一句前面都可以放心寫 AND。
 -->
 
 ---
 
-# `<set>` — 動態 UPDATE
+# 想一想
 
-只更新有值的欄位，避免覆寫 null：
+<Poll question="用上一頁的 findByCondition，只傳入 name=Judy，id 是 null。MyBatis 會執行哪一句？" options="SELECT id, name FROM student|SELECT id, name FROM student WHERE name = 'Judy'|SELECT id, name FROM student WHERE AND name = 'Judy'|SELECT id, name FROM student WHERE name = 'Judy' AND id = null" answer="2" />
+
+<!--
+確認一下。
+
+用上一頁的 findByCondition，只傳入 name 是 Judy，id 是 null。MyBatis 會執行哪一句？
+
+（等大家作答）
+
+（下一步）答案是第二個。
+
+name 有值，所以加上 name 的條件。id 是 null，那一句不會加。where 標籤補上 WHERE，並且把最前面的 AND 去掉。
+-->
+
+---
+
+# `<set>`：有填才更新
 
 ```xml
-<update id="updateSelective" parameterType="com.example.model.Student">
+<update id="updateSelective" parameterType="com.example.demo.Student">
     UPDATE student
     <set>
         <if test="name != null">name = #{name},</if>
+        <if test="score != null">score = #{score},</if>
     </set>
     WHERE id = #{id}
 </update>
 ```
 
-| 說明 | 詳情 |
-| --- | --- |
-| `<set>` | 自動加上 `SET` 關鍵字，並移除最後多餘的逗號 |
-| 選擇性更新 | `name` 有值才更新，避免把不想改的欄位設成 null |
+<v-clicks>
+
+- 只想改成績、不想動名字時，Body 只給 `score` 就好
+- 沒給的欄位不會出現在 SQL 裡，原本的值不會被蓋成空的
+- `<set>`：自動補上 `SET`，並且去掉最後多出來的逗號
+
+</v-clicks>
 
 <!--
-`<set>` 是 `<where>` 的 UPDATE 版本。
+同樣的想法也可以用在修改。
 
-在 UPDATE 操作中，如果前端只傳了 name（沒傳其他欄位），我們只想更新 name，不想把其他欄位清空。
+假設學生資料卡有名字和成績。有時候只想改成績，不想動名字。
 
-`<set>` 標籤：
-- 自動加上 SET 關鍵字
-- 自動移除最後一個多餘的逗號（例如只有一個條件，末尾的逗號會被移除）
+（下一步）用這個寫法，Body 只給 score 就好。
 
-這樣就可以實作「部分更新（Partial Update）」的功能，業界非常常用。
+（下一步）沒給的欄位，if 不成立，就不會出現在 SQL 裡。所以原本的值不會被蓋成空的。如果用寫死的 UPDATE，沒給的欄位會被改成 null，資料就不見了。
+
+（下一步）外面的 set 標籤和 where 類似：自動補上 SET 這個字，並且去掉最後多出來的逗號。
 -->
 
 ---
 
-# `<foreach>`（1/2）— IN 條件批次查詢
+# `<foreach>`：一次查好幾個編號
 
-批次查詢多個 id 時，使用 `<foreach>` 產生 IN (?,?,?) 語法：
+<CodeSteps>
 
-```xml
-<!-- @Mapper 方法：List<Student> findByIds(@Param("ids") List<Integer> ids); -->
-<select id="findByIds" resultType="com.example.model.Student">
+```xml {2-3|4-5,7|6|all}
+<select id="findByIds" resultType="com.example.demo.Student">
     SELECT id, name FROM student
     WHERE id IN
     <foreach collection="ids" item="id"
@@ -508,37 +566,32 @@ MyBatis 的動態 SQL 標籤讓你直接在 XML 裡寫「如果這個條件有�
 </select>
 ```
 
-<!--
-`<foreach>` 用於處理集合參數，最常見的場景就是 IN 條件。
+- 目標是組出 `WHERE id IN (1, 2, 3)`
+- `<foreach>`：把一串值一個一個拿出來。`collection` 是那一串的名字，`item` 是每一個的暫時名字；`open`、`separator`、`close` 是開頭、中間、結尾要放的符號
+- 每拿到一個，就放一個空格 `#{id}`
+- 介面的方法：`List<Student> findByIds(@Param("ids") List<Integer> ids);`
 
-例如前端傳來 ids = [1, 2, 3]，我們要查詢這三個 id 的學生，就需要生成 `WHERE id IN (1, 2, 3)` 這樣的 SQL。
+</CodeSteps>
+
+<!--
+第三個標籤是 foreach，用來處理「一串值」。例如一次查好幾個編號。
+
+（下一步）目標是組出 WHERE id IN 括號 1、2、3 這樣的 SQL。
+
+（下一步）foreach 的意思是「對每一個」：把一串值一個一個拿出來。collection 是那一串的名字，這裡是 ids。item 是幫每一個取的暫時名字。open、separator、close，分別是開頭、中間、結尾要放的符號：左括號、逗號、右括號。
+
+（下一步）每拿到一個，就放一個空格 #{id}。
+
+（下一步）介面的方法要用 @Param 把那一串標上 ids 這個名字，和 collection 對起來。
+
+第二十五章 Spring JDBC 是自動展開的。在 MyBatis 要自己用 foreach 寫出來。
 -->
 
 ---
 
-# `<foreach>`（2/2）— 屬性說明
-
-| `<foreach>` 屬性 | 說明 |
-| --- | --- |
-| `collection="ids"` | 對應 `@Param("ids")` 的參數名稱 |
-| `item="id"` | 集合裡每個元素的別名，在 `#{}` 裡使用 |
-| `open` / `close` | 集合的開頭和結尾符號，這裡是 `(` 和 `)` |
-| `separator=","` | 元素之間用逗號分隔 |
-
-<!--
-四個屬性對照剛才的範例：collection 指定 ids 集合，item 給每個元素一個暫時名稱 id，open/close 包住整個 IN 子句，separator 在元素之間加逗號。
-
-組合起來，傳入 [1, 2, 3] 就會產生 IN (1, 2, 3)。
--->
-
----
-
-# `<foreach>` — 批次 INSERT
-
-一次插入多筆資料，比迴圈逐筆呼叫效能更好：
+# `<foreach>`：一次新增很多筆
 
 ```xml
-<!-- @Mapper 方法：int batchInsert(@Param("list") List<Student> list); -->
 <insert id="batchInsert">
     INSERT INTO student(id, name) VALUES
     <foreach collection="list" item="s" separator=",">
@@ -547,16 +600,25 @@ MyBatis 的動態 SQL 標籤讓你直接在 XML 裡寫「如果這個條件有�
 </insert>
 ```
 
-| `<foreach>` 屬性 | 說明 |
-| --- | --- |
-| `collection="list"` | 對應 `@Param("list")` 的參數名稱 |
-| `item="s"` | 集合裡每個元素的別名 |
-| `separator=","` | 每組 VALUES 之間用逗號分隔 |
+<v-clicks>
+
+- 傳進來的是一串學生，每拿到一位就產生一組 `(編號, 名字)`，中間用逗號隔開
+- `#{s.id}`：`s` 是這一位學生，`s.id` 是他的編號
+- 組出來的是 `VALUES (2, 'Tom'), (3, 'Amy')`，一趟就全部新增
+- 介面的方法：`int batchInsert(@Param("list") List<Student> list);`
+
+</v-clicks>
 
 <!--
-MyBatis 的批次 INSERT 和 IN 查詢都用 <foreach>，差別在於位置：
-IN 查詢把 <foreach> 放在 WHERE 子句；批次 INSERT 把 <foreach> 放在 VALUES 後面。
-產生的 SQL 是 INSERT INTO student(id, name) VALUES (?, ?), (?, ?), (?, ?)——一次送出所有資料。
+foreach 也可以用在新增，一次新增很多筆。
+
+（下一步）傳進來的是一串學生。每拿到一位，就產生一組括號，裡面是編號和名字，中間用逗號隔開。
+
+（下一步）#{s.id} 的 s 是這一位學生，s.id 就是他的編號。
+
+（下一步）最後組出來的 SQL 是 VALUES 後面接好幾組資料，一趟就全部新增。這和第二十四章「一疊申請單一次送」是同樣的目的。
+
+（下一步）介面的方法一樣用 @Param 標上名字。
 -->
 
 ---
@@ -564,275 +626,208 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# Part 6
-
-## Annotation vs XML 選擇建議
+# Part 5
+# 把三層接起來
 
 <!--
-學了兩種寫法，什麼時候用哪個？
+最後看三層要怎麼接。
 -->
 
 ---
 
-# Annotation vs XML 選擇指南
+# 這次連承辦人員都不用改
 
-| 情境 | 建議 | 原因 |
-| --- | --- | --- |
-| 簡單 CRUD（SQL < 3 行） | Annotation | 簡潔直觀，不需要額外 XML 檔案 |
-| 複雜查詢（多 JOIN、子查詢） | XML | SQL 排版自由，可讀性更高 |
-| 動態條件（有時才加 WHERE） | XML | `<if>`、`<where>` 語法 |
-| 批次操作（IN 條件） | XML | `<foreach>` 語法 |
-| 欄位名稱不一致的映射 | XML | `<resultMap>` 精確控制 |
-| 同一個 @Mapper 混搭 | 可以 | 各方法獨立選擇，不衝突 |
+<Pairs left="哪一層" right="SQL 搬到 XML 之後" sign="→" rows="clerk,櫃台：StudentController=ok,不用改|teacher,組長：StudentService=ok,不用改|staff,承辦人員：StudentDao=ok,不用改|doc,StudentMapper 介面=doc,只把方法上面的 @Insert、@Select 等拿掉" />
 
-<!--
-沒有絕對的答案，根據 SQL 複雜度選擇最適合的方式。
+<v-click>
 
-實務上的經驗：
-- findById、insert、update、deleteById 這種基本操作，直接用 Annotation 就夠了。
-- 搜尋功能、多條件過濾、複雜報表查詢，用 XML 管理更好維護。
-
-同一個 @Mapper 介面裡，有些方法用 Annotation、有些方法在 XML，是完全合法的。
-MyBatis 會分別去找對應的 SQL，不會衝突。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# Part 7
-
-## 串接三層式架構
-
-<!--
-前兩章的 Controller、Service、Dao 都已經寫好了。這一節來看：換成 XML Mapper 之後，這三層要改多少。
--->
-
----
-
-# 回顧：三層式架構的呼叫鏈
-
-答案是：**一行都不用改**。原因看 `@Mapper` 介面：
-
-| 分層 | 類別 | 和 ch29／ch30 相比 |
-| --- | --- | --- |
-| Controller | `StudentController` | 完全相同 |
-| Service | `StudentService` | 完全相同 |
-| Dao | `StudentDao` | 完全相同（一樣注入 `StudentMapper`，呼叫一樣的方法名） |
-| `StudentMapper` 介面 | 方法簽名 | 完全相同，只是拿掉 `@Insert`/`@Select` 等 Annotation |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>關鍵原因：</b> Dao 呼叫的是 <code>studentMapper.insert(student)</code> 這個「方法」，不管 SQL 寫在 Annotation 還是 XML，方法簽名不變，呼叫端完全感覺不到差異。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 因為方法的名稱、參數、回傳型別都沒變。Dao 呼叫的還是 <code>studentMapper.insert(student)</code>，它不需要知道 SQL 放在哪。
 </div>
 
+</v-click>
+
 <!--
-這是本章最重要的觀念：Annotation 換成 XML，改變的只有「SQL 寫在哪裡」，不影響 @Mapper 介面對外的方法簽名。
+把前兩章的 SQL 搬到 XML 之後，程式哪裡要改？
 
-Dao 呼叫 studentMapper.insert(student)、findAll()、findById() 這些方法名稱和參數完全沒變，
-所以 Dao、Service、Controller 三層——包含前面章節寫好的建構子注入、@RequestBody、@PathVariable——一行都不用動。
+（下一步）櫃台，不用改。
 
-這正是「介面（interface）」的價值：呼叫端只依賴方法簽名，不依賴實作方式。
+（下一步）組長，不用改。
+
+（下一步）承辦人員 StudentDao，這次也不用改。
+
+（下一步）只有 StudentMapper 介面，把方法上面的 @Insert、@Select 這些標註拿掉。
+
+（下一步）原因就是剛才強調的：方法的名稱、參數、回傳型別都沒變。Dao 呼叫的還是 studentMapper.insert(student)，它不需要知道 SQL 是貼在方法上，還是收在範本夾裡。
+
+改完之後，用和前兩章完全一樣的方式測試新增、修改、刪除、查詢，結果應該一模一樣。
 -->
 
 ---
 
-# 對照：Annotation 版 vs XML 版的 `StudentMapper`
+# 加一個「有填才查」的搜尋 API
 
-```java
-// ch29／ch30：Annotation 版——SQL 寫在介面上
-@Mapper
-public interface StudentMapper {
-    @Insert("INSERT INTO student(id, name) VALUES (#{id}, #{name})")
-    int insert(Student student);
+<CodeSteps>
 
-    @Select("SELECT id, name FROM student")
-    List<Student> findAll();
+```java {1-2|4-7|9-12|14-20|all}
+// StudentMapper
+List<Student> findByCondition(@Param("id") Integer id, @Param("name") String name);
+
+// StudentDao
+public List<Student> getStudentsByCondition(Integer id, String name) {
+    return studentMapper.findByCondition(id, name);
+}
+
+// StudentService
+public List<Student> getStudentsByCondition(Integer id, String name) {
+    return studentDao.getStudentsByCondition(id, name);
+}
+
+// StudentController
+@GetMapping("/students/search-dynamic")
+public List<Student> getStudentsByCondition(
+        @RequestParam(name = "id", required = false) Integer id,
+        @RequestParam(name = "name", required = false) String name) {
+    return studentService.getStudentsByCondition(id, name);
 }
 ```
 
-```java
-// ch31：XML 版——介面只留方法簽名，SQL 搬到 mapper.xml
-@Mapper
-public interface StudentMapper {
-    int insert(Student student);
-    List<Student> findAll();
-}
-```
+- 介面：補上方法，名稱要和 XML 的 `id` 一樣
+- 承辦人員：轉交給 `StudentMapper`
+- 組長：轉交給承辦人員
+- 櫃台：兩個參數都加 `required = false`，沒帶的就是 `null`
+
+</CodeSteps>
 
 <!--
-兩份程式碼對照，一眼就能看出差異：方法名稱、參數、回傳型別完全一樣，唯一的差別是 Annotation 版把 SQL 字串寫在方法上，XML 版把 SQL 搬到 mapper.xml 的 `<insert>`、`<select>` 元素裡。
+剛才寫的 findByCondition，我們幫它接上三層，做成一個搜尋 API。
 
-因為介面沒變，Dao 注入這個介面之後，呼叫方式也完全沒變——這就是為什麼 Service、Controller 不用改一行。
+（下一步）先在 StudentMapper 介面補上方法。名稱要和 XML 裡的 id 一樣，兩個參數用 @Param 標上名字。
+
+（下一步）承辦人員，轉交給 StudentMapper。
+
+（下一步）組長，轉交給承辦人員。
+
+（下一步）櫃台。重點在兩個 @RequestParam 後面都加了 required = false，意思是「這個參數可以不帶」。第十八章學過，不加的話，前端沒帶這個參數會收到 400 的錯誤。加了之後，沒帶的參數就是 null，剛好交給 XML 裡的 if 去判斷。
 -->
 
 ---
 
-# 用 Postman 驗證：CUD／查詢 API 沒有任何改變
+# 用 Postman 測試
 
-把 `StudentMapper` 的 SQL 改成 XML 版之後，重新啟動 Spring Boot，用**和 ch29／ch30 完全相同**的 API 測試：
+同一個 API，帶不同的參數，看 Console 裡的 SQL 怎麼變：
 
-| 操作 | HTTP 方法 + URL | 預期結果 |
-| --- | --- | --- |
-| 新增 | `POST /students` | 和 ch29 相同 |
-| 修改 | `PUT /students/1` | 和 ch29 相同 |
-| 刪除 | `DELETE /students/1` | 和 ch29 相同 |
-| 查全部 | `GET /students` | 和 ch30 相同 |
-| 查單筆 | `GET /students/1` | 和 ch30 相同 |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>驗證重點：</b> 前端完全感覺不到後端從 Annotation 換成 XML——這就是三層式架構「上層不受下層實作細節影響」的具體證明。
+- `GET /students/search-dynamic` → 沒有 `WHERE`，查全部
+- `GET /students/search-dynamic?name=Judy` → `WHERE name = ?`
+- `GET /students/search-dynamic?id=1` → `WHERE id = ?`
+- `GET /students/search-dynamic?id=1&name=Judy` → `WHERE name = ? AND id = ?`
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-left">
+✅ 一個 API、一段 XML，就應付了四種情況。想在 Console 看到 MyBatis 的 SQL，可以加一行：<code>logging.level.你的package名稱=DEBUG</code>
 </div>
 
+</v-click>
+
 <!--
-先用 Postman 打和前兩章一模一樣的 API，確認結果完全相同。
+啟動 Spring Boot，用同一個 API，帶不同的參數測試。
 
-這個練習的意義不在於「又測了一次 CRUD」，而在於親眼驗證：資料庫存取的實作方式（Annotation 或 XML）換了，
-但 API 的 URL、Method、Request Body、Response 全部沒有任何改變——這正是三層式架構、以及「面向介面寫程式」的核心價值。
+（下一步）什麼都不帶：沒有 WHERE，查全部。
 
-CUD 和基本查詢確認完，接下來把 Part 5 學的動態 SQL 也串成一支真正能呼叫的 API——這是本章唯一需要新增程式碼的地方。
+（下一步）只帶 name：條件只有 name。
+
+（下一步）只帶 id：條件只有 id。
+
+（下一步）兩個都帶：兩個條件用 AND 接起來。
+
+（下一步）一個 API、一段 XML，就應付了四種情況。
+
+如果想在 Console 看到 MyBatis 實際執行的 SQL，可以在 application.properties 加一行 logging.level，後面接你的 package 名稱，等於 DEBUG。
 -->
 
 ---
 
-# StudentMapper — 補上動態查詢方法
+# 貼在方法上，還是收進範本夾？
 
-Part 5 的 `findByCondition` 只存在 XML 裡，`@Mapper` 介面要補上對應的方法簽名：
+<v-clicks>
 
-```java
-@Mapper
-public interface StudentMapper {
-    // 前面 CUD／查詢方法省略
-    List<Student> findByCondition(@Param("id") Integer id, @Param("name") String name);
-}
-```
+- **SQL 很短的新增、修改、刪除、查詢** → 貼在方法上（Annotation），最直接
+- **SQL 很長，例如要對好幾張表** → 範本夾（XML），可以自由換行
+- **條件有時有、有時沒有** → 範本夾，用 `<if>`、`<where>`、`<set>`
+- **一串值** → 範本夾，用 `<foreach>`
+- **欄位名稱對不上** → 範本夾，用 `<resultMap>`
 
-<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>對照 Part 5：</b> XML 裡 <code>&lt;select id="findByCondition"&gt;</code> 的 <code>id</code>，要對應介面裡一模一樣的方法名稱 <code>findByCondition</code>。
-</div>
+</v-clicks>
 
 <!--
-Part 5 示範動態 SQL 時，只寫了 mapper.xml 的 <select> 元素，還沒有在 @Mapper 介面加上對應的方法——現在補上。
+最後整理一下，什麼時候用哪一種放法。
 
-id 和 name 都可能是 null（前端不一定會填），所以參數型別用 Integer、String 這種包裝類別，並用 @Param 明確指定名稱，對應 XML 裡 <if test="name != null">、<if test="id != null"> 的判斷。
+（下一步）SQL 很短的新增、修改、刪除、查詢，貼在方法上最直接。
 
-回傳型別是 List<Student>：不管符合條件的有幾筆，甚至 0 筆或查全部，統一用 List 回傳最單純。
+（下一步）SQL 很長，例如要對好幾張表，用範本夾，可以自由換行。
+
+（下一步）條件有時有、有時沒有，用範本夾，才能寫 if、where、set。
+
+（下一步）要處理一串值，用範本夾的 foreach。
+
+（下一步）欄位名稱對不上，用範本夾的 resultMap。
+
+實際工作上，很多團隊為了統一，會規定全部都寫在 XML 裡。
 -->
 
 ---
 
-# StudentDao／StudentService — 補上動態查詢
+# 複習：教務處對照表
 
-兩層都是單純轉呼叫，不做任何邏輯判斷：
-
-```java
-    // 接續 StudentDao，新增方法
-    public List<Student> getStudentsByCondition(Integer id, String name) {
-        return studentMapper.findByCondition(id, name);
-    }
-```
-
-```java
-    // 接續 StudentService，新增方法
-    public List<Student> getStudentsByCondition(Integer id, String name) {
-        return studentDao.getStudentsByCondition(id, name);
-    }
-```
+<Pairs left="教務處" right="程式" rows="book,申請單的範本夾=doc,XML Mapper（放在 resources/mappers）|what,封面：這是誰的=code,namespace = 介面完整的名稱|doc,範本的編號=code,id = 方法名稱|form,有填這一格，才加這一句=code,&lt;if&gt; 搭配 &lt;where&gt; 或 &lt;set&gt;|cabinet,一串值，一個一個列出來=code,&lt;foreach&gt;" />
 
 <!--
-Dao、Service 都是同樣的模式：單純轉呼叫，id、name 是否為 null 完全不影響這兩層的寫法。
+我們用一張圖複習今天的內容。
 
-id、name 是否為 null，交給 XML 的 <if> 標籤處理，Dao、Service 都不需要知道細節。
+（下一步）申請單的範本夾，是 XML Mapper。
+
+（下一步）封面寫這是誰的，是 namespace，等於介面完整的名稱。
+
+（下一步）範本的編號，是 id，等於方法名稱。
+
+（下一步）有填這一格，才加這一句，是 if，搭配 where 或 set。
+
+（下一步）一串值，一個一個列出來，是 foreach。
 -->
 
 ---
 
-# StudentController — 動態查詢 API
+# 章節總結
 
-`id`、`name` 都設成非必填，前端可以只填其中一個、都填、或都不填：
+<v-clicks>
 
-```java
-    @GetMapping("/students/search-dynamic")
-    public List<Student> getStudentsByCondition(
-            @RequestParam(name = "id", required = false) Integer id,
-            @RequestParam(name = "name", required = false) String name) {
-        return studentService.getStudentsByCondition(id, name);
-    }
-```
+- **XML Mapper**：SQL 集中寫在 XML 檔，適合又長又複雜的 SQL
+- **對應規則**：`namespace` 對介面、`id` 對方法
+- **`resultType` / `resultMap`**：查到的資料要變成什麼；名字對不上時自己寫對照
+- **`<if>` + `<where>`**：有值才加條件
+- **`<set>`**：有值才更新
+- **`<foreach>`**：處理一串值，用在 `IN` 和批次新增
+- **三層**：SQL 換地方放，Controller、Service、Dao 都不用改
 
-<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>關鍵是 <code>required = false</code>：</b> 不加的話，前端沒帶這個參數會直接噴 400 錯誤；加了之後，沒帶的參數會是 <code>null</code>，交給 XML 的 <code>&lt;if&gt;</code> 判斷要不要加進 WHERE。
-</div>
+</v-clicks>
 
-<!--
-這支 API 是本章動態 SQL 真正派上用場的地方：id、name 都用 @RequestParam(required = false)，
-前端可以只填 name、只填 id、兩者都填、或都不填，四種情況都交給同一支 API、同一段 XML 處理。
+<v-click>
 
-和前面 findById、findByIdAndName 這種「參數一定要有」的 API 不同，這裡的 null 是預期中的正常情況。
--->
+三位幫手到這裡都學完了。下一章：兩件事要一起成功、一起失敗，交易 `@Transactional`。
 
----
-
-# 用 Postman 測試動態查詢 API
-
-同一支 `GET /students/search-dynamic`，帶不同的參數組合觀察 SQL 如何變化：
-
-| 帶的參數 | URL | 產生的 SQL |
-| --- | --- | --- |
-| 都不帶 | `GET /students/search-dynamic` | `SELECT id, name FROM student`（查全部） |
-| 只帶 name | `GET /students/search-dynamic?name=Judy` | `... WHERE name = 'Judy'` |
-| 只帶 id | `GET /students/search-dynamic?id=1` | `... WHERE id = 1` |
-| 兩者都帶 | `GET /students/search-dynamic?id=1&name=Judy` | `... WHERE id = 1 AND name = 'Judy'` |
-
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>觀察重點：</b> 同一支 API、同一段 XML，<code>&lt;where&gt;</code> 標籤依照實際帶的參數自動組出正確的 WHERE 條件——不需要為每種組合各寫一支 API。
-</div>
+</v-click>
 
 <!--
-這是動態 SQL 最有價值的驗證：四種參數組合打同一支 API，SQL 的 WHERE 子句會跟著變化，
-但 Controller、Service、Dao、Mapper 介面都只有一份程式碼——這就是 Part 5 學的 <if> + <where> 在真實三層式架構裡發揮的效果。
--->
+最後整理今天的重點。
 
----
+（依序按下一步）XML Mapper 把 SQL 集中寫在 XML 檔。namespace 對介面，id 對方法。resultType 和 resultMap 決定查到的資料要變成什麼。if 加 where 是有值才加條件。set 是有值才更新。foreach 處理一串值。SQL 換地方放，三層都不用改。
 
-# 章節總結（一）：XML Mapper 與動態 SQL
-
-| 重點 | 說明 |
-| --- | --- |
-| XML Mapper | SQL 寫在 XML 檔案，適合複雜查詢 |
-| namespace | 必須對應 @Mapper 介面完整類別名稱 |
-| id | 必須對應 @Mapper 介面的方法名稱 |
-| resultMap | 欄位名稱不一致時，手動指定映射關係 |
-| `<if>` + `<where>` | 動態 WHERE 條件，自動處理 AND 和 WHERE 關鍵字 |
-| `<set>` | 動態 UPDATE，實作部分更新 |
-| `<foreach>` IN | 集合參數放在 WHERE，生成 `IN (?,?,?)` |
-| `<foreach>` 批次 INSERT | 集合參數放在 VALUES 後，生成多行 INSERT |
-
-<!--
-XML Mapper 與動態 SQL 的重點：
-
-第一，XML Mapper 把 SQL 寫在獨立 XML 檔案，適合複雜查詢和動態條件。
-第二，namespace 和 id 是 XML 和 @Mapper 介面對應的橋樑，兩者必須完全一致。
-第三，resultMap 解決欄位名稱不一致的問題。
-第四，動態 SQL 三個核心標籤：`<if>` + `<where>` 做動態 WHERE；`<set>` 做動態 UPDATE；`<foreach>` 做 IN 批次查詢。
--->
-
----
-
-# 章節總結（二）：選擇建議與三層式架構
-
-| 重點 | 說明 |
-| --- | --- |
-| 混搭 | Annotation 和 XML 可在同一個 @Mapper 混搭使用 |
-| 三層式架構 | CUD／基本查詢完全不用改；動態查詢要在 `@Mapper` 補方法簽名，並新增一支 `required = false` 的搜尋 API |
-
-<!--
-選擇建議與三層式架構的重點：
-
-第五，Annotation 和 XML 可以混搭，根據 SQL 複雜度選擇最適合的方式。
-第六，CUD 和基本查詢的三層式架構完全不用改；但動態查詢是全新功能，要在 @Mapper 補方法簽名，並用 @RequestParam(required = false) 開一支能接受任意參數組合的搜尋 API。
-
-MyBatis 三章全部學完了！
+（最後一步）三位幫手到這裡都學完了。下一章要處理一個新的問題：有兩件事必須一起成功、一起失敗，該怎麼辦？這叫做交易，@Transactional。
 -->
 
 ---
@@ -841,6 +836,12 @@ layout: end
 
 # Q & A
 
+有任何問題嗎？
+
 <!--
-今天的內容就到這裡。大家有任何問題嗎？
+今天的內容到這邊。
+
+課後請把前兩章的 SQL 搬到 XML，確認原本的 API 都還能用。再試試動態查詢的四種組合。
+
+有任何問題歡迎提出來。
 -->
