@@ -26,6 +26,7 @@ import CupLabel from './anim/CupLabel.vue'
 import FileRoom from './anim/FileRoom.vue'
 import SqlSlip from './anim/SqlSlip.vue'
 import RowCards from './anim/RowCards.vue'
+import TwoBooks from './anim/TwoBooks.vue'
 import AskOrOrder from './anim/AskOrOrder.vue'
 import AspectTimeline from './anim/AspectTimeline.vue'
 import Flow from './anim/Flow.vue'
@@ -78,6 +79,7 @@ createApp(App)
   .component('FileRoom', FileRoom)
   .component('SqlSlip', SqlSlip)
   .component('RowCards', RowCards)
+  .component('TwoBooks', TwoBooks)
   .component('AskOrOrder', AskOrOrder)
   .component('AspectTimeline', AspectTimeline)
   .mount('#app')

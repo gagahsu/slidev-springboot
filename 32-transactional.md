@@ -46,32 +46,38 @@ style: |
 </div>
 
 <!--
-大家好，今天要學的是 @Transactional——Spring 的事務管理機制。
+大家好，歡迎來到第三十二章。
 
-想像銀行轉帳：A 的帳戶扣款成功，但就在準備入款到 B 的帳戶時，系統突然當掉了。結果 A 的錢不見了，B 卻沒收到。這就是沒有事務保護時會發生的悲劇。
+前面我們學會了三種存取資料庫的方式。到目前為止，每一個功能都只改一筆資料。
 
-@Transactional 就是解決這個問題的工具：讓一組操作要嘛全部成功、要嘛全部撤銷，永遠不會停在中間狀態。
-
-學完今天，大家可以說：「我知道怎麼用 @Transactional 保護重要的資料庫操作了！」
+今天要處理一個新的問題：有些事情要同時改兩本簿子。如果改到一半出錯了，怎麼辦？答案是「交易」，在 Spring 裡用 @Transactional。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要搞懂的四件事
 
-- **為什麼需要事務？** — 沒有事務保護會發生什麼問題
-- **什麼是事務？** — ACID 原則、Transaction 的定義
-- **@Transactional 基本用法** — import、方法層級、類別層級
-- **Rollback 規則** — 預設只 Rollback RuntimeException
-- **自訂 Rollback 行為** — `rollbackFor`、`noRollbackFor` 設定
-- **使用注意事項** — 常見錯誤與邊界情境
+<v-clicks>
+
+- **改到一半出錯會怎樣？** 兩本簿子對不起來
+- **交易是什麼？** 好幾件事算成「同一件」：全部成功，或是全部不算
+- **怎麼用？** 在方法上加 `@Transactional`
+- **什麼時候會復原？** Rollback 的規則和注意事項
+
+</v-clicks>
 
 <!--
-今天的內容分四個部分。前面打概念，後面學用法，最後整理注意事項。
+今天要搞懂四件事。
 
-最重要的兩個段落是「基本用法」和「Rollback 規則」——搞懂這兩個，日常開發就夠用了。
+（下一步）第一，改到一半出錯會怎樣。兩本簿子會對不起來。
+
+（下一步）第二，交易是什麼。把好幾件事算成同一件：全部成功，或是全部不算。
+
+（下一步）第三，怎麼用。在方法上加 @Transactional。
+
+（下一步）第四，什麼時候會復原。也就是 Rollback 的規則，還有幾個容易踩到的地方。
+
+名詞說明一下：Transaction 有人翻成「交易」，也有人翻成「事務」，是同一個東西。
 -->
 
 ---
@@ -80,57 +86,129 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-
-## 為什麼需要事務？
+# 改到一半出錯了
 
 <!--
-先從問題出發，看看沒有事務保護的 API 會發生什麼事。
+先看教務處發生的事。
 -->
 
 ---
 
-# 沒有事務保護時會發生什麼？
+# 記過：要改兩本簿子
 
-以「銀行轉帳」為例：A 轉 1000 元給 B，需要執行兩個操作：
+<TwoBooks mode="broken" />
 
-| 步驟 | 操作 | 可能失敗 |
-| --- | --- | --- |
-| Step 1 | `A 帳戶扣款 1000 元` | ✅ 成功 |
-| Step 2 | `B 帳戶入款 1000 元` | ❌ 突然拋出例外 |
+<!--
+小明今天遲到，要記過。教務處要改兩本簿子：學籍簿上，小明的分數要扣 10 分；記過簿上，要多一筆紀錄，寫清楚為什麼扣分。
 
-**結果：** A 的錢不見了，B 卻沒有收到——資料不一致！
+（下一步）第一件事，承辦人員到學籍簿把小明的分數從 80 改成 70。成功。
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>事務的目標：</b> 確保「扣款」和「入款」這兩個操作，要嘛都成功，要嘛 Step 2 失敗時 Step 1 也自動撤銷（Rollback）。
+（下一步）第二件事，要寫記過簿。就在這個時候出錯了，可能是資料有問題，也可能是系統剛好出狀況。
+
+（下一步）結果：分數被扣了，記過簿卻沒有紀錄。兩本簿子對不起來。小明來問為什麼被扣分，教務處也查不到。
+
+這種狀況叫做資料不一致，是資料庫最怕的事情之一。
+-->
+
+---
+
+# 把兩件事算成「同一件」
+
+<TwoBooks mode="tx" />
+
+<!--
+要怎麼避免？讓組長先說好：這兩件事算同一件。
+
+（下一步）第一件，學籍簿扣 10 分。但是這次先用鉛筆寫，還不算數。
+
+（下一步）第二件，寫記過簿的時候，一樣出錯了。
+
+（下一步）因為算同一件事，第二件失敗了，第一件也要擦掉。分數回到 80。
+
+兩本簿子都回到原本的樣子，就像什麼事都沒發生過。雖然記過沒有完成，但是資料是對得起來的，之後再做一次就好。
+
+如果兩件事都成功呢？那就把鉛筆寫的全部描成原子筆，正式算數。
+-->
+
+---
+
+# 把故事對應到程式
+
+<Pairs left="教務處" right="程式" rows="teacher,兩件事算同一件=code,交易（Transaction）|book,先用鉛筆寫，還不算數=code,交易進行中，資料還沒正式寫入|ok,全部成功，描成原子筆=code,Commit（提交）|no,有一件失敗，全部擦掉=code,Rollback（回復）" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <b>交易</b>：一組對資料庫的操作，要嘛全部成功，要嘛全部不算。不會停在「做到一半」的狀態。
 </div>
 
+</v-click>
+
 <!--
-銀行轉帳是最經典的事務範例，因為它最直觀地說明了「部分成功比完全失敗更危險」這個道理。
+把故事對應到程式。
 
-Step 2 拋出例外後，如果沒有事務保護，Step 1 的扣款已經寫入資料庫，無法自動還原——錢就憑空消失了。
+（下一步）兩件事算同一件，叫做交易，英文是 Transaction。
 
-這在電商訂單、庫存扣減、任何「多步驟資料庫操作」的場景都會發生。
+（下一步）先用鉛筆寫、還不算數，對應到交易進行中，資料還沒正式寫入。
+
+（下一步）全部成功，描成原子筆，叫做 Commit，提交。
+
+（下一步）有一件失敗，全部擦掉，叫做 Rollback，回復。這個字今天會一直出現。
+
+（下一步）用一句話說交易：一組對資料庫的操作，要嘛全部成功，要嘛全部不算。不會停在做到一半的狀態。
 -->
 
 ---
 
-# 什麼是事務？ACID 原則
+# 交易的四個特性：ACID
 
-「事務（Transaction）確保一組操作，要嘛全部成功，要嘛全部失敗（Rollback），永遠不會停在中間狀態。」
+<v-clicks>
 
-| ACID 原則 | 說明 |
-| --- | --- |
-| **A**tomicity（原子性） | 所有操作視為一個整體，全成功或全失敗 |
-| **C**onsistency（一致性） | 操作前後資料庫都處於合法狀態 |
-| **I**solation（隔離性） | 各事務之間互不干擾 |
-| **D**urability（持久性） | 成功提交後，資料永久寫入 |
+- **A**tomicity（原子性）：全部成功，或全部不算
+- **C**onsistency（一致性）：做完之後，資料之間還是對得起來
+- **I**solation（隔離性）：同時進行的交易，不會互相干擾
+- **D**urability（持久性）：一旦提交，資料就確實存下來了
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 這四個字的開頭合起來是 <b>ACID</b>，面試很常問。今天的重點是第一個；第三個和下一章的「鎖」有關。
+</div>
+
+</v-click>
 
 <!--
-ACID 是資料庫事務的四個核心保證，每個字母代表一個原則。
+交易有四個特性，是資料庫領域很有名的四個字。
 
-對後端開發者來說，最直接相關的是 Atomicity——原子性，確保操作不會被切開。
+（下一步）Atomicity，原子性。全部成功，或全部不算。這就是我們剛才看到的。
 
-Isolation 在樂觀鎖、悲觀鎖那一章會更深入討論。今天先記住：@Transactional 主要幫我們實現 Atomicity。
+（下一步）Consistency，一致性。做完之後，資料之間還是對得起來。
+
+（下一步）Isolation，隔離性。同時進行的交易，不會互相干擾。
+
+（下一步）Durability，持久性。一旦提交，資料就確實存下來了，就算馬上停電也還在。
+
+（下一步）四個字的開頭合起來是 ACID，面試很常問。今天的重點是第一個原子性。第三個隔離性，和下一章要學的「鎖」有關。
+-->
+
+---
+
+# 想一想
+
+<Poll question="交易裡有兩個步驟。第一步成功，第二步失敗。最後資料庫會是什麼狀態？" options="第一步的結果保留，第二步沒做|兩步都不算，回到一開始的樣子|兩步都算成功|資料庫會壞掉" answer="2" />
+
+<!--
+確認一下。
+
+交易裡有兩個步驟。第一步成功，第二步失敗。最後資料庫會是什麼狀態？
+
+（等大家作答）
+
+（下一步）答案是兩步都不算，回到一開始的樣子。
+
+這就是 Rollback。
 -->
 
 ---
@@ -139,280 +217,19 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-
-## @Transactional 基本用法
+# 在程式裡使用交易
 
 <!--
-概念清楚了，來看怎麼在 Spring Boot 裡使用 @Transactional。
+觀念清楚了，來看程式怎麼寫。
 -->
 
 ---
 
-# Import 選擇
+# 準備工作：分數和記過簿
 
-使用 `@Transactional` 時，import 必須選正確的套件：
-
-| import | 說明 |
-| --- | --- |
-| `org.springframework.transaction.annotation.Transactional` | ✅ **Spring 原生版本，使用這個** |
-| `jakarta.transaction.Transactional` | ⚠️ Jakarta EE 版本，功能相似但屬性不同 |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-⚠️ <b>版本注意：</b> Spring Boot 專案一律用 <code>org.springframework.transaction.annotation.Transactional</code>，才能使用 <code>rollbackFor</code>、<code>noRollbackFor</code> 等 Spring 特有屬性。
-</div>
-
-<!--
-@Transactional 有兩個版本，import 錯了不會報錯，但行為可能不同。
-
-Spring 原生的版本支援 rollbackFor、propagation 等更多屬性，是 Spring 生態系的標準用法。
-
-在 Eclipse 按下快速修正（Ctrl+1）時，IDE 可能同時提示兩個版本，要特別注意選哪一個。
--->
-
----
-
-# @Transactional 的兩種加法
-
-`@Transactional` 可以加在**方法**或**類別**上：
-
-| 加在哪裡 | 效果 |
-| --- | --- |
-| **方法**上 | 只有該方法是一個事務 |
-| **類別**上 | 類別中所有 public 方法都套用事務 |
+`Student` 在第二十八章已經有 `score`。再用 JPA 幫我們建立記過簿的資料表：
 
 ```java
-@Service
-@Transactional          // 所有方法都套用事務
-public class OrderService {
-
-    public void createOrder(Order order) { ... }
-
-    @Transactional(readOnly = true)   // 覆寫：唯讀事務
-    public Order findById(String id) { ... }
-}
-```
-
-<!--
-加在類別上是「全面保護」，加在方法上是「精準保護」。
-
-業界常見做法是：Service 類別加上類別層級的 @Transactional，然後對查詢方法個別加 readOnly = true——這樣既有保護，又能對查詢操作做效能優化。
-
-readOnly = true 告訴資料庫「這個事務只讀不寫」，資料庫可以做一些優化，例如不用加鎖。
--->
-
----
-
-# 完整範例：轉帳服務
-
-`@Transactional` 確保兩個 Dao 操作在同一個事務中執行：
-
-```java
-@Service
-public class BankService {
-
-    @Autowired
-    private AccountDao accountDao;
-
-    @Transactional
-    public void transfer(String fromId, String toId, int amount) {
-        accountDao.deduct(fromId, amount);   // Step 1：扣款
-        accountDao.deposit(toId, amount);    // Step 2：入款
-    }
-}
-```
-
-若 `deposit()` 拋出例外，Spring 自動 Rollback `deduct()` 的結果。
-
-<!--
-這段程式碼就是前面說的銀行轉帳情境。
-
-只要加上 @Transactional，Spring 會在方法開始前開啟一個事務，方法結束後提交（commit）。如果中間拋出例外，Spring 自動執行 rollback，撤銷所有已執行的資料庫操作。
-
-我們完全不需要手動寫 conn.rollback()——Spring 幫我們搞定了。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# Part 3
-
-## Rollback 規則
-
-<!--
-@Transactional 不是碰到所有例外都會 Rollback，來看它的預設規則。
--->
-
----
-
-# 預設只 Rollback RuntimeException
-
-`@Transactional` 預設只處理 **RuntimeException**（未受檢例外）及其子類別：
-
-```
-Exception（所有例外的父類別）
-├── RuntimeException   ← @Transactional 預設只 Rollback 這個
-│   ├── NullPointerException
-│   ├── IllegalArgumentException
-│   └── ...（其他未受檢例外）
-└── IOException        ← 預設不觸發 Rollback
-    └── ...（其他受檢例外）
-```
-
-<!--
-Java 例外分兩大類：RuntimeException（不需要宣告的例外）和 Checked Exception（需要 try-catch 或 throws 的例外）。
-
-@Transactional 預設只攔截 RuntimeException。為什麼？Spring 設計時認為受檢例外（Checked Exception）是「預期的錯誤情境」，不一定代表操作失敗需要 Rollback。
-
-實務上這個預設常常讓人踩坑——如果你的方法拋出 IOException 卻沒加 rollbackFor，資料就不會 Rollback。
--->
-
----
-
-# 自訂 Rollback：rollbackFor
-
-讓**受檢例外**也觸發 Rollback：
-
-| 設定 | 說明 |
-| --- | --- |
-| `rollbackFor = Exception.class` | 所有例外都觸發 Rollback |
-| `rollbackFor = IOException.class` | 只有 IOException 觸發 Rollback |
-| `rollbackFor = {IOException.class, SQLException.class}` | 多個例外都觸發 Rollback |
-
-```java
-@Transactional(rollbackFor = Exception.class)
-public void importData() throws IOException {
-    // IOException 也會觸發 Rollback
-}
-```
-
-<!--
-rollbackFor 是最常用的屬性之一。
-
-業界有一個常見的做法：對重要的寫入操作，直接加 rollbackFor = Exception.class，確保任何例外都會 Rollback，不留漏洞。
-
-這樣雖然比較嚴格，但對資料一致性要求高的業務（例如金融、訂單）是合理的保守策略。
--->
-
----
-
-# 自訂 Rollback：noRollbackFor
-
-讓某些 **RuntimeException 不** 觸發 Rollback：
-
-```java
-@Transactional(noRollbackFor = IllegalArgumentException.class)
-public void processOrder(Order order) {
-    // IllegalArgumentException 不會觸發 Rollback
-    // 其他 RuntimeException 仍然會 Rollback
-}
-```
-
-<!--
-noRollbackFor 的使用場景比較少，通常是「業務邏輯驗證失敗」這類情況，我們故意拋出 RuntimeException 但不想 Rollback（例如只是回傳錯誤訊息，不需要撤銷操作）。
-
-記住：rollbackFor 和 noRollbackFor 可以同時使用，Spring 會合併規則判斷。
--->
-
----
-
-# Rollback 規則總結
-
-| 設定 | Rollback 行為 |
-| --- | --- |
-| `@Transactional`（預設） | 只有 RuntimeException |
-| `rollbackFor = Exception.class` | 所有例外 |
-| `rollbackFor = IOException.class` | RuntimeException + IOException |
-| `noRollbackFor = IllegalArgumentException.class` | RuntimeException（排除 IllegalArgumentException） |
-
-<!--
-rollbackFor 讓受檢例外也觸發 Rollback；noRollbackFor 讓特定 RuntimeException 不觸發 Rollback。兩者可以同時使用，Spring 會合併規則判斷。
--->
-
----
-
-# 使用注意事項
-
-| 注意事項 | 說明 |
-| --- | --- |
-| **只對 public 方法有效** | private / protected 方法上的 @Transactional 不會生效（AOP 限制） |
-| **同類別內呼叫不走代理** | A 方法呼叫同類別的 B 方法，B 的 @Transactional 不生效 |
-| **搭配 @Service 使用** | @Transactional 需要 Spring Bean，不能加在非 Spring 管理的類別上 |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-⚠️ <b>最常見踩坑：</b> 同一個 Service 內的方法 A 呼叫方法 B，就算 B 有 @Transactional 也不會建立新事務。解法：把 B 移到另一個 Service，或使用 <code>@Transactional(propagation = Propagation.REQUIRES_NEW)</code>。
-</div>
-
-<!--
-這三個注意事項是開發者最常踩的坑。
-
-特別是「同類別內呼叫不走代理」——這是 Spring AOP 的機制限制。Spring 的 @Transactional 是透過動態代理實現的，只有從外部呼叫 Bean 才會走代理，同類別內呼叫是直接呼叫，繞過了代理機制。
-
-如果你加了 @Transactional 但發現事務沒生效，第一件事就是檢查這兩個常見原因。
--->
-
----
-layout: default
----
-
-# 練習：為轉帳 API 加上事務保護
-### 任務說明
-
-在 `StudentService` 中加入一個新功能：
-
-**「扣除學生積分並新增懲戒記錄」**，需要同時執行兩個操作：
-
-1. `studentDao.deductScore(studentId, points)` — 扣除積分
-2. `penaltyDao.create(studentId, reason)` — 建立懲戒記錄
-
-請確保：若任一步驟拋出 `Exception`，兩個操作都 Rollback。
-
-<!--
-這個練習把今天學的 @Transactional 套用到一個實際的業務場景。
-
-大家想想：為什麼我們要讓 Exception 也觸發 Rollback？如果只讓 RuntimeException Rollback 會有什麼風險？
-
-想好了再動手！
--->
-
----
-
-# 練習：解題提示
-
-1. 在 `StudentService` 的方法加上 `@Transactional(rollbackFor = Exception.class)`
-2. 方法內依序呼叫 `studentDao.deductScore()` 和 `penaltyDao.create()`
-3. 在 Postman 測試時，可以暫時讓 `penaltyDao.create()` 拋出 `RuntimeException`，確認積分是否被 Rollback
-
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>成功標準：</b> 當 <code>penaltyDao.create()</code> 拋出例外時，資料庫中的積分沒有被扣除——代表 Rollback 成功。
-</div>
-
-<!--
-驗證 Rollback 是否成功的最直接方法，就是在第二個操作故意拋出例外，然後去查資料庫確認第一個操作有沒有被還原。
-
-如果積分被扣了但沒被還原，代表事務沒生效，要回去檢查是不是踩了剛才說的注意事項。
--->
-
----
-
-# 補充：用 JPA 建立 penalty 資料表
-
-不想手寫 `CREATE TABLE` SQL？可以用 `@Entity` 類別讓 Hibernate 自動建表：
-
-```properties
-# application.properties
-spring.jpa.hibernate.ddl-auto=update
-```
-
-```java
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import lombok.Getter;
-import lombok.Setter;
-
 @Getter
 @Setter
 @Entity
@@ -425,53 +242,38 @@ public class Penalty {
 }
 ```
 
-<!--
-這個練習需要一張新的 penalty 資料表，除了手寫 SQL，也可以借用 JPA 的 @Entity 機制來建表。
+<v-click>
 
-只要專案有引入 Spring Data JPA 依賴，並在 application.properties 設定 spring.jpa.hibernate.ddl-auto=update，Spring Boot 啟動時就會根據 @Entity 類別自動幫你 CREATE TABLE（或 ALTER TABLE 補欄位）。
-
-這裡的 Penalty 類別只是拿來「產生資料表結構」，欄位命名跟著 Java 屬性走：studentId 對應 student_id、reason 對應 reason。
--->
-
----
-
-# 補充：JPA 建表 vs MyBatis 存取，兩者不衝突
-
-`Penalty` 這個 `@Entity` **只負責建表**，實際的新增操作還是走本章的 `PenaltyMapper`：
-
-| 角色 | 用途 |
-| --- | --- |
-| `@Entity class Penalty` | 讓 Hibernate 根據欄位自動建立 `penalty` 資料表結構 |
-| `PenaltyMapper`（MyBatis） | 實際執行 `INSERT INTO penalty ...`，被 `PenaltyDao` 呼叫 |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>不用建立 <code>PenaltyRepository</code>：</b> 這裡沒有用 <code>JpaRepository</code> 存取資料，@Entity 純粹是「建表工具」；資料存取仍統一走 MyBatis 三層架構，維持和 StudentMapper 一致的寫法。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 這裡的 <code>@Entity</code> 只是請 JPA 在啟動時<b>幫忙建表</b>（<code>ddl-auto=update</code>）。實際存取資料，我們繼續用 MyBatis，兩者不衝突。
 </div>
 
+</v-click>
+
 <!--
-特別澄清一個容易混淆的地方：加了 @Entity 不代表要改用 JpaRepository 存取資料。
+先做準備工作。
 
-這裡刻意只用 @Entity 產生資料表結構，實際的 INSERT 操作仍然透過 PenaltyMapper（MyBatis）執行，維持和 StudentMapper 相同的存取方式，也才能被同一個 @Transactional 方法一起管理事務。
+學籍簿這邊，Student 在第二十八章已經加了 score 這個變數，可以直接用。請確認你要測試的同學，score 有值。
 
-如果專案還沒手動建過 penalty 表，加上這個 @Entity 類別就能省去手寫 CREATE TABLE 的步驟；已經手動建表的話，這一頁可以跳過。
+記過簿這邊，需要一張新的資料表 penalty。我們建立一個 Penalty 類別，加上 @Entity。有三個變數：編號、哪一位學生、原因。
+
+（下一步）這裡的 @Entity 只是請 JPA 在啟動的時候幫忙建表，因為第二十六章設定了 ddl-auto=update。我們不用自己到 Workbench 建。實際存取資料，還是繼續用 MyBatis，兩者不衝突。
 -->
 
 ---
 
-# 完整程式碼：StudentMapper／PenaltyMapper
+# 兩張申請單
 
-`@Mapper` 介面各補一個方法：
+<CodeSteps>
 
-```java
+```java {1-6|8-12|all}
 @Mapper
 public interface StudentMapper {
-    // 其餘方法省略
+    // 其他方法省略
     @Update("UPDATE student SET score = score - #{points} WHERE id = #{studentId}")
     int deductScore(@Param("studentId") Integer studentId, @Param("points") Integer points);
 }
-```
 
-```java
 @Mapper
 public interface PenaltyMapper {
     @Insert("INSERT INTO penalty(student_id, reason) VALUES (#{studentId}, #{reason})")
@@ -479,53 +281,36 @@ public interface PenaltyMapper {
 }
 ```
 
+- 扣分：`score = score - #{points}`，把原本的分數減掉幾分
+- 記過紀錄：新的 `PenaltyMapper`，在 `penalty` 表新增一筆
+- 這兩個方法寫在介面裡；如果你的 SQL 已經搬到 XML，這兩個貼在方法上也可以混用
+
+</CodeSteps>
+
 <!--
-先看 Mapper 層。StudentMapper 補一個 deductScore，用 #{studentId}、#{points} 兩個具名參數扣分。
+記過要做兩件事，所以需要兩張申請單。
 
-PenaltyMapper 是新的 Mapper，對應 penalty 資料表，一筆懲戒記錄需要 student_id 和 reason 兩個欄位。
+（下一步）第一張，扣分。加在 StudentMapper 裡。SQL 是 UPDATE student SET score = score 減掉 #{points}，意思是把原本的分數減掉幾分。
 
-這兩個方法本身沒有事務邏輯，事務要加在呼叫它們的 Service 方法上。
+（下一步）第二張，記過紀錄。建立一個新的介面 PenaltyMapper，在 penalty 表新增一筆。
+
+（下一步）上一章說過兩種放法可以混用。就算你其他的 SQL 已經搬到 XML，這兩個簡單的貼在方法上也沒問題。
 -->
 
 ---
 
-# 完整程式碼：StudentDao
-
-Dao 層單純轉呼叫，不做邏輯判斷：
+# 兩位承辦人員
 
 ```java
-@Repository
-public class StudentDao {
-
-    private final StudentMapper studentMapper;
-
-    public StudentDao(StudentMapper studentMapper) {
-        this.studentMapper = studentMapper;
-    }
-
-    // 其餘方法省略
-    public int deductScore(Integer studentId, Integer points) {
-        return studentMapper.deductScore(studentId, points);
-    }
+// StudentDao：加一個方法
+public int deductScore(Integer studentId, Integer points) {
+    return studentMapper.deductScore(studentId, points);
 }
 ```
-
-<!--
-Dao 層維持一貫的風格：建構子注入對應的 Mapper，方法內容就是單純轉呼叫，不夾雜任何業務邏輯。
-
-StudentDao 補上 deductScore，包住 StudentMapper 的同名方法。
--->
-
----
-
-# 完整程式碼：PenaltyDao
-
-新的 Dao class，對應懲戒記錄：
 
 ```java
 @Repository
 public class PenaltyDao {
-
     private final PenaltyMapper penaltyMapper;
 
     public PenaltyDao(PenaltyMapper penaltyMapper) {
@@ -539,21 +324,22 @@ public class PenaltyDao {
 ```
 
 <!--
-PenaltyDao 是全新的 Dao class，記得也要加上 @Repository，讓 Spring 把它註冊成 Bean，Service 才能注入使用。
+承辦人員這一層。
 
-寫法和 StudentDao 一樣：建構子注入 PenaltyMapper，方法內容單純轉呼叫。
+StudentDao 加一個 deductScore 方法，轉交給 StudentMapper。
+
+記過簿由另一位承辦人員負責，所以建立一個新的類別 PenaltyDao。寫法和 StudentDao 一樣：@Repository，用建構子注入 PenaltyMapper，再加一個 create 方法。
 -->
 
 ---
 
-# 完整程式碼：StudentService（建構子注入）
+# 組長：加上 @Transactional
 
-用建構子注入 `StudentDao`、`PenaltyDao`：
+<CodeSteps>
 
-```java
+```java {3-9|12-15|11|all}
 @Service
 public class StudentService {
-
     private final StudentDao studentDao;
     private final PenaltyDao penaltyDao;
 
@@ -562,126 +348,418 @@ public class StudentService {
         this.penaltyDao = penaltyDao;
     }
 
-    // 其餘方法省略
-}
-```
-
-<!--
-StudentService 這次要同時注入兩個 Dao：StudentDao 和 PenaltyDao。
-
-延續前面章節的慣例，用建構子注入而不是 @Autowired 欄位注入：兩個依賴都宣告成 private final，建構子把它們指派給欄位。只有一個建構子時，Spring 會自動辨識並注入，不需要額外加 @Autowired。
--->
-
----
-
-# 完整程式碼：StudentService（加上 @Transactional）
-
-兩個 Dao 操作包在同一個事務方法裡：
-
-```java
-@Service
-public class StudentService {
-
-    private final StudentDao studentDao;
-    private final PenaltyDao penaltyDao;
-
-    public StudentService(StudentDao studentDao, PenaltyDao penaltyDao) {
-        this.studentDao = studentDao;
-        this.penaltyDao = penaltyDao;
-    }
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional
     public void penalizeStudent(Integer studentId, Integer points, String reason) {
-        studentDao.deductScore(studentId, points);   // Step 1：扣除積分
-        penaltyDao.create(studentId, reason);         // Step 2：建立懲戒記錄
+        studentDao.deductScore(studentId, points);
+        penaltyDao.create(studentId, reason);
     }
 }
 ```
 
-<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>用 <code>rollbackFor = Exception.class</code>：</b> 不只 RuntimeException，任何 Exception 都會讓兩個操作一起 Rollback，符合題目「若任一步驟拋出 Exception，兩個操作都 Rollback」的要求。
-</div>
+- 組長現在要指揮兩位承辦人員，所以注入兩個 Dao
+- 記過的方法：先扣分，再寫記過紀錄
+- `@Transactional`：這個方法裡的事算「同一件」。中途出錯，全部 Rollback
+- 交易加在 **Service** 這一層，因為只有組長知道哪幾件事要算在一起
+
+</CodeSteps>
 
 <!--
-這是本題的核心：penalizeStudent 方法依序呼叫 studentDao.deductScore 和 penaltyDao.create。
+重點在組長這一層。
 
-加上 @Transactional(rollbackFor = Exception.class)，代表這個方法從開始到結束是同一個事務，只要任何一步拋出 Exception（不管是不是 RuntimeException），Spring 都會把兩個操作一起 Rollback，不會留下「扣分但沒記錄」的中間狀態。
+（下一步）組長現在要指揮兩位承辦人員，所以建構子要注入兩個 Dao。原本的建構子只有 StudentDao，請多加一個 PenaltyDao。其他的方法都保留，這裡省略沒有列出來。
+
+（下一步）記過的方法 penalizeStudent 做兩件事：先請 StudentDao 扣分，再請 PenaltyDao 寫記過紀錄。
+
+（下一步）在方法上面加 @Transactional。意思就是：這個方法裡的事，算同一件。只要中途出錯，前面做過的全部 Rollback。
+
+（下一步）注意交易是加在 Service 這一層。因為只有組長知道哪幾件事要算在一起。這就是第二十四章說的，組長負責決定事情該怎麼辦。
 -->
 
 ---
 
-# 完整程式碼：StudentController
+# import 要選對
 
-新增一支懲戒 API：
+Eclipse 會給兩個選項，請選 **Spring** 的那一個：
+
+<v-clicks>
+
+- ✅ `org.springframework.transaction.annotation.Transactional`
+- ⚠️ `jakarta.transaction.Transactional`：功能類似，但是等一下要用的設定它沒有
+
+</v-clicks>
+
+<!--
+加 @Transactional 的時候，Eclipse 會給兩個 import 的選項。
+
+（下一步）請選 org.springframework 開頭的，這是 Spring 自己的版本。
+
+（下一步）另一個 jakarta 開頭的功能類似，但是等一下要用的設定它沒有。選錯的話，後面的程式會出現紅字。
+-->
+
+---
+
+# 櫃台：記過的 API
 
 ```java
-@RestController
-public class StudentController {
-
-    private final StudentService studentService;
-
-    public StudentController(StudentService studentService) {
-        this.studentService = studentService;
-    }
-
-    // 其餘方法省略
-    @PostMapping("/students/{id}/penalty")
-    public void penalizeStudent(@PathVariable("id") Integer id,
-                                 @RequestParam("points") Integer points,
-                                 @RequestParam("reason") String reason) {
-        studentService.penalizeStudent(id, points, reason);
-    }
+@PostMapping("/students/{id}/penalty")
+public String penalizeStudent(@PathVariable(name = "id") Integer id,
+                              @RequestParam(name = "points") Integer points,
+                              @RequestParam(name = "reason") String reason) {
+    studentService.penalizeStudent(id, points, reason);
+    return "記過完成";
 }
 ```
 
-<!--
-Controller 只負責接收 HTTP 參數，轉呼叫 StudentService.penalizeStudent，不知道也不需要知道事務是怎麼運作的。
+<v-click>
 
-id 從路徑參數拿，points、reason 用 @RequestParam 接收，呼叫 Service 方法即可完成整個扣分＋建立懲戒記錄的流程。
+測試：`POST /students/1/penalty?points=10&reason=遲到`
+
+</v-click>
+
+<!--
+最後是櫃台，在 StudentController 加一個 API。
+
+路徑是 /students/ 編號 /penalty，意思是「幫這位同學記過」。扣幾分和原因，放在問號後面。
+
+（下一步）測試的時候，用 POST 發送 /students/1/penalty，問號後面 points=10、reason=遲到。請把 1 換成你實際的學生編號。
 -->
 
 ---
 
-# 用 Postman 驗證 Rollback
+# 動手驗證 Rollback
 
-| 測試步驟 | 操作 | 預期結果 |
-| --- | --- | --- |
-| 1 | 正常呼叫 `POST /students/1/penalty?points=10&reason=遲到` | 積分扣除，懲戒記錄新增 |
-| 2 | 暫時把 `PenaltyDao.create()` 的 `return ...` 整行**改成** `throw new RuntimeException("測試");` | 呼叫拋出例外 |
-| 3 | 查詢資料庫 `student` 表的積分欄位 | 積分**沒有被扣除**——代表 Rollback 成功 |
-| 4 | 把 `throw` 改回原本的 `return penaltyMapper.create(studentId, reason);` | 功能恢復正常 |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>驗證重點：</b> Step 1（扣分）已經寫入資料庫，但因為 Step 2 拋出例外，整個事務被 Rollback，Step 1 的扣分也一併撤銷——這正是 @Transactional 保護的效果。
+1. **正常呼叫**一次 → 分數少 10 分，`penalty` 表多一筆
+2. 把 `PenaltyDao.create()` 裡的那一行，**暫時改成** `throw new RuntimeException("測試");`
+3. 再呼叫一次 → Postman 收到錯誤
+4. 到資料庫看 `student` 表 → 分數**沒有被扣**
+5. 把程式改回來
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-left">
+✅ 也試試看把 <code>@Transactional</code> 拿掉再做一次：這次分數會被扣掉，記過簿卻沒有紀錄。
+</div>
+
+</v-click>
+
+<!--
+來動手驗證 Rollback 真的有效。
+
+（下一步）第一步，正常呼叫一次。分數少 10 分，penalty 表多一筆。
+
+（下一步）第二步，故意製造錯誤。把 PenaltyDao 的 create 方法裡的那一行，暫時改成 throw new RuntimeException。throw 的意思是「丟出一個錯誤」，等於假裝寫記過簿的時候出錯了。
+
+（下一步）第三步，再呼叫一次。這次 Postman 會收到錯誤。
+
+（下一步）第四步，到資料庫看 student 表。分數沒有被扣。扣分明明先執行了，但是因為後面出錯，被 Rollback 了。
+
+（下一步）第五步，記得把程式改回來。
+
+（下一步）還可以多做一個對照：把 @Transactional 拿掉，再做一次同樣的實驗。這次分數會被扣掉，記過簿卻沒有紀錄。就是一開始故事裡的狀況。
+-->
+
+---
+
+# 加在方法上，或加在類別上
+
+```java
+@Service
+@Transactional
+public class StudentService {
+
+    public void penalizeStudent(Integer studentId, Integer points, String reason) { ... }
+
+    @Transactional(readOnly = true)
+    public Student getStudentById(Integer studentId) { ... }
+}
+```
+
+<v-clicks>
+
+- 加在**方法**上：只有這個方法是一筆交易
+- 加在**類別**上：類別裡所有 public 方法都各自是一筆交易
+- 方法上可以再寫一次，蓋掉類別的設定。`readOnly = true` 表示「這個方法只查詢、不改資料」
+
+</v-clicks>
+
+<!--
+@Transactional 可以加在兩個地方。
+
+（下一步）加在方法上，只有這個方法是一筆交易。剛才就是這樣寫。
+
+（下一步）加在類別上，類別裡所有 public 的方法，都各自是一筆交易。
+
+（下一步）兩個都寫的時候，方法上的設定會蓋掉類別的。例如這裡的查詢方法，寫了 readOnly = true，告訴資料庫這個方法只查詢、不改資料，資料庫可以處理得快一點。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 3
+# 什麼時候會 Rollback？
+
+<!--
+接下來看一個容易忽略的細節：不是所有錯誤都會 Rollback。
+-->
+
+---
+
+# 預設：只有 RuntimeException 會 Rollback
+
+Java 把「錯誤」叫做**例外**（Exception），分成兩大類：
+
+```
+Exception（所有例外）
+├── RuntimeException      ← 預設會 Rollback
+│   ├── NullPointerException
+│   ├── IllegalArgumentException
+│   └── …
+└── 其他，例如 IOException  ← 預設「不會」Rollback
+```
+
+<v-clicks>
+
+- **RuntimeException**：程式執行中突然發生的錯誤，方法不用事先宣告
+- **其他例外**（受檢例外）：方法要寫 `throws` 事先宣告，例如讀檔失敗的 `IOException`
+
+</v-clicks>
+
+<!--
+在 Java 裡，「錯誤」有一個正式的名字，叫做例外，Exception。例外分成兩大類。
+
+（下一步）第一類是 RuntimeException 這一家，像 NullPointerException。它們是程式執行中突然發生的錯誤，方法不用事先宣告。剛才實驗裡丟的就是這一種。
+
+（下一步）第二類是其他的例外，叫做受檢例外。方法要寫 throws 事先宣告，例如讀檔失敗的 IOException。
+
+重點是：@Transactional 預設只有遇到第一類 RuntimeException，才會 Rollback。遇到第二類，預設不會 Rollback，前面做過的事會被保留下來。這一點很多人不知道。
+-->
+
+---
+
+# 自己決定：rollbackFor、noRollbackFor
+
+<CodeSteps>
+
+```java {1-2|4-5|7-8|all}
+@Transactional(rollbackFor = Exception.class)
+public void importData() throws IOException { ... }
+
+@Transactional(rollbackFor = {IOException.class, SQLException.class})
+public void importData2() throws IOException, SQLException { ... }
+
+@Transactional(noRollbackFor = IllegalArgumentException.class)
+public void process() { ... }
+```
+
+- `rollbackFor = Exception.class`：**任何**例外都 Rollback。最常用、最保險
+- 也可以指定某幾種例外，用大括號列出來
+- `noRollbackFor`：反過來，指定某種例外**不要** Rollback
+
+</CodeSteps>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+✅ 不確定的時候，寫 <code>@Transactional(rollbackFor = Exception.class)</code> 就對了。
+</div>
+
+</v-click>
+
+<!--
+如果希望第二類例外也會 Rollback，可以自己設定。
+
+（下一步）rollbackFor = Exception.class。Exception 是所有例外的源頭，所以意思是任何例外都 Rollback。這是最常用、最保險的寫法。
+
+（下一步）也可以只指定某幾種例外，用大括號列出來。
+
+（下一步）noRollbackFor 是反過來：指定某一種例外不要 Rollback，其他的 RuntimeException 照舊。這個比較少用。
+
+（下一步）不確定的時候，寫 rollbackFor = Exception.class 就對了。所以我們的記過方法，建議也改成這樣寫。
+-->
+
+---
+
+# 想一想
+
+<Poll question="方法上只寫 @Transactional，執行到一半丟出 IOException（受檢例外）。前面已經做的修改會怎樣？" options="會 Rollback|不會 Rollback，被保留下來|程式無法編譯|資料表會被清空" answer="2" />
+
+<!--
+確認一下。
+
+方法上只寫 @Transactional，沒有其他設定。執行到一半丟出 IOException，它是受檢例外。前面已經做的修改會怎樣？
+
+（等大家作答）
+
+（下一步）答案是不會 Rollback，被保留下來。
+
+預設只有 RuntimeException 會 Rollback。想讓 IOException 也 Rollback，要加上 rollbackFor。
+-->
+
+---
+
+# 三個容易踩到的地方
+
+<v-clicks>
+
+- **只對 public 方法有效**：加在 private 方法上不會有作用
+- **同一個類別裡互相呼叫，不會生效**：A 方法呼叫同類別的 B 方法，B 上面的 `@Transactional` 不算數
+- **類別要是 Spring 的 Bean**：例如有加 `@Service`
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 原因是第十一章的 <b>AOP</b>：<code>@Transactional</code> 是 Spring 在「外面的人呼叫這個方法」時幫忙加上去的。從類別裡面自己呼叫自己，Spring 插不上手。
+</div>
+
+</v-click>
+
+<!--
+@Transactional 有三個容易踩到的地方。
+
+（下一步）第一，只對 public 方法有效。加在 private 方法上不會有作用，而且不會報錯，很難發現。
+
+（下一步）第二，同一個類別裡互相呼叫，不會生效。A 方法呼叫同一個類別的 B 方法，就算 B 上面有 @Transactional，也不算數。這是最多人踩到的。
+
+（下一步）第三，類別要是 Spring 的 Bean，例如有加 @Service。
+
+（下一步）這三點的原因其實是同一個，就是第十一章學的 AOP。@Transactional 是 Spring 在「外面的人呼叫這個方法」的時候，幫忙在前後加上開始交易和結束交易。從類別裡面自己呼叫自己，Spring 插不上手。
+
+遇到第二種情況，解法是把 B 方法搬到另一個 Service 裡。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 4
+# 動手練習
+
+<!--
+最後來做一個練習。
+-->
+
+---
+
+# 練習：撤銷記過
+
+教務處發現記錯了，要幫同學**撤銷記過**。在 `StudentService` 加一個方法，同時做兩件事：
+
+1. 把扣掉的分數**加回去**
+2. 把那一筆記過紀錄**刪掉**
+
+**要求：** 任何一步丟出 `Exception`，兩件事都要 Rollback。
+
+<v-click>
+
+**提示：**
+
+- `StudentMapper`：`UPDATE student SET score = score + #{points} WHERE id = #{studentId}`
+- `PenaltyMapper`：`DELETE FROM penalty WHERE id = #{penaltyId}`
+- API 可以設計成 `DELETE /students/{id}/penalty/{penaltyId}?points=10`
+
+</v-click>
+
+<!--
+練習題。教務處發現記錯了，要幫同學撤銷記過。
+
+請在 StudentService 加一個方法，同時做兩件事：把扣掉的分數加回去；把那一筆記過紀錄刪掉。
+
+要求是：任何一步丟出 Exception，兩件事都要 Rollback。
+
+（下一步）給三個提示。StudentMapper 要加一個加分的 SQL。PenaltyMapper 要加一個刪除的 SQL。API 可以設計成 DELETE /students/ 編號 /penalty/ 記過編號，要加回幾分放在問號後面。
+
+請先暫停，自己試試看，再看下一頁。
+-->
+
+---
+
+# 練習：參考答案
+
+```java
+// StudentMapper
+@Update("UPDATE student SET score = score + #{points} WHERE id = #{studentId}")
+int addScore(@Param("studentId") Integer studentId, @Param("points") Integer points);
+
+// PenaltyMapper
+@Delete("DELETE FROM penalty WHERE id = #{penaltyId}")
+int deleteById(@Param("penaltyId") Integer penaltyId);
+
+// StudentService（兩個 Dao 各加一個轉交的方法）
+@Transactional(rollbackFor = Exception.class)
+public void revokePenalty(Integer studentId, Integer penaltyId, Integer points) {
+    studentDao.addScore(studentId, points);
+    penaltyDao.deleteById(penaltyId);
+}
+```
+
+<div class="mt-2 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-left">
+✅ 驗證方式和剛才一樣：讓第二步故意丟出例外，確認分數沒有被加回去。
 </div>
 
 <!--
-驗證 Rollback 最直接的方式，就是故意在第二步製造例外，然後去查資料庫確認第一步有沒有被還原。
+這是參考答案。
 
-如果拿掉 @Transactional 或用預設設定（沒加 rollbackFor），重新測一次，會發現積分被扣了但沒有被還原——這就是為什麼受檢例外和 RuntimeException 都要考慮清楚要不要 Rollback。
+StudentMapper 加一個 addScore，把分數加回去。PenaltyMapper 加一個 deleteById，刪掉那一筆記過紀錄。兩個 Dao 各加一個轉交的方法，這裡省略。
+
+重點在 StudentService：方法上面加 @Transactional，並且寫 rollbackFor = Exception.class，因為題目要求任何例外都要 Rollback。方法裡依序呼叫兩個 Dao。
+
+驗證方式和剛才一樣：讓第二步故意丟出例外，確認分數沒有被加回去。
+-->
+
+---
+
+# 複習：教務處對照表
+
+<Pairs left="教務處" right="程式" rows="teacher,組長說：這幾件事算同一件=code,@Transactional（加在 Service 的方法上）|ok,全部成功才算數=code,Commit|no,有一件失敗就全部擦掉=code,Rollback|what,哪些錯誤要擦掉=code,預設 RuntimeException；rollbackFor 可以改" />
+
+<!--
+我們用一張圖複習今天的內容。
+
+（下一步）組長說這幾件事算同一件，是 @Transactional，加在 Service 的方法上。
+
+（下一步）全部成功才算數，是 Commit。
+
+（下一步）有一件失敗就全部擦掉，是 Rollback。
+
+（下一步）哪些錯誤要擦掉：預設是 RuntimeException，可以用 rollbackFor 改。
 -->
 
 ---
 
 # 章節總結
 
-| 重點 | 說明 |
-| --- | --- |
-| 事務 | 一組操作全成功或全 Rollback，確保資料一致性 |
-| Import | `org.springframework.transaction.annotation.Transactional` |
-| 加在哪裡 | 方法上（單方法事務）或類別上（所有方法套用） |
-| 預設 Rollback | 只有 RuntimeException 及其子類別 |
-| rollbackFor | 讓受檢例外也觸發 Rollback |
-| noRollbackFor | 讓某 RuntimeException 不觸發 Rollback |
-| 注意事項 | private 方法無效；同類別呼叫不走代理 |
+<v-clicks>
+
+- **交易**：一組操作全部成功，或全部 Rollback
+- **ACID**：原子性、一致性、隔離性、持久性
+- **`@Transactional`**：加在 Service 的方法或類別上；import 選 Spring 的
+- **預設規則**：只有 `RuntimeException` 會 Rollback
+- **`rollbackFor = Exception.class`**：任何例外都 Rollback
+- **注意**：只對 public 方法有效；同一個類別裡互相呼叫不會生效
+
+</v-clicks>
+
+<v-click>
+
+下一章：兩個人同時搶最後一個名額，會發生什麼事？
+
+</v-click>
 
 <!--
-今天的重點總結。
+最後整理今天的重點。
 
-最重要的是記住：@Transactional 預設只 Rollback RuntimeException，如果業務邏輯可能拋出受檢例外，一定要加 rollbackFor。
+（依序按下一步）交易是一組操作全部成功，或全部 Rollback。四個特性合稱 ACID。@Transactional 加在 Service 的方法或類別上。預設只有 RuntimeException 會 Rollback。寫 rollbackFor = Exception.class，任何例外都會 Rollback。它只對 public 方法有效，同一個類別裡互相呼叫不會生效。
 
-學完今天，大家應該可以說：「我知道怎麼用 @Transactional 保護多步驟的資料庫操作了！」
-
-下一章我們要學的是樂觀鎖和悲觀鎖——它們和 @Transactional 是好夥伴，一起解決並發控制的問題。
+（最後一步）交易解決了「一個人做兩件事」的問題。下一章要看另一種狀況：兩個人同時搶最後一個名額，會發生什麼事？
 -->
 
 ---
@@ -690,6 +768,12 @@ layout: end
 
 # Q & A
 
+有任何問題嗎？
+
 <!--
-今天的 @Transactional 章節就到這裡。大家有任何問題嗎？
+今天的內容到這邊。
+
+課後請一定要做一次 Rollback 的實驗：有加 @Transactional 和沒加的時候，各看一次資料庫的結果。親眼看過，印象會很深。
+
+有任何問題歡迎提出來。
 -->
