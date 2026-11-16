@@ -46,64 +46,56 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第十四章！
+大家好，歡迎來到第十四章。
 
-上一章學了 Http 協議，我們知道每個請求都有一個 URL，指定要訪問後端的哪個資源。今天要學的是：Spring Boot 怎麼知道收到某個 URL 的請求時，要執行哪個 Java 方法來處理？
+上一章我們看了點單上的四格。今天只專心看其中一格：URL，也就是網址。
 
-答案就是 @RequestMapping——它是 Spring MVC 的核心 Annotation，負責把 URL 路徑和 Controller 方法連接起來。
--->
-
----
-layout: default
----
-
-# Outline
-
-- **回顧：什麼是 Http 協議？** — 複習 Request URL 的角色
-- **什麼是 URL？** — URL 的定義與格式規範
-- **URL 的例子分析** — 拆解一個完整的 URL
-- **URL 路徑對應：@RequestMapping** — 如何把 URL 路徑對應到 Controller 方法
-- **在 Spring Boot 中練習 @RequestMapping 的用法** — 設定多個路徑、指定 Http Method
-
-<!--
-今天有點偏實作，學完之後你會知道怎麼在 Spring Boot 裡設定「哪個 URL 對應到哪個方法」。
-
-@RequestMapping 是我們從第三章就一直在用的 Annotation，今天要把它說清楚、講明白。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# 回顧
-# 什麼是 Http 協議？
-
-<!--
-先快速複習一下上一章的重點，特別是 URL 在 Http Request 中的角色。
+學完之後，你會知道怎麼告訴 Spring Boot：「哪一個網址，要交給哪一段程式處理」。
 -->
 
 ---
 
-# 回顧：Http Request 的組成
+# 今天要搞懂的三件事
 
-前端發送的 Http Request 有四個部分，其中 URL 決定「要找後端的哪個方法」：
+<v-clicks>
 
-| 部分 | 說明 | 本章重點 |
-| --- | --- | --- |
-| **Http Method** | 請求的動作（GET / POST / ...） | ✓ @RequestMapping 可指定 |
-| **URL** | 請求的目標網址，包含路徑 | ✓ **本章核心** |
-| **Request Header** | 附加資訊（Content-Type 等） | — |
-| **Request Body** | 夾帶的資料（POST / PUT 限定） | — |
+- **網址怎麼讀？** 一個網址可以拆成五段，每一段都有意思
+- **`@RequestMapping` 是什麼？** 店員身上那張「我負責的品項」
+- **動手做**：讓一位店員同時負責好幾種飲料
 
-「URL 裡的路徑（Path）告訴 Spring Boot：這個請求要交給哪個 Controller 方法處理。」
+</v-clicks>
 
 <!--
-上一章我們學了 Http Request 的四個部分：Method、URL、Header、Body。
+今天要搞懂三件事。
 
-今天要深入看的是 URL——特別是 URL 裡的路徑（Path）部分。
+（下一步）第一，網址怎麼讀。一個網址可以拆成五段，每一段都有它的意思。
 
-Spring Boot 收到一個請求的時候，它會看這個請求的 URL 路徑，然後找到對應的 Controller 方法來執行。@RequestMapping 就是做這個「對應」工作的。
+（下一步）第二，@RequestMapping 是什麼。先劇透：它就是店員身上那張「我負責的品項」的牌子。
+
+（下一步）第三，我們會動手做，讓一個 Controller 同時負責好幾種飲料。
+-->
+
+---
+
+# 回顧：點單上的四格
+
+上一章，客人交給櫃台的點單有四格：
+
+- **Http Method**：想做什麼動作
+- **URL**：要找哪一樣東西　← 今天的主角
+- **Request Header**：附帶的說明
+- **Request Body**：詳細的內容
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 店員拿到點單，第一件事就是看 <b>URL</b>：客人到底要點什麼？
+</div>
+
+<!--
+先複習一下。上一章我們說，客人交給櫃台的點單上有四格：Method、URL、Header、Body。
+
+今天的主角是第二格，URL。
+
+店員拿到點單，第一件事一定是看：客人到底要點什麼？後端也是一樣，收到請求先看 URL。
 -->
 
 ---
@@ -112,105 +104,78 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-# 什麼是 URL？
+# 網址怎麼讀？
 
 <!--
-在學 @RequestMapping 之前，先把 URL 的結構搞清楚，特別是路徑（Path）這個部分。
+URL 就是我們平常說的網址。它看起來是一長串，其實可以拆成幾段來讀。
 -->
 
 ---
 
-# URL 的定義
+# 把網址拆開來看
 
-**URL**（Uniform Resource Locator）是「統一資源定位器」，也就是網址，用來指定網路上一個資源的位置。
-
-| 概念 | 說明 |
-| --- | --- |
-| **URL 的用途** | 告訴瀏覽器或前端「要去哪裡找資源」 |
-| **在 Http 中的角色** | Http Request 的第二個部分，指定請求的目標 |
-| **最關鍵的部分** | 路徑（Path）——決定後端要執行哪個方法 |
-
-「每個 URL 都指向網路上的某個資源；後端 API 中，URL 的路徑決定由哪個 Controller 方法來處理請求。」
+<UrlParts parts="http://;;Protocol（協定）;;用什麼方式溝通;;Protocol：用什麼方式溝通。http 就是上一章學的 Http 協議||localhost;;Host（主機）;;哪一間店;;Host：哪一間店。localhost 代表「我自己這台電腦」||:8080;;Port（埠號）;;幾號窗口;;Port：這間店的幾號窗口。Spring Boot 預設開在 8080||/milktea;;Path（路徑）;;點的品項;;Path：客人要點的品項。後端就是看這一段來決定誰處理||?ice=less;;Query String;;備註;;Query String：附帶的備註，例如少冰。第 18 章會學" />
 
 <!--
-URL 就是我們平常說的「網址」，但在後端開發的語境裡，它有更精確的意義。
+我們拿這個網址當例子，一段一段看。
 
-每個 URL 都在描述一個資源的位置：「在哪台機器、哪個 port、哪個路徑下，找到這個資源。」
+（下一步）最前面是 Protocol，協定，代表用什麼方式溝通。http 就是上一章學的 Http 協議。
 
-對後端開發者來說，最重要的是 URL 裡的「路徑」部分——Spring Boot 就是根據路徑來決定要執行哪個 Controller 方法。
+（下一步）接著是 Host，主機，代表要去哪一間店。localhost 是一個特別的名字，意思是「我自己這台電腦」。
+
+（下一步）冒號後面的數字是 Port，埠號。你可以想成這間店的幾號窗口。Spring Boot 預設開在 8080 號窗口。
+
+（下一步）再來是 Path，路徑。這是今天最重要的一段，它代表客人要點的品項。後端就是看這一段，來決定要交給誰處理。
+
+（下一步）問號後面的是 Query String，可以想成點單上的備註，例如少冰。這個我們第十八章才會學，今天先知道有它就好。
 -->
 
 ---
 
-# URL 的格式規範
+# 真實世界的網址也一樣
 
-一個完整的 URL 由以下幾個部分組成：
+<UrlParts parts="https://;;Protocol;;用什麼方式溝通;;https 是加密版的 http，正式上線的網站幾乎都用它||www.youtube.com;;Host;;哪一間店;;Host 換成真正的網域名稱：YouTube 這間店||/watch;;Path;;點的品項;;Path 是 /watch：我要看影片||?v=abc123;;Query String;;備註;;Query String：要看的是編號 abc123 的那一支影片" />
 
-| 部分 | 名稱 | 說明 | 例子 |
-| --- | --- | --- | --- |
-| `http://` | Protocol（協定） | 使用的通訊協定 | `http://`、`https://` |
-| `localhost` | Host（主機） | 伺服器的網域或 IP | `localhost`、`www.youtube.com` |
-| `:8080` | Port（埠號） | 伺服器上的服務入口 | `:8080`（開發）、`:443`（HTTPS 預設） |
-| `/test` | Path（路徑） | 指向後端資源的路徑 | `/test`、`/users`、`/products/1` |
-| `?name=Alice` | Query String（查詢字串） | 附加的查詢參數（可選） | `?name=Alice&age=20` |
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 沒寫 Port？因為 https 預設就是 443 號窗口，可以省略不寫。
+</div>
+
+</v-click>
 
 <!--
-把 URL 拆開來看，每個部分都有它的意義。
+換一個真實世界的例子，YouTube 的網址。結構是一模一樣的。
 
-Protocol 決定用什麼協定溝通。開發時常用 http://，正式環境幾乎都用 https://（加密版）。
+（下一步）Protocol 是 https，它是加密版的 http。正式上線的網站幾乎都用它。
 
-Host 是伺服器的位置。開發時 localhost 代表自己的電腦，正式環境是真實的域名或 IP。
+（下一步）Host 換成了真正的網域名稱，也就是 YouTube 這間店。
 
-Port 是伺服器上的入口編號。Spring Boot 開發環境預設用 8080，HTTP 正式環境預設 80（可以省略），HTTPS 預設 443（也可以省略）。
+（下一步）Path 是 /watch，意思是我要看影片。
 
-Path 是最重要的部分——這是 @RequestMapping 在對應的。
+（下一步）Query String 說明要看的是哪一支影片。
 
-Query String 是額外的查詢參數，格式是 ?key=value，多個參數用 & 連接。這是第 19 章要學的 @RequestParam 在解析的。
+（下一步）你可能發現這個網址沒有寫 Port。因為 https 預設就是 443 號窗口，所以可以省略不寫。
+
+不管網址多長，都是這幾段。對我們寫後端的人來說，最重要的永遠是 Path。
 -->
 
 ---
 
-# URL 例子分析（一）
+# 小測驗：哪一段是 Path？
 
-拆解這個完整的 URL：`http://localhost:8080/test?name=Alice`
-
-| 部分 | 值 | 說明 |
-| --- | --- | --- |
-| Protocol | `http://` | 使用 Http 協定 |
-| Host | `localhost` | 自己的電腦（本機） |
-| Port | `8080` | Spring Boot 開發環境預設埠號 |
-| **Path** | **`/test`** | **@RequestMapping 對應的就是這個** |
-| Query String | `?name=Alice` | 附加參數（下一章學怎麼接收） |
+<Poll question="http://localhost:8080/greentea　這個網址裡，哪一段是 Path（客人點的品項）？" options="http://|localhost|:8080|/greentea" answer="4" />
 
 <!--
-把 URL 拆開來，每個部分都有它的意義。
+來一題確認一下。
 
-這是我們熟悉的本機 Spring Boot 環境，Path 是 /test，@RequestMapping("/test") 就是在對應這個路徑。
+這個網址裡，哪一段是 Path，也就是客人點的品項？
 
-記住這個規律：無論 URL 多長多複雜，@RequestMapping 對應的都是 Path 的部分。
--->
+（等大家作答）
 
----
+（下一步）答案是 /greentea。
 
-# URL 例子分析（二）
-
-再看一個真實世界的例子：`https://www.youtube.com/channel/UCxxxxxx/videos`
-
-| 部分 | 值 | 說明 |
-| --- | --- | --- |
-| Protocol | `https://` | 使用加密的 Https 協定 |
-| Host | `www.youtube.com` | YouTube 的伺服器域名 |
-| Port | 443（省略） | Https 預設埠號，可省略不寫 |
-| **Path** | **`/channel/UCxxxxxx/videos`** | **YouTube 後端對應這個路徑的 Controller** |
-
-兩個例子結構完全一樣，只是各部分的值不同——無論 URL 多長，@RequestMapping 對應的都是 Path。
-
-<!--
-第二個例子是 YouTube 的真實網址，Path 是 /channel/UCxxxxxx/videos。YouTube 後端也有對應這個路徑的 Controller 方法，負責回傳這個頻道的影片清單。
-
-對照第一個例子，結構是完全一樣的，只是各個部分的值不同。
-
-記住這個規律：無論 URL 多長多複雜，@RequestMapping 對應的都是 Path 的部分。
+Port 後面、從斜線開始的那一段，就是 Path。
 -->
 
 ---
@@ -219,94 +184,112 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-# URL 路徑對應：@RequestMapping
+# 誰來處理這張點單？
 
 <!--
-現在清楚了 URL 的結構，特別是 Path 的位置，我們來學 @RequestMapping 怎麼把 Path 和 Controller 方法連接起來。
+會讀網址之後，下一個問題是：點單進來了，後端要怎麼知道該交給誰處理？
 -->
 
 ---
 
-# @RequestMapping — 定義
+# 每位店員都掛著一張牌子
 
-| 項目 | 說明 |
-| --- | --- |
-| **用途** | 把 URL 路徑（Path）對應到 Controller 類別或方法 |
-| **加在哪裡** | 加在 `@RestController` 或 `@Controller` 的類別或方法上 |
-| **必要前提** | 類別必須有 `@RestController` 或 `@Controller`，否則不生效 |
-| **預設行為** | 不指定 Http Method 時，接受所有 Method（GET / POST / ...）的請求 |
-
-「@RequestMapping 就是 Spring Boot 的「路由表」——當請求進來，Spring Boot 查這張表找到對應的方法執行。」
+<Dispatch />
 
 <!--
-@RequestMapping 是 Spring MVC 最核心的 Annotation，負責定義「這個方法負責處理哪個 URL 路徑的請求」。
+回到手搖飲店。這間店有三位店員，每個人只會做一種飲料。
 
-有一個很重要的前提：@RequestMapping 一定要配合 @RestController 或 @Controller 使用，缺少這兩個其中之一，@RequestMapping 不會生效，Spring Boot 不會把請求導向這個方法。
+所以每位店員身上都掛著一張牌子，寫著「我負責的品項」。門口的接待，就是上一章提過的那位，會看點單上的品項來找人。
 
-另一個要記住的：如果只寫 @RequestMapping("/test") 不指定 Method，那不管前端是 GET 還是 POST 還是 DELETE，這個方法都會被觸發。這在開發中很方便，但正式 API 設計時通常會指定 Method（下一張會示範）。
+（下一步）點單上寫 /milktea。接待一看，交給掛著 /milktea 牌子的店員。
+
+（下一步）下一張點單寫 /greentea，就交給掛著 /greentea 的店員。
+
+（下一步）第三張點單寫 /coffee。接待找了一圈，沒有任何人掛這張牌子。只好回覆客人：本店沒有賣。
+
+這個回覆，就是上一章學過的 404。
 -->
 
 ---
 
-# @RequestMapping — 基本用法
+# 把牌子搬進程式裡
 
-```java
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+<Pairs left="飲料店" right="Spring Boot" rows="form,點單上的品項=code,URL 裡的 Path|clerk,店員=code,Controller 裡的一個方法|what,店員身上「我負責的品項」牌子=code,@RequestMapping|no,沒有人掛這張牌子=code,404 Not Found" />
 
+<!--
+把這個畫面搬進程式裡。
+
+（下一步）點單上的品項，就是 URL 裡的 Path。
+
+（下一步）店員，就是 Controller 裡的一個方法。方法這個詞，你可以先想成「一段會做事的程式」。
+
+（下一步）店員身上那張「我負責的品項」牌子，就是今天的主角：@RequestMapping。
+
+（下一步）沒有人掛這張牌子，Spring Boot 就會回 404 Not Found。
+-->
+
+---
+
+# @RequestMapping 是什麼？
+
+**`@RequestMapping`：告訴 Spring Boot「這個 Path 的請求，交給這個方法處理」。**
+
+使用時有三個規則：
+
+<v-clicks>
+
+- 寫在**方法的上面**，括號裡放 Path，例如 `@RequestMapping("/milktea")`
+- 這個類別**一定要有** `@RestController`，牌子才會生效
+- 沒有特別指定的話，不管是 GET 還是 POST 的請求**都會收**
+
+</v-clicks>
+
+<!--
+用一句話說：@RequestMapping 是在告訴 Spring Boot，這個 Path 的請求，交給這個方法處理。
+
+使用的時候有三個規則。
+
+（下一步）第一，它寫在方法的上面，括號裡放 Path。
+
+（下一步）第二，這個類別一定要有 @RestController。不是店裡的員工，掛什麼牌子都沒有用。
+
+（下一步）第三，沒有特別指定的話，不管請求的 Method 是 GET 還是 POST，它都會收。Method 的差別我們第十七章會仔細學。
+-->
+
+---
+
+# 程式長這樣
+
+<CodeSteps>
+
+```java {1-2|4|5-7|all}
 @RestController
-public class MyController {
+public class DrinkController {
 
-    @RequestMapping("/test")
-    public String test() {
-        return "Hello World";
+    @RequestMapping("/milktea")
+    public String milkTea() {
+        return "珍珠奶茶一杯";
     }
 }
 ```
 
-當前端向 `http://localhost:8080/test` 發送請求時，Spring Boot 執行 `test()` 並回傳 `Hello World`。
+- `@RestController`：`DrinkController` 是這間店的櫃台
+- `@RequestMapping("/milktea")`：掛上牌子，「/milktea 由我負責」
+- 這個方法就是店員：收到點單後，回傳「珍珠奶茶一杯」
+- 請求 `http://localhost:8080/milktea`，就會拿到「珍珠奶茶一杯」
+
+</CodeSteps>
 
 <!--
-這段程式碼從第三章就一直在用，現在我們能完整解釋它：
+我們來看程式。這次不用第三章的 MyController 了，我們新增一個 DrinkController，專門負責飲料。
 
-@RestController 宣告這是一個 Controller，Spring Boot 才會掃描裡面的 @RequestMapping。
+（第一步）@RestController，表示 DrinkController 是這間店的櫃台。
 
-@RequestMapping("/test") 告訴 Spring Boot：收到路徑是 /test 的請求，就執行 test() 這個方法。
+（下一步）@RequestMapping("/milktea")，就是掛上牌子：/milktea 由我負責。
 
-test() 回傳的 "Hello World" 字串，Spring MVC 自動組裝成 Http Response 的 Body 回傳給前端。
+（下一步）下面這個方法就是店員本人。收到點單之後，他回傳「珍珠奶茶一杯」。
 
-這三行程式碼把「一個 URL 路徑 → 一個 Java 方法 → 一個 Http 回應」串起來了，這就是 Spring MVC 最基礎的運作模式。
--->
-
----
-
-# @RequestMapping — 指定 Http Method
-
-`@RequestMapping` 可以用 `method` 屬性限制只接受特定的 Http Method：
-
-```java
-// 只接受 GET 請求
-@RequestMapping(value = "/users", method = RequestMethod.GET)
-public String getUsers() { return "使用者清單"; }
-
-// 只接受 POST 請求
-@RequestMapping(value = "/users", method = RequestMethod.POST)
-public String createUser() { return "新增使用者"; }
-```
-
-| 屬性 | 說明 |
-| --- | --- |
-| `value` | URL 路徑，等同於直接寫字串 `"/users"` |
-| `method` | 指定接受的 Http Method，使用 `RequestMethod.GET` 等常數 |
-
-<!--
-有時候我們希望同一個路徑 /users，GET 回傳清單、POST 新增資料——這樣就需要用 method 屬性來區分。
-
-value 就是路徑，和直接寫 @RequestMapping("/users") 是一樣的效果，只是當你要同時指定 method 時，路徑要用 value = 的方式寫。
-
-RequestMethod.GET、RequestMethod.POST 等是 Spring 定義的常數，對應到 Http 的各個 Method。
-
-不過在實際工作中，大家更常用 @GetMapping、@PostMapping 這些簡短版的 Annotation——那是第 22 章會學的內容，它們底層就是 @RequestMapping + method 的語法糖。
+（下一步）所以只要有人請求 localhost:8080/milktea，就會拿到「珍珠奶茶一杯」這幾個字。
 -->
 
 ---
@@ -315,93 +298,188 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 3
-# 在 Spring Boot 中練習 @RequestMapping 的用法
+# 動手做：多請幾位店員
 
 <!--
-概念清楚了，實際動手寫一個有多個路徑的 Controller，用 Postman 分別測試每個路徑。
+一間店不會只賣一種飲料。我們多請幾位店員。
 -->
 
 ---
 
-# 練習 — 設定多個 @RequestMapping
+# 一個 Controller，多個路徑
 
-在同一個 Controller 中設定多個路徑，分別處理不同的請求：
+<CodeSteps>
 
-```java
+```java {4-7|9-12|14-17|all}
 @RestController
-public class MyController {
-    @RequestMapping("/hello")
-    public String hello() {
-        return "Hello!";
+public class DrinkController {
+
+    @RequestMapping("/milktea")
+    public String milkTea() {
+        return "珍珠奶茶一杯";
     }
-    @RequestMapping("/test")
-    public String test() {
-        return "Hello World";
+
+    @RequestMapping("/greentea")
+    public String greenTea() {
+        return "綠茶一杯";
     }
-    @RequestMapping("/hi")
-    public String hi() {
-        return "Hi Spring Boot!";
+
+    @RequestMapping("/blacktea")
+    public String blackTea() {
+        return "紅茶一杯";
     }
 }
 ```
 
+- 第一位店員：負責 `/milktea`
+- 第二位店員：負責 `/greentea`
+- 第三位店員：負責 `/blacktea`
+- 同一個 Controller 裡可以有很多個方法，每個方法掛自己的牌子
+
+</CodeSteps>
+
 <!--
-一個 Controller 裡可以有多個方法，每個方法用 @RequestMapping 對應不同的路徑。
+在同一個 DrinkController 裡，我們寫三個方法。
 
-這樣前端發送不同的 URL 請求，Spring Boot 就會分別執行對應的方法，回傳各自的結果。
+（第一步）第一位店員，負責 /milktea。
 
-這就是後端 API 最基本的組織方式：一個 Controller 管理一組相關的路徑，每個路徑有自己的處理方法。
+（下一步）第二位店員，負責 /greentea。
+
+（下一步）第三位店員，負責 /blacktea。
+
+（下一步）同一個 Controller 裡可以有很多個方法，每個方法掛自己的牌子，互不干擾。
+
+請大家在自己的專案裡照著寫一次，然後重新啟動 Spring Boot。
 -->
 
 ---
 
-# 執行結果
+# 用 Postman 測試看看
 
-啟動 Spring Boot，用 Postman 分別存取三個路徑：
+啟動 Spring Boot，分別請求這幾個網址：
 
-| 請求 URL | Http Method | 回應 Body |
-| --- | --- | --- |
-| `http://localhost:8080/hello` | GET | `Hello!` |
-| `http://localhost:8080/test` | GET | `Hello World` |
-| `http://localhost:8080/hi` | GET | `Hi Spring Boot!` |
+<v-clicks>
 
-三個路徑各自獨立，Spring Boot 根據 URL 的 Path 部分找到對應的方法執行。
+- `http://localhost:8080/milktea` → **珍珠奶茶一杯**
+- `http://localhost:8080/greentea` → **綠茶一杯**
+- `http://localhost:8080/blacktea` → **紅茶一杯**
+- `http://localhost:8080/coffee` → **404 Not Found**（沒有人掛這張牌子）
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>驗證方式：</b> 試著存取一個沒有對應的路徑（例如 <code>/abc</code>），會看到 Status Code <b>404 Not Found</b>——確認 @RequestMapping 只對應設定的路徑。
-</div>
+</v-clicks>
 
 <!--
-從結果可以清楚看到：不同的路徑對應到不同的方法，每個方法各自回傳不同的結果。
+程式啟動之後，打開上一章學過的 Postman，分別請求這幾個網址。
 
-Spring Boot 的運作就是這樣：收到請求 → 看 Path → 找到對應的 @RequestMapping → 執行方法 → 回傳結果。
+（下一步）請求 /milktea，拿到珍珠奶茶一杯。
 
-建議大家做一個小實驗：在 Postman 裡輸入一個沒有設定的路徑，比如 /abc。你會看到 404 Not Found，這就確認了 @RequestMapping 只會對應你設定的路徑，沒有設定的路徑 Spring Boot 不知道怎麼處理，就回傳 404。
+（下一步）請求 /greentea，拿到綠茶一杯。
 
-這是 Spring Boot 最基礎的請求分派機制，後面不管學多複雜的功能，底層都是這個邏輯。
+（下一步）請求 /blacktea，拿到紅茶一杯。
+
+（下一步）最後請大家故意請求一個沒有設定的 /coffee。你會看到 404 Not Found。這就是剛剛故事裡「沒有人掛這張牌子」的情況。
+
+親手看到一次 404，以後遇到它就不會慌了：先檢查網址有沒有打錯，再檢查 @RequestMapping 有沒有寫。
+-->
+
+---
+
+# 進階：牌子上還能寫「只收哪一種動作」
+
+<CodeSteps>
+
+```java {1-4|6-9|all}
+@RequestMapping(value = "/drinks", method = RequestMethod.GET)
+public String menu() {
+    return "飲料清單";
+}
+
+@RequestMapping(value = "/drinks", method = RequestMethod.POST)
+public String order() {
+    return "點了一杯新的飲料";
+}
+```
+
+- Path 是 `/drinks`，而且**只收 GET**：客人想「看」飲料清單
+- Path 一樣是 `/drinks`，但**只收 POST**：客人想「點」一杯新的
+- `value` 放 Path，`method` 放要收的 Http Method
+
+</CodeSteps>
+
+<!--
+最後看一個進階用法。牌子上除了品項，還可以寫「只收哪一種動作」。
+
+（第一步）第一個方法，Path 是 /drinks，而且只收 GET。客人只是想看飲料清單。
+
+（下一步）第二個方法，Path 一樣是 /drinks，但只收 POST。客人是想點一杯新的。
+
+（下一步）寫法是這樣：value 放 Path，method 放要收的 Http Method。
+
+同一個 Path，因為動作不同，交給不同的方法。GET 和 POST 的差別，以及更短的寫法，我們第十七章會學，今天先看過有印象就好。
+-->
+
+---
+
+# 小測驗：找不到店員
+
+<Poll question="DrinkController 裡只寫了 /milktea、/greentea、/blacktea。有人請求 /coffee，會發生什麼事？" options="隨便挑一位店員處理|回應 404 Not Found|Spring Boot 直接當掉|回應 200，但內容是空的" answer="2" />
+
+<!--
+最後一題。
+
+DrinkController 裡只寫了三個路徑。這時候有人請求 /coffee，會發生什麼事？
+
+（等大家作答）
+
+（下一步）答案是回應 404 Not Found。
+
+Spring Boot 不會亂猜，也不會當掉。它只是老實地告訴前端：這個品項，本店沒有人負責。
+-->
+
+---
+
+# 複習：飲料店對照表
+
+<Pairs left="飲料店" right="程式" rows="shop,哪一間店的幾號窗口=code,Host 和 Port|form,點單上的品項=code,Path|clerk,掛著品項牌的店員=code,加了 @RequestMapping 的方法|no,沒有人負責的品項=code,404 Not Found" />
+
+<!--
+我們用一張圖複習今天的內容。
+
+（下一步）哪一間店的幾號窗口，是 Host 和 Port。
+
+（下一步）點單上的品項，是 Path。
+
+（下一步）掛著品項牌的店員，是加了 @RequestMapping 的方法。
+
+（下一步）沒有人負責的品項，就是 404 Not Found。
 -->
 
 ---
 
 # 章節總結
 
-- **URL 的組成**：Protocol + Host + Port + **Path**（最重要）+ Query String
-- **@RequestMapping**：把 URL 的 Path 對應到 Controller 方法，是 Spring MVC 的路由核心
-- **必要前提**：類別必須有 `@RestController` 或 `@Controller`，@RequestMapping 才生效
-- **預設行為**：不指定 `method` 時，接受所有 Http Method 的請求
-- **指定 Method**：用 `method = RequestMethod.GET` 限制只接受特定 Http Method
-- **一個 Controller 多個路徑**：每個方法加上各自的 @RequestMapping，各自獨立處理
+<v-clicks>
 
-下一章我們會學 JSON 格式，了解前後端傳遞資料最常用的格式是什麼樣子。
+- **URL 的五段**：Protocol、Host、Port、**Path**、Query String
+- **`@RequestMapping`**：把一個 Path 交給一個方法處理
+- **前提**：類別要有 `@RestController`
+- **一個 Controller 可以有多個方法**，各自對應不同的 Path
+- **找不到對應的 Path**：Spring Boot 回應 404
+- **指定動作**：用 `method = RequestMethod.GET` 限定只收某一種 Http Method
+
+</v-clicks>
+
+<v-click>
+
+下一章我們會學 JSON：飲料做好之後，要用什麼「包裝」交給客人。
+
+</v-click>
 
 <!--
-今天的核心只有一件事：@RequestMapping 把 URL 的 Path 和 Controller 方法連起來。
+最後整理今天的重點。
 
-記住三個要點：第一，必須搭配 @RestController 或 @Controller 才生效；第二，不指定 method 時接受所有請求；第三，一個 Controller 裡可以有多個 @RequestMapping，每個對應不同路徑。
+（依序按下一步）URL 可以拆成五段，其中最重要的是 Path。@RequestMapping 把一個 Path 交給一個方法處理。前提是類別要有 @RestController。一個 Controller 可以有多個方法。找不到對應的 Path，會回應 404。還可以用 method 限定只收某一種 Http Method。
 
-下一章學 JSON，學完之後你就能讓後端回傳結構化的資料（物件、陣列），而不只是簡單的字串了。
-
-有問題嗎？
+（最後一步）目前我們的店員只會回傳一句話。下一章要學 JSON，也就是飲料做好之後，要用什麼包裝交給客人。
 -->
 
 ---
@@ -413,9 +491,9 @@ layout: end
 有任何問題嗎？
 
 <!--
-大家今天把 URL 的結構和 @RequestMapping 的用法都搞清楚了。
+今天的內容到這邊。
 
-課後建議：在你的 Controller 裡加幾個新的路徑，用 Postman 測試看看，確認每個路徑都能正確回應，然後試試看存取一個沒有設定的路徑，觀察 404 的回應。
+課後請大家自己在 DrinkController 裡多加一兩種飲料，用 Postman 測試看看，再故意打錯一次網址，觀察 404。
 
-有問題嗎？
+有任何問題歡迎提出來。
 -->

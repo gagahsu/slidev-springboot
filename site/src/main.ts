@@ -20,6 +20,8 @@ import StoreOpening from './anim/StoreOpening.vue'
 import NoticeBoard from './anim/NoticeBoard.vue'
 import Counter from './anim/Counter.vue'
 import ShopLayout from './anim/ShopLayout.vue'
+import UrlParts from './anim/UrlParts.vue'
+import Dispatch from './anim/Dispatch.vue'
 import AspectTimeline from './anim/AspectTimeline.vue'
 import Flow from './anim/Flow.vue'
 import HttpExchange from './anim/HttpExchange.vue'
@@ -65,5 +67,7 @@ createApp(App)
   .component('NoticeBoard', NoticeBoard)
   .component('Counter', Counter)
   .component('ShopLayout', ShopLayout)
+  .component('UrlParts', UrlParts)
+  .component('Dispatch', Dispatch)
   .component('AspectTimeline', AspectTimeline)
   .mount('#app')
