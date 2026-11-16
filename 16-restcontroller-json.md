@@ -46,27 +46,33 @@ style: |
 </div>
 
 <!--
-大家好，上一章我們學了 JSON 的格式。
+大家好，歡迎來到第十六章。
 
-但現在有個問題：我知道 JSON 長什麼樣子了，可是我要怎麼讓 Spring Boot 的 API 回傳 JSON 格式的資料呢？
+上一章我們學會了 JSON 這張「標籤」怎麼寫。
 
-這一章就是要解決這個問題。我們會看到，其實 @RestController 早就幫我們做好這件事了，而且用法非常簡單。
+今天要學的是：怎麼讓 Spring Boot 自動幫我們印出這張標籤，不用自己一個引號一個逗號慢慢拼。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要搞懂的三件事
 
-- **回顧：到目前為止的返回數據** — 從回傳字串到回傳 Java 物件的演進
-- **如何將返回值轉換成 JSON？** — Jackson 自動轉換機制、三步驟實作
-- **用 Lombok 省略 Getter/Setter** — `@Data` 一個 Annotation 搞定
-- **@Controller vs @RestController** — 差別、適用情境、現代開發建議
-- **章節總結** — 核心概念整理
+<v-clicks>
+
+- **誰幫我們印標籤？** 店裡有一台自動標籤機
+- **程式要怎麼寫？** 三個步驟，讓店員交出一杯「有資料的飲料」
+- **`@RestController` 和 `@Controller` 差在哪？** 新式的店和舊式的店
+
+</v-clicks>
 
 <!--
-這章的重點是實作。我們會一步一步建立一個能回傳 JSON 的 API，最後再補充說明 @Controller 和 @RestController 的差別。
+今天要搞懂三件事。
+
+（下一步）第一，誰幫我們印標籤。答案是店裡有一台自動標籤機。
+
+（下一步）第二，程式要怎麼寫。只要三個步驟。
+
+（下一步）第三，我們一直在用的 @RestController，和另一個很像的 @Controller，到底差在哪裡。
 -->
 
 ---
@@ -74,32 +80,101 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# 回顧
-
-## 到目前為止的返回數據
+# Part 1
+# 店裡的自動標籤機
 
 <!--
-先快速回顧一下我們目前的情況。
+先回到店裡，看看標籤是怎麼貼上去的。
 -->
 
 ---
 
-# 回顧：到目前為止的返回數據
+# 店員不用自己寫標籤
 
-| 章節 | 回傳類型 | 回傳內容 |
-| --- | --- | --- |
-| Ch 3–14 | `String` | `"Hello World"` |
-| Ch 15 | — | 學習了 JSON 格式 |
-| **Ch 16（本章）** | **Java 物件** | **自動轉換成 JSON** |
+<Flow nodes="店員:Controller 的方法|標籤機:Jackson|客人:前端" steps="1>2:做好一杯飲料|2>3:印好標籤，貼上交出" />
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>目標：</b> 讓 Controller 回傳一個 Java 物件，Spring Boot 自動把它轉成 JSON 格式回應給前端。
-</div>
+<v-clicks>
+
+- 店員只管**把飲料做好**，不用自己手寫標籤
+- 出餐口有一台**標籤機**：讀飲料的資料，自動印成標籤
+- 客人拿到的，就是一杯貼好標籤的飲料
+
+</v-clicks>
 
 <!--
-我們從第三章開始，Controller 一直都只能回傳字串。
-上一章我們學了 JSON 格式是什麼。
-這一章要把這兩件事合起來：讓 API 真正回傳 JSON。
+上一章我們自己手寫了好幾張 JSON 標籤。如果店員每做一杯都要手寫，一定會寫錯。
+
+所以這間店在出餐口放了一台標籤機。
+
+（下一步）店員做好一杯飲料，放到出餐口。
+
+（下一步）標籤機讀一下這杯飲料的資料，自動印好標籤、貼上去，交給客人。
+
+（下一步）店員只管把飲料做好。
+
+（下一步）印標籤是標籤機的事。
+
+（下一步）客人拿到的，就是一杯貼好標籤的飲料。
+-->
+
+---
+
+# 把標籤機搬進程式裡
+
+<Pairs left="飲料店" right="Spring Boot" rows="cup,店員做好的一杯飲料=code,方法回傳的 Java 物件|machine,自動標籤機=code,Jackson（Spring Boot 內建）|form,印出來的標籤=code,JSON|shop,「本店飲料一律貼標籤」的規定=code,@RestController" />
+
+<!--
+把它搬進程式裡。
+
+（下一步）店員做好的一杯飲料，就是方法回傳的 Java 物件。物件這個詞，你可以先想成「一包整理好的資料」。
+
+（下一步）自動標籤機，是一個叫 Jackson 的工具。Spring Boot 已經內建了，我們不用安裝，也不用設定。
+
+（下一步）印出來的標籤，就是 JSON。
+
+（下一步）而「本店飲料一律貼標籤」這條規定，就是我們從第三章用到現在的 @RestController。
+-->
+
+---
+
+# 一句話：回傳物件，自動變成 JSON
+
+**在 `@RestController` 裡，方法回傳一個 Java 物件，Spring Boot 就會自動把它轉成 JSON。**
+
+<v-clicks>
+
+- 以前：方法回傳 `String`，前端收到一句話
+- 現在：方法回傳**物件**，前端收到一張 JSON 標籤
+- 中間的轉換，全部由 **Jackson** 代勞
+
+</v-clicks>
+
+<!--
+用一句話說：在 @RestController 裡，方法回傳一個 Java 物件，Spring Boot 就會自動把它轉成 JSON。
+
+（下一步）以前我們的方法回傳 String，前端收到的是一句話。
+
+（下一步）現在我們要讓方法回傳一個物件，前端收到的就會是一張 JSON 標籤。
+
+（下一步）中間的轉換，全部由 Jackson 代勞。
+-->
+
+---
+
+# 小測驗：誰印的標籤？
+
+<Poll question="Controller 的方法回傳了一個 Java 物件。是誰把它變成 JSON 的？" options="我們自己寫程式拼出來|Jackson 自動轉換|前端收到之後自己轉|Postman" answer="2" />
+
+<!--
+來一題確認一下。
+
+Controller 的方法回傳了一個 Java 物件。是誰把它變成 JSON 的？
+
+（等大家作答）
+
+（下一步）答案是 Jackson 自動轉換。
+
+它就是那台標籤機。我們完全不用自己拼引號和逗號。
 -->
 
 ---
@@ -107,161 +182,203 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# 如何將 Spring Boot 的返回值轉換成 JSON 格式？
+# Part 2
+# 三個步驟，回傳 JSON
 
 <!--
-好，進入本章核心。我們要怎麼讓 Spring Boot 的 API 回傳 JSON？
+概念清楚了，我們來寫程式。總共三個步驟。
 -->
 
 ---
 
-# Spring Boot 自動轉換的秘密
+# Step 1：先定義「一杯飲料」有哪些資料
 
-`@RestController` 會自動將回傳的 Java 物件轉換成 JSON 格式：
+<CodeSteps>
 
-| 步驟 | 說明 |
-| --- | --- |
-| 1 | Controller 方法回傳一個 Java 物件（例如 `Student`） |
-| 2 | `@RestController` 交給底層的 **Jackson** 函式庫處理 |
-| 3 | Jackson 把 Java 物件的欄位轉成 JSON key-value |
-| 4 | 前端收到的就是 JSON 格式的回應 |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>Jackson：</b> Spring Boot 預設整合的 JSON 序列化函式庫，無需額外設定，開箱即用。
-</div>
-
-<!--
-秘密就藏在 @RestController 裡。
-
-當我們的方法回傳一個 Java 物件，@RestController 不會直接把物件丟出去，而是交給一個叫做 Jackson 的函式庫。
-Jackson 的工作就是把 Java 物件「翻譯」成 JSON 格式的字串。
-
-好消息是，Spring Boot 已經幫我們把 Jackson 設定好了，我們完全不需要額外安裝或設定任何東西。
-
-接下來我們用三個步驟，實際做一個能回傳 JSON 的 API。
--->
-
----
-
-# Step 1：建立 Student 類別
-
-建立一個 `Student.java`，用來代表學生資料：
-
-```java
-public class Student {
+```java {1|2|3|all}
+public class Drink {
     private Integer id;
     private String name;
 }
 ```
 
-| 欄位 | 類型 | 說明 |
-| --- | --- | --- |
-| `id` | `Integer` | 學生 ID，對應 JSON 的整數類型 |
-| `name` | `String` | 學生姓名，對應 JSON 的字串類型 |
+- 新增一個類別 `Drink`，代表「一杯飲料」
+- `id`：飲料的編號，是整數（`Integer`）
+- `name`：飲料的名稱，是文字（`String`）
+- 這兩個變數，之後會變成 JSON 裡的兩個 key
+
+</CodeSteps>
 
 <!--
-第一步，建立一個簡單的 Java 類別 Student，有兩個欄位：id 和 name。
+第一步，先告訴程式「一杯飲料」有哪些資料。
 
-這種只有欄位和 getter/setter 的類別，在 Java 裡通常叫做 POJO（Plain Old Java Object）。
+（第一步）我們新增一個類別，叫做 Drink，代表一杯飲料。
 
-注意欄位都是 private，這樣才符合物件導向的封裝原則。
-下一步我們要加上 getter 和 setter，讓 Jackson 能讀到這些欄位的值。
+（下一步）裡面有一個 id，是飲料的編號，型別是 Integer，也就是整數。
+
+（下一步）還有一個 name，是飲料的名稱，型別是 String，也就是文字。
+
+（下一步）這兩個變數的名字，之後就會變成 JSON 裡的兩個 key。
 -->
 
 ---
 
-# Step 2：加上 Getter 和 Setter
+# Step 2：幫標籤機開「讀取口」
 
-Jackson 需要透過 Getter 讀取欄位值，才能轉換成 JSON：
+<CodeSteps>
 
-```java
+```java {1-3|5-7|all}
 public Integer getId() {
     return id;
 }
+
 public void setId(Integer id) {
     this.id = id;
 }
-public String getName() {
-    return name;
-}
-public void setName(String name) {
-    this.name = name;
-}
+
+// name 也一樣：getName()、setName()
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 覺得 Getter/Setter 很囉唆？本章最後的補充會示範用 <b>Lombok</b> 一行 Annotation 全部省掉。
-</div>
+- **Getter**（`getId`）：讓別人「讀」到 id。標籤機就是從這裡讀資料
+- **Setter**（`setId`）：讓別人「填」入 id。店員做飲料時用
+- 每個變數都要有一組；少了 Getter，那一項就**不會出現在 JSON 裡**
+
+</CodeSteps>
 
 <!--
-第二步，為每個欄位加上 getter 和 setter。
+第二步。Drink 裡的變數前面都寫了 private，意思是外面的人看不到。標籤機也看不到，就印不出標籤。
 
-⚠️ 這裡很重要：Jackson 是透過呼叫 getter 方法來讀取欄位的值，並轉換成 JSON 的 key-value。
-如果沒有 getter，Jackson 就讀不到欄位，那個欄位就不會出現在 JSON 裡。
+所以我們要幫它開讀取口。
 
-命名規則是固定的：getId 對應 "id"，getName 對應 "name"，Jackson 會自動把 get 去掉、首字母小寫，作為 JSON 的 key。
+（第一步）getId 這種方法叫做 Getter，功能是讓別人讀到 id。標籤機就是從這裡讀資料的。
 
-在 Eclipse 裡，你可以用右鍵 → Source → Generate Getters and Setters 自動產生，不用手動打。
+（下一步）setId 這種方法叫做 Setter，功能是讓別人填入 id。等一下店員做飲料的時候會用到。
+
+（下一步）每個變數都要有一組。請特別記住：如果少了 Getter，那一項資料就不會出現在 JSON 裡。
 -->
 
 ---
 
-# Step 3：Controller 回傳 Student 物件
+# 用 Lombok 省掉 Getter 和 Setter
 
-把原本回傳 `String` 改成回傳 `Student` 物件：
+<CodeSteps>
 
-```java
+```java {1|3|4-7|all}
+import lombok.Data;
+
+@Data
+public class Drink {
+    private Integer id;
+    private String name;
+}
+```
+
+- 第七章安裝過的 **Lombok**，這裡又派上用場
+- 在類別上加 `@Data`
+- 類別裡只要寫變數就好
+- Lombok 會自動產生所有的 Getter 和 Setter，效果完全一樣
+
+</CodeSteps>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+✅ 這種「只用來裝資料」的類別，之後我們都直接加 <code>@Data</code>。
+</div>
+
+</v-click>
+
+<!--
+每個變數都要寫一組 Getter 和 Setter，很囉唆。
+
+（第一步）還記得第七章安裝過的 Lombok 嗎？它這裡又派上用場了。
+
+（下一步）我們在類別上面加一個 @Data。
+
+（下一步）類別裡只要寫變數就好。
+
+（下一步）Lombok 會自動幫我們產生所有的 Getter 和 Setter，效果跟自己手寫完全一樣。
+
+（下一步）像 Drink 這種只用來裝資料的類別，之後我們都直接加 @Data。
+-->
+
+---
+
+# Step 3：讓店員交出一杯 Drink
+
+<CodeSteps>
+
+```java {5|6|7-8|9|all}
 @RestController
-public class MyController {
+public class DrinkController {
 
-    @RequestMapping("/test")
-    public Student test() {
-        Student student = new Student();
-        student.setId(123);
-        student.setName("Judy");
-        return student;
+    @RequestMapping("/drink")
+    public Drink getDrink() {
+        Drink drink = new Drink();
+        drink.setId(1);
+        drink.setName("珍珠奶茶");
+        return drink;
     }
 }
 ```
 
+- 回傳的型別從 `String` 改成 `Drink`
+- `new Drink()`：拿一個空杯子
+- 用 Setter 把資料填進去：編號 1、名稱珍珠奶茶
+- `return drink`：把飲料放到出餐口
+- 接下來，標籤機會自動把它變成 JSON
+
+</CodeSteps>
+
 <!--
-第三步，修改 Controller。
+第三步，回到 DrinkController。
 
-注意看方法的回傳類型，從原來的 String 改成了 Student。
-我們建立一個 Student 物件，設定好 id 和 name，然後直接 return 出去。
+（第一步）注意方法前面的型別。以前是 String，現在改成 Drink。意思是這個方法會交出一杯飲料。
 
-@RestController 會攔截這個回傳值，交給 Jackson 轉成 JSON，再回應給前端。
-整個過程對我們來說完全透明，我們只需要 return 物件就好。
+（下一步）new Drink()，就像拿一個空杯子。
+
+（下一步）用 Setter 把資料填進去：編號是 1，名稱是珍珠奶茶。
+
+（下一步）return drink，就是把飲料放到出餐口。
+
+（下一步）接下來的事，標籤機會自動完成。
 -->
 
 ---
 
 # 執行結果
 
-啟動後用 Postman 呼叫 `GET http://localhost:8080/test`：
+用 Postman 請求 `http://localhost:8080/drink`：
 
-| 項目 | 內容 |
-| --- | --- |
-| 請求 URL | `http://localhost:8080/test` |
-| Http Method | `GET` |
-| 回應 Status | `200 OK` |
-| 回應 Body | JSON 格式的學生資料 |
+<v-click>
 
 ```json
 {
-    "id": 123,
-    "name": "Judy"
+    "id": 1,
+    "name": "珍珠奶茶"
 }
 ```
 
+</v-click>
+
+<v-clicks>
+
+- 變數名稱 `id`、`name` 自動變成 **key**
+- 填進去的 `1`、`"珍珠奶茶"` 自動變成 **value**
+- 整數沒有引號、文字有引號，Jackson 都幫我們處理好了
+
+</v-clicks>
+
 <!--
-啟動 Spring Boot，打開 Postman，發送 GET 請求到 /test。
+重新啟動 Spring Boot，用 Postman 請求 localhost:8080/drink。
 
-你會看到回應的 body 變成了 JSON 格式！id 和 name 都正確對應到我們在 Student 物件裡設定的值。
+（下一步）回應的內容，就是上一章學過的 JSON。
 
-這就是 @RestController 的魔法——我們只需要 return 一個 Java 物件，它自動幫我們轉成 JSON。
+（下一步）變數名稱 id 和 name，自動變成了 key。
 
-大家有沒有發現，我們完全沒有手動寫任何 JSON 字串，一切都是 Spring Boot 自動完成的？
+（下一步）我們填進去的 1 和珍珠奶茶，自動變成了 value。
+
+（下一步）而且整數沒有引號、文字有引號，上一章那些容易寫錯的規則，Jackson 都幫我們處理好了。
 -->
 
 ---
@@ -269,131 +386,37 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# 用 Lombok 省略 Getter 和 Setter
+# Part 3
+# @Controller 和 @RestController
 
 <!--
-在進入 @Controller 和 @RestController 的差別之前，先補充一個實務上大家都會用的技巧。
-
-剛才 Step 2 我們手寫了四個方法的 getter 和 setter。欄位一多，這種樣板程式碼會非常冗長。
-還記得第七章介紹過的 Lombok 嗎？它也能幫我們解決這個問題。
+最後補充一個常被問到的問題。Spring 裡還有一個長得很像的 @Controller，它們差在哪裡？
 -->
 
 ---
 
-# 用 Lombok 省略 Getter 和 Setter
+# 新式的店 vs 舊式的店
 
-第七章安裝過的 **Lombok**，在編譯時自動生成樣板程式碼。加上 `@Data`，Getter/Setter 全部不用寫：
+<Pairs left="@RestController" right="@Controller" sign="vs" rows="cup,店員直接把飲料（資料）交給你=form,店員給你一張號碼牌，請你去看對應的看板|code,回傳值會被轉成 JSON=code,回傳值被當成「網頁樣板的名稱」|browser,前後端分離：現在的主流=doc,後端自己產生網頁：早期的做法" />
 
-```java
-import lombok.Data;
+<v-click>
 
-@Data
-public class Student {
-    private Integer id;
-    private String name;
-}
-```
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>效果完全相同：</b> Lombok 在編譯時生成 <code>getId()</code>、<code>setName()</code> 等方法，Jackson 一樣能透過這些 Getter 讀取欄位值轉成 JSON。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+✅ 這門課寫的都是回傳 JSON 的 API，所以一律使用 <code>@RestController</code>。
 </div>
 
-<!--
-只要在類別上加一個 @Data，原本手寫的四個方法就全部可以刪掉。
-
-要強調的是：Lombok 不是「跳過」getter，而是在「編譯的時候」自動幫你把 getter 和 setter 生成到 .class 檔裡。
-所以對 Jackson 來說完全沒有差別，它照樣呼叫 getId()、getName() 來讀取欄位值。
-
-原始碼變乾淨了，但編譯出來的結果跟手寫一模一樣。
-
-如果你還沒安裝 Lombok，回去看第七章的安裝流程：加 dependency、再執行 lombok.jar 安裝到 IDE。
--->
-
----
-
-# Lombok 常用 Annotation
-
-| Annotation | 生成的內容 |
-| --- | --- |
-| `@Getter` | 所有欄位的 Getter |
-| `@Setter` | 所有欄位的 Setter |
-| `@Data` | Getter + Setter + `toString()` + `equals()` + `hashCode()` |
-| `@NoArgsConstructor` | 無參數建構子 |
-| `@AllArgsConstructor` | 包含所有欄位的建構子 |
-
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>建議：</b> 這種承載資料的類別（POJO / DTO）直接加 <code>@Data</code> 最方便；只需要單一功能時再用 <code>@Getter</code> 或 <code>@Setter</code>。
-</div>
+</v-click>
 
 <!--
-Lombok 還有很多常用的 Annotation，這裡列出最常見的幾個。
+用兩種店來比較。
 
-@Getter 和 @Setter 可以單獨使用，只生成你需要的那一半。
-@Data 是懶人包，一次生成 Getter、Setter、toString、equals、hashCode，資料類別加這個就夠了。
-@NoArgsConstructor 和 @AllArgsConstructor 用來生成建構子，之後串接資料庫時會很常用到。
+（下一步）@RestController 是新式的店：店員直接把飲料交給你。@Controller 是舊式的店：店員不給你飲料，而是給你一張號碼牌，請你自己去看對應的看板。
 
-第七章我們用過 @RequiredArgsConstructor 來簡化建構子注入，這章的 @Data 則是用來簡化資料類別。
-從這章開始，後面章節的範例只要是這種資料類別，我們都會用 Lombok 來寫。
--->
+（下一步）對應到程式：@RestController 的回傳值會被轉成 JSON。@Controller 的回傳值，會被當成一個網頁樣板的名稱，Spring 會拿那個樣板去產生一整頁網頁。
 
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
+（下一步）@RestController 適合前後端分離的做法，是現在的主流。@Controller 是早期後端自己產生網頁的做法。
 
-# @Controller 和 @RestController 的差別在哪裡？
-
-<!--
-學完了怎麼回傳 JSON，我們來補充一個很多人會問的問題：@Controller 和 @RestController 有什麼差別？
--->
-
----
-
-# @Controller 和 @RestController 的差別
-
-| 項目 | `@Controller` | `@RestController` |
-| --- | --- | --- |
-| 回傳值用途 | 被當作「前端樣板名稱」 | 被當作「JSON 資料」自動轉換 |
-| 適用情境 | JSP、Thymeleaf 等樣板引擎 | REST API（回傳 JSON） |
-| 時代背景 | 早期前後端未分離的架構 | 現代前後端分離架構 |
-| 是否需要 `@ResponseBody` | 需要（每個方法都要加） | 不需要（已內建） |
-
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>建議：</b> 現代 Spring Boot 開發以 REST API 為主，優先使用 <code>@RestController</code>。
-</div>
-
-<!--
-@Controller 是比較早期的 Annotation。在前後端還沒分離的年代，後端要直接渲染 HTML 頁面，這時候 Controller 的方法回傳的是「樣板名稱」，例如 "index.html"，框架再去找對應的 HTML 樣板渲染。
-
-@RestController 則是為了 REST API 設計的。它等於 @Controller + @ResponseBody，方法的回傳值會直接被轉成 JSON 寫進 Http Response 的 body 裡。
-
-在現代的前後端分離架構中，後端只負責提供 JSON 資料，前端（React、Vue）自己渲染畫面。
-所以我們幾乎都用 @RestController，@Controller 只在需要整合 JSP 或 Thymeleaf 時才用到。
--->
-
----
-
-# 章節總結
-
-| 重點 | 說明 |
-| --- | --- |
-| 自動轉換機制 | `@RestController` 透過 Jackson 自動將 Java 物件轉成 JSON |
-| 建立步驟 | 定義 Java 類別 → 加 Getter/Setter → Controller 回傳物件 |
-| Getter 的重要性 | Jackson 透過 Getter 讀取欄位值，缺少則欄位不出現在 JSON |
-| Lombok 簡化 | `@Data` 在編譯時自動生成 Getter/Setter，不必手寫 |
-| @Controller vs @RestController | 前者回傳樣板名稱，後者回傳 JSON |
-| 現代建議 | REST API 一律使用 `@RestController` |
-
-<!--
-好，讓我們總結今天學到的東西。
-
-第一，@RestController 透過 Jackson 自動把 Java 物件轉成 JSON，我們不需要手動處理。
-第二，步驟是：建立 Java 類別、加 Getter/Setter、Controller 回傳物件。
-第三，Getter 是關鍵，Jackson 靠它讀取欄位值。
-第四，實務上用 Lombok 的 @Data，Getter/Setter 都不用手寫，編譯時自動生成。
-第五，@Controller 和 @RestController 有本質差異，現代開發用後者。
-
-今天的內容是 Spring Boot 開發 REST API 的核心。從這章開始，我們的 API 就能真正回傳結構化的 JSON 資料了！
+（下一步）這門課寫的都是回傳 JSON 的 API，所以我們一律使用 @RestController。你只要知道有 @Controller 這個東西，看到的時候不要搞混就好。
 -->
 
 ---
@@ -402,146 +425,178 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # 實作練習
-
-## 打造一個回傳 JSON 的圖書 API
+# 回傳一張訂單
 
 <!--
-學完了本章的內容，我們來動手做一個練習，把今天學到的東西實際應用一次。
+換大家動手做。這次不是飲料，而是一張訂單。
 -->
 
 ---
 
-# 實作題目：圖書資訊 API
+# 題目：訂單 API
 
-請建立一個 API，讓前端呼叫 `GET http://localhost:8080/book` 時，回傳一本書的 JSON 資料：
+請讓 `http://localhost:8080/order` 回傳這張訂單：
 
 ```json
 {
     "id": 1,
-    "name": "Spring Boot 零基礎入門",
-    "price": 550.0,
-    "available": true
+    "drinkName": "珍珠奶茶",
+    "price": 50.0,
+    "paid": true
 }
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>觀察：</b> 這次的 JSON 包含了四種類型——整數、字串、小數、布林，比課堂範例更完整。
+<v-clicks>
+
+- 建立 `Order` 類別，有 `id`、`drinkName`、`price`、`paid` 四個變數
+- 使用 `@Data`，不要手寫 Getter 和 Setter
+- 建立 `OrderController`，路徑是 `/order`，回傳 `Order` 物件
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 想一想：JSON 的小數、是或否，在 Java 裡要用什麼型別？
 </div>
 
+</v-click>
+
 <!--
-題目很直接：做一個回傳書籍資料的 API。
+題目是這樣：請讓 localhost:8080/order 回傳這張訂單的 JSON。
 
-注意這次的欄位比課堂範例多了兩種類型：price 是小數、available 是布林值，正好對應第十五章學過的 JSON 數字和布林類型。
+（下一步）第一，建立一個 Order 類別，裡面有四個變數。
 
-下一頁是具體的實作要求。
+（下一步）第二，使用 @Data，不要手寫 Getter 和 Setter。
+
+（下一步）第三，建立一個 OrderController，路徑是 /order，回傳 Order 物件。
+
+（下一步）提示：這次的 JSON 多了小數和「是或否」兩種內容。想一想，它們在 Java 裡要用什麼型別？
+
+請大家先暫停，自己寫寫看，再往下看解答。
 -->
 
 ---
 
-# 實作題目：具體要求
+# 參考解答（1/2）：Order 類別
 
-| # | 要求 |
-| --- | --- |
-| 1 | 建立 `Book` 類別，包含 `id`（整數）、`name`（字串）、`price`（小數）、`available`（布林）四個欄位 |
-| 2 | 使用 **Lombok 的 `@Data`**，不要手寫 Getter/Setter |
-| 3 | 在 Controller 建立 `/book` 路徑，回傳 `Book` 物件 |
-| 4 | 用 Postman 驗證回應的 JSON 與上一頁範例一致 |
+<CodeSteps>
 
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>提示：</b> 想一想，JSON 的小數和布林，分別要對應到 Java 的什麼類型？
-</div>
-
-<!--
-四個要求：建 Book 類別、用 @Data、寫 Controller、用 Postman 驗證。
-
-要求使用 Lombok 的 @Data，練習我們剛學的省略 Getter/Setter 技巧。
-
-給大家一個提示：id 對應 Integer、name 對應 String，那 price 和 available 呢？回想一下第十五章 JSON 類型的對應表。
-
-大家先自己動手做做看，做完再看下一頁的參考解答。
--->
-
----
-
-# 參考解答（1/3）：建立 Book 類別
-
-用 `@Data` 省略 Getter/Setter：
-
-```java
-import lombok.Data;
-
+```java {4|5|6|7|all}
 @Data
-public class Book {
+public class Order {
+
     private Integer id;
-    private String name;
+    private String drinkName;
     private Double price;
-    private Boolean available;
+    private Boolean paid;
 }
 ```
 
+- 整數 → `Integer`
+- 文字 → `String`
+- 小數 → `Double`
+- 是或否 → `Boolean`
+- Jackson 會依照 Java 的型別，自動印出對應的 JSON 寫法
+
+</CodeSteps>
+
 <!--
-參考解答的第一步：建立 Book 類別。
+先看 Order 類別。重點是 JSON 的內容和 Java 型別的對應。
 
-四個欄位分別是 Integer、String、Double、Boolean。
+（第一步）整數，用 Integer。
 
-加上 @Data 之後，Getter/Setter 都不用寫，Lombok 會在編譯時自動生成。
+（下一步）文字，用 String。
 
-下一頁我們看類型是怎麼對應的。
+（下一步）小數，用 Double。
+
+（下一步）是或否，用 Boolean。
+
+（下一步）Jackson 會依照 Java 的型別，自動印出對應的 JSON 寫法，不需要任何設定。
 -->
 
 ---
 
-# 參考解答（2/3）：JSON 與 Java 的類型對應
-
-| JSON 類型 | 範例值 | Java 類型 |
-| --- | --- | --- |
-| 整數 | `1` | `Integer` |
-| 字串 | `"Spring Boot 零基礎入門"` | `String` |
-| 小數 | `550.0` | `Double` |
-| 布林 | `true` | `Boolean` |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 Jackson 依照欄位的 Java 類型，自動輸出對應的 JSON 類型——不需要任何額外設定。
-</div>
-
-<!--
-類型對應的答案：price 用 Double、available 用 Boolean，對應 JSON 的小數和布林類型。
-
-Jackson 會根據 Java 欄位的類型，自動決定 JSON 輸出的類型：Integer 輸出成整數、String 輸出成帶引號的字串、Double 輸出成小數、Boolean 輸出成 true/false。
-
-我們完全不需要額外設定，這就是第十五章 JSON 類型知識的實際應用。
--->
-
----
-
-# 參考解答（3/3）：Controller 回傳 Book 物件
+# 參考解答（2/2）：OrderController
 
 ```java
 @RestController
-public class BookController {
+public class OrderController {
 
-    @RequestMapping("/book")
-    public Book getBook() {
-        Book book = new Book();
-        book.setId(1);
-        book.setName("Spring Boot 零基礎入門");
-        book.setPrice(550.0);
-        book.setAvailable(true);
-        return book;
+    @RequestMapping("/order")
+    public Order getOrder() {
+        Order order = new Order();
+        order.setId(1);
+        order.setDrinkName("珍珠奶茶");
+        order.setPrice(50.0);
+        order.setPaid(true);
+        return order;
     }
 }
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 雖然沒有手寫 <code>setId()</code>、<code>setPrice()</code>，但 <code>@Data</code> 已在編譯時生成，可以直接呼叫。
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 我們沒有手寫 <code>setPrice()</code>，但 <code>@Data</code> 已經自動產生，可以直接用。
 </div>
 
+</v-click>
+
 <!--
-第二步，Controller 的方法回傳類型改成 Book，建立物件、設定欄位值、直接 return。
+再看 OrderController。寫法和剛剛的 DrinkController 一模一樣：拿一張空白訂單，用 Setter 把四項資料填進去，然後回傳。
 
-雖然我們沒有手寫 setId、setPrice 這些方法，但因為有 @Data，這些 setter 在編譯後都存在，可以直接呼叫。
+（下一步）注意，我們並沒有手寫 setPrice 這些方法。它們是 @Data 自動產生的，所以可以直接用。
 
-用 Postman 發送 GET /book，就會看到完整的 JSON 回應。四個欄位的類型都由 Jackson 自動對應：整數、字串、小數、布林。
+用 Postman 測試，看到的 JSON 和題目一樣，就成功了。
+-->
+
+---
+
+# 複習：飲料店對照表
+
+<Pairs left="飲料店" right="程式" rows="cup,一杯做好的飲料=code,Java 物件（Drink）|machine,自動標籤機=code,Jackson|what,標籤機的讀取口=code,Getter（可以用 @Data 自動產生）|form,貼好的標籤=code,JSON|shop,「一律貼標籤」的規定=code,@RestController" />
+
+<!--
+我們用一張圖複習今天的內容。
+
+（下一步）一杯做好的飲料，是 Java 物件。
+
+（下一步）自動標籤機，是 Jackson。
+
+（下一步）標籤機的讀取口，是 Getter，可以用 @Data 自動產生。
+
+（下一步）貼好的標籤，是 JSON。
+
+（下一步）一律貼標籤的規定，是 @RestController。
+-->
+
+---
+
+# 章節總結
+
+<v-clicks>
+
+- **自動轉換**：`@RestController` 的方法回傳 Java 物件，Jackson 自動轉成 JSON
+- **三個步驟**：定義類別 → 準備 Getter / Setter → Controller 回傳物件
+- **Getter 很重要**：少了它，那一項資料不會出現在 JSON 裡
+- **`@Data`**：Lombok 自動產生 Getter 和 Setter
+- **`@RestController`** 回傳 JSON；**`@Controller`** 回傳網頁樣板的名稱
+
+</v-clicks>
+
+<v-click>
+
+下一章我們會學 GET 和 POST：客人是想「看菜單」，還是想「點一杯新的」。
+
+</v-click>
+
+<!--
+最後整理今天的重點。
+
+（依序按下一步）@RestController 的方法回傳 Java 物件，Jackson 會自動轉成 JSON。做法是三個步驟：定義類別、準備 Getter 和 Setter、Controller 回傳物件。Getter 很重要，少了它資料就不會出現。@Data 可以自動產生 Getter 和 Setter。@RestController 回傳 JSON，@Controller 回傳網頁樣板的名稱。
+
+（最後一步）下一章，我們會學 GET 和 POST：客人是想看菜單，還是想點一杯新的。
 -->
 
 ---
@@ -550,6 +605,12 @@ layout: end
 
 # Q & A
 
+有任何問題嗎？
+
 <!--
-今天的內容就到這裡。大家有任何問題嗎？
+今天的內容到這邊。
+
+課後請把訂單 API 做完。也可以做個小實驗：把 Order 上面的 @Data 拿掉，看看回應會變成什麼樣子，體會一下 Getter 的重要性。
+
+有任何問題歡迎提出來。
 -->

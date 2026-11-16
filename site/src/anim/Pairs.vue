@@ -9,7 +9,8 @@ import Art from './Art.vue'
  *   <Pairs left="住飯店" right="寫程式" rows="you,你=teacher,Teacher 類別|hotel,飯店=spring,Spring 容器" />
  * Each side is `插圖名稱,文字`; the illustration name may be left out (`,文字`).
  */
-const props = defineProps<{ left?: string, right?: string, rows: string }>()
+// `sign` replaces the "=" between the two sides, e.g. sign="vs" for a comparison.
+const props = withDefaults(defineProps<{ left?: string, right?: string, rows: string, sign?: string }>(), { sign: '=' })
 const rows = computed(() => props.rows.split('|').map((r) => {
   const side = (s: string) => {
     const at = s.indexOf(',')
@@ -39,7 +40,7 @@ onMounted(() => {
     <div v-if="left || right" class="heads"><b>{{ left }}</b><i /><b class="code">{{ right }}</b></div>
     <div v-for="(row, n) in rows" :key="n" class="pair" :class="{ 'step-hidden': live && n >= local }">
       <div class="l"><Art v-if="row.l.art" :name="row.l.art" size="44" /><span>{{ row.l.text }}</span></div>
-      <div class="eq">=</div>
+      <div class="eq" :class="{ word: sign.length > 1 }">{{ sign }}</div>
       <div class="r"><Art v-if="row.r.art" :name="row.r.art" size="44" /><span>{{ row.r.text }}</span></div>
     </div>
   </div>
@@ -53,4 +54,5 @@ onMounted(() => {
 .slide .pairs .l, .slide .pairs .r { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 6px 16px; border: 2px solid #ffc800; border-radius: 16px; box-shadow: 0 3px 0 #d9a600; background: #fffbea; font-size: 18px; font-weight: 800; color: #2b2b2b; line-height: 1.35; }
 .slide .pairs .r { border-color: var(--c-blue); box-shadow: 0 3px 0 var(--c-blue-dark); background: #f2fbff; }
 .slide .pairs .eq { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--c-brand); color: #fff; font-size: 24px; font-weight: 900; line-height: 1; }
+.slide .pairs .eq.word { font-size: 14px; }
 </style>
