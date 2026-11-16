@@ -8,7 +8,8 @@ import Sidebar from '../components/Sidebar.vue'
 import SlideCanvas from '../components/SlideCanvas.vue'
 import { questions } from '../lib/classroom'
 import { draw } from '../lib/draw'
-import { room } from '../lib/room'
+import { leaveRoom, room } from '../lib/room'
+import { liveClass, settings } from '../lib/settings'
 import { audienceCount } from '../lib/sync'
 import { useDeck } from '../lib/useDeck'
 
@@ -20,6 +21,13 @@ const overview = ref(false)
 const roomPanel = ref(false)
 const tab = ref<'notes' | 'questions'>('notes')
 const openQuestions = computed(() => questions.filter(q => !q.done).length)
+watch(liveClass, (on) => {
+  if (on) return
+  tab.value = 'notes'
+  roomPanel.value = false
+  // switching interaction off also closes the room this device opened
+  if (room.status === 'on' && room.canControl) leaveRoom()
+}, { immediate: true })
 const nextSlide = computed(() => slides.value[index.value + 1])
 
 function go(i: number, ch = chId.value) {
@@ -117,7 +125,14 @@ onBeforeUnmount(() => {
       <div class="status" :class="{ ok: audienceCount > 0 }" role="status">
         <i />{{ audienceCount > 0 ? `已連線 ${audienceCount} 個展示視窗` : '尚未開啟展示視窗' }}
       </div>
-      <button class="pbtn" :class="{ live: room.status === 'on' }" @click="roomPanel = true">
+      <button
+        class="pbtn switch" role="switch" :aria-checked="settings.interactive" :class="{ on: settings.interactive }"
+        :title="settings.interactive ? '課堂互動已開啟：學生可以投票、提問、用代碼加入' : '課堂互動已關閉：投票題顯示為「想一想」小測驗（適合錄影）'"
+        @click="settings.interactive = !settings.interactive"
+      >
+        <i class="knob" aria-hidden="true" /><span>課堂互動</span>
+      </button>
+      <button v-if="liveClass" class="pbtn" :class="{ live: room.status === 'on' }" @click="roomPanel = true">
         <Icon name="wifi" /><span>{{ room.status === 'on' ? `課堂 ${room.people} 人` : '遠端課堂' }}</span>
       </button>
       <button class="pbtn accent" @click="openAudience"><Icon name="window" /><span>開啟展示視窗</span></button>
@@ -155,7 +170,7 @@ onBeforeUnmount(() => {
           <div class="label">
             <span class="tabs" role="tablist">
               <button role="tab" :aria-selected="tab === 'notes'" :class="{ on: tab === 'notes' }" @click="tab = 'notes'">講稿</button>
-              <button role="tab" :aria-selected="tab === 'questions'" :class="{ on: tab === 'questions' }" @click="tab = 'questions'">
+              <button v-if="liveClass" role="tab" :aria-selected="tab === 'questions'" :class="{ on: tab === 'questions' }" @click="tab = 'questions'">
                 學生提問<i v-if="openQuestions">{{ openQuestions }}</i>
               </button>
             </span>
@@ -241,6 +256,12 @@ aside { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
 .dock { margin-top: 12px; }
 .notes { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .sizer { display: flex; gap: 6px; }
+.pbtn.switch { gap: 10px; color: var(--muted, #9aa5ad); }
+.pbtn.switch .knob { position: relative; width: 34px; height: 20px; border-radius: 999px; background: var(--edge); transition: background .15s; }
+.pbtn.switch .knob::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.pbtn.switch.on { color: var(--text); }
+.pbtn.switch.on .knob { background: var(--c-brand); }
+.pbtn.switch.on .knob::after { transform: translateX(14px); }
 .pbtn.live { border-color: var(--c-brand-dark); box-shadow: 0 3px 0 var(--c-brand-dark); color: #9be35a; }
 .tabs { display: flex; gap: 6px; }
 .tabs button { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border: 0; border-radius: 10px; background: none; color: var(--dim); font: 900 13px var(--font-sans); letter-spacing: .08em; cursor: pointer; }

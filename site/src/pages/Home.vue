@@ -5,6 +5,7 @@ import Icon from '../components/Icon.vue'
 import { chapterById, chapters, totalSlides } from '../lib/deck'
 import { progress } from '../lib/progress'
 import { normalizeCode } from '../lib/room'
+import { liveClass } from '../lib/settings'
 import { units } from '../lib/units'
 
 const openSearch = inject<() => void>('openSearch')!
@@ -43,11 +44,11 @@ onMounted(() => { document.title = 'Spring Boot Backend Masterclass' })
           <p>{{ chapters.length }} 章 · {{ totalSlides.toLocaleString() }} 張投影片</p>
         </div>
       </div>
-      <form v-if="joining" class="join" @submit.prevent="join">
+      <form v-if="liveClass && joining" class="join" @submit.prevent="join">
         <input v-model="code" aria-label="課堂代碼" placeholder="課堂代碼（8 碼）" maxlength="9" autocapitalize="characters" autocomplete="off" autofocus>
         <button class="btn primary" type="submit" :disabled="normalizeCode(code).length !== 8">加入</button>
       </form>
-      <button v-else class="btn" @click="joining = true"><Icon name="wifi" /><span>加入課堂</span></button>
+      <button v-else-if="liveClass" class="btn" @click="joining = true"><Icon name="wifi" /><span>加入課堂</span></button>
       <button class="btn search" @click="openSearch()">
         <Icon name="search" /><span>搜尋教材</span><kbd>{{ isMac ? '⌘' : 'Ctrl' }} K</kbd>
       </button>

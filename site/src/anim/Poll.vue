@@ -2,12 +2,15 @@
 import { computed, inject, onBeforeUnmount, onMounted, watch } from 'vue'
 import { hidePoll, myVotes, polls, registerPoll, setRevealed, showPoll, vote } from '../lib/classroom'
 import { room } from '../lib/room'
+import { liveClass } from '../lib/settings'
 import { SLIDE_KEY, useFixedSteps } from '../lib/steps'
 
 /**
  * Classroom poll / quiz.
  *   <Poll question="IoC 把什麼交給容器？" options="物件的控制權|資料庫連線|程式碼版本" answer="1" />
  * Students tap an option on their own device; one step later the results (and the answer) are revealed.
+ * With classroom interaction switched off (recorded lessons) it is a "think about it" quiz:
+ * no vote counts, the next step simply marks the answer.
  */
 const props = defineProps<{ question: string, options: string, answer?: string | number }>()
 const slideKey = inject(SLIDE_KEY, null)
@@ -20,7 +23,7 @@ const revealed = computed(() => local.value >= 1)
 onMounted(() => {
   registerPoll(id, opts.value.length)
   // only the slide on stage offers the answer pad, not previews or thumbnails
-  if (live.value) showPoll({ id, question: props.question, options: opts.value, answer: correct.value, revealed: revealed.value })
+  if (live.value && liveClass.value) showPoll({ id, question: props.question, options: opts.value, answer: correct.value, revealed: revealed.value })
 })
 watch(revealed, r => setRevealed(id, r))
 onBeforeUnmount(() => { if (live.value) hidePoll(id) })
@@ -33,7 +36,8 @@ const letters = 'ABCDEFGH'
 </script>
 
 <template>
-  <div class="poll" :class="{ revealed }">
+  <div class="poll" :class="{ revealed, quiz: !liveClass }">
+    <p v-if="!liveClass" class="think">想一想</p>
     <h3>{{ question }}</h3>
     <div class="options">
       <button
@@ -41,14 +45,19 @@ const letters = 'ABCDEFGH'
         :class="{ mine: mine === n, right: revealed && n === correct, wrong: revealed && correct >= 0 && mine === n && n !== correct }"
         :aria-pressed="mine === n" @click="vote(id, n)"
       >
-        <i class="bar" :style="{ width: revealed ? `${pct(n)}%` : '0%' }" />
+        <i v-if="liveClass" class="bar" :style="{ width: revealed ? `${pct(n)}%` : '0%' }" />
         <span class="letter">{{ letters[n] }}</span>
         <span class="text">{{ o }}</span>
-        <span v-if="revealed" class="result">{{ pct(n) }}%<small>{{ counts[n] ?? 0 }} 票</small></span>
+        <span v-if="revealed && liveClass" class="result">{{ pct(n) }}%<small>{{ counts[n] ?? 0 }} 票</small></span>
+        <span v-else-if="revealed && n === correct" class="result picked">正確答案</span>
+        <span v-else-if="revealed && mine === n" class="result picked">再想想</span>
         <span v-else-if="mine === n" class="result picked">已選</span>
       </button>
     </div>
-    <p class="status">
+    <p v-if="!liveClass" class="status">
+      {{ revealed ? (mine < 0 || correct < 0 ? '答案公佈了，你猜對了嗎？' : mine === correct ? '答對了！' : '沒關係，看完說明再想一次。') : '先在心裡選一個答案 · 下一步公佈' }}
+    </p>
+    <p v-else class="status">
       <template v-if="room.status === 'on'">已作答 <b>{{ total }}</b> 人</template>
       <template v-else>點選一個答案</template>
       <template v-if="!revealed"> · 下一步公佈結果</template>
@@ -78,6 +87,11 @@ const letters = 'ABCDEFGH'
 .slide .poll .option.right .result { color: var(--c-brand-dark); }
 .slide .poll .option.wrong { border-color: #ff4b4b; box-shadow: 0 4px 0 #d33131; }
 .slide .poll .option.wrong .letter { border-color: #ff4b4b; background: #ff4b4b; color: #fff; }
+.slide .poll .think { display: inline-block; margin: 0 0 8px; padding: 3px 12px; border-radius: 999px; background: var(--c-blue-soft); color: var(--c-blue-dark); font-size: 14px; font-weight: 900; }
+.slide .poll.quiz.revealed .option:not(.right):not(.wrong) { opacity: .55; }
+.slide .poll.quiz .option.right .result, .slide .poll.quiz .option.wrong .result { font-size: 15px; }
+.slide .poll.quiz .option.right { background: #f1ffe4; }
+.slide .poll.quiz .option.wrong .result { color: #d33131; }
 .slide .poll .status { margin: 14px 0 0; color: var(--c-ink-soft); font-size: 15px; font-weight: 800; }
 .slide .poll .status b { color: var(--c-blue-dark); font-size: 18px; }
 </style>
