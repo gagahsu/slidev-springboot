@@ -137,6 +137,29 @@ defineProps<{ name: string, size?: number | string }>()
       <rect x="40" y="54" width="20" height="26" rx="4" fill="#fff" /><circle cx="50" cy="48" r="3" fill="#ff4b4b" />
     </g>
 
+    <!-- school office -->
+    <g v-else-if="name === 'cabinet'">
+      <rect x="18" y="6" width="64" height="88" rx="8" fill="#8b9aa3" />
+      <rect x="25" y="13" width="50" height="22" rx="4" fill="#dfe6ea" /><rect x="25" y="39" width="50" height="22" rx="4" fill="#dfe6ea" /><rect x="25" y="65" width="50" height="22" rx="4" fill="#dfe6ea" />
+      <g fill="#5d6b74"><rect x="42" y="21" width="16" height="5" rx="2.5" /><rect x="42" y="47" width="16" height="5" rx="2.5" /><rect x="42" y="73" width="16" height="5" rx="2.5" /></g>
+    </g>
+    <g v-else-if="name === 'card'">
+      <rect x="8" y="22" width="84" height="58" rx="9" fill="#fff" stroke="#1cb0f6" stroke-width="4" />
+      <circle cx="30" cy="44" r="9" fill="#ffd9b3" /><path d="M16 68 Q16 54 30 54 Q44 54 44 68Z" fill="#1cb0f6" />
+      <path d="M54 40h28M54 52h28M54 64h18" stroke="#b9dff5" stroke-width="5" stroke-linecap="round" />
+    </g>
+    <g v-else-if="name === 'book'">
+      <rect x="14" y="10" width="72" height="80" rx="8" fill="#ce82ff" /><rect x="14" y="10" width="14" height="80" rx="6" fill="#a568cc" />
+      <rect x="38" y="26" width="38" height="16" rx="4" fill="#fff" /><path d="M38 56h38M38 68h26" stroke="#f0dcff" stroke-width="5" stroke-linecap="round" />
+    </g>
+    <g v-else-if="name === 'key'">
+      <circle cx="30" cy="50" r="20" fill="none" stroke="#ffc800" stroke-width="10" /><path d="M50 50 H90 M74 50 V66 M86 50 V62" fill="none" stroke="#ffc800" stroke-width="10" stroke-linecap="round" />
+    </g>
+    <g v-else-if="name === 'lock'">
+      <path d="M32 46 V32 Q32 14 50 14 Q68 14 68 32 V46" fill="none" stroke="#8b9aa3" stroke-width="9" stroke-linecap="round" />
+      <rect x="20" y="44" width="60" height="46" rx="10" fill="#ffc800" /><circle cx="50" cy="62" r="6" fill="#8a6d00" /><path d="M50 64 V76" stroke="#8a6d00" stroke-width="6" stroke-linecap="round" />
+    </g>
+
     <!-- marks -->
     <g v-else-if="name === 'ok'"><circle cx="50" cy="50" r="42" fill="#58cc02" /><path d="M30 52 L45 66 L72 36" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" /></g>
     <g v-else-if="name === 'no'"><circle cx="50" cy="50" r="42" fill="#ff4b4b" /><path d="M34 34 L66 66M66 34 L34 66" stroke="#fff" stroke-width="11" stroke-linecap="round" /></g>

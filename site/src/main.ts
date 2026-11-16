@@ -23,6 +23,7 @@ import ShopLayout from './anim/ShopLayout.vue'
 import UrlParts from './anim/UrlParts.vue'
 import Dispatch from './anim/Dispatch.vue'
 import CupLabel from './anim/CupLabel.vue'
+import FileRoom from './anim/FileRoom.vue'
 import AskOrOrder from './anim/AskOrOrder.vue'
 import AspectTimeline from './anim/AspectTimeline.vue'
 import Flow from './anim/Flow.vue'
@@ -72,6 +73,7 @@ createApp(App)
   .component('UrlParts', UrlParts)
   .component('Dispatch', Dispatch)
   .component('CupLabel', CupLabel)
+  .component('FileRoom', FileRoom)
   .component('AskOrOrder', AskOrOrder)
   .component('AspectTimeline', AspectTimeline)
   .mount('#app')

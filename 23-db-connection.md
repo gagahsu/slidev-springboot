@@ -46,27 +46,35 @@ style: |
 </div>
 
 <!--
-大家好，上一章我們學了 Spring JDBC 的概念，知道它是 Spring Boot 和資料庫之間的橋樑。
+大家好，歡迎來到第二十三章。
 
-今天要動手設定——讓 Spring Boot 實際連接到 MySQL 資料庫。
+上一章我們認識了教務處的檔案室，也就是資料庫；還有負責跑檔案室的承辦人員，Spring JDBC。
 
-有兩件事要做：第一，在程式碼中設定連線資訊；第二，在 Eclipse 裡安裝資料庫管理工具，讓我們能直接在 IDE 裡查看資料庫的內容。
+但是承辦人員現在還進不了檔案室：他不知道檔案室在哪裡，也沒有門禁卡。今天就來把這些準備好。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要完成的三件事
 
-- **前置準備：建立 Schema 和 Table** — 用 MySQL Workbench 建立資料庫與資料表
-- **回顧：什麼是 Spring JDBC？** — 橋樑角色、JdbcTemplate 工具
-- **設定資料庫連線資訊** — application.properties 設定 URL、帳號、密碼、Driver、SQL logging
-- **Eclipse 資料庫管理工具** — Data Source Explorer 安裝與使用，直接在 IDE 查看資料庫
-- **章節總結** — 連線設定重點整理
+<v-clicks>
+
+- **整理檔案室**：在 MySQL 裡開一個檔案櫃、放一本學籍簿
+- **申請門禁**：告訴 Spring Boot 檔案室在哪裡、帳號密碼是什麼
+- **裝一扇觀察窗**：在 Eclipse 裡直接看資料庫的內容
+
+</v-clicks>
 
 <!--
-今天分兩個部分：先設定程式碼裡的連線設定，再介紹 Eclipse 的視覺化資料庫工具。
+今天是設定的一章，要完成三件事。
+
+（下一步）第一，整理檔案室。在 MySQL 裡開一個檔案櫃、放一本學籍簿。
+
+（下一步）第二，申請門禁。告訴 Spring Boot 檔案室在哪裡、帳號密碼是什麼。
+
+（下一步）第三，裝一扇觀察窗。讓我們在 Eclipse 裡就能直接看資料庫的內容。
+
+今天的步驟比較多，但是每一步都只是照著填。跟著做一次就好。
 -->
 
 ---
@@ -74,53 +82,94 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# 前置準備
-
-## 用 MySQL Workbench 建立 Schema 和 Table
+# Part 1
+# 進檔案室之前，要準備什麼？
 
 <!--
-在設定 Spring Boot 連線之前，要先確認 MySQL 裡有資料庫和資料表可以連。
+先用故事看一下，今天到底在準備什麼。
 -->
 
 ---
 
-# 建立 Schema（一）：開啟 MySQL Workbench
+# 承辦人員第一天上班
 
-**Step 1：** 開啟 MySQL Workbench，點選本機連線（Local instance）進入
+<Pairs left="教務處" right="程式" rows="cabinet,檔案室裡專屬我們的一個檔案櫃=server,Schema（一個資料庫）：myjdbc|book,檔案櫃裡的學籍簿，先畫好欄位=doc,Table（資料表）：student，有 id 和 name|shop,檔案室的地址=code,連線網址（url）|key,門禁卡的帳號和密碼=code,username、password" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 前兩項在 <b>MySQL</b> 裡準備，後兩項寫在 <b>Spring Boot</b> 的設定檔裡。
+</div>
+
+</v-click>
+
+<!--
+承辦人員第一天上班，要先準備四樣東西。
+
+（下一步）第一，檔案室很大，很多單位共用。我們要先有一個專屬的檔案櫃。對應到 MySQL，這叫 Schema，也就是一個資料庫。我們取名叫 myjdbc。
+
+（下一步）第二，檔案櫃裡要有一本學籍簿，而且要先畫好欄位。對應到資料表 Table。我們建一張 student 表，有 id 和 name 兩個欄位。
+
+（下一步）第三，承辦人員要知道檔案室的地址，這是連線網址。
+
+（下一步）第四，門禁卡的帳號和密碼。
+
+（下一步）前兩項是在 MySQL 裡準備，後兩項是寫在 Spring Boot 的設定檔裡。我們照這個順序來做。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 2
+# 整理檔案室：建立 Schema 和 Table
+
+<!--
+先到 MySQL 裡，把檔案櫃和學籍簿準備好。我們用 MySQL Workbench 這個工具。
+-->
+
+---
+
+# 建立 Schema（1）：進入 MySQL Workbench
+
+開啟 MySQL Workbench，點選本機連線 **Local instance** 進入：
 
 <img src="/screenshots/ch23-workbench-portal.png" class="rounded border mt-4 mx-auto" style="max-height: 340px;" />
 
 <!--
-Step 1：開啟 Workbench，點 Local instance MySQL 進入。
+第一步，開啟 MySQL Workbench。
+
+畫面上會看到一個 Local instance 的方塊，這是你自己電腦上的 MySQL。點它進去。
 -->
 
 ---
 
-# 建立 Schema（二）：點選建立按鈕
+# 建立 Schema（2）：按下建立按鈕
 
-**Step 2：** 點選上方工具列的 **Create a new schema** 圖示（圓柱 + 加號）
+點上方工具列的 **Create a new schema**（圓柱加上一個加號的圖示）：
 
 <img src="/screenshots/ch23-workbench-schema-btn.png" class="rounded border mt-4 mx-auto" style="max-height: 340px;" />
 
 <!--
-工具列找到「圓柱+加號」的圖示就是 Create a new schema。
+進來之後，在上方的工具列找一個「圓柱加上加號」的圖示。
+
+滑鼠移上去會顯示 Create a new schema。點它。
 -->
 
 ---
 
-# 建立 Schema（二）：填寫設定並套用
+# 建立 Schema（3）：填寫並套用
 
 <div class="grid grid-cols-2 gap-4">
 <div>
 
-| 步驟 | 操作 |
-| --- | --- |
-| 3 | `Schema Name` 填入 `myjdbc` |
-| 4 | Charset 選 `utf8mb4`，Collation 保持預設即可 |
-| 5 | 點 **Apply** → 確認 SQL → 再點 **Apply** → **Finish** |
+1. `Schema Name` 填 `myjdbc`
+2. Charset 選 `utf8mb4`，Collation 保持預設
+3. 按 **Apply** → 再按 **Apply** → **Finish**
 
 <div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm">
-💡 Schema 名稱需與後續 <code>application.properties</code> 的 URL 設定一致。
+💡 <code>myjdbc</code> 這個名字等一下會寫進連線網址，兩邊要一樣。
 </div>
 
 </div>
@@ -132,61 +181,73 @@ Step 1：開啟 Workbench，點 Local instance MySQL 進入。
 </div>
 
 <!--
-utf8mb4 是 MySQL 推薦的字元集，支援完整 Unicode。Collation 保持預設（MySQL 8.0 為 utf8mb4_0900_ai_ci）即可，不需要特別更改。
+這個畫面要填三樣東西。
 
-Apply 後 Workbench 會顯示 SQL 預覽，確認沒問題再按第二個 Apply。
-建立成功後左側 SCHEMAS 清單會出現 myjdbc。
+第一，Schema Name 填 myjdbc。
+
+第二，Charset 選 utf8mb4。它讓資料庫可以正確存中文和各種符號。Collation 保持預設就好。
+
+第三，按 Apply。Workbench 會先給你看它準備執行的 SQL，確認沒問題再按一次 Apply，最後按 Finish。
+
+建好之後，左邊的 SCHEMAS 清單會出現 myjdbc。記住這個名字，等一下會寫進連線網址，兩邊要一樣。
 -->
 
 ---
 
-# 建立 Table（一）：開啟建立視窗
+# 建立 Table（1）：開啟建立視窗
 
-| 步驟 | 操作 |
-| --- | --- |
-| 1 | 在左側 Navigator 展開 `myjdbc` → 右鍵 `Tables` → **Create Table...** |
-| 2 | 在 `Table Name` 填入資料表名稱（例如 `student`） |
+1. 左側展開 `myjdbc` → 在 `Tables` 上按右鍵 → **Create Table...**
+2. `Table Name` 填 `student`
 
 <img src="/screenshots/ch23-workbench-create-table.png" class="rounded border mt-4 mx-auto" style="max-height: 320px;" />
 
 <!--
-在左側 SCHEMAS 找到 myjdbc，展開後右鍵 Tables，選 Create Table 進入建立畫面。
-Table Name 填 student，這個名稱之後 SQL 裡會用到。
+檔案櫃有了，接著放一本學籍簿進去。
+
+在左邊找到 myjdbc，展開它。在 Tables 上按右鍵，選 Create Table。
+
+Table Name 填 student。之後寫 SQL 的時候，用的就是這個名字。
 -->
 
 ---
 
-# 建立 Table（二）：設定欄位並套用
+# 建立 Table（2）：畫好欄位
 
-| 步驟 | 操作 |
-| --- | --- |
-| 3 | 點下方 `+` 新增欄位，填入欄位名稱、資料型態 |
-| 4 | 勾選 `id` 欄位的 **PK**（Primary Key）和 **AI**（Auto Increment） |
-| 5 | 點 **Apply** → 確認 SQL → 再點 **Apply** → **Finish** |
+1. 新增兩個欄位：`id` 和 `name`
+2. 勾選 `id` 的 **PK**（Primary Key）和 **AI**（Auto Increment）
+3. 按 **Apply** → 再按 **Apply** → **Finish**
 
 <img src="/screenshots/ch23-workbench-table-columns.png" class="rounded border mt-3 mx-auto" style="max-height: 220px;" />
 
 <!--
-建立 Table 時，id 欄位設為 Primary Key 和 Auto Increment，新增資料時 id 會自動產生，不需要手動指定。
+接著畫學籍簿的欄位。
+
+新增兩個欄位：id 和 name。
+
+id 那一列要勾兩個選項。PK 是 Primary Key，意思是這個欄位用來辨認每一筆資料，不能重複，就像學號。AI 是 Auto Increment，意思是自動編號，新增資料的時候不用自己填，資料庫會自動給下一個號碼。
+
+設定好之後一樣按 Apply、Apply、Finish。
 -->
 
 ---
 
-# 建立 Table（三）：範例欄位設定
+# 建立 Table（3）：我們的學籍簿
 
-本課程使用的 `student` 資料表欄位：
-
-| 欄位名稱 | 資料型態 | 設定 | 說明 |
+| 欄位 | 資料型態 | 設定 | 說明 |
 | --- | --- | --- | --- |
-| `id` | `INT` | PK、AI | 學生 ID，自動遞增，不需手動填入 |
-| `name` | `VARCHAR(256)` | — | 學生姓名 |
+| `id` | `INT` | PK、AI | 學號：自動編號，不用自己填 |
+| `name` | `VARCHAR(256)` | | 學生姓名 |
 
-<img src="/screenshots/ch23-workbench-table-result.png" class="rounded border mt-4 mx-auto" style="max-height: 260px;" />
+<img src="/screenshots/ch23-workbench-table-result.png" class="rounded border mt-4 mx-auto" style="max-height: 250px;" />
 
 <!--
-之後 Spring JDBC 執行 INSERT 時只需要填 name，id 會自動填入。
+這就是我們的學籍簿，接下來好幾章都會用它。
 
-這個 student 資料表會在後續章節中持續使用。
+id 是整數，設定了 PK 和 AI，所以是自動編號。
+
+name 是文字，最多 256 個字，用來放學生姓名。
+
+因為 id 會自動編號，之後新增學生的時候，只要給 name 就可以了。
 -->
 
 ---
@@ -194,157 +255,150 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# 回顧
-
-## 什麼是 Spring JDBC？
+# Part 3
+# 申請門禁：設定資料庫連線
 
 <!--
-先快速回顧上一章的重點。
+檔案室整理好了。接著回到 Spring Boot，幫承辦人員申請門禁。
 -->
 
 ---
 
-# 回顧：Spring JDBC 的角色
-
-| 層次 | 說明 | 狀態 |
-| --- | --- | --- |
-| 前端 | 使用者介面，發送 Http 請求 | — |
-| Spring MVC | 接收請求、處理邏輯、回傳 Response | ✅ 已學完 |
-| **Spring JDBC** | **執行 SQL，存取資料庫資料** | **← 本章：設定連線** |
-| 資料庫（MySQL） | 儲存應用程式的數據 | — |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>今天目標：</b> 完成 Spring JDBC 的連線設定，讓 Spring Boot 能存取 MySQL 資料庫。
-</div>
-
-<!--
-上一章學了 Spring JDBC 的概念，它是後端和資料庫之間的橋樑。
-
-今天要把這座橋真正搭起來：設定連線資訊，讓 Spring Boot 知道要連到哪個資料庫、用什麼帳號密碼。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# Part 1
-
-## 在 Spring Boot 中設定資料庫連線資訊
-
-<!--
-先來看程式碼層面的設定。
--->
-
----
-
-# Step 1：在 build.gradle 加入依賴
-
-需要兩個依賴：Spring JDBC 和 MySQL 驅動程式：
+# Step 1：在 build.gradle 加入兩個工具
 
 ```groovy
 implementation 'org.springframework.boot:spring-boot-starter-jdbc'
 implementation 'com.mysql:mysql-connector-j'
 ```
 
-| 依賴 | 說明 |
-| --- | --- |
-| `spring-boot-starter-jdbc` | 啟用 Spring JDBC 功能，包含 `JdbcTemplate` |
-| `mysql-connector-j` | MySQL 的 Java 驅動程式，讓 Spring Boot 能連接 MySQL |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>注意：</b> 修改 build.gradle 後，必須在 Eclipse 右鍵專案 → <code>Gradle</code> → <code>Refresh Gradle Project</code>，才會下載依賴並生效。
+- `spring-boot-starter-jdbc`：承辦人員本人，也就是 Spring JDBC
+- `mysql-connector-j`：MySQL 的**驅動程式**（Driver），像一位翻譯，讓 Java 能和 MySQL 溝通
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 改完 build.gradle，要在專案上按右鍵 → <code>Gradle</code> → <code>Refresh Gradle Project</code> 才會生效。
 </div>
 
+</v-click>
+
 <!--
-第一步，在 build.gradle 加入兩個依賴。
+第一步，在 build.gradle 的 dependencies 裡加入兩行。
 
-第一個是 spring-boot-starter-jdbc，這是 Spring JDBC 的核心功能包，加入後就能使用 JdbcTemplate 來執行 SQL。
-第二個是 mysql-connector-j，這是 MySQL 的 Java 驅動程式，沒有它 Spring Boot 根本連不上 MySQL。
+（下一步）第一行是 spring-boot-starter-jdbc。它就是承辦人員本人，加了它才有 Spring JDBC 可以用。
 
-加完之後記得在 Eclipse 右鍵專案 → Gradle → Refresh Gradle Project，讓 Eclipse 下載這兩個依賴。
+（下一步）第二行是 mysql-connector-j。它是 MySQL 的驅動程式，英文叫 Driver。可以把它想成一位翻譯：Java 和 MySQL 講的話不一樣，要靠它居中溝通。
+
+（下一步）提醒一下：改完 build.gradle，要在專案上按右鍵，選 Gradle，再選 Refresh Gradle Project，Eclipse 才會去下載這兩個工具。
 -->
 
 ---
 
-# Step 2：設定 application.properties
+# Step 2：填寫門禁申請表
 
-在 `src/main/resources/application.properties` 加入四行連線設定：
+在 `src/main/resources/application.properties` 加入四行：
 
-```properties
+<CodeSteps>
+
+```properties {1|2|3-4|all}
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 spring.datasource.url=jdbc:mysql://localhost:3306/myjdbc?serverTimezone=Asia/Taipei&characterEncoding=utf-8
 spring.datasource.username=root
 spring.datasource.password=（你的 MySQL 密碼）
 ```
 
+- 用哪一位翻譯：固定寫法，照抄就好
+- 檔案室的地址：下一頁拆開來看
+- 門禁卡的帳號和密碼
+- Spring Boot 啟動時會讀這四行，自動連上資料庫
+
+</CodeSteps>
+
 <!--
-第二步，在 application.properties 設定資料庫連線資訊。
+第二步，填寫門禁申請表。這張表就是 application.properties 這個設定檔，位置在 src/main/resources 底下。加入四行。
 
-這四行告訴 Spring Boot：要用哪個驅動程式、連到哪個資料庫、用什麼帳號密碼。
+（下一步）第一行，driver-class-name，指定用哪一位翻譯。這是固定寫法，照抄就好。
 
-password 填入你自己設定的 MySQL root 密碼。
+（下一步）第二行，url，是檔案室的地址。這一行比較長，下一頁拆開來看。
 
-設定完成之後，Spring Boot 啟動時會自動讀取這四個設定，建立和資料庫的連線。
+（下一步）第三、第四行是門禁卡的帳號和密碼。帳號用 root，密碼填你安裝 MySQL 時自己設定的那一組。
+
+（下一步）Spring Boot 啟動的時候會讀這四行，自動連上資料庫。我們不用再寫任何連線的程式。
 -->
 
 ---
 
-# application.properties 各項說明
+# 把檔案室的地址拆開來看
 
-| 設定項目 | 說明 |
-| --- | --- |
-| `driver-class-name` | MySQL 驅動程式的類別名稱，固定填 `com.mysql.cj.jdbc.Driver` |
-| `url` | 資料庫連線 URL，格式：`jdbc:mysql://主機:埠號/資料庫名稱?參數` |
-| `username` | MySQL 帳號，預設使用 `root` |
-| `password` | MySQL 密碼，填入你設定的密碼 |
-
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>URL 說明：</b> <code>myjdbc</code> 是資料庫名稱（需先在 MySQL 建立）；<code>serverTimezone=Asia/Taipei</code> 避免時區問題；<code>characterEncoding=utf-8</code> 避免中文亂碼。
-</div>
+<UrlParts parts="jdbc:mysql://;;連線方式;;怎麼去;;用 JDBC 連一個 MySQL 資料庫。固定寫法||localhost;;主機;;哪一棟樓;;MySQL 裝在哪一台電腦。localhost 是「我自己這台」||:3306;;埠號;;幾號門;;MySQL 預設開在 3306 這個門||/myjdbc;;Schema;;哪一個檔案櫃;;剛才在 Workbench 建立的 myjdbc，名字要一模一樣||?serverTimezone=…;;參數;;備註;;兩個常用的備註：時區用台北、文字用 utf-8，避免時間錯誤和中文亂碼" />
 
 <!--
-這頁詳細說明四個設定的意思。
+這一行地址，和第十四章學的網址長得很像。我們一段一段拆開。
 
-driver-class-name 是固定值，不需要記，照抄就好。
+（下一步）最前面 jdbc:mysql，意思是用 JDBC 去連一個 MySQL 資料庫。固定寫法。
 
-url 的格式要注意：jdbc:mysql://localhost:3306/ 是固定的，後面的 myjdbc 是你要連接的資料庫名稱，這個資料庫需要先在 MySQL 裡建立。
+（下一步）localhost 是主機，MySQL 裝在哪一台電腦。localhost 代表我自己這台。
 
-serverTimezone=Asia/Taipei 和 characterEncoding=utf-8 這兩個參數幾乎都需要加，前者避免時區錯誤，後者避免中文字亂碼。
+（下一步）3306 是埠號。MySQL 預設開在 3306 這個門。
 
-⚠️ 如果連線失敗，最常見的原因是：密碼錯了、資料庫名稱拼錯、或 MySQL 服務沒有啟動。
+（下一步）/myjdbc 是 Schema 的名字，也就是哪一個檔案櫃。它要和剛才在 Workbench 建立的名字一模一樣。
+
+（下一步）問號後面是兩個備註。serverTimezone 把時區設成台北，避免時間差八小時。characterEncoding 設成 utf-8，避免中文變成亂碼。這兩個幾乎每次都會加。
 -->
 
 ---
 
-# 補充設定：讓 SQL 出現在 Console
+# 想一想
 
-在 `application.properties` 加上 logging 設定，之後執行 SQL 時就能在 Console 看到：
+<Poll question="啟動 Spring Boot 時出現「連不上資料庫」的錯誤，下面哪一個「不是」常見的原因？" options="password 打錯了|url 裡的 Schema 名稱拼錯了|MySQL 沒有啟動|Controller 少寫了 @RestController" answer="4" />
+
+<!--
+來想一題。
+
+啟動 Spring Boot 的時候，如果出現連不上資料庫的錯誤，下面哪一個不是常見的原因？
+
+（等大家作答）
+
+（下一步）答案是第四個。Controller 有沒有寫 @RestController，和資料庫連線沒有關係。
+
+前三個才是最常見的原因：密碼打錯、Schema 名稱拼錯、MySQL 根本沒有啟動。以後遇到連線失敗，先檢查這三件事。
+-->
+
+---
+
+# 加碼設定：讓 SQL 顯示在 Console
 
 ```properties
 # 印出執行的 SQL
 logging.level.org.springframework.jdbc.core.JdbcTemplate=DEBUG
-# 連參數值也印出（可選）
+# 連參數的值也印出來（可選）
 logging.level.org.springframework.jdbc.core.StatementCreatorUtils=TRACE
 ```
 
-| 設定 | 效果 |
-| --- | --- |
-| `JdbcTemplate=DEBUG` | Console 印出執行的 SQL 語法 |
-| `StatementCreatorUtils=TRACE` | 連同每個參數實際帶入的值一起印出 |
+<v-clicks>
+
+- 第一行：每次執行 SQL，Console 都會印出那一句 SQL
+- 第二行：連帶入的參數值也一起印出來
+- 只在開發的時候開，正式上線要關掉
+
+</v-clicks>
 
 <!--
-連線設定完成後，順便加兩行 logging 設定，方便之後開發除錯。
+最後多加兩行設定，之後找問題會很方便。
 
-第一行把 JdbcTemplate 的 log level 調成 DEBUG，之後每次執行 SQL，Console 就會印出 SQL 語法。
-第二行是 TRACE 等級，連參數實際帶入的值都會印出來。
+（下一步）第一行讓 Spring JDBC 每次執行 SQL 的時候，都把那一句 SQL 印在 Console。等於承辦人員每送一張申請單，都唸給我們聽。
 
-現在還沒執行任何 SQL，所以看不到效果；下一章開始用 update() 執行 INSERT 時，就會在 Console 看到這些 log。
+（下一步）第二行會連帶入的參數值也一起印出來。
 
-⚠️ 常見誤區：網路上查到的 spring.jpa.show-sql=true 是給 JPA/Hibernate 用的，
-我們用的是 Spring JDBC，設了也沒效果，要用 logging.level 的方式。
+（下一步）這兩行只在開發的時候開。正式上線要關掉，因為印太多會拖慢速度，也可能把資料洩漏在紀錄裡。
 
-這個設定建議只在開發環境開啟，正式環境印出所有 SQL 會影響效能、也可能洩漏資料。
+現在還沒執行任何 SQL，所以看不到效果。下一章就會看到了。
+
+另外提醒：網路上常看到 spring.jpa.show-sql=true，那是之後 JPA 用的。現在用 Spring JDBC，寫了不會有效果。
 -->
 
 ---
@@ -352,261 +406,246 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# Part 2
-
-## Eclipse 中的資料庫管理工具<br>Data Source Explorer
+# Part 4
+# 裝一扇觀察窗：Data Source Explorer
 
 <!--
-設定完連線之後，來介紹 Eclipse 的視覺化資料庫工具。
+門禁申請好了。最後在 Eclipse 裡裝一扇觀察窗，讓我們隨時能看檔案室裡的資料。
 -->
 
 ---
 
-# 什麼是 Data Source Explorer？
+# Data Source Explorer 是什麼？
 
-| 項目 | 說明 |
-| --- | --- |
-| 工具名稱 | Data Source Explorer（資料來源總管） |
-| 所屬功能 | Eclipse DTP（Data Tools Platform）插件內建 |
-| 用途 | 在 Eclipse 中直接連接資料庫，瀏覽資料表、執行 SQL |
-| 好處 | 不需要開啟其他資料庫工具，在 IDE 裡就能檢查資料 |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>類似工具：</b> 功能類似 MySQL Workbench、DBeaver，但直接整合在 Eclipse 開發環境中。
+- Eclipse 裡的一個面板，可以**直接連上資料庫**
+- 能看有哪些資料表、裡面有哪些資料，也能改資料
+- 寫完程式後，不用切換到別的軟體，就能確認資料有沒有存進去
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 它和 MySQL Workbench 做的事差不多，只是直接放在 Eclipse 裡。想繼續用 Workbench 看資料也完全可以。
+</div>
+
+</v-click>
+
+<!--
+Data Source Explorer 是 Eclipse 裡的一個面板。
+
+（下一步）它可以直接連上資料庫。
+
+（下一步）可以看有哪些資料表、裡面有哪些資料，也能直接改資料。
+
+（下一步）好處是：寫完程式之後，不用切換到別的軟體，就能確認資料有沒有存進去。
+
+（下一步）它和 MySQL Workbench 做的事差不多，只是直接放在 Eclipse 裡。如果你習慣用 Workbench 看資料，也完全可以，這一段就當作參考。
+-->
+
+---
+
+# 先確認有沒有這個面板
+
+1. `Window` → `Show View` → `Other...`
+2. 在搜尋框輸入 `Data Source`
+3. 有出現 `Data Source Explorer` → 選它，按 `Open`
+4. 沒有出現 → 要先安裝（下一頁）
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 有些 Eclipse 版本（例如 Eclipse IDE for Java Developers）預設沒有這個面板。
 </div>
 
 <!--
-Data Source Explorer 是 Eclipse 內建的資料庫管理工具，不需要額外安裝。
+先確認你的 Eclipse 有沒有這個面板。
 
-它讓我們可以在 Eclipse 裡直接連接 MySQL，查看有哪些資料表、資料表裡有什麼欄位和資料，甚至可以直接執行 SQL。
+從上方選單點 Window，選 Show View，再選 Other。
 
-開發時這個工具很好用——寫完 SQL 之後，可以馬上在 Data Source Explorer 裡確認資料有沒有正確寫進資料庫，不需要切換到其他視窗。
+在搜尋框輸入 Data Source。
+
+如果有出現 Data Source Explorer，選它，按 Open，面板就打開了。
+
+如果沒有出現，代表你的 Eclipse 還沒有安裝這個功能。有些比較精簡的 Eclipse 版本預設沒有。照下一頁安裝就可以。
 -->
 
 ---
 
-# 找不到 Data Source Explorer？先確認是否已安裝
+# 沒有的話：安裝 Database Development
 
-開啟前先確認 Eclipse 是否有 DTP 插件：
+1. `Help` → `Install New Software...`
+2. `Work with` 選 `--All Available Sites--`（載入要等一下）
+3. 勾選整個 **Database Development**
+4. `Next` → 接受授權 → `Finish`
+5. 安裝完成後，重新啟動 Eclipse
 
-| 確認步驟 | 說明 |
-| --- | --- |
-| 1 | `Window` → `Show View` → `Other...` |
-| 2 | 搜尋框輸入 `Data Source` |
-| 3 | 有出現 → 已安裝，直接使用 |
-| 4 | 沒有出現 → 需要安裝 DTP 插件 |
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-left">
+✅ 重新啟動後，再做一次上一頁的步驟，就找得到 Data Source Explorer 了。
+</div>
+
+<!--
+安裝的方法是這樣。
+
+從上方選單點 Help，選 Install New Software。
+
+Work with 的下拉選單選 All Available Sites。清單載入要等一下。
+
+找到 Database Development 這個分類，整個勾起來。
+
+按 Next，接受授權，按 Finish。
+
+安裝大概要三到五分鐘。完成後 Eclipse 會請你重新啟動。
+
+重新啟動之後，再做一次上一頁的步驟，就找得到 Data Source Explorer 了。
+-->
+
+---
+
+# 建立連線（1）：新增 MySQL 連線
+
+1. 在 `Database Connections` 上按右鍵 → `New...`
+2. 清單裡選 `MySQL`，名稱填 `myjdbc`，按 `Next`
+3. 在 Drivers 欄位旁邊按 `+`，選 `MySQL JDBC Driver`
+4. 切到 `JAR List` 頁籤，按 **Clear All**
+5. 按 **Add JAR/Zip...**，選 `mysql-connector-j-[版本].jar`，按 `OK`
 
 <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>注意：</b> 部分 Eclipse 版本（如 Eclipse IDE for Java Developers）預設不含 DTP，需要手動安裝。
+⚠️ 這個 jar 檔在 <code>C:\Users\[使用者名稱]\.gradle\caches\</code> 底下，用檔案總管搜尋 <code>mysql-connector-j</code> 就找得到。
 </div>
 
 <!--
-在打開 Data Source Explorer 之前，要先確認你的 Eclipse 有沒有安裝 DTP（Data Tools Platform）這個插件。
+面板打開之後，來建立一條連到 MySQL 的連線。
 
-如果是下載 Eclipse IDE for Java EE Developers，通常已經內建 DTP。
-但如果是 Eclipse IDE for Java Developers（比較精簡的版本），就需要手動安裝。
+在 Database Connections 上按右鍵，選 New。
 
-確認方式：Window → Show View → Other，在搜尋框打 Data Source，有出現就代表已安裝。
+清單裡選 MySQL。名稱可以填 myjdbc，方便辨認。按 Next。
+
+接著要告訴 Eclipse 用哪一位翻譯，也就是 Driver。在 Drivers 欄位旁邊按加號，選 MySQL JDBC Driver。
+
+切到 JAR List 這個頁籤。裡面預設有一個檔名，但是那個檔案其實不存在。所以先按 Clear All 把它清掉。
+
+再按 Add JAR/Zip，選我們真正的驅動程式檔案：mysql-connector-j 加上版本號的 jar 檔。
+
+這個檔案在哪裡？剛才 Gradle 已經幫我們下載了，放在使用者資料夾的 .gradle\caches 底下。用檔案總管搜尋 mysql-connector-j 就找得到。
 -->
 
 ---
 
-# 安裝 DTP 插件（找不到時才需要）
+# 如果看到這個錯誤
 
-透過 **Install New Software** 安裝：
+`Unable to locate JAR/zip ... mysql-connector-java-4.0.0-bin.jar`
 
-| 步驟 | 操作 |
-| --- | --- |
-| 1 | `Help` → `Install New Software...` |
-| 2 | `Work with` 下拉選單選擇 `--All Available Sites--`（載入時間較長，但最簡單） |
-| 3 | 找到 `Database Development` 分類 |
-| 4 | 直接勾選整個 **Database Development**（全部安裝） |
-| 5 | 點 `Next` → 接受授權 → `Finish` |
-| 6 | 等待安裝完成，重新啟動 Eclipse |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ 重啟後再次執行 <code>Window → Show View → Other → Data Management → Data Source Explorer</code>，即可正常開啟。
-</div>
+- **原因**：`JAR List` 裡預設的那個檔名並不存在
+- **解法**：回到 `JAR List` → **Clear All** → **Add JAR/Zip...** 選真正的 jar 檔
+
+</v-clicks>
 
 <!--
-如果 Eclipse Marketplace 找不到，改用 Install New Software。
+如果你在設定的時候看到這個錯誤，不用緊張，這很常見。
 
-Work with 下拉選單選對應版本的 release site，展開 Database Development 分類就能找到 Data Tools Platform。
+（下一步）原因是 JAR List 裡預設的那個檔名，在你的電腦上並不存在。
 
-整個安裝過程大約 3 到 5 分鐘，視網路速度而定。
-
-重啟完成之後，再回到 Window → Show View → Other，就會看到 Data Management 資料夾和 Data Source Explorer 選項了。
+（下一步）解法就是上一頁的第四、第五步：回到 JAR List，按 Clear All，再按 Add JAR/Zip 選真正的 jar 檔。
 -->
 
 ---
 
-# Step 1：開啟 Data Source Explorer
+# 建立連線（2）：填入連線資訊並測試
 
-| 操作步驟 | 說明 |
-| --- | --- |
-| 1 | 點選上方選單 `Window` |
-| 2 | 選擇 `Show View` → `Other...` |
-| 3 | 展開 `Data Management` 資料夾 |
-| 4 | 選擇 `Data Source Explorer`，點 `Open` |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>快捷做法：</b> 也可以切換到 <b>Database Development</b> 視角（右上角圖示 → Other... → Database Development），Data Source Explorer 會自動出現在左側面板。
-</div>
-
-<!--
-第一步，把 Data Source Explorer 這個面板打開。
-
-路徑是 Window → Show View → Other → Data Management → Data Source Explorer。
-
-開啟之後，你會在 Eclipse 的某個角落看到一個新的面板，裡面有「Database Connections」這個項目，這就是我們要操作的地方。
-
-如果你用的是 Database Development 視角，Data Source Explorer 會預設顯示，不需要手動開啟。
--->
-
----
-
-# Step 2：建立 MySQL 連線
-
-| 操作步驟 | 說明 |
-| --- | --- |
-| 1 | 在 `Database Connections` 上右鍵 → `New...` |
-| 2 | 從清單選擇 `MySQL`，點 `Next` |
-| 3 | 填入 Connection 名稱（例如 `myjdbc`），點 `Next` |
-| 4 | 在 Drivers 欄位旁點 `+`（新增 Driver 定義） |
-| 5 | 選擇 MySQL 版本（例如 `MySQL JDBC Driver`） |
-
-<!--
-第二步，在 Data Source Explorer 建立一個新的 MySQL 連線。
-
-右鍵 Database Connections，選 New，然後從清單選 MySQL 這個資料庫類型。
-
-接下來要填一個名稱，建議和你的資料庫名稱一樣，方便辨認。
-
-然後需要設定 Driver——這告訴 Eclipse 要用什麼驅動程式連接 MySQL。如果是第一次設定，需要點 + 新增。
--->
-
----
-
-# Step 3：設定 MySQL Driver
-
-| 操作步驟 | 說明 |
-| --- | --- |
-| 1 | 點 `JAR List` 頁籤 |
-| 2 | 點 `Add JAR/Zip...`，找到 `mysql-connector-j-[版本].jar` |
-| 3 | JAR 位置：Gradle 快取資料夾（見下方提示） |
-| 4 | 確認後點 `OK` 完成 Driver 設定 |
-
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>找 JAR 的位置：</b> Windows 上 Gradle 下載的 JAR 在 <code>C:\Users\[使用者名稱]\.gradle\caches\</code>，用檔案總管搜尋 <code>mysql-connector-j</code> 找到對應版本的 <code>.jar</code> 檔。
-</div>
-
-<!--
-第三步，設定 MySQL 的驅動程式 JAR 檔。
-
-Driver 設定頁面切到 JAR List，點 Add JAR/Zip，找到 mysql-connector-j 的 JAR 檔。
-
-這個 JAR 在哪裡？因為我們在 build.gradle 加入了依賴，Gradle 已經把它下載到本機快取。
-Windows 上的路徑大概是 C:\Users\你的帳號\.gradle\caches\ 底下某個子資料夾，搜尋 mysql-connector-j 就能找到。
-
-版本號以 build.gradle 裡設定的為準，每個人可能不同。
--->
-
----
-
-# 疑難排解：Driver JAR 路徑錯誤
-
-出現 `Unable to locate JAR/zip ... mysql-connector-java-4.0.0-bin.jar` 錯誤時：
-
-| 步驟 | 操作 |
-| --- | --- |
-| 1 | 在 Driver 設定視窗，點 `JAR List` 頁籤 |
-| 2 | 選中清單中的 `mysql-connector-java-4.0.0-bin.jar` 項目 |
-| 3 | 點 **Clear All**（移除舊的佔位路徑） |
-| 4 | 點 **Add JAR/Zip...**，找到實際的 `mysql-connector-j-[版本].jar` |
-| 5 | 點 `OK` 儲存，重新 Test Connection |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>原因：</b> Eclipse DTP 的 Driver 範本預帶一個不存在的佔位 JAR 路徑，需要手動換成 Gradle 快取中實際下載的版本。
-</div>
-
-<!--
-這個錯誤很常見。原因是 Eclipse DTP 的預設 Driver 定義裡帶了一個佔位 JAR 名稱 mysql-connector-java-4.0.0-bin.jar，這個檔案根本不存在，所以找不到。
-
-JAR List 頁面看起來有東西，但那個路徑是壞的。
-
-修法很簡單：Clear All，然後 Add JAR/Zip 選 Gradle 快取裡實際的 mysql-connector-j-[版本].jar。
--->
-
----
-
-# Step 4：填入連線資訊並測試
+和 `application.properties` 填的是同一組資料：
 
 | 欄位 | 填入內容 |
 | --- | --- |
-| Database | `myjdbc`（你的資料庫名稱） |
+| Database | `myjdbc` |
 | URL | `jdbc:mysql://localhost:3306/myjdbc` |
 | User name | `root` |
-| Password | （你的 MySQL 密碼） |
-| **Test Connection** | 點擊後若出現 ✅ Ping Succeeded 表示連線成功 |
+| Password | 你的 MySQL 密碼 |
+
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-left">
+✅ 按 <b>Test Connection</b>，出現 <b>Ping Succeeded</b> 就是成功了，再按 <code>Finish</code>。
+</div>
 
 <!--
-第四步，填入連線資訊。
+Driver 設定好之後，填入連線資訊。這四個欄位，和剛才 application.properties 填的是同一組資料。
 
-這些資訊和 application.properties 裡設定的一樣：資料庫名稱、URL、帳號、密碼。
+Database 填 myjdbc。URL 填 jdbc:mysql://localhost:3306/myjdbc。帳號 root，密碼是你的 MySQL 密碼。
 
-填完之後，記得點 Test Connection 按鈕，確認連線是否成功。
-如果出現 Ping Succeeded 的提示，就表示 Eclipse 成功連到 MySQL 了，可以點 Finish 完成設定。
+填完之後按 Test Connection。如果出現 Ping Succeeded，就是連線成功了，再按 Finish。
 
-如果連線失敗，通常是密碼錯了、MySQL 沒有啟動，或是 JAR 版本不符。
+如果失敗，一樣先檢查那三件事：密碼、Schema 名稱、MySQL 有沒有啟動。
 -->
 
 ---
 
-# Step 5：瀏覽資料庫與資料表
+# 看看檔案室裡的資料
 
-連線建立後，展開 Data Source Explorer 的連線節點：
-
-| 操作 | 說明 |
-| --- | --- |
-| 展開 `[連線名稱]` → `[資料庫名稱]` | 查看所有資料表 |
-| 右鍵資料表 → **Edit** | 開啟資料表編輯器，可瀏覽、新增、修改資料 |
-
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>好用功能：</b> 寫完 Spring JDBC 的 INSERT 後，直接右鍵 Table → Edit 確認資料有沒有寫進去，不需要另開 MySQL Workbench。
-</div>
+1. 展開連線 → `myjdbc` → 找到 `student` 資料表
+2. 在資料表上按右鍵 → **Edit**，就能看到裡面的資料
 
 <img src="/screenshots/ch23-data-source-edit.png" class="rounded border mt-3 mx-auto" style="max-height: 150px;" />
 
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-left">
+✅ 下一章用程式新增學生之後，就可以來這裡確認資料有沒有真的存進去。
+</div>
+
 <!--
-連線建立成功後，Data Source Explorer 裡就會出現資料庫結構。
+連線成功之後，展開它，找到 myjdbc，再找到 student 資料表。
 
-展開連線節點找到資料表，右鍵選 Edit，就能看到資料表裡的所有資料，也可以在這裡直接新增或修改資料。
+在資料表上按右鍵，選 Edit，就能看到裡面的資料，也可以直接在這裡新增或修改。
 
-開發時很好用——寫完 Spring JDBC 的程式碼，馬上切到這裡確認資料是否正確寫入。
+現在資料表是空的。下一章我們用程式新增學生之後，就可以來這裡確認資料有沒有真的存進去。
+-->
+
+---
+
+# 複習：教務處對照表
+
+<Pairs left="教務處" right="程式" rows="cabinet,專屬的檔案櫃=server,Schema：myjdbc|book,畫好欄位的學籍簿=doc,Table：student（id、name）|staff,翻譯=code,Driver：mysql-connector-j|key,門禁申請表：地址、帳號、密碼=code,application.properties 的四行設定|what,觀察窗=code,Data Source Explorer" />
+
+<!--
+我們用一張圖複習今天做的事。
+
+（下一步）專屬的檔案櫃，是 Schema，名字叫 myjdbc。
+
+（下一步）畫好欄位的學籍簿，是 student 資料表，有 id 和 name。
+
+（下一步）翻譯，是 MySQL 的 Driver。
+
+（下一步）門禁申請表，是 application.properties 裡的四行設定。
+
+（下一步）觀察窗，是 Eclipse 的 Data Source Explorer。
 -->
 
 ---
 
 # 章節總結
 
-| 重點 | 說明 |
-| --- | --- |
-| build.gradle 依賴 | `spring-boot-starter-jdbc` + `mysql-connector-j` |
-| application.properties | 4 個設定：driver、url、username、password |
-| URL 格式 | `jdbc:mysql://localhost:3306/資料庫名?serverTimezone=Asia/Taipei&characterEncoding=utf-8` |
-| SQL logging | `logging.level.org...JdbcTemplate=DEBUG` 印 SQL；`StatementCreatorUtils=TRACE` 印參數值 |
-| Data Source Explorer | Eclipse 內建視覺化資料庫工具，可瀏覽資料表、執行 SQL |
-| 下一步 | 開始使用 JdbcTemplate 執行 INSERT / SELECT / UPDATE / DELETE |
+<v-clicks>
+
+- **MySQL**：用 Workbench 建立 Schema `myjdbc` 和資料表 `student`
+- **build.gradle**：加入 `spring-boot-starter-jdbc` 和 `mysql-connector-j`
+- **application.properties**：driver、url、username、password 四行
+- **url 的格式**：`jdbc:mysql://主機:埠號/Schema名稱?參數`
+- **看 SQL**：`logging.level…JdbcTemplate=DEBUG`，只在開發時開
+- **看資料**：Data Source Explorer 或 MySQL Workbench 都可以
+
+</v-clicks>
+
+<v-click>
+
+下一章，承辦人員正式上工：用 Spring JDBC 新增、修改、刪除資料。
+
+</v-click>
 
 <!--
-好，今天的重點總結。
+最後整理今天的重點。
 
-第一，加入兩個 Gradle 依賴：spring-boot-starter-jdbc 和 mysql-connector-j。
-第二，在 application.properties 設定四行連線資訊。
-第三，在 Eclipse 的 Data Source Explorer 建立 MySQL 連線，可以視覺化查看資料。
-第四，下一章開始正式用 JdbcTemplate 執行 SQL，完成 CRUD 操作。
+（依序按下一步）在 MySQL 建立 Schema 和資料表。在 build.gradle 加入兩個工具。在 application.properties 寫四行連線設定。url 的格式是主機、埠號、Schema 名稱，再加參數。想看執行的 SQL，就加 logging 的設定。想看資料，用 Data Source Explorer 或 Workbench 都可以。
 
-設定好連線之後，接下來的幾章就會越來越有趣——我們可以把資料真正存進資料庫了！
+（最後一步）下一章，承辦人員正式上工：我們要用 Spring JDBC 新增、修改、刪除資料。
 -->
 
 ---
@@ -615,6 +654,12 @@ layout: end
 
 # Q & A
 
+有任何問題嗎？
+
 <!--
-今天的內容就到這裡。大家有任何問題嗎？
+今天的內容到這邊。
+
+課後請確認兩件事：Spring Boot 可以正常啟動、沒有連線的錯誤；而且你有辦法看到 student 這張資料表。這樣下一章就可以直接開始寫程式。
+
+有任何問題歡迎提出來。
 -->
