@@ -26,6 +26,8 @@ import CupLabel from './anim/CupLabel.vue'
 import FileRoom from './anim/FileRoom.vue'
 import SqlSlip from './anim/SqlSlip.vue'
 import RowCards from './anim/RowCards.vue'
+import PaperTrail from './anim/PaperTrail.vue'
+import FormCheck from './anim/FormCheck.vue'
 import TwoBooks from './anim/TwoBooks.vue'
 import SeatRace from './anim/SeatRace.vue'
 import AskOrOrder from './anim/AskOrOrder.vue'
@@ -80,6 +82,8 @@ createApp(App)
   .component('FileRoom', FileRoom)
   .component('SqlSlip', SqlSlip)
   .component('RowCards', RowCards)
+  .component('PaperTrail', PaperTrail)
+  .component('FormCheck', FormCheck)
   .component('TwoBooks', TwoBooks)
   .component('SeatRace', SeatRace)
   .component('AskOrOrder', AskOrOrder)

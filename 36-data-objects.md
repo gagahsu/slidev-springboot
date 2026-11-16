@@ -46,93 +46,35 @@ style: |
 </div>
 
 <!--
-大家好，在學了三層架構（Controller-Service-Dao）之後，今天要介紹另一個業界非常重要的概念——資料物件的分類。
+大家好，歡迎來到第三十六章。
 
-在真實的後端專案中，我們不會用同一個 Java 類別來做所有事情。
-資料庫的資料、API 接收的資料、API 回傳的資料、業務邏輯裡的資料，都應該用不同的物件來表示。
+上一章我們整理了「人」的分工：櫃台、組長、承辦人員。今天整理的是「紙」的分工。
 
-今天要介紹四個縮寫：PO、DTO、VO、DAO，學完之後你就能讀懂業界程式碼裡常見的命名規則。
--->
-
----
-layout: default
----
-
-# 本章大綱
-
-| 章節 | 內容 |
-| --- | --- |
-| 前言 | 為什麼需要不同的資料物件？ |
-| Part 1 | PO（Persistent Object）— 資料庫映射物件 |
-| Part 2 | DTO（Data Transfer Object）— 資料傳輸物件 |
-| Part 3 | VO（Value Object）— 值物件 |
-| Part 4 | DAO（Data Access Object）— 資料存取物件 |
-| 總結 | 四個物件完整比較 + 章節總結 |
-
-<!--
-今天的重點是概念理解，程式碼範例會搭配說明。學完之後，你會理解為什麼業界的專案裡有那麼多不同後綴的類別（xxxRequest、xxxResponse、xxxPO 等等）。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# 前言
-
-## 為什麼需要不同的資料物件？
-
-<!--
-先從問題情境開始：不分類的話會遇到什麼麻煩？
+到目前為止，我們只用一個 Student 類別，從前端一路傳到資料庫，再一路傳回去。今天會看到，這樣做在真實的系統裡會出問題。今天的程式碼先用看的，下一章再一起動手寫。
 -->
 
 ---
 
-# 問題情境：一個 Student 類別打天下
+# 今天要搞懂的三件事
 
-假設我們只有一個 Student 類別：
+<v-clicks>
 
-| 欄位 | 用途 | 問題 |
-| --- | --- | --- |
-| `id` | 資料庫主鍵 | 新增時不需要（DB 自動產生） |
-| `name` | 學生姓名 | 所有場景都需要 |
-| `password` | 密碼（資料庫存儲） | **不應該出現在 API 回應裡！** |
-| `createdAt` | 建立時間（DB 自動填） | 前端不需要傳入 |
+- **一個 `Student` 類別用到底，會出什麼問題？**
+- **PO、DTO、VO 是什麼？** 三種用途不同的資料物件
+- **DAO 又是什麼？** 它和前面三個不是同一類東西
 
-<div class="mt-4 p-3 bg-red-50 border-l-4 border-red-400 text-gray-700 text-sm text-left">
-⚠️ <b>問題：</b> 如果前端發送新增請求，不應該帶 id；如果後端回傳資料，不應該包含 password。一個類別無法同時滿足所有情境。
-</div>
+</v-clicks>
 
 <!--
-想像一下：你的 Student 類別有 id、name、password、createdAt 四個欄位。
+今天要搞懂三件事。
 
-前端新增學生時，傳過來的資料應該只有 name 和 password，不應該有 id（因為 id 是資料庫自動產生的）。
+（下一步）第一，一個 Student 類別用到底，會出什麼問題。
 
-後端回傳學生資料給前端時，應該包含 id 和 name，但絕對不應該包含 password——把密碼暴露給前端是嚴重的安全漏洞！
+（下一步）第二，PO、DTO、VO 是什麼。它們是三種用途不同的資料物件。
 
-這就是為什麼我們需要不同的資料物件：讓每個場景使用最合適的資料結構，既安全又清晰。
--->
+（下一步）第三，DAO 又是什麼。它常常和前面三個一起被提到，但它和它們不是同一類東西。
 
----
-
-# 解決方案：不同層次，不同物件
-
-| 物件類型 | 使用層次 | 核心用途 |
-| --- | --- | --- |
-| **PO** | Dao 層 ↔ 資料庫 | 對應資料庫的欄位，映射整張表格 |
-| **DTO** | Controller 層 ↔ 前端 | API 的請求（Request）和回應（Response） |
-| **VO** | Service 層 ↔ Controller 層 | 業務邏輯的值，通常是唯讀的 |
-| **DAO** | 負責資料庫操作的類別 | 封裝 SQL 查詢邏輯，不是資料物件 |
-
-<!--
-解決方案就是「讓每一層使用最適合它的物件」。
-
-PO 對應資料庫表格，完整包含所有欄位，只在 Dao 層和資料庫之間流動。
-DTO 用於 API 的輸入和輸出，可以根據需要選擇性地包含欄位（例如回應時去掉 password）。
-VO 是業務邏輯的值物件，通常是不可修改的。
-DAO 嚴格來說不是資料物件，而是封裝資料庫操作邏輯的類別（我們在第三十章學過的 StudentDao）。
-
-接下來一個一個詳細介紹。
+這四個縮寫看起來很嚇人，其實每一個都對應到教務處裡的一樣東西。
 -->
 
 ---
@@ -141,84 +83,146 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-
-## PO（Persistent Object）<br>資料庫映射物件
+# 學籍簿正本不外流
 
 <!--
-先介紹 PO，它是最靠近資料庫的那層物件。
+先看教務處發生的事。
 -->
 
 ---
 
-# 什麼是 PO（Persistent Object）？
+# 學籍簿多了一欄
 
-| 項目 | 說明 |
-| --- | --- |
-| 全名 | Persistent Object（持久化物件） |
-| 定義 | 「一個 Java 類別，對應到資料庫的一張表格」 |
-| 特性 | 欄位和資料庫欄位一一對應，包含所有欄位 |
-| 使用層次 | Dao 層（資料庫 ↔ Java 的橋樑） |
-| 常見命名 | `StudentPO`、`Student`（JPA 的 @Entity） |
+教務處的學籍簿，現在要多記一欄「身分證字號」：
+
+<v-clicks>
+
+- 同學來查成績。櫃台很省事，直接把**學籍簿那一頁影印**給他
+- 影印出來的紙上，身分證字號也在上面
+- 幫同學代領成績單的人，就這樣看到了別人的身分證字號
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 我們的程式就是這樣做的：<code>Student</code> 物件從資料庫拿出來，原封不動變成 JSON 回傳。資料表有什麼欄位，前端就看到什麼欄位。
+</div>
+
+</v-click>
 
 <!--
-PO 的全名是 Persistent Object，「持久化」的意思是「存進資料庫、從資料庫讀出來」。
+教務處的學籍簿，現在要多記一欄：身分證字號。
 
-一個 PO 類別就對應資料庫的一張表格，類別的每個欄位對應表格的每個欄位。
+（下一步）有一天，同學來查成績。櫃台很省事，直接把學籍簿的那一頁影印給他。
 
-在 Spring Data JPA 裡，加了 @Entity 的類別就是 PO；在 Spring JDBC 裡，用 RowMapper 映射的 Student 類別也扮演 PO 的角色。
+（下一步）影印出來的紙上，除了姓名和成績，身分證字號也在上面。
 
-PO 只在 Dao 層流動，不應該直接傳給前端。
+（下一步）如果來的是幫同學代領成績單的人，他就這樣看到了別人的身分證字號。
+
+（下一步）我們的程式就是這樣做的。Student 物件從資料庫拿出來，原封不動變成 JSON 回傳。資料表有什麼欄位，前端就看到什麼欄位。
+
+現在欄位只有姓名和成績，所以沒有感覺。但是真正的系統裡，資料表通常會有不適合給外面看的欄位，例如身分證字號、密碼、電話。
 -->
 
 ---
 
-# PO 在三種框架中的對應
+# 反過來也有問題
 
-三種框架都有 PO 概念，只是名稱和標註方式不同：
+同學來辦入學。櫃台也很省事，直接請他**填學籍簿的那一頁**：
 
-| 技術 | PO 的對應物 | 特徵 |
-| --- | --- | --- |
-| Spring JDBC | RowMapper 映射出的 `Student` | 純 POJO，欄位對應 SQL 查詢結果，無框架標註 |
-| MyBatis | `@Mapper` 方法回傳的 `Student`（常稱 MyBatis PO） | 純 POJO，欄位對應 resultType／resultMap，無框架標註 |
-| Spring Data JPA | `@Entity` 的 `Student` | 帶 `@Entity`、`@Id`、`@Column` 等標註，多了 persistence context 生命週期 |
+<v-clicks>
+
+- 「編號」那一格：編號是檔案室自動編的，同學不該自己填
+- 如果他填了別人的編號 → 別人的資料就被蓋掉了
+- 以後學籍簿每多一欄，同學看到的、要填的也跟著變
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 問題的根源：<b>給同學看的、同學填的、檔案室存的，其實是三種不同的紙</b>，我們卻硬用同一張。
+</div>
+
+</v-click>
 
 <!--
-三種框架都有 PO 的概念，只是實作方式不同：
-Spring JDBC 裡，RowMapper 映射出來的 Student 類別就是 PO，是純粹的 POJO，沒有任何框架標註。
-MyBatis 也一樣，@Select／resultMap 映射出來的 Student 類別也是 PO（業界常稱 MyBatis PO），同樣是純 POJO。
-Spring Data JPA 裡，加了 @Entity 的類別才是 PO，而且多了 ORM 的標註（@Id、@Column）和 persistence context 生命週期管理，這是三者中最「重」的一種。
+反過來也有問題。同學來辦入學。櫃台也很省事，直接請他填學籍簿的那一頁。
+
+（下一步）那一頁上面有「編號」這一格。可是編號是檔案室自動編的，同學不該自己填。
+
+（下一步）如果他在編號那一格填了別人的號碼呢？我們在第二十六章學過，save() 看到物件有 id，會當成修改。別人的資料就被蓋掉了。
+
+（下一步）還有一個長期的問題。以後學籍簿每多一欄，同學看到的、要填的東西也會跟著變。資料表的樣子和 API 的樣子綁在一起了。
+
+（下一步）問題的根源是：給同學看的、同學填的、檔案室存的，其實是三種不同的紙。我們卻硬用同一張。
 -->
 
 ---
 
-# PO 程式碼範例
+# 同一位同學，三張不同的紙
 
-PO 包含所有資料庫欄位，包括敏感資料：
-
-```java
-@Entity
-public class StudentPO {
-    private Integer id;
-    private String name;
-    private String password; // 資料庫有，但不應傳給前端
-    private String createdAt;
-}
-```
-
-| 欄位 | 說明 |
-| --- | --- |
-| `id` | 主鍵，資料庫自動產生 |
-| `password` | 敏感資料，只在 Dao 層使用，不對外暴露 |
+<PaperTrail />
 
 <!--
-看這個 PO 的範例。
+真正的教務處會準備三張不同的紙。我們一張一張看。
 
-它包含了資料庫表格的所有欄位，包括 password 這個敏感資料和 createdAt 這個時間戳。
+第一張是同學填的申請表。上面只有他自己知道的事：姓名、身分證字號、成績。沒有編號，因為編號不是他決定的。
 
-重要：PO 只在 Dao 層使用，不應該直接 return 給 Controller 再傳給前端。
-如果你把含有 password 的 PO 直接 return，前端就能看到所有使用者的密碼，這是非常嚴重的安全漏洞。
+（下一步）第二張是學籍簿的正本。每一欄都有，包含編號和身分證字號。它只在承辦人員和檔案室之間來回，不會交到櫃台外面。
 
-這就是為什麼我們需要 DTO 來做 API 的輸入和輸出。
+（下一步）第三張是發給同學的成績單。上面有編號、姓名、成績，還多了一個等第。身分證字號沒有印在上面。
+
+（下一步）三張紙各有各的用途。那是誰負責把申請表抄成學籍簿、再把學籍簿抄成成績單？是組長。
+-->
+
+---
+
+# 對照到程式
+
+<PaperTrail terms />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 一張表只做一件事。這三種類別都只是「裝資料的盒子」，合起來稱為<b>資料物件</b>。
+</div>
+
+</v-click>
+
+<!--
+同一張圖，加上程式的名字。
+
+申請表，是 Request DTO。
+
+（下一步）學籍簿正本，是 PO。
+
+（下一步）成績單，是 Response DTO。
+
+（下一步）負責在中間抄寫的組長，是 Service。
+
+（下一步）這三種類別裡面都沒有什麼邏輯，就只是裝資料的盒子，合起來稱為資料物件。原則是：一張表只做一件事。
+
+接下來一個一個介紹這些名字。
+-->
+
+---
+
+# 想一想
+
+<Poll question="為什麼不直接把學籍簿那一頁影印給同學？" options="影印機太慢|上面有不該給外人看的欄位，例如身分證字號|學籍簿的字太小|同學看不懂編號" answer="2" />
+
+<!--
+來想一題。
+
+為什麼不直接把學籍簿那一頁影印給同學？
+
+（等大家作答）
+
+（下一步）答案是：上面有不該給外人看的欄位，例如身分證字號。
+
+對應到程式：不要把對應資料表的物件，直接回傳給前端。
 -->
 
 ---
@@ -227,115 +231,75 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-
-## DTO（Data Transfer Object）<br>資料傳輸物件
+# PO：學籍簿正本
 
 <!--
-DTO 是後端開發中最常用到的概念之一。
+第一個，PO。
 -->
 
 ---
 
-# 什麼是 DTO（Data Transfer Object）？
+# PO（Persistent Object）
 
-| 項目 | 說明 |
-| --- | --- |
-| 全名 | Data Transfer Object（資料傳輸物件） |
-| 定義 | 「在不同層之間或跨網路傳輸資料的輕量物件」 |
-| 特性 | 只包含需要的欄位，沒有業務邏輯 |
-| 使用層次 | Controller 層（接收前端請求、回傳前端資料） |
-| 兩種角色 | **Request DTO**（接收）和 **Response DTO**（回傳） |
+<v-clicks>
 
-<!--
-DTO 的核心概念是「只傳必要的資料」。
+- Persistent 是「保存下來」的意思。PO 就是**對應資料表的物件**
+- 資料表有幾個欄位，它就有幾個變數，一欄都不少
+- 只在 **Service ↔ Dao ↔ 資料庫** 之間流動，不交給 Controller 以外的地方
 
-Request DTO：前端發送請求時帶的資料格式，定義「我接受哪些欄位的輸入」。
-Response DTO：後端回應前端時的資料格式，定義「我對外暴露哪些欄位」。
+</v-clicks>
 
-用 DTO 的好處是：
-第一，安全——可以選擇不暴露 password 這類敏感欄位。
-第二，彈性——不同 API 可以有不同的 Response DTO，回傳不同的欄位組合。
-第三，清晰——光看類別名稱就知道它的用途（CreateStudentRequest vs StudentResponse）。
--->
+<v-click>
 
----
-
-# DTO 的兩種角色
-
-| 角色 | 命名慣例 | 說明 | 不含欄位 |
-| --- | --- | --- | --- |
-| Request DTO | `CreateStudentRequest` | 前端新增時傳入的資料 | `id`（DB 自動產生）、`createdAt` |
-| Response DTO | `StudentResponse` | 後端回傳給前端的資料 | `password`（敏感資料） |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>命名慣例：</b> Request DTO 通常加 <code>Request</code> 後綴，Response DTO 加 <code>Response</code> 後綴，讓目的一目了然。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 其實我們早就寫過 PO 了：JPA 加了 <code>@Entity</code> 的 <code>Student</code>，就是一個 PO。所以 PO 也常被叫做 <b>Entity</b>。
 </div>
 
+</v-click>
+
 <!--
-DTO 分成兩種：接收用和回傳用。
+PO 的全名是 Persistent Object。
 
-Request DTO：前端新增學生時，傳過來的應該只有 name 和 password，不需要 id（資料庫自動產生）和 createdAt。
+（下一步）Persistent 是「保存下來」的意思。PO 就是對應資料表的物件。
 
-Response DTO：後端回傳給前端時，應該包含 id 和 name，但絕對不包含 password。
+（下一步）資料表有幾個欄位，它就有幾個變數，一欄都不少。
 
-透過這樣的設計，每個 DTO 的職責非常清楚，程式碼也更安全。
+（下一步）它只在 Service、Dao、資料庫之間流動。不交給 Controller 以外的地方，也就是不直接變成 JSON 回傳。
+
+（下一步）其實我們早就寫過 PO 了。在 JPA 的章節，加了 @Entity 的 Student 類別，就是一個 PO。所以 PO 也常被叫做 Entity。Spring JDBC 和 MyBatis 用來接查詢結果的 Student，也是同樣的角色。
 -->
 
 ---
 
-# CreateStudentRequest — Request DTO
+# PO 長什麼樣子
 
-前端新增學生時傳入的資料格式：
-
-```java
-public class CreateStudentRequest {
-    private String name;
-    private String password;
-}
-```
-
-| 特點 | 說明 |
-| --- | --- |
-| 不含 `id` | 主鍵由資料庫自動產生，前端不需要傳 |
-| 不含 `createdAt` | 建立時間由後端自動填入 |
-| 含 `password` | 新增時需要密碼，但後端不會回傳 |
-
-<!--
-看 CreateStudentRequest 的範例。
-
-這個 DTO 只有 name 和 password 兩個欄位，因為前端新增學生時只需要這兩個資訊。
-
-在 Controller 裡用 @RequestBody CreateStudentRequest request 接住前端傳來的 JSON，這樣就只接受 name 和 password，避免前端傳入非預期的欄位（例如自訂 id 或 createdAt）。
--->
-
----
-
-# StudentResponse — Response DTO
-
-後端回傳給前端的資料格式：
-
-```java
-public class StudentResponse {
+```java {all|8|all}
+@Getter
+@Setter
+@Entity
+public class Student {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
+    private String idNumber;   // 身分證字號：資料庫要存，但不能給前端
     private String name;
-    // 刻意不含 password！
+    private Integer score;
 }
 ```
 
-| 特點 | 說明 |
-| --- | --- |
-| 不含 `password` | **安全考量**：密碼不應暴露給前端 |
-| 含 `id` | 前端查詢時需要知道學生的 id |
-| 僅包含必要欄位 | 減少不必要的資料傳輸 |
+<v-click>
+
+- 和以前的 `Student` 幾乎一樣，只是多了 `idNumber`
+- 差別不在寫法，在於**使用的規矩**：它不再直接當成 API 的輸入和輸出
+
+</v-click>
 
 <!--
-StudentResponse 是後端回傳給前端的物件。
+PO 長什麼樣子？就是我們熟悉的 Student。
 
-最重要的設計決策：不包含 password。
+（下一步）多了一個變數 idNumber，身分證字號。資料庫要存它，但不能給前端看。
 
-Service 層在查詢到 StudentPO 之後，會把需要的欄位複製到 StudentResponse，故意略過 password，再把 StudentResponse 傳給 Controller 回應前端。
-
-這個「把 PO 轉換成 Response DTO」的步驟，通常發生在 Service 層，有時候也用一些轉換工具（如 ModelMapper）來簡化這個過程。
+（下一步）除了這一行，它和以前的 Student 幾乎一樣。所以差別不在寫法，而在使用的規矩：從現在開始，它不再直接當成 API 的輸入和輸出。
 -->
 
 ---
@@ -344,90 +308,130 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 3
-
-## VO（Value Object）<br>值物件
+# DTO：申請表和成績單
 
 <!--
-VO 是四個中最容易和 DTO 搞混的，讓我們來仔細看看。
+第二個，DTO。
 -->
 
 ---
 
-# 什麼是 VO（Value Object）？
+# DTO（Data Transfer Object）
 
-| 項目 | 說明 |
-| --- | --- |
-| 全名 | Value Object（值物件） |
-| 定義 | 「以值的內容來識別，而非物件的記憶體位址」 |
-| 核心特性 | **不可變（Immutable）**：建立後就不能修改 |
-| 相等判斷 | 只要欄位值相同就視為相等（不看是否同一個物件） |
-| 使用場景 | 貨幣、座標、顏色、地址等「值的概念」 |
+<v-clicks>
+
+- Transfer 是「傳遞」的意思。DTO 是**專門用來和前端傳遞資料的物件**
+- **Request DTO**：前端傳進來的（申請表）
+- **Response DTO**：回傳給前端的（成績單）
+- 要有哪些變數，看的是「這支 API 需要什麼」，不是「資料表有什麼」
+
+</v-clicks>
 
 <!--
-VO 和 DTO 最大的差別在於：VO 是不可變的（Immutable）。
+DTO 的全名是 Data Transfer Object。
 
-想像一下「金額」這個概念：100 元就是 100 元，你不會去「修改」100 元讓它變成 200 元，而是建立一個新的「200 元物件」。
+（下一步）Transfer 是「傳遞」的意思。DTO 是專門用來和前端傳遞資料的物件。
 
-VO 就是這樣：它的欄位一旦設定就不能改，如果需要「不同的值」，就建立一個新的 VO 物件。
+（下一步）它有兩種。前端傳進來的，叫 Request DTO，就是申請表。
 
-在 Spring Boot 開發中，VO 的概念有時候和 DTO 的概念有所重疊，不同團隊的定義可能略有不同。
+（下一步）回傳給前端的，叫 Response DTO，就是成績單。
+
+（下一步）DTO 要有哪些變數，看的是「這支 API 需要什麼」，不是「資料表有什麼」。這就是它和 PO 最大的不同。
 -->
 
 ---
 
-# VO vs DTO 的差別
-
-| 比較項目 | DTO | VO |
-| --- | --- | --- |
-| 可修改性 | 可變（有 setter） | **不可變（只有 constructor，無 setter）** |
-| 用途 | 在層之間傳輸資料 | 表達「值」的概念，強調不變性 |
-| 相等判斷 | 比較物件記憶體位址 | 比較欄位值是否相同 |
-| 常見例子 | CreateStudentRequest | Money(100, "TWD")、Coordinate(x, y) |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>實務上：</b> 許多團隊把 DTO 和 VO 統稱為 DTO，在入門階段不需要嚴格區分，理解概念即可。
-</div>
-
-<!--
-DTO 和 VO 最大的區別就是「可不可以改」。
-
-DTO 通常有 getter 和 setter，建立後可以修改欄位值。
-VO 只有 constructor（建構子），建立之後欄位值永遠不能改。
-
-在 Java 中，VO 通常用 final 欄位 + 只有 constructor 沒有 setter 來實作。
-
-不過在實務上，很多團隊不嚴格區分 DTO 和 VO，兩者常常混用。作為入門學習，理解「值物件是不可變的」這個核心概念就夠了。
--->
-
----
-
-# VO 程式碼範例
-
-VO 使用 `final` 欄位，只有 constructor，沒有 setter：
+# Request DTO：申請表
 
 ```java
-public class MoneyVO {
-    private final Integer amount;
-    private final String currency;
-
-    public MoneyVO(Integer amount, String currency) {
-        this.amount = amount;
-        this.currency = currency;
-    }
+@Getter
+@Setter
+public class CreateStudentRequest {
+    private String name;
+    private String idNumber;
+    private Integer score;
 }
 ```
 
+<v-clicks>
+
+- **沒有 `id`**：前端想傳也沒有地方放，不會蓋到別人的資料
+- 有 `idNumber`：入學的時候要登記
+- 名字的習慣：`動作 + 對象 + Request`
+
+</v-clicks>
+
 <!--
-看這個 MoneyVO 的範例。
+先看 Request DTO。新增同學用的申請表，叫做 CreateStudentRequest。
 
-所有欄位都是 final，一旦透過 constructor 設定值就不能再改。
-沒有 setter 方法，外部無法修改金額或貨幣單位。
+（下一步）它沒有 id 這個變數。所以前端就算在 JSON 裡多寫了 id，也沒有地方放，會被忽略。不會蓋到別人的資料。
 
-如果要表示「不同金額」，就建立新的 MoneyVO 物件，不能修改現有的。
+（下一步）它有 idNumber，因為入學的時候要登記身分證字號。
 
-這種不可變性讓程式碼更安全——你可以確信一個 MoneyVO 物件的值不會在某個地方被悄悄修改。
+（下一步）名字的習慣是：動作，加上對象，加上 Request。新增同學就是 CreateStudentRequest。
 
-⚠️ Java 16+ 可以用 record 語法更簡潔地定義 VO，但基本概念是一樣的。
+它沒有 @Entity，因為它和資料表沒有關係，只是一張表單。
+-->
+
+---
+
+# Response DTO：成績單
+
+```java
+@Getter
+@Setter
+public class StudentResponse {
+    private Integer id;
+    private String name;
+    private Integer score;
+    private String letterGrade;   // 等第：A、B、C、F
+}
+```
+
+<v-clicks>
+
+- **沒有 `idNumber`**：不在這個類別裡的東西，就不可能出現在 JSON 裡
+- 有 `id`：前端之後要修改、刪除，需要知道編號
+- 多了 `letterGrade`：資料表沒有這一欄，是算出來的
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+✅ 一個 PO，可以搭配很多個 DTO。不同的 API 用不同的表單，彼此不影響。
+</div>
+
+</v-click>
+
+<!--
+再看 Response DTO。回傳給前端的成績單，叫做 StudentResponse。
+
+（下一步）它沒有 idNumber。不在這個類別裡的東西，就不可能出現在 JSON 裡。這比「記得不要回傳」可靠得多。
+
+（下一步）它有 id。因為前端之後要修改、刪除這位同學，需要知道他的編號。
+
+（下一步）它還多了一個 letterGrade，等第。資料表裡沒有這一欄，是根據成績算出來的。Response DTO 可以放資料表沒有的東西。
+
+（下一步）一個 PO 可以搭配很多個 DTO。新增用一張表單、修改用另一張、列表用精簡的一張。不同的 API 用不同的表單，彼此不影響。
+-->
+
+---
+
+# 想一想
+
+<Poll question="前端在新增同學的 JSON 裡偷偷加了 &quot;id&quot;: 1，會發生什麼事？（後端用 CreateStudentRequest 接收）" options="1 號同學的資料被蓋掉|程式當掉|id 被忽略，照常新增一位新同學|資料庫被清空" answer="3" />
+
+<!--
+確認一下。
+
+前端在新增同學的 JSON 裡偷偷加了 id 等於 1。後端是用 CreateStudentRequest 接收的。會發生什麼事？
+
+（等大家作答）
+
+（下一步）答案是：id 被忽略，照常新增一位新同學。
+
+因為 CreateStudentRequest 裡沒有 id 這個變數，JSON 裡多出來的東西沒有地方放。如果我們還是用 Student 直接接收，1 號同學的資料就真的會被蓋掉。
 -->
 
 ---
@@ -436,105 +440,271 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 4
-
-## DAO（Data Access Object）<br>資料存取物件
+# VO：寫好就不能改的值
 
 <!--
-最後來回顧一下 DAO，它和前三個有點不同——DAO 是一個設計模式，不是資料物件本身。
+第三個，VO。
 -->
 
 ---
 
-# 什麼是 DAO（Data Access Object）？
+# VO（Value Object）
 
-| 項目 | 說明 |
-| --- | --- |
-| 全名 | Data Access Object（資料存取物件） |
-| 定義 | 「封裝資料庫存取邏輯的類別，讓其他層不需要知道 SQL 細節」 |
-| 本質 | 設計模式（Design Pattern），不是資料物件 |
-| 在 Spring Boot | 就是我們學的 Dao 層（`StudentDao`，加 `@Repository`） |
-| 和 PO/DTO/VO 的差別 | DAO 是「做事的類別」，PO/DTO/VO 是「裝資料的類別」 |
+教務處開出去的在學證明會**護貝**：做好之後就不能塗改。要改，只能重新做一張。
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>注意：</b> DAO 是「類別/模式」，PO/DTO/VO 是「資料物件」，這是最容易混淆的地方。
+<v-clicks>
+
+- VO 是「值物件」：用來表示**一個值**，例如一個成績、一筆金額
+- 最大的特色是**不可變**：建立之後，內容就不能再改
+- 值的規矩可以寫在裡面，例如「成績一定在 0 到 100 之間」
+
+</v-clicks>
+
+<!--
+VO 的全名是 Value Object，值物件。
+
+先說一個教務處的習慣。開出去的在學證明會護貝。做好之後就不能塗改。如果內容要改，只能重新做一張。
+
+（下一步）VO 用來表示一個值。例如一個成績、一筆金額、一個座標。
+
+（下一步）它最大的特色是不可變。建立之後，內容就不能再改。就像護貝過的證明。
+
+（下一步）因為不能改，所以我們可以把值的規矩寫在裡面。例如「成績一定在 0 到 100 之間」。只要這個物件建立得出來，它就一定是合法的，之後也不會被改壞。
+-->
+
+---
+
+# VO 長什麼樣子
+
+```java {all|2|4-9|11|all}
+public class ScoreVO {
+    private final Integer value;
+
+    public ScoreVO(Integer value) {
+        if (value == null || value < 0 || value > 100) {
+            throw new IllegalArgumentException("成績要在 0 到 100 之間");
+        }
+        this.value = value;
+    }
+
+    public Integer getValue() { return value; }
+}
+```
+
+- `final`：這個變數只能設定一次，之後不能再改
+- 建構子：建立物件時檢查，不合規定就丟出例外，物件建立不起來
+- 只有 getter，**沒有 setter**：外面只能看，不能改
+
+<!--
+VO 長什麼樣子？我們用成績當例子，叫做 ScoreVO。
+
+（下一步）變數前面有 final。final 的意思是：這個變數只能設定一次，之後不能再改。
+
+（下一步）建構子。建立物件的時候，先檢查成績是不是在 0 到 100 之間。不合規定就丟出例外，物件根本建立不起來。
+
+（下一步）只有 getter，沒有 setter。外面的程式只能看這個值，不能改它。
+
+（下一步）所以拿到一個 ScoreVO，就可以放心：它裡面的成績一定是合法的，而且沒有人能偷偷改掉。
+-->
+
+---
+
+# DTO 和 VO，差在哪裡
+
+<Pairs left="DTO" right="VO" sign="vs" rows="form,用途：把資料傳來傳去=card,用途：代表一個有規矩的值|ok,可以改（有 setter）=lock,不能改（final，沒有 setter）|doc,例子：CreateStudentRequest=doc,例子：ScoreVO" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ <b>VO 這個縮寫有兩種用法</b>。有些團隊把它當成 View Object（給畫面看的資料），第二十八章的 <code>StudentTeacherVo</code> 就是這個意思。進到團隊之後，以團隊的定義為準。
 </div>
 
+</v-click>
+
 <!--
-DAO 和 PO、DTO、VO 有一個根本上的不同。
+DTO 和 VO 很容易搞混，我們放在一起看。
 
-PO、DTO、VO 都是「裝資料的盒子」——純粹的資料容器，主要包含欄位、getter 和 setter。
+（下一步）用途不同。DTO 是把資料傳來傳去的容器。VO 代表一個有規矩的值。
 
-DAO 則是「做事的工具」——它是一個設計模式，封裝了所有資料庫存取的邏輯。StudentDao 的 getStudentById() 方法裡有 SELECT SQL，create() 方法裡有 INSERT SQL。
+（下一步）能不能改。DTO 可以改，有 setter。VO 不能改，變數是 final，沒有 setter。
 
-所以 DAO 是第三十章學的 Dao 層類別，不是資料物件。這是四個縮寫裡最特別的一個。
+（下一步）例子。DTO 是 CreateStudentRequest。VO 是 ScoreVO。
+
+（下一步）這裡要提醒一件事。VO 這個縮寫，在業界有兩種用法。有些團隊把它當成 View Object，意思是「給畫面看的資料」。我們在第二十八章寫的 StudentTeacherVo，就是這個意思。今天講的是另一種：Value Object。兩種都有人用，進到團隊之後，以團隊的定義為準。
+
+初學階段不用太擔心分不清楚。記得「VO 是不能改的值」這個觀念就夠了。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 5
+# DAO，以及全部放在一起
+
+<!--
+最後一個，DAO。
 -->
 
 ---
 
-# 四個物件在三層架構中的位置
+# DAO（Data Access Object）
 
-| 層次 | 接收的物件 | 回傳的物件 |
-| --- | --- | --- |
-| **Controller 層** | Request DTO（接前端）| Response DTO（回前端） |
-| **Service 層** | Request DTO（來自 Controller）| Response DTO（往 Controller）|
-| **Dao 層** | PO（轉換成 SQL 參數）| PO（資料庫查詢結果） |
-| **DAO（類別本身）** | — | — （負責執行 SQL 的類別） |
+<v-clicks>
+
+- Access 是「存取」的意思。DAO 是**負責存取資料庫的物件**
+- 它就是承辦人員：`StudentDao`、`StudentRepository`、`StudentMapper`
+- 它**不是**裝資料的盒子。它是「做事的人」，前面三個是「被傳遞的紙」
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 名字很像，所以常常被放在一起講。分辨的方法：PO、DTO、VO 裡面是<b>資料</b>；DAO 裡面是<b>方法</b>。
+</div>
+
+</v-click>
 
 <!--
-把四個概念放到三層架構裡來看，就清楚多了。
+DAO 的全名是 Data Access Object。
 
-Controller 接收前端傳來的 Request DTO（例如 CreateStudentRequest），處理完後回傳 Response DTO（例如 StudentResponse）給前端。
+（下一步）Access 是「存取」的意思。DAO 是負責存取資料庫的物件。
 
-Service 把 Request DTO 的資料轉成 PO，呼叫 Dao 存入資料庫；或是從 Dao 取得 PO，再把需要的欄位轉成 Response DTO。
+（下一步）它就是我們的承辦人員。我們寫過的 StudentDao、JPA 的 StudentRepository、MyBatis 的 StudentMapper，都是 DAO。上一章說的 Dao 層，名字就是從這裡來的。
 
-Dao 操作 PO——把 PO 轉成 SQL 參數，或是把查詢結果映射成 PO。
+（下一步）所以它不是裝資料的盒子。它是做事的人。前面三個是被傳遞的紙。
 
-DAO 這個類別就是 StudentDao，它負責執行 SQL，不是資料物件本身。
+（下一步）四個名字很像，所以常常被放在一起講。分辨的方法很簡單：PO、DTO、VO 裡面是資料；DAO 裡面是方法。
 -->
 
 ---
 
-# PO / DTO / VO / DAO 完整比較
+# 一個請求裡，誰拿著哪張紙
 
-| 縮寫 | 全名 | 類型 | 所在層次 | 核心特性 |
-| --- | --- | --- | --- | --- |
-| **PO** | Persistent Object | 資料物件 | Dao 層 | 對應資料庫表格 |
-| **DTO** | Data Transfer Object | 資料物件 | Controller 層 | 選擇性欄位，Request/Response |
-| **VO** | Value Object | 資料物件 | Service/Controller | 不可變，以值識別 |
-| **DAO** | Data Access Object | **設計模式（類別）** | Dao 層 | 封裝 SQL 邏輯 |
+<Flow nodes="前端:同學|Controller:櫃台|Service:組長|Dao:承辦人員|資料庫:檔案室" steps="1>2:JSON|2>3:Request DTO|3>4:PO|4>5:INSERT …|5>4:存好了|4>3:PO（有 id 了）|3>2:Response DTO|2>1:JSON" />
 
 <!--
-用這張表格做最終的四個概念完整比較。
+把它們放進上一章的三層裡，看一個新增的請求，誰拿著哪張紙。
 
-最重要的區別記清楚：PO、DTO、VO 是「裝資料的物件」，DAO 是「做事的類別（設計模式）」。
+（下一步）同學送出 JSON。
 
-PO 靠近資料庫，DTO 靠近 API，VO 強調不可變性。
+（下一步）櫃台把它接成 Request DTO，也就是申請表，交給組長。
 
-在業界，你會看到各種以這些縮寫命名的類別：StudentPO、CreateStudentRequest、StudentResponse、MoneyVO 等等。看到這些命名，你就能馬上知道這個類別的用途和所在層次。
+（下一步）組長把申請表抄成 PO，也就是學籍簿的一頁，交給承辦人員。
+
+（下一步）承辦人員把它存進檔案室。
+
+（下一步）檔案室存好了。
+
+（下一步）承辦人員把存好的 PO 交回來。這時候 PO 上面已經有檔案室編的 id 了。
+
+（下一步）組長把 PO 抄成 Response DTO，也就是成績單，交給櫃台。
+
+（下一步）櫃台把它變成 JSON，回覆給同學。
+
+請注意：櫃台從頭到尾只碰過 DTO，沒有碰過 PO。承辦人員從頭到尾只碰過 PO，沒有碰過 DTO。在中間轉換的是組長。
+-->
+
+---
+
+# 四個名字，一次整理
+
+<Pairs left="教務處" right="程式" rows="book,學籍簿正本：每一欄都有，不外流=code,PO（Entity）：對應資料表|form,申請表、成績單：給外面的人用=code,DTO：Request DTO、Response DTO|lock,護貝的證明：做好就不能改=code,VO：不可變的值物件|staff,承辦人員：進檔案室存取=code,DAO：Dao、Repository、Mapper" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+📌 規矩：<b>Controller 只碰 DTO，Dao 只碰 PO，轉換交給 Service。</b>
+</div>
+
+</v-click>
+
+<!--
+四個名字，一次整理。
+
+（下一步）學籍簿正本，每一欄都有，不外流。這是 PO，也叫 Entity，對應資料表。
+
+（下一步）申請表和成績單，給外面的人用。這是 DTO，分成 Request DTO 和 Response DTO。
+
+（下一步）護貝的證明，做好就不能改。這是 VO，不可變的值物件。
+
+（下一步）承辦人員，進檔案室存取。這是 DAO，也就是我們寫過的 Dao、Repository、Mapper。
+
+（下一步）最後記一條規矩：Controller 只碰 DTO，Dao 只碰 PO，轉換交給 Service。
+-->
+
+---
+
+# 想一想
+
+<Poll question="把 PO 轉成 Response DTO 的程式，應該寫在哪裡？" options="Controller|Service|Dao|前端" answer="2" />
+
+<!--
+確認一下。
+
+把 PO 轉成 Response DTO 的程式，應該寫在哪裡？
+
+（等大家作答）
+
+（下一步）答案是 Service。
+
+組長是唯一同時看得到兩種紙的人。櫃台只認識 DTO，承辦人員只認識 PO。
+-->
+
+---
+
+# 這樣不是要多寫很多類別嗎？
+
+<v-clicks>
+
+- 是的。一個 `Student` 變成 `Student`、`CreateStudentRequest`、`StudentResponse`
+- 換來的是：**資料表可以放心改**，API 不受影響；**API 可以放心改**，資料表不受影響
+- 以及：敏感的欄位不會不小心流出去
+- 很小的練習可以不分；會上線、會長大的系統，建議一開始就分
+
+</v-clicks>
+
+<!--
+你可能會想：這樣不是要多寫很多類別嗎？
+
+（下一步）是的。原本一個 Student，現在變成 Student、CreateStudentRequest、StudentResponse 三個。
+
+（下一步）換來的是什麼？資料表可以放心改，API 不受影響。API 可以放心改，資料表不受影響。兩邊鬆開了。
+
+（下一步）還有：敏感的欄位不會不小心流出去。
+
+（下一步）所以很小的練習可以不分。但是會上線、會長大的系統，建議一開始就分。等資料已經流出去才補救，就來不及了。
 -->
 
 ---
 
 # 章節總結
 
-| 重點 | 說明 |
-| --- | --- |
-| PO | 對應資料庫表格，包含所有欄位，只在 Dao 層使用 |
-| DTO | API 的輸入（Request）和輸出（Response），選擇性包含欄位 |
-| VO | 不可變的值物件，以欄位值識別相等性 |
-| DAO | 不是資料物件，而是封裝 SQL 邏輯的設計模式（類別） |
-| 核心目的 | 不同層次使用不同物件，讓資料安全流動、職責清楚分離 |
+<v-clicks>
+
+- **問題**：一個類別同時當輸入、輸出、資料表，會洩漏欄位，也會被亂填
+- **PO**：對應資料表，欄位最完整，只在 Service 和 Dao 之間
+- **DTO**：和前端傳遞用。Request DTO 收進來，Response DTO 送出去
+- **VO**：不可變的值，規矩寫在建構子裡
+- **DAO**：存取資料庫的類別，是做事的人，不是資料
+- **規矩**：Controller 只碰 DTO，Dao 只碰 PO，Service 負責轉換
+
+</v-clicks>
+
+<v-click>
+
+下一章：開一個新專案，把這兩章的分工和資料物件，從頭到尾實際寫一次。
+
+</v-click>
 
 <!--
-今天的重點總結。
+最後整理今天的重點。
 
-第一，PO 是資料庫的 Java 映射，包含所有欄位，包括敏感資料，只在 Dao 層流動。
-第二，DTO 用於 API 的輸入和輸出，Request DTO 定義接收格式，Response DTO 定義回傳格式，可以刻意略過敏感欄位。
-第三，VO 是不可變的值物件，建立後就不能修改。
-第四，DAO 是設計模式，是封裝 SQL 的類別，不是資料物件本身。
-第五，分類的核心目的是讓資料在層與層之間安全、清晰地流動。
+（依序按下一步）問題是一個類別同時當輸入、輸出、資料表，會洩漏欄位，也會被亂填。PO 對應資料表，欄位最完整。DTO 是和前端傳遞用的，分成 Request 和 Response。VO 是不可變的值，規矩寫在建構子裡。DAO 是存取資料庫的類別，是做事的人，不是資料。規矩是 Controller 只碰 DTO，Dao 只碰 PO，Service 負責轉換。
 
-這些概念在業界非常普遍，看懂它們之後，你就能更快速地理解真實專案的程式碼結構！
+（最後一步）今天的程式都只是用看的。下一章，我們會開一個新專案，把這兩章的分工和資料物件，從頭到尾實際寫一次。
 -->
 
 ---
@@ -543,6 +713,10 @@ layout: end
 
 # Q & A
 
+有任何問題嗎？
+
 <!--
-今天的內容就到這裡。大家有任何問題嗎？
+今天的內容到這邊。
+
+有任何問題歡迎提出來。
 -->

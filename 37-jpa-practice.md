@@ -46,174 +46,33 @@ style: |
 </div>
 
 <!--
-大家好，我們已經學了 JPA 的 CRUD 操作，也學了 MVC 三層架構，以及 PO、DTO、VO、DAO 四種資料物件的概念。
+大家好，歡迎來到第三十七章。
 
-今天要把這些全部整合在一起——用 JPA 打造一套完整的 CRUD API，並且正確地在每一層使用對應的資料物件。
+前兩章我們談了很多觀念：三層的分工、四條規則、PO 和 DTO 這些資料物件。但是都只有用看的。
 
-學完之後，你的程式碼不只能跑，還符合業界標準的設計規範：資料安全流動、各層職責清楚。
--->
-
----
-layout: default
----
-
-# Outline
-
-- **為什麼選擇 JPA？** — 三框架選擇時機比較
-- **架構設計** — 整合 PO / DTO / DAO 的四層架構
-- **Part 1：Entity（PO）** — Student @Entity，含敏感欄位
-- **Part 2：Repository（DAO）** — JpaRepository，零行 SQL
-- **Part 3：DTO 與 VO 設計** — CreateStudentRequest、StudentResponse、ScoreVO
-- **Part 4：Service** — PO ↔ DTO 轉換、業務邏輯
-- **Part 5：Controller** — 接收 Request DTO，回傳 Response DTO
-- **練習題** — 自己動手整合完整架構
-
-<!--
-今天的重點不只是 JPA 的語法，而是「資料物件如何在各層之間正確流動」。
-
-Entity（PO）只在 Repository 和 Service 之間流動。
-Controller 和 Service 之間用 DTO 溝通。
-這樣前端永遠看不到 password 等敏感欄位。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# 前言
-
-## 為什麼選擇 JPA？
-
-<!--
-先快速比較三種框架，確認今天為什麼選 JPA。
+今天是實戰。我們開一個全新的專案，從第一個檔案開始，把一套完整的學生管理 API 寫出來。這一章要寫的程式比較多，請跟著一步一步做。
 -->
 
 ---
 
-# 三種框架的選擇時機
+# 今天要完成的三件事
 
-| 框架 | 適合場景 | 不適合場景 |
-| --- | --- | --- |
-| **Spring JDBC** | 需要最高性能、SQL 完全自訂 | 快速開發、欄位常變動 |
-| **MyBatis** | 複雜 SQL（多 JOIN、動態條件）| 標準 CRUD、快速開發 |
-| **Spring Data JPA** | 標準 CRUD、快速開發、欄位會變動 | 超複雜 SQL、高性能批次操作 |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>今天的場景：</b> 標準 CRUD API，選 JPA——不需要寫 SQL，開發速度最快，最適合入門練習。
-</div>
+- **開一個新專案**：設定好資料庫，把資料夾先分好
+- **由裡往外寫**：PO → Repository → DTO 和 VO → Service → Controller
+- **用 Postman 測試**：確認身分證字號沒有流出去
+
+</v-clicks>
 
 <!--
-三個框架各有定位，沒有絕對的好壞。
+今天要完成三件事。
 
-Spring JDBC 最靈活，SQL 自己寫，但程式碼最多。
-MyBatis SQL 自己寫，比 JDBC 簡潔，適合複雜查詢。
-Spring Data JPA 不需要寫 SQL，開發速度最快，適合標準 CRUD。
+（下一步）第一，開一個新專案。設定好資料庫，並且先把資料夾分好。
 
-今天我們要實作的是學生管理的標準 CRUD API，選 JPA 是最合理的選擇。
--->
+（下一步）第二，由裡往外寫。從最靠近資料庫的 PO 開始，然後是 Repository、DTO 和 VO、Service，最後才是 Controller。
 
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# 架構設計
-
-## 整合 PO / DTO / VO / DAO 的四層架構
-
-<!--
-在開始寫程式之前，先把整體架構和資料物件的位置釐清楚。
--->
-
----
-
-# 四層架構中的資料物件位置
-
-| 層次 | 類別 | Annotation | 使用的資料物件 |
-| --- | --- | --- | --- |
-| **Controller** | `StudentController` | `@RestController` | 接收 **Request DTO**，回傳 **Response DTO** |
-| **Service** | `StudentService` | `@Service` | **Request DTO → PO**、**PO → Response DTO** 轉換；用 **VO** 封裝業務規則 |
-| **Repository（DAO）** | `StudentRepository` | `@Repository` | 只操作 **PO（Entity）** |
-| **Entity（PO）** | `Student` | `@Entity` | 對應資料庫 `student` 表格，包含所有欄位 |
-| **VO** | `ScoreVO` | — | Service 層的值物件，封裝業務規則（驗證 + 計算字母等第） |
-
-<!--
-這張表格是今天最重要的概念。
-
-Controller 和前端溝通時用 DTO：接收 Request DTO（前端傳來的資料），回傳 Response DTO（過濾過敏感欄位的資料）。
-
-Service 是轉換中心：把 Request DTO 轉成 PO 存進資料庫，把 PO 轉成 Response DTO 回傳給前端。
-
-Repository 只看得到 PO（Entity）——它負責資料庫操作，不需要知道 DTO 的存在。
-
-Entity 就是 PO，包含資料庫的所有欄位，包括 password 等敏感資料。這些敏感欄位只在 Repository ↔ Service 之間流動，不會出現在 Controller 的回應裡。
--->
-
----
-
-# 資料流動路徑
-
-| 方向 | 資料流 |
-| --- | --- |
-| **新增（POST）** | 前端 JSON → **Request DTO** → Service 轉 **PO** → Repository save → Service 轉 **Response DTO** → 前端 |
-| **查詢（GET）** | Repository findAll → **PO List** → Service 轉 **Response DTO List** → 前端 |
-| **更新（PUT）** | 前端 JSON → **Request DTO** → Service 轉 **PO**（含 id）→ Repository save → **Response DTO** → 前端 |
-| **刪除（DELETE）** | 前端傳 id → Service → Repository deleteById → 完成 |
-
-<!--
-把四個 CRUD 操作的資料流動路徑列清楚。
-
-最重要的觀念：PO（Entity）永遠不應該出現在 Controller 的回傳值裡。
-
-Controller 回傳的永遠是 Response DTO——因為 PO 可能包含 password 等敏感資料，直接回傳會造成安全漏洞。
-
-Service 就是那個把 PO 「過濾」成 Response DTO 的地方。
--->
-
----
-
-# 專案資料夾結構
-
-```
-src/main/java/com/example/demo/
-├── entity/          → Student.java（PO）
-├── repository/      → StudentRepository.java（DAO）
-├── dto/
-│   ├── request/     → CreateStudentRequest.java
-│   └── response/    → StudentResponse.java
-├── vo/              → ScoreVO.java
-├── service/         → StudentService.java
-└── controller/      → StudentController.java
-src/main/resources/
-└── application.properties
-```
-
-<!--
-Java 套件通常依「職責」分資料夾，不是依「功能模組」——這是初學者常見的疑問。
-
-entity 放 PO，repository 放 DAO，dto 底下再依方向分 request 和 response 兩個子資料夾，vo 放值物件，service 和 controller 各自一個資料夾。
-
-application.properties 固定放在 src/main/resources/ 底下，這是 Spring Boot 的規定路徑，啟動時會自動讀取。
--->
-
----
-
-# 資料夾與架構層對應
-
-| 資料夾 | 放置檔案類型 | 對應架構層 |
-| --- | --- | --- |
-| `entity/` | `@Entity` 標註的 PO | Repository ↔ Service |
-| `repository/` | `extends JpaRepository` 介面 | DAO 層 |
-| `dto/request/`、`dto/response/` | Request DTO、Response DTO | Controller ↔ Service |
-| `vo/` | 不可變值物件 | Service 層內部使用 |
-| `service/` | `@Service` 商業邏輯與轉換 | 轉換中心 |
-| `controller/` | `@RestController` | 對外 API 入口 |
-
-<!--
-檔案命名和資料夾一一對應：只要看到 CreateStudentRequest 在 dto/request/ 底下，就知道它是 Controller 接收前端資料用的。
-
-這種依職責分資料夾的方式，讓同一層的類別集中在一起，符合今天教的四層架構。
+（下一步）第三，用 Postman 測試。除了確認功能正常，還要確認身分證字號沒有流出去。
 -->
 
 ---
@@ -222,71 +81,200 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-
-## Entity（PO）— 對應資料庫表格
+# 重新整理教務處
 
 <!--
-第一層：建立 Entity，也就是 PO。
+先說明為什麼要開新專案。
 -->
 
 ---
 
-# Student Entity（PO）程式碼
+# 為什麼開一個新專案
 
-```java
-import jakarta.persistence.*;
+教務處用了很久，櫃子裡塞滿了以前試過的各種做法。與其一邊清一邊做，不如**搬到新辦公室，一開始就照規矩擺好**。
 
-@Entity
-public class Student {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-    private String name;
-    private String password; // DB 有，不應傳給前端
-    private Integer score;
-    // Getter 和 Setter（省略）
-}
-```
+<v-clicks>
 
-| 說明 | 詳情 |
-| --- | --- |
-| **PO 包含所有欄位** | 包括 `password` 等敏感資料 |
-| **只在 Service ↔ Repository 流動** | 不能直接 return 給 Controller |
+- 舊專案裡有 Spring JDBC、JPA、MyBatis 三種寫法留下來的程式
+- 新專案只用一種工具，而且一開始就分好資料夾
+- 順便複習：從零建立一個 Spring Boot 專案
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 這次選 <b>Spring Data JPA</b>。標準的新增、查詢、修改、刪除，用它最省事，一句 SQL 都不用寫。
+</div>
+
+</v-click>
 
 <!--
-Student Entity 包含了資料庫表格的所有欄位，包括 password。
+教務處用了很久，櫃子裡塞滿了以前試過的各種做法。與其一邊清一邊做，不如搬到新辦公室，一開始就照規矩擺好。
 
-這就是為什麼我們需要 DTO：如果 Controller 直接 return Student（PO），前端就能看到所有人的密碼，這是嚴重的安全問題。
+（下一步）我們的舊專案裡，有 Spring JDBC、JPA、MyBatis 三種寫法留下來的程式，互相夾雜。
 
-Entity 應該只在 Service 和 Repository 之間流動——從 Repository 查出來的 PO，在 Service 裡轉成 Response DTO，再往上給 Controller。
+（下一步）新專案只用一種工具，而且一開始就把資料夾分好。
 
-⚠️ Spring Boot 3.x / 4.x 的 JPA import 是 `jakarta.persistence.*`，不是 `javax.persistence.*`。
+（下一步）也順便複習一次，怎麼從零建立一個 Spring Boot 專案。
+
+（下一步）三種工具，這次選 Spring Data JPA。今天要做的是標準的新增、查詢、修改、刪除，用它最省事，一句 SQL 都不用寫。如果是很複雜的查詢，才會考慮 MyBatis 或 Spring JDBC。
 -->
 
 ---
 
-# application.properties — JPA 設定
+# 步驟一：建立專案
 
-```properties
+到 `start.spring.io`，和第三章一樣的做法：
+
+<v-clicks>
+
+- Project 選 **Gradle - Groovy**，Language 選 **Java**
+- Artifact 填 `school`（Package name 會變成 `com.example.school`）
+- Dependencies 加四個：**Spring Web**、**Spring Data JPA**、**MySQL Driver**、**Lombok**
+- 下載、解壓縮、匯入 Eclipse
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 啟動新專案之前，請先把舊專案<b>停掉</b>。兩個專案都想用 8080，後啟動的那一個會失敗。
+</div>
+
+</v-click>
+
+<!--
+步驟一，建立專案。打開 start.spring.io，做法和第三章一樣。
+
+（下一步）Project 選 Gradle - Groovy，Language 選 Java。
+
+（下一步）Artifact 填 school。下面的 Package name 會自動變成 com.example.school。
+
+（下一步）Dependencies 這次一口氣加四個：Spring Web，讓我們能寫 API。Spring Data JPA，資深助理。MySQL Driver，連 MySQL 用的。Lombok，幫我們產生 getter 和 setter。以前我們是一個一個手動加進 build.gradle，這次在建立專案的時候就一起選好。
+
+（下一步）然後下載、解壓縮、匯入 Eclipse。忘記怎麼做的同學，可以回頭看第三章。
+
+（下一步）提醒一件事。啟動新專案之前，請先把舊專案停掉。兩個專案都想用 8080 這個 port，後啟動的那一個會失敗。
+-->
+
+---
+
+# 步驟二：新的檔案櫃和連線設定
+
+在 Workbench 建一個新的 Schema，名字叫 `school`（做法在第二十三章）。然後設定 `application.properties`：
+
+```properties {1-4|5|6}
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
-spring.datasource.url=jdbc:mysql://localhost:3306/myjdbc?serverTimezone=Asia/Taipei&characterEncoding=utf-8
+spring.datasource.url=jdbc:mysql://localhost:3306/school?serverTimezone=Asia/Taipei&characterEncoding=utf-8
 spring.datasource.username=root
 spring.datasource.password=（你的 MySQL 密碼）
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 ```
 
-| 設定 | 說明 |
-| --- | --- |
-| `ddl-auto=update` | Entity 有新欄位，資料庫自動 ALTER TABLE（開發期間用） |
-| `show-sql=true` | console 顯示 JPA 執行的 SQL，方便除錯 |
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 只要建 Schema，<b>不用建 Table</b>。<code>ddl-auto=update</code> 會在啟動時，照我們的 PO 自動把資料表建好。
+</div>
+
+</v-click>
 
 <!--
-application.properties 的設定和第二十六章一樣，這裡快速複習。
+步驟二，資料庫。
 
-`ddl-auto=update` 讓開發期間修改 Entity 欄位後，資料庫會自動同步，不需要手動 ALTER TABLE。
+新辦公室配一個新的檔案櫃。請在 Workbench 建一個新的 Schema，名字叫 school。做法在第二十三章。
 
-⚠️ 正式上線環境要把 ddl-auto 改成 validate 或 none，避免自動修改生產資料庫。
+然後打開 application.properties，寫這六行。
+
+前四行是連線設定，和以前一樣。唯一要注意的是網址裡 Schema 的名字，這次是 school。
+
+（下一步）第五行，ddl-auto=update。啟動的時候，助理會照我們的類別自動建立或補齊資料表。
+
+（下一步）第六行，show-sql=true。助理執行的 SQL 會印在 console，方便我們觀察。
+
+（下一步）所以這次只要建 Schema，不用建 Table。資料表等一下會自動出現。
+-->
+
+---
+
+# 步驟三：把資料夾分好
+
+在 `com.example.school` 上按右鍵 → **New** → **Package**，建立這些資料夾：
+
+```text
+com.example.school
+├── controller      櫃台
+├── service         組長
+├── repository      承辦人員（DAO）
+├── entity          學籍簿正本（PO）
+├── dto             申請表、成績單（DTO）
+├── vo              不能改的值（VO）
+└── SchoolApplication.java
+```
+
+<v-clicks>
+
+- **package** 就是放程式的資料夾。名字用小寫
+- 不同資料夾的類別互相使用時，要 `import`。在 Eclipse 按 `Ctrl + Shift + O` 會自動補上
+
+</v-clicks>
+
+<!--
+步驟三，把資料夾分好。
+
+以前我們所有的類別都放在同一個資料夾裡。類別一多，就很難找。這次先分好。
+
+在 com.example.school 上按右鍵，選 New，再選 Package，建立這六個資料夾。名字的最後一段分別是 controller、service、repository、entity、dto、vo。
+
+每個資料夾放什麼，就是前兩章講的角色。controller 放櫃台，service 放組長，repository 放承辦人員，entity 放學籍簿正本，dto 放申請表和成績單，vo 放不能改的值。
+
+（下一步）package 就是放程式的資料夾。名字的習慣是全部小寫。
+
+（下一步）分了資料夾之後，有一件事要注意。不同資料夾的類別互相使用的時候，要 import。不用自己打，在 Eclipse 按 Ctrl + Shift + O，它會自動補上。今天的投影片為了節省空間，import 都省略了。
+
+SchoolApplication.java 是專案的啟動類別，留在最外層不要動。Spring 會從它所在的位置往下掃描所有的資料夾。
+-->
+
+---
+
+# 今天要寫的七個檔案
+
+<Pairs left="資料夾" right="檔案" rows="book,entity=code,Student（PO）|staff,repository=code,StudentRepository（DAO）|form,dto=code,CreateStudentRequest、StudentResponse|lock,vo=code,ScoreVO|teacher,service=code,StudentService|clerk,controller=code,StudentController" />
+
+<!--
+今天總共要寫七個檔案。
+
+（下一步）entity 裡面是 Student，PO。
+
+（下一步）repository 裡面是 StudentRepository，DAO。
+
+（下一步）dto 裡面有兩個：CreateStudentRequest 和 StudentResponse。
+
+（下一步）vo 裡面是 ScoreVO。
+
+（下一步）service 裡面是 StudentService。
+
+（下一步）controller 裡面是 StudentController。
+
+我們會照這個順序，由裡往外寫。因為外層會用到內層，先寫內層，寫外層的時候才不會一片紅字。
+-->
+
+---
+
+# 想一想
+
+<Poll question="StudentResponse 這個類別，應該放在哪一個資料夾？" options="entity|dto|vo|repository" answer="2" />
+
+<!--
+來想一題。
+
+StudentResponse 這個類別，應該放在哪一個資料夾？
+
+（等大家作答）
+
+（下一步）答案是 dto。它是回傳給前端的成績單，是 Response DTO。
 -->
 
 ---
@@ -295,40 +283,73 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-
-## Repository（DAO）— 零行 SQL
+# 最裡面：PO 和 Repository
 
 <!--
-第二層：建立 Repository，也就是 DAO。
+從最靠近資料庫的地方開始。
 -->
 
 ---
 
-# StudentRepository 程式碼
+# entity/Student.java
 
-```java
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
-@Repository
-public interface StudentRepository
-        extends JpaRepository<Student, Integer> {
+```java {all|3|5-7|8|all}
+@Getter
+@Setter
+@Entity
+public class Student {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+    private String idNumber;
+    private String name;
+    private Integer score;
 }
 ```
 
-| 方法 | 說明 |
-| --- | --- |
-| `save(po)` | id=null → INSERT；id 有值 → UPDATE |
-| `findAll()` | 回傳 `List<Student>`（PO List） |
-| `findById(id)` | 回傳 `Optional<Student>` |
-| `deleteById(id)` | DELETE WHERE id = ? |
+- `@Entity`：這個類別對應一張資料表 `student`
+- `id` 是主鍵，交給資料庫自動編號
+- `idNumber`：身分證字號。資料表的欄位會自動叫 `id_number`
 
 <!--
-Repository 是 DAO 層，繼承 JpaRepository 之後，不需要寫任何程式碼就擁有完整的 CRUD 方法。
+第一個檔案，在 entity 資料夾建立 Student。
 
-注意這裡的回傳型別全都是 Student（PO）——findAll() 回傳 List<Student>，findById() 回傳 Optional<Student>。
+（下一步）@Entity，告訴 JPA 這個類別對應一張資料表。預設用類別名稱找，也就是 student。
 
-這些 PO 不應該直接往上傳給 Controller，而是在 Service 層轉換成 Response DTO 後再傳出去。
+（下一步）id 是主鍵，交給資料庫自動編號。這三行和第二十六章一樣。
+
+（下一步）idNumber，身分證字號。資料表的欄位會自動叫 id_number，JPA 會幫我們把駝峰式的名字轉成底線。
+
+（下一步）上面的 @Getter 和 @Setter 是 Lombok，幫我們產生 getter 和 setter。
+
+寫好之後可以先啟動一次。到 Workbench 重新整理，應該會看到 school 裡面多了一張 student 資料表，四個欄位都建好了。
+-->
+
+---
+
+# repository/StudentRepository.java
+
+```java
+public interface StudentRepository extends JpaRepository<Student, Integer> {
+}
+```
+
+<v-clicks>
+
+- 和第二十六章一樣：繼承 `JpaRepository`，尖括號裡是「PO 的類別」和「主鍵的型別」
+- 裡面一行都不用寫，就有 `save()`、`findAll()`、`findById()`、`deleteById()`
+- 它只認識 `Student` 這個 PO，不認識任何 DTO
+
+</v-clicks>
+
+<!--
+第二個檔案，在 repository 資料夾建立 StudentRepository。注意它是 interface。
+
+（下一步）和第二十六章一樣，繼承 JpaRepository。尖括號裡放兩個東西：PO 的類別，還有主鍵的型別。
+
+（下一步）裡面一行都不用寫，就有 save、findAll、findById、deleteById 可以用。今天的功能這四個就夠了。
+
+（下一步）請注意，它只認識 Student 這個 PO，不認識任何 DTO。這就是上一章的規矩：Dao 只碰 PO。
 -->
 
 ---
@@ -337,126 +358,80 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 3
-
-## DTO 與 VO 設計
+# 三張紙：DTO 和 VO
 
 <!--
-在寫 Service 之前，先設計好 DTO 和 VO 類別。
+接著準備申請表、成績單，還有成績這個值。
 -->
 
 ---
 
-# CreateStudentRequest — Request DTO
-
-前端新增學生時傳入的格式：
+# dto：申請表和成績單
 
 ```java
+@Getter
+@Setter
 public class CreateStudentRequest {
     private String name;
-    private String password;
+    private String idNumber;
     private Integer score;
-    // Getter 和 Setter
 }
 ```
 
-| 設計決策 | 說明 |
-| --- | --- |
-| 不含 `id` | 主鍵由資料庫自動產生，前端不需要傳 |
-| 含 `password` | 新增時需要設定密碼，但後端不會回傳 |
-| 含 `score` | 前端傳入分數（0–100），由 ScoreVO 驗證 |
-
-<!--
-CreateStudentRequest 是前端發送 POST 請求時，Request Body 的格式。
-
-它只包含前端應該傳入的欄位：name 和 password。
-不包含 id（資料庫自動產生）。
-
-Controller 用 @RequestBody CreateStudentRequest request 接住前端傳來的 JSON，然後把這個 Request DTO 傳給 Service 處理。
--->
-
----
-
-# StudentResponse — Response DTO
-
-後端回傳給前端的格式：
-
 ```java
+@Getter
+@Setter
 public class StudentResponse {
     private Integer id;
     private String name;
     private Integer score;
-    private String letterGrade; // 由 ScoreVO 計算（A/B/C/F）
-    // Getter 和 Setter（刻意不含 password）
+    private String letterGrade;
 }
 ```
 
-| 設計決策 | 說明 |
-| --- | --- |
-| 不含 `password` | **安全考量**：密碼不應暴露給前端 |
-| 含 `id` | 前端查詢後需要知道這筆資料的 id |
-| `letterGrade` | 由 Service 層的 ScoreVO 計算後填入 |
-
 <!--
-StudentResponse 是後端回傳給前端的物件格式。
+第三和第四個檔案，在 dto 資料夾。內容和上一章看到的一樣。
 
-最重要的設計決策：不包含 password。
+上面是 CreateStudentRequest，申請表。有姓名、身分證字號、成績，沒有 id。
 
-即使 Student PO 有 password 欄位，我們在 Service 把 PO 轉成 StudentResponse 時，刻意不複製 password，這樣前端就永遠看不到密碼。
+下面是 StudentResponse，成績單。有 id、姓名、成績、等第，沒有身分證字號。
 
-這就是「一個 PO，不同場景用不同 DTO」的核心價值。
+兩個類別都沒有 @Entity，它們和資料表沒有關係。
 -->
 
 ---
 
-# ScoreVO — 用 VO 封裝業務規則
+# vo/ScoreVO.java
 
-| 特性 | 說明 |
-| --- | --- |
-| **不可變** | `final` 欄位，只有 constructor，沒有 setter |
-| **驗證內建** | 建構時驗證 0–100，超出範圍拋出例外 |
-| **行為封裝** | `getLetterGrade()` 根據分數計算字母等第（A/B/C/F） |
-| **使用層次** | Service 層；表達「值的概念」，不是資料傳輸用途 |
-| **和 DTO 的差別** | DTO 用於傳輸資料；VO 用於封裝業務邏輯，強調不可變 |
-
-<!--
-VO 和 DTO 很容易搞混，關鍵差別是：
-
-DTO 是「資料的容器」，有 getter 和 setter，目的是在層之間傳遞資料。
-VO 是「值的概念」，是不可變的（final 欄位，沒有 setter），內建業務規則和行為。
-
-ScoreVO 代表「一個合法的學生分數」——分數必須在 0 到 100 之間，而且可以告訴你它對應的字母等第。
-一旦建立了 ScoreVO(85)，這個「85分」物件的值永遠不會被修改；如果要表示不同分數，就建立新的 ScoreVO。
--->
-
----
-
-# ScoreVO 程式碼
-
-```java
+```java {all|2,4-9|12-17|all}
 public class ScoreVO {
     private final Integer value;
+
     public ScoreVO(Integer value) {
-        if (value < 0 || value > 100)
-            throw new IllegalArgumentException("分數需在 0–100 之間");
+        if (value == null || value < 0 || value > 100) {
+            throw new IllegalArgumentException("成績要在 0 到 100 之間");
+        }
         this.value = value;
     }
     public Integer getValue() { return value; }
+
     public String getLetterGrade() {
-        if (value >= 90) return "A"; if (value >= 80) return "B";
-        return value >= 70 ? "C" : "F";
+        if (value >= 90) return "A";
+        if (value >= 80) return "B";
+        if (value >= 70) return "C";
+        return "F";
     }
 }
 ```
 
 <!--
-看 ScoreVO 的完整程式碼。
+第五個檔案，在 vo 資料夾建立 ScoreVO。
 
-三個重點：
-第一，`final` 欄位——value 一旦在 constructor 設定，就永遠不能改，這就是「不可變」。
-第二，constructor 裡的驗證——建立 ScoreVO 時就確保分數合法，不需要在 Service 到處寫驗證邏輯。
-第三，`getLetterGrade()` 方法——業務邏輯封裝在 VO 裡，Service 只需要呼叫，不需要自己寫 if-else 判斷等第。
+（下一步）前半部和上一章一樣。變數是 final，建構子裡檢查成績要在 0 到 100 之間，不合規定就丟出例外。沒有 setter。
 
-⚠️ 沒有 setter 方法，外部無法修改 value——這是 VO 和一般 Java 物件最大的差別。
+（下一步）這次多了一個方法 getLetterGrade，把成績換算成等第。90 分以上是 A，80 分以上是 B，70 分以上是 C，其他是 F。
+
+（下一步）「幾分算哪個等第」是和成績這個值綁在一起的規矩，所以我們把它放在 VO 裡。組長要用的時候，問這個物件就好，不用自己寫一串 if。
 -->
 
 ---
@@ -465,135 +440,138 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 4
-
-## Service — PO ↔ DTO 轉換中心
+# 中間：Service 負責轉換
 
 <!--
-Service 是整個架構裡最複雜的一層，負責 PO 和 DTO 之間的轉換。
+三張紙都準備好了。接著是負責抄寫的組長。
 -->
 
 ---
 
-# StudentService — 類別宣告與注入
+# service/StudentService.java：先寫「抄成績單」
 
-```java
+```java {all|6|7|8-12|all}
 @Service
 public class StudentService {
     @Autowired
     private StudentRepository studentRepository;
 
-    // createStudent、getAllStudents、getStudentById、
-    // updateStudent、deleteStudent、toResponse
-    // 方法定義在後續投影片
+    private StudentResponse toResponse(Student po) {
+        ScoreVO score = new ScoreVO(po.getScore());
+        StudentResponse res = new StudentResponse();
+        res.setId(po.getId());
+        res.setName(po.getName());
+        res.setScore(score.getValue());
+        res.setLetterGrade(score.getLetterGrade());
+        return res;
+    }
 }
 ```
 
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+✅ 這裡<b>沒有</b> <code>res.setIdNumber(…)</code>。成績單上本來就沒有那一格，想抄也抄不進去。
+</div>
+
+</v-click>
+
 <!--
-Service 類別加上 @Service，讓 Spring 將它管理為 Bean。
-@Autowired 注入 StudentRepository，後續所有方法都透過 studentRepository 操作資料庫。
+第六個檔案，在 service 資料夾建立 StudentService。這個檔案比較長，我們分幾頁寫。
+
+先加上 @Service，注入 StudentRepository。然後寫第一個方法。
+
+（下一步）toResponse。收一個 PO，回傳一張成績單。它是 private，只給這個類別自己用。後面每一個功能都會用到它，所以先寫好。
+
+（下一步）先把 PO 裡的成績包成 ScoreVO。
+
+（下一步）建立一張空白的成績單，把編號、姓名、成績一格一格抄過去。等第是問 ScoreVO 拿的。
+
+（下一步）整個方法寫完，請注意它沒有抄身分證字號。成績單上本來就沒有那一格，想抄也抄不進去。這就是把敏感欄位擋在裡面的地方。
 -->
 
 ---
 
-# toResponse — PO 轉 Response DTO
+# 新增：申請表 → PO → 存檔 → 成績單
 
-Service 裡建立一個私有的轉換方法：
-
-```java
-private StudentResponse toResponse(Student po) {
-    ScoreVO scoreVO = new ScoreVO(po.getScore());
-    StudentResponse resp = new StudentResponse();
-    resp.setId(po.getId());
-    resp.setName(po.getName());
-    resp.setScore(scoreVO.getValue());
-    resp.setLetterGrade(scoreVO.getLetterGrade()); // VO 計算等第
-    return resp; // 刻意不複製 password
-}
-```
-
-| 說明 | 詳情 |
-| --- | --- |
-| `ScoreVO` | 用 VO 驗證分數合法性並計算字母等第 |
-| 略過 `password` | 敏感資料不複製進 Response DTO |
-
-<!--
-toResponse() 現在使用 ScoreVO。
-
-第一步：建立 ScoreVO(po.getScore())——這一行同時完成兩件事：驗證分數在 0–100、準備計算字母等第。
-第二步：把 id、name、score、letterGrade 填進 Response DTO，刻意不複製 password。
-
-這就是 VO 在 Service 層的標準用法：把業務規則（分數驗證、等第計算）封裝在 VO 裡，Service 只需要建立 VO 並呼叫方法，邏輯集中、清晰。
--->
-
----
-
-# createStudent — Request DTO → PO → save → Response DTO
-
-```java
+```java {all|2|3-6|7|8|all}
 public StudentResponse createStudent(CreateStudentRequest req) {
+    ScoreVO score = new ScoreVO(req.getScore());
     Student po = new Student();
     po.setName(req.getName());
-    po.setPassword(req.getPassword());
-    po.setScore(req.getScore());
+    po.setIdNumber(req.getIdNumber());
+    po.setScore(score.getValue());
     Student saved = studentRepository.save(po);
     return toResponse(saved);
 }
 ```
 
-| 步驟 | 說明 |
-| --- | --- |
-| 1. 建立 PO | `new Student()`，從 Request DTO 複製欄位 |
-| 2. 存進資料庫 | `save(po)`，id=null 所以執行 INSERT |
-| 3. 轉成 Response DTO | `toResponse(saved)`，過濾 password |
+- 先用 `ScoreVO` 檢查成績。不合規定，這裡就會丟出例外，不會存檔
+- 把申請表抄成 PO。沒有設定 `id`
+- `save()` 看到沒有 id → 新增。回傳的 `saved` 已經有編號了
+- 把存好的 PO 抄成成績單，交回去
 
 <!--
-createStudent 展示了完整的 Request DTO → PO → Response DTO 流程。
+接著在同一個類別裡，加上新增的方法 createStudent。它收的是申請表，回傳的是成績單。
 
-第一步：建立一個空的 Student PO，把 Request DTO 裡的 name 和 password 複製進去。
-第二步：呼叫 save() 存進資料庫，JPA 執行 INSERT 並回傳帶有自動產生 id 的 PO。
-第三步：呼叫 toResponse() 把 PO 轉成 Response DTO，過濾掉 password，回傳給 Controller。
+（下一步）第一步，先用 ScoreVO 檢查成績。如果成績不合規定，這一行就會丟出例外，後面都不會執行，也就不會存檔。
 
-整個流程 Controller 只看到 Request DTO 和 Response DTO，永遠看不到含 password 的 PO。
+（下一步）第二步，建立一個 PO，把申請表上的姓名、身分證字號、成績抄過去。注意我們沒有設定 id。
+
+（下一步）第三步，請承辦人員存檔。save 看到 PO 沒有 id，就知道是新增。它回傳的 saved，是存好之後的 PO，上面已經有資料庫編的 id 了。
+
+（下一步）第四步，把存好的 PO 抄成成績單，交回去。這裡就用到剛才寫的 toResponse。
+
+（下一步）這四步，就是上一章那張流程圖裡，組長做的事。
 -->
 
 ---
 
-# getAllStudents 和 getStudentById
+# 查詢：全部，和單一一位
 
-```java
+```java {1-8|10-16}
 public List<StudentResponse> getAllStudents() {
     List<Student> poList = studentRepository.findAll();
     List<StudentResponse> result = new ArrayList<>();
-    for (Student po : poList) result.add(toResponse(po));
+    for (Student po : poList) {
+        result.add(toResponse(po));
+    }
     return result;
 }
 
 public StudentResponse getStudentById(Integer id) {
     Student po = studentRepository.findById(id).orElse(null);
-    return (po != null) ? toResponse(po) : null;
+    if (po == null) {
+        return null;
+    }
+    return toResponse(po);
 }
 ```
 
 <!--
-getAllStudents：從 Repository 取得 PO List，逐一用 toResponse() 轉換，回傳 Response DTO List。
+接著是兩個查詢的方法。
 
-getStudentById：用 findById() 取得 Optional<Student>，用 orElse(null) 轉成 Student，找不到時回傳 null，找到就轉成 Response DTO。
+上面是查全部。承辦人員拿回來的是一疊 PO。我們準備一個空的 List，用 for 迴圈一張一張抄成成績單，放進去，最後整疊回傳。
 
-兩個方法的共同模式：從 Repository 拿到 PO → 轉成 Response DTO → 回傳。
+（下一步）下面是查單一一位。findById 回傳的是 Optional，也就是第二十七章說的信封。orElse(null) 的意思是：信封裡有東西就拿出來，沒有就給我 null。
+
+如果是 null，代表沒有這位同學，我們也回傳 null，讓櫃台去決定怎麼回覆。有的話，抄成成績單回傳。
 -->
 
 ---
 
-# updateStudent 和 deleteStudent
+# 修改和刪除
 
-```java
-public StudentResponse updateStudent(Integer id,
-                                     CreateStudentRequest req) {
-    Student po = new Student();
-    po.setId(id);  // 有 id → JPA 執行 UPDATE
+```java {1-11|13-15}
+public StudentResponse updateStudent(Integer id, CreateStudentRequest req) {
+    Student po = studentRepository.findById(id).orElse(null);
+    if (po == null) {
+        return null;
+    }
+    ScoreVO score = new ScoreVO(req.getScore());
     po.setName(req.getName());
-    po.setPassword(req.getPassword());
-    po.setScore(req.getScore());
+    po.setIdNumber(req.getIdNumber());
+    po.setScore(score.getValue());
     return toResponse(studentRepository.save(po));
 }
 
@@ -602,13 +580,21 @@ public void deleteStudent(Integer id) {
 }
 ```
 
+- 修改：**先查出原本那一筆**，改它的內容，再存回去。查不到就回傳 `null`
+- 刪除：直接請承辦人員照編號刪掉
+
 <!--
-updateStudent 和 createStudent 結構相同，差別是 po.setId(id)。
+最後是修改和刪除。
 
-當 PO 的 id 有值，JPA 執行的是 UPDATE，不是 INSERT——這就是 save() 的雙重行為。
-id 的來源是 Controller 從 URL 路徑（@PathVariable）取得的，不是前端 Request Body 裡的值。
+上面是修改。它收兩個東西：要改的是幾號，還有新的內容。新的內容我們直接沿用申請表的格式。
 
-deleteStudent 最簡單，直接呼叫 deleteById()，不需要轉換任何物件。
+做法是先用編號把原本那一筆查出來。查不到就回傳 null。查到了，檢查新的成績，把姓名、身分證字號、成績改掉，再存回去。這次 PO 有 id，所以 save 會執行修改。
+
+為什麼要先查？因為如果不查，直接用一個不存在的編號去存，結果會不如預期。先確認這位同學真的存在，比較安全。
+
+（下一步）下面是刪除。直接請承辦人員照編號刪掉，不需要回傳任何東西。
+
+到這裡，StudentService 就寫完了。五個功能，加上一個 toResponse。
 -->
 
 ---
@@ -617,318 +603,345 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 5
-
-## Controller — 接收 DTO，回傳 DTO
+# 最外面：Controller
 
 <!--
-最後一層：Controller 只和 DTO 打交道，永遠不直接碰 Entity（PO）。
+最後一個檔案，櫃台。
 -->
 
 ---
 
-# StudentController — 完整類別宣告 + GET
+# controller/StudentController.java：查全部、新增
 
-```java
+```java {all|6-9|11-14|all}
 @RestController
 public class StudentController {
     @Autowired
     private StudentService studentService;
 
     @GetMapping("/students")
-    public List<StudentResponse> getAll() {
+    public List<StudentResponse> getAllStudents() {
         return studentService.getAllStudents();
+    }
+
+    @PostMapping("/students")
+    public StudentResponse createStudent(@RequestBody CreateStudentRequest req) {
+        return studentService.createStudent(req);
     }
 }
 ```
 
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+📌 整個 Controller 裡<b>沒有出現 <code>Student</code></b>。櫃台收的是申請表，交出去的是成績單。
+</div>
+
+</v-click>
+
 <!--
-Controller 最乾淨——它只負責接請求、呼叫 Service、回傳結果，完全不碰 PO。
+第七個檔案，在 controller 資料夾建立 StudentController。注入的是 StudentService，不是 Repository。這是第三十五章的規則一。
 
-@GetMapping("/students") 對應 GET /students，回傳 List<StudentResponse>，前端收到的 JSON 陣列裡每個物件只有 id 和 name，看不到 password。
+（下一步）查全部。GET /students，回傳一疊成績單。方法裡只有一行，轉交給組長。
 
-注意回傳型別是 List<StudentResponse>，不是 List<Student>。這確保了 password 欄位不會暴露。
+（下一步）新增。POST /students，用 @RequestBody 把 JSON 接成申請表，交給組長，再把組長給的成績單回傳。
+
+（下一步）請注意，整個 Controller 裡沒有出現 Student 這個 PO。櫃台收的是申請表，交出去的是成績單。這是上一章的規矩：Controller 只碰 DTO。
 -->
 
 ---
 
-# StudentController — POST 和 GET 單筆
+# 查單一一位、修改、刪除
 
-```java
-@PostMapping("/students")
-public StudentResponse create(
-        @RequestBody CreateStudentRequest req) {
-    return studentService.createStudent(req);
-}
-
+```java {1-8|10-16|18-21}
 @GetMapping("/students/{id}")
-public StudentResponse getById(@PathVariable("id") Integer id) {
-    return studentService.getStudentById(id);
+public ResponseEntity<StudentResponse> getStudentById(@PathVariable("id") Integer id) {
+    StudentResponse res = studentService.getStudentById(id);
+    if (res == null) {
+        return ResponseEntity.notFound().build();
+    }
+    return ResponseEntity.ok(res);
 }
-```
 
-<!--
-POST /students：@RequestBody 接住前端傳來的 JSON，Jackson 自動轉成 CreateStudentRequest 物件，傳給 Service 處理，回傳 StudentResponse（不含 password）。
-
-GET /students/{id}：@PathVariable 取出 URL 裡的 id，查詢單筆，同樣回傳 StudentResponse。
-
-Controller 裡完全看不到 Student（PO），所有資料物件都是 DTO。
--->
-
----
-
-# StudentController — PUT 和 DELETE
-
-```java
 @PutMapping("/students/{id}")
-public StudentResponse update(
-        @PathVariable("id") Integer id,
-        @RequestBody CreateStudentRequest req) {
-    return studentService.updateStudent(id, req);
+public ResponseEntity<StudentResponse> updateStudent(
+        @PathVariable("id") Integer id, @RequestBody CreateStudentRequest req) {
+    StudentResponse res = studentService.updateStudent(id, req);
+    if (res == null) { return ResponseEntity.notFound().build(); }
+    return ResponseEntity.ok(res);
 }
 
 @DeleteMapping("/students/{id}")
-public void delete(@PathVariable("id") Integer id) {
+public void deleteStudent(@PathVariable("id") Integer id) {
     studentService.deleteStudent(id);
 }
 ```
 
 <!--
-PUT /students/{id}：URL 的 id 決定更新哪筆，Request Body 是新的資料，同樣用 CreateStudentRequest 接收，回傳更新後的 StudentResponse。
+在同一個類別裡，再加三個方法。
 
-DELETE /students/{id}：刪除指定 id 的學生，回傳 void，HTTP Status 自動是 200。
+上面是查單一一位。回傳型別用的是第三十三章學過的 ResponseEntity，它可以讓我們自己決定狀態碼。如果組長回傳 null，代表沒有這位同學，我們回覆 404。notFound().build() 的意思是：狀態碼 404，沒有內容。有找到的話，回覆 200 加上成績單。
 
-五個 API 全部完成，Controller 全程只接觸 DTO，確保 Entity（PO）不會洩漏到前端。
+（下一步）中間是修改。PUT /students/ 加上編號。編號從網址拿，新的內容從 Body 拿。一樣，找不到就回覆 404。
+
+（下一步）下面是刪除。DELETE /students/ 加上編號，轉交給組長就好。
+
+七個檔案到這裡全部寫完了。請啟動專案，確認 console 沒有錯誤。
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
 
-# 完整 API 設計總覽
-
-| HTTP Method | URL | 接收 | 回傳 |
-| --- | --- | --- | --- |
-| `GET` | `/students` | — | `List<StudentResponse>` |
-| `GET` | `/students/{id}` | — | `StudentResponse` |
-| `POST` | `/students` | `CreateStudentRequest` | `StudentResponse` |
-| `PUT` | `/students/{id}` | `CreateStudentRequest` | `StudentResponse`  |
-| `DELETE` | `/students/{id}` | — | `void` |
+# Part 6
+# 測試
 
 <!--
-這張表格總覽五個 API 的輸入輸出格式。
-
-觀察規律：所有回傳值都是 Response DTO（StudentResponse），前端永遠收不到含 password 的資料。
-POST 和 PUT 的輸入都是 Request DTO（CreateStudentRequest），前端傳來的 id 欄位不被接受。
-
-這就是用 DTO 設計 API 的安全性和清晰性。
+寫完了，用 Postman 測試。
 -->
 
 ---
 
-# Postman 測試 — GET／DELETE 該帶的參數
+# 五支 API
 
-| API | URL | Body | 說明 |
-| --- | --- | --- | --- |
-| `GET` | `http://localhost:8080/students` | 無 | 不用帶任何參數 |
-| `GET` | `http://localhost:8080/students/1` | 無 | `1` 是 id，帶在 URL 路徑上 |
-| `DELETE` | `http://localhost:8080/students/1` | 無 | `1` 是 id，帶在 URL 路徑上 |
+<Pairs left="請求" right="收什麼 → 回什麼" rows="code,GET /students=doc,不用帶東西 → 一疊成績單|code,GET /students/1=doc,網址帶編號 → 一張成績單，或 404|code,POST /students=form,申請表 → 成績單|code,PUT /students/1=form,網址帶編號 + 申請表 → 成績單，或 404|code,DELETE /students/1=doc,網址帶編號 → 沒有內容" />
 
 <!--
-GET 和 DELETE 都不用帶 Body，差別只在 URL。
+我們做出來的五支 API，整理在這裡。
 
-查全部不帶 id；查單筆、刪除單筆都把 id 放在 URL 路徑最後面，對應 Controller 的 @PathVariable。
+（下一步）GET /students，不用帶東西，回傳一疊成績單。
 
-這三個 API 在 Postman 裡最簡單——不用切換 Body 分頁，直接送出就好。
+（下一步）GET /students/1，網址帶編號，回傳一張成績單。沒有這位同學就是 404。
+
+（下一步）POST /students，Body 帶申請表，回傳成績單。
+
+（下一步）PUT /students/1，網址帶編號，Body 帶申請表，回傳成績單，或是 404。
+
+（下一步）DELETE /students/1，網址帶編號，沒有回傳內容。
 -->
 
 ---
 
-# Postman 測試 — POST／PUT 該帶的參數
+# 用 Postman 新增一位同學
 
-| API | URL | Body（raw / JSON） | 說明 |
-| --- | --- | --- | --- |
-| `POST` | `http://localhost:8080/students` | `{"name":"Tom","password":"1234","score":85}` | 不含 `id`，由資料庫自動產生 |
-| `PUT` | `http://localhost:8080/students/1` | `{"name":"Tom","password":"1234","score":90}` | id 帶在 URL，Body 不用再帶 id |
+`POST http://localhost:8080/students`，Body 選 **raw** → **JSON**：
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>Postman 設定重點：</b> Body → raw → JSON，並在 Headers 確認 <code>Content-Type: application/json</code>。
+```json
+{ "name": "Judy", "idNumber": "A223456789", "score": 85 }
+```
+
+回傳：
+
+```json
+{ "id": 1, "name": "Judy", "score": 85, "letterGrade": "B" }
+```
+
+<v-clicks>
+
+- 送進去的有 `idNumber`，回來的**沒有**
+- 回來的多了 `id` 和 `letterGrade`
+- 到 Workbench 查 `student` 資料表：`id_number` 有確實存進去
+
+</v-clicks>
+
+<!--
+用 Postman 新增一位同學。方法選 POST，網址是 localhost:8080/students。Body 選 raw，格式選 JSON，填入姓名、身分證字號、成績。
+
+送出之後，回傳的內容在下面。
+
+（下一步）送進去的 JSON 有 idNumber，回來的 JSON 沒有。身分證字號沒有流出來。
+
+（下一步）回來的多了 id 和 letterGrade。id 是資料庫編的，等第是 ScoreVO 算的。85 分是 B。
+
+（下一步）再到 Workbench 查 student 資料表，可以看到 id_number 有確實存進去。資料庫有存，只是沒有給前端。
+
+這就是分開 PO 和 DTO 的效果。
+-->
+
+---
+
+# 再試幾個
+
+<v-clicks>
+
+- `GET /students` → 陣列裡每一筆都沒有 `idNumber`
+- `GET /students/999` → 狀態碼 **404**
+- `PUT /students/1`，Body 把 `score` 改成 `95` → 回傳的 `letterGrade` 變成 `"A"`
+- `POST /students`，Body 多寫 `"id": 1` → 沒有蓋掉 1 號，而是新增了一位
+- `POST /students`，`score` 填 `200` → 狀態碼 **500**
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 最後一個：<code>ScoreVO</code> 有擋下來，資料沒有存進去。但是 500 的意思是「伺服器出錯」，其實是前端填錯。這個問題留到第三十九章解決。
 </div>
 
+</v-click>
+
 <!--
-POST 新增時，Body 選 raw、格式選 JSON，貼上 name、password、score 三個欄位，不能帶 id，因為 id 是資料庫自動產生的，前端傳了也會被忽略。
+請再試幾個。
 
-PUT 更新時，id 放在 URL 路徑，不是 Body 裡；Body 一樣是 name、password、score 三個欄位，代表更新後的新值。
+（下一步）GET /students，回傳的陣列裡，每一筆都沒有 idNumber。
 
-⚠️ 最容易忘記設定的地方：Postman 的 Headers 要有 Content-Type: application/json，不然 Spring 會讀不到 @RequestBody 的內容。
+（下一步）GET /students/999，查一個不存在的編號，狀態碼是 404。
+
+（下一步）PUT /students/1，把成績改成 95。回傳的等第會變成 A。
+
+（下一步）POST /students，在 Body 裡多寫一個 id 等於 1。結果沒有蓋掉 1 號同學，而是新增了一位。這是上一章想一想的那一題，現在可以親手驗證。
+
+（下一步）POST /students，成績填 200。狀態碼是 500。
+
+（下一步）最後這一個要說明一下。ScoreVO 有把不合法的成績擋下來，資料沒有存進去，這是對的。但是 500 的意思是「伺服器出錯」。這次其實是前端填錯資料，應該回覆 400 才對，而且最好告訴他是哪一格填錯。這個問題，我們留到第三十九章解決。
 -->
 
 ---
-layout: default
----
 
-# 練習：課程管理 CRUD API
-### 任務說明
+# 想一想
 
-用 JPA 四層架構 + DTO 設計，實作「課程（Course）」CRUD API：
-
-| 類別 | 欄位 | 說明 |
-| --- | --- | --- |
-| **Course（PO）** | id, name, credit, teacherPassword | 含敏感欄位 |
-| **CreateCourseRequest** | name, credit | 不含 id、不含密碼 |
-| **CourseResponse** | id, name, credit | 不含 teacherPassword |
-
-**目標 API：** GET `/courses`、POST `/courses`、DELETE `/courses/{id}`
+<Poll question="今天的 StudentController 裡，哪一個類別從頭到尾都沒有出現？" options="StudentService|StudentResponse|CreateStudentRequest|Student" answer="4" />
 
 <!--
-練習題把今天學的完整架構都用到了：Entity（PO）、Request DTO、Response DTO、Repository、Service、Controller。
+確認一下。
 
-最重要的練習重點是：Course PO 有 teacherPassword 欄位，但 CourseResponse 刻意不包含它，這樣前端拿到的課程資料就不含密碼。
+今天的 StudentController 裡，哪一個類別從頭到尾都沒有出現？
+
+（等大家作答）
+
+（下一步）答案是 Student。
+
+Student 是 PO。櫃台只碰 DTO，所以 Controller 裡只有 CreateStudentRequest 和 StudentResponse。
 -->
 
 ---
-layout: default
+layout: section
+class: flex flex-col justify-center items-center text-center
 ---
 
-# 練習：解題步驟
-### 提示說明
+# Part 7
+# 動手練習
 
-| 步驟 | 要建立的類別 | 關鍵重點 |
-| --- | --- | --- |
-| 1 | `Course`（PO） | `@Entity`、含 `teacherPassword` 欄位 |
-| 2 | `CreateCourseRequest`（DTO） | 只含 `name`、`credit`，不含 `id` |
-| 3 | `CourseResponse`（DTO） | 只含 `id`、`name`、`credit`，不含 `teacherPassword` |
-| 4 | `CourseRepository` | `extends JpaRepository<Course, Integer>` |
-| 5 | `CourseService` | `toResponse()`、`createCourse()`、`getAllCourses()` |
-| 6 | `CourseController` | 全程只用 DTO，不直接碰 PO |
+<!--
+最後請大家自己做一套。
+-->
 
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>驗證方式：</b> POST 新增課程後，GET 查詢，確認回應 JSON 裡沒有 <code>teacherPassword</code> 欄位。
+---
+
+# 練習：社團管理 API
+
+用同樣的做法，在同一個專案裡做「社團（Club）」的 API：
+
+<v-clicks>
+
+- **`Club`（PO）**：`id`、`name`（社團名稱）、`fee`（社費）、`advisorPhone`（指導老師電話）
+- **`CreateClubRequest`**：`name`、`fee`、`advisorPhone`
+- **`ClubResponse`**：`id`、`name`、`fee`。**不含** `advisorPhone`
+- API：`GET /clubs`、`POST /clubs`、`DELETE /clubs/{id}`
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+✅ 完成的標準：<code>POST</code> 新增之後再 <code>GET</code>，回傳的 JSON 裡沒有 <code>advisorPhone</code>；Workbench 裡 <code>advisor_phone</code> 有存到。
 </div>
 
-<!--
-解題的核心心法：從 Entity（最底層）往上建，每一層都想清楚「我用的是 PO 還是 DTO？」
+</v-click>
 
-建完 Service 之後，重點驗證：用 Postman 發 POST 新增一筆課程，再 GET 查詢，確認回應的 JSON 只有 id、name、credit，沒有 teacherPassword——這才算真正完成了資料安全設計。
+<!--
+練習題。請用同樣的做法，在同一個專案裡做社團的 API。
+
+（下一步）PO 叫做 Club。有編號、社團名稱、社費，還有指導老師的電話。
+
+（下一步）申請表叫 CreateClubRequest。有社團名稱、社費、指導老師電話。
+
+（下一步）回傳用的叫 ClubResponse。有編號、社團名稱、社費。不含指導老師的電話。
+
+（下一步）要做三支 API：查全部、新增、刪除。
+
+（下一步）完成的標準是：POST 新增之後再 GET，回傳的 JSON 裡沒有 advisorPhone。同時到 Workbench 看，advisor_phone 這個欄位有存到值。
+
+建議的順序和今天一樣：PO、Repository、兩個 DTO、Service、Controller。這個練習不需要 VO。請先暫停，自己做做看。
 -->
 
 ---
 
-# 練習解答：Entity（PO）
+# 練習解答：PO、DTO、Repository
 
 ```java
-@Entity
-public class Course {
+@Getter @Setter @Entity
+public class Club {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     private String name;
-    private Integer credit;
-    private String teacherPassword; // DB 有，不應傳給前端
-    // Getter 和 Setter（省略）
-}
-```
-
-| 說明 | 詳情 |
-| --- | --- |
-| **含 `teacherPassword`** | 敏感欄位，只在 Repository ↔ Service 流動 |
-| **不能直接 return** | 不可讓 Controller 直接回傳這個 PO |
-
-<!--
-Course PO 對應資料庫的 course 表格，包含所有欄位，包括 teacherPassword。這個欄位不能出現在 Controller 回傳給前端的資料裡。
--->
-
----
-
-# 練習解答：DTO
-
-```java
-public class CreateCourseRequest {
-    private String name;
-    private Integer credit;
-    // Getter 和 Setter
+    private Integer fee;
+    private String advisorPhone;
 }
 ```
 
 ```java
-public class CourseResponse {
-    private Integer id;
-    private String name;
-    private Integer credit;
-    // Getter 和 Setter（刻意不含 teacherPassword）
-}
+@Getter @Setter
+public class CreateClubRequest { private String name; private Integer fee; private String advisorPhone; }
+
+@Getter @Setter
+public class ClubResponse { private Integer id; private String name; private Integer fee; }
 ```
-
-<!--
-CreateCourseRequest 不含 id 和 teacherPassword，前端新增課程時只傳 name、credit。
-CourseResponse 不含 teacherPassword，這就是這題的核心考點——PO 裡有的敏感欄位，Response DTO 刻意不複製。
--->
-
----
-
-# 練習解答：Repository（DAO）
 
 ```java
-@Repository
-public interface CourseRepository
-        extends JpaRepository<Course, Integer> {
-}
+public interface ClubRepository extends JpaRepository<Club, Integer> { }
 ```
 
 <!--
-繼承 JpaRepository 即可，不需要寫任何方法，save()、findAll()、deleteById() 全部內建。
+參考答案。先看四個比較短的檔案。
+
+最上面是 Club，放在 entity。四個變數，id 自動編號。
+
+中間是兩個 DTO，放在 dto。投影片為了省空間，把變數寫在同一行，實際寫的時候一行一個比較好讀。CreateClubRequest 有電話，ClubResponse 沒有電話。記得它們是兩個檔案。
+
+最下面是 ClubRepository，放在 repository。一樣是一行。
 -->
 
 ---
 
-# 練習解答：Service — toResponse 與 createCourse
+# 練習解答：Service
 
 ```java
 @Service
-public class CourseService {
+public class ClubService {
     @Autowired
-    private CourseRepository courseRepository;
+    private ClubRepository clubRepository;
 
-    private CourseResponse toResponse(Course po) {
-        CourseResponse resp = new CourseResponse();
-        resp.setId(po.getId());
-        resp.setName(po.getName());
-        resp.setCredit(po.getCredit());
-        return resp; // 刻意不複製 teacherPassword
+    private ClubResponse toResponse(Club po) {
+        ClubResponse res = new ClubResponse();
+        res.setId(po.getId());
+        res.setName(po.getName());
+        res.setFee(po.getFee());
+        return res;
     }
 
-    public CourseResponse createCourse(CreateCourseRequest req) {
-        Course po = new Course();
+    public ClubResponse createClub(CreateClubRequest req) {
+        Club po = new Club();
         po.setName(req.getName());
-        po.setCredit(req.getCredit());
-        Course saved = courseRepository.save(po);
-        return toResponse(saved);
+        po.setFee(req.getFee());
+        po.setAdvisorPhone(req.getAdvisorPhone());
+        return toResponse(clubRepository.save(po));
     }
+    // getAllClubs()：findAll() 之後用 for 迴圈逐一 toResponse
+    // deleteClub(id)：clubRepository.deleteById(id)
 }
 ```
 
 <!--
-toResponse() 是安全設計的核心——把 PO 轉成 Response DTO 時，刻意不複製 teacherPassword。
-createCourse 走 Request DTO → PO → save → Response DTO 的標準流程，跟 Student 的 createStudent 結構完全一樣。
--->
+ClubService。
 
----
+toResponse 把 PO 抄成 ClubResponse，只抄編號、名稱、社費。沒有抄電話。
 
-# 練習解答：Service — getAllCourses 與 deleteCourse
+createClub 把申請表抄成 PO，三個欄位都抄，存檔之後，再用 toResponse 抄成回傳的格式。
 
-```java
-public List<CourseResponse> getAllCourses() {
-    List<Course> poList = courseRepository.findAll();
-    List<CourseResponse> result = new ArrayList<>();
-    for (Course po : poList) result.add(toResponse(po));
-    return result;
-}
-
-public void deleteCourse(Integer id) {
-    courseRepository.deleteById(id);
-}
-```
-
-<!--
-getAllCourses：從 Repository 取得 PO List，逐一轉成 Response DTO List，回傳給 Controller。
-deleteCourse：最單純，直接呼叫 deleteById()，不需要轉換任何物件。
+另外兩個方法寫法和今天的 StudentService 一樣，投影片上用註解帶過。getAllClubs 是 findAll 之後，用 for 迴圈一筆一筆 toResponse。deleteClub 是呼叫 deleteById。
 -->
 
 ---
@@ -937,60 +950,83 @@ deleteCourse：最單純，直接呼叫 deleteById()，不需要轉換任何物�
 
 ```java
 @RestController
-public class CourseController {
+public class ClubController {
     @Autowired
-    private CourseService courseService;
+    private ClubService clubService;
 
-    @GetMapping("/courses")
-    public List<CourseResponse> getAll() {
-        return courseService.getAllCourses();
+    @GetMapping("/clubs")
+    public List<ClubResponse> getAllClubs() {
+        return clubService.getAllClubs();
     }
 
-    @PostMapping("/courses")
-    public CourseResponse create(
-            @RequestBody CreateCourseRequest req) {
-        return courseService.createCourse(req);
+    @PostMapping("/clubs")
+    public ClubResponse createClub(@RequestBody CreateClubRequest req) {
+        return clubService.createClub(req);
     }
 
-    @DeleteMapping("/courses/{id}")
-    public void delete(@PathVariable("id") Integer id) {
-        courseService.deleteCourse(id);
+    @DeleteMapping("/clubs/{id}")
+    public void deleteClub(@PathVariable("id") Integer id) {
+        clubService.deleteClub(id);
     }
 }
 ```
 
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ Controller 全程只接觸 DTO，GET /courses 回傳的 JSON 陣列裡每個物件都沒有 teacherPassword。
-</div>
+<!--
+ClubController。三個方法，每個都只有一行，轉交給 ClubService。
+
+一樣請檢查：Controller 裡沒有出現 Club 這個 PO，也沒有出現 ClubRepository。
+
+做完之後用 Postman 測試，確認回傳的 JSON 裡沒有 advisorPhone。
+-->
+
+---
+
+# 複習：教務處對照表
+
+<Pairs left="教務處" right="程式" rows="shop,搬到新辦公室，先分好區域=code,新專案，先分好 package|book,學籍簿正本=code,entity/Student（PO）|form,申請表和成績單=code,dto/CreateStudentRequest、StudentResponse|lock,成績這個值和它的規矩=code,vo/ScoreVO|teacher,組長在三張紙之間抄寫=code,StudentService 的 toResponse() 和各個方法|clerk,櫃台只收申請表、只發成績單=code,StudentController 只用 DTO" />
 
 <!--
-三個 API 全部完成：GET 查全部、POST 新增、DELETE 刪除，Controller 只看得到 DTO，Course PO 的 teacherPassword 全程不外洩。
+我們用一張圖複習今天的內容。
+
+（下一步）搬到新辦公室、先分好區域，是開新專案、先分好 package。
+
+（下一步）學籍簿正本，是 entity 裡的 Student。
+
+（下一步）申請表和成績單，是 dto 裡的兩個類別。
+
+（下一步）成績這個值和它的規矩，是 vo 裡的 ScoreVO。
+
+（下一步）組長在三張紙之間抄寫，是 StudentService 裡的 toResponse 和各個方法。
+
+（下一步）櫃台只收申請表、只發成績單，是 StudentController 只用 DTO。
 -->
 
 ---
 
 # 章節總結
 
-| 重點 | 說明 |
-| --- | --- |
-| 選 JPA | 標準 CRUD、不需要寫 SQL、開發最快 |
-| Entity = PO | 對應資料庫表格，含所有欄位，只在 Repository ↔ Service 流動 |
-| Request DTO | 前端傳入的格式，去掉 id 和自動產生欄位 |
-| Response DTO | 前端收到的格式，去掉 password 等敏感欄位 |
-| VO（ScoreVO） | Service 層的值物件，`final` 欄位、無 setter，封裝驗證和業務計算 |
-| Service 轉換 | `toResponse(PO)` 用 VO 計算業務值，並過濾敏感資料 |
-| Controller | 全程只接觸 DTO，永遠不直接回傳 PO |
+<v-clicks>
+
+- **新專案**：建立時一次選好依賴；只建 Schema，資料表讓 JPA 自動建
+- **package**：`controller`、`service`、`repository`、`entity`、`dto`、`vo`
+- **由裡往外寫**：PO → Repository → DTO / VO → Service → Controller
+- **Service 是轉換中心**：申請表 → PO → 成績單，敏感欄位在這裡擋下來
+- **Controller 只用 DTO**；找不到資料時用 `ResponseEntity` 回覆 404
+
+</v-clicks>
+
+<v-click>
+
+下一章：API 寫好了，怎麼讓前端的同事知道有哪些 API、要怎麼用？
+
+</v-click>
 
 <!--
-今天的重點總結。
+最後整理今天的重點。
 
-第一，選 JPA：標準 CRUD 場景最適合，不需要寫 SQL。
-第二，四層架構：Entity → Repository → Service → Controller，單向呼叫，不跨層。
-第三，資料物件分工：Entity（PO）只在 Service 以下，DTO 是 Controller 和 Service 之間的介面。
-第四，Service 的 toResponse() 是整個安全設計的核心——它決定哪些欄位可以傳給前端。
-第五，Controller 全程只和 DTO 打交道，確保 password 等敏感資料不會洩漏。
+（依序按下一步）新專案在建立時一次選好依賴；資料庫只建 Schema，資料表讓 JPA 自動建。package 分成 controller、service、repository、entity、dto、vo。寫的順序是由裡往外。Service 是轉換中心，敏感欄位在這裡擋下來。Controller 只用 DTO，找不到資料時用 ResponseEntity 回覆 404。
 
-這個架構就是業界 Spring Boot 後端開發的標準模式！
+（最後一步）API 寫好了。下一章要解決另一個問題：怎麼讓前端的同事知道我們有哪些 API、要怎麼用？
 -->
 
 ---
@@ -999,6 +1035,12 @@ layout: end
 
 # Q & A
 
+有任何問題嗎？
+
 <!--
-今天的內容就到這裡。大家有任何問題嗎？
+今天的內容到這邊。
+
+今天的專案請留著，接下來兩章會繼續用它。
+
+有任何問題歡迎提出來。
 -->

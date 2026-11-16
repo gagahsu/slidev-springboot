@@ -46,34 +46,33 @@ style: |
 </div>
 
 <!--
-大家好，今天我們來聊一個非常實用的主題——OpenAPI。
+大家好，歡迎來到第三十八章。
 
-我們花了好幾章學習怎麼寫 Spring Boot 的 API，但寫完之後有一個問題：前端工程師、測試人員、或新加入的同事，他們怎麼知道這些 API 長什麼樣子？能接受哪些參數？會回傳什麼資料？
+上一章我們做出了一套完整的學生管理 API。今天不寫新的功能，而是解決一個合作上的問題：別人要怎麼知道我們的 API 怎麼用？
 
-如果靠人工整理文件，寫起來很花時間，而且程式改了、文件忘記更新，就會出現文件和程式碼對不上的情況。
-
-今天學的 OpenAPI + springdoc-openapi，就是解決這個問題的工具——加幾行 Annotation，文件自動產生。
+今天繼續使用上一章的 school 專案。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要搞懂的三件事
 
-- **什麼是 OpenAPI？** — API 文件的痛點、OpenAPI 規範、三者關係
-- **加入 springdoc-openapi** — Gradle 依賴、啟動即可用的 Swagger UI
-- **OpenAPI 常用 Annotation** — `@Tag` / `@Operation` / `@ApiResponse` / `@Parameter` / `@Schema`
-- **自訂 API 資訊** — `OpenApiConfig` Bean、生產環境設定
-- **練習題**
+<v-clicks>
+
+- **為什麼需要 API 文件？** 手寫的文件又有什麼問題？
+- **OpenAPI、Swagger UI、springdoc 是什麼？** 加一行依賴，文件自己長出來
+- **怎麼把文件寫得更清楚？** 五個補充說明用的 Annotation
+
+</v-clicks>
 
 <!--
-今天的學習路徑：
+今天要搞懂三件事。
 
-先了解為什麼需要 OpenAPI，以及它和 Swagger UI、springdoc-openapi 三者的關係。
-然後加入依賴，親眼看到 Swagger UI 頁面出現。
-再學幾個 Annotation，讓文件更豐富、更有說明。
-最後看怎麼自訂 API 的標題和版本。
+（下一步）第一，為什麼需要 API 文件。手寫的文件又有什麼問題。
+
+（下一步）第二，OpenAPI、Swagger UI、springdoc 這三個名字各是什麼。今天最神奇的地方是：加一行依賴，文件就自己長出來。
+
+（下一步）第三，怎麼把文件寫得更清楚。我們會學五個補充說明用的 Annotation。
 -->
 
 ---
@@ -82,82 +81,154 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-
-## 什麼是 OpenAPI？
+# 櫃台前的辦事指南
 
 <!--
-先從問題出發：API 文件的痛點是什麼？
+先看教務處。
 -->
 
 ---
 
-# API 文件的痛點
+# 每個人都來問同樣的問題
 
-| 問題 | 說明 |
-| --- | --- |
-| 手寫文件費時 | 每新增一個 API 就要手動更新 Word 或 Postman Collection |
-| 文件與程式碼脫鉤 | API 邏輯改了，文件忘記同步更新 |
-| 前端難以測試 | 沒有統一的介面，必須靠 curl 或 Postman 手動測試 |
-| 新人上手困難 | 沒有結構化文件，只能看程式碼猜 API 規格 |
+教務處的櫃台，每天被問一樣的事：
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>痛點的根本原因：</b> 文件和程式碼是分開維護的，一旦其中一個更新，另一個就容易落後。
+<v-clicks>
+
+- 「這裡可以辦哪些事？」
+- 「辦入學要帶什麼？要填哪些格子？」
+- 「辦完會拿到什麼？」
+
+</v-clicks>
+
+<v-click>
+
+所以教務處在櫃台前貼了一張**辦事指南**。
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 我們的 API 也一樣。前端的同事要知道：有哪些網址、用什麼方法、要帶什麼參數、會回傳什麼。寫下這些事的東西，叫做 <b>API 文件</b>。
 </div>
 
+</v-click>
+
 <!--
-想像一下：你開發了二十幾支 API，然後前端同事問你「這支 API 需要傳哪些參數？回傳值的格式是什麼？」
+教務處的櫃台，每天被問一樣的事。
 
-你可能會說「去看 Controller 吧」，但前端看不懂 Java；或者你花一個小時整理成文件，下週程式改了、文件沒更新，就出問題了。
+（下一步）這裡可以辦哪些事？
 
-這就是 API 文件的現實困境：手動維護很痛苦，而且幾乎一定會出現版本不同步的問題。
+（下一步）辦入學要帶什麼？要填哪些格子？
+
+（下一步）辦完會拿到什麼？
+
+（下一步）一直回答同樣的問題太沒效率。所以教務處在櫃台前貼了一張辦事指南，把這些事寫清楚。
+
+我們的 API 也一樣。使用 API 的人，通常是前端的同事。他要知道：有哪些網址、用什麼方法、要帶什麼參數、會回傳什麼。寫下這些事的東西，叫做 API 文件。
+
+到目前為止，我們的 API 只有自己在用，所以沒有感覺。只要有第二個人要用，就需要文件。
 -->
 
 ---
 
-# 什麼是 OpenAPI？
+# 手寫的指南，很快就過期
 
-| 概念 | 說明 |
-| --- | --- |
-| OpenAPI 規範 | 描述 RESTful API 的標準格式（JSON 或 YAML），由 Linux Foundation 維護 |
-| 版本 | 目前主流是 OpenAPI 3.x，springdoc-openapi 實作此規範 |
-| 優點 | 機器可讀——工具可自動讀取並產生互動式文件、Client SDK、Mock Server |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>OpenAPI vs Swagger：</b> Swagger 是 OpenAPI 規範的前身；現在「Swagger」常用來指 Swagger UI 這個視覺化工具，而非規範本身。
+- 每多一項業務，就要記得去改指南。**很花時間**
+- 規定改了，指南忘了改。**照著指南辦，反而被退件**
+- 指南只能看，不能試。要試還是得去排隊
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 根本的原因：<b>指南和實際的業務是分開維護的</b>。只要有一邊改了、另一邊沒跟上，指南就是錯的。錯的文件比沒有文件更糟。
 </div>
 
+</v-click>
+
 <!--
-OpenAPI 的核心想法是：用一個標準格式來「描述」API。
+一開始，指南是職員自己用手寫的。很快就出問題了。
 
-就像建築師用規格圖紙描述一棟建築一樣，OpenAPI 用 JSON 或 YAML 描述「這支 API 的路徑是什麼、需要什麼參數、會回傳什麼」。
+（下一步）每多一項業務，就要記得去改指南。很花時間，而且沒有人喜歡做。
 
-一旦有了這份規格文件，各種工具都可以讀它——Swagger UI 讀它來顯示互動式頁面，前端工具讀它來自動產生 API Client，測試工具讀它來驗證 API 行為。
+（下一步）規定改了，指南忘了改。同學照著指南準備，反而被退件。
 
-所以 OpenAPI 的精髓是：讓 API 的規格可以被「機器讀懂」，而不只是給人看的文字說明。
+（下一步）指南只能看，不能試。想知道實際辦起來怎麼樣，還是得去排隊。
+
+（下一步）根本的原因是：指南和實際的業務是分開維護的。只要有一邊改了、另一邊沒跟上，指南就是錯的。錯的文件比沒有文件更糟，因為大家會相信它。
+
+對應到程式：用 Word 或是記事本寫 API 文件，程式改了，文件常常忘記改。
 -->
 
 ---
 
-# OpenAPI、Swagger UI 與 springdoc 三者的關係
+# 讓指南自己長出來
 
-| 角色 | 工具 | 說明 |
-| --- | --- | --- |
-| 規範 | OpenAPI 3.0 | 描述 API 的標準格式（JSON / YAML） |
-| 視覺化介面 | Swagger UI | 讀取 OpenAPI 規範，顯示互動式文件，可在瀏覽器直接測試 API |
-| Spring Boot 整合 | springdoc-openapi | 掃描 `@RestController`，自動產生 OpenAPI 規範並嵌入 Swagger UI |
+<Pairs left="手寫的指南" right="自動產生的指南" sign="vs" rows="you,職員另外花時間寫=ok,直接看櫃台實際在辦什麼，自動整理|no,規定改了，指南可能忘了改=ok,櫃台一改，指南跟著變|doc,只能看=ok,可以直接在指南上試辦" />
 
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>實際流程：</b> 加入 springdoc-openapi 依賴 → 啟動 Spring Boot → 開啟瀏覽器 → Swagger UI 自動出現，不需要額外設定。
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 做法：請一位助手，<b>直接讀我們的 Controller</b>，自動整理出文件。程式就是文件的來源，兩邊不會對不起來。
 </div>
 
+</v-click>
+
 <!--
-三者的關係可以這樣理解：
+比較好的做法，是讓指南自己長出來。
 
-OpenAPI 3.0 是「標準格式」，就像 HTML 是網頁的標準格式一樣。
-Swagger UI 是「瀏覽器」，它讀取 OpenAPI 格式並顯示出漂亮的介面。
-springdoc-openapi 是「產生器」，它掃描我們的 Spring Boot Controller，自動幫我們寫出符合 OpenAPI 格式的規格文件。
+（下一步）手寫的指南，要職員另外花時間寫。自動產生的指南，是直接看櫃台實際在辦什麼，自動整理出來。
 
-三者合作的結果是：我們只要加一個依賴，API 文件就自動出現了。
+（下一步）手寫的，規定改了，指南可能忘了改。自動的，櫃台一改，指南跟著變。
+
+（下一步）手寫的只能看。自動的那一種，還可以直接在指南上試辦。
+
+（下一步）對應到程式的做法是：請一位助手，直接讀我們的 Controller，自動整理出文件。程式就是文件的來源，兩邊不會對不起來。
+-->
+
+---
+
+# 三個名字
+
+<Pairs left="教務處" right="程式" rows="form,全國統一的指南格式=code,OpenAPI：描述 API 的標準格式|shop,貼在牆上、可以直接試辦的指南=browser,Swagger UI：把文件顯示成網頁|staff,自動讀櫃台、寫出指南的助手=code,springdoc-openapi：Spring Boot 用的套件" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 你也會聽到有人說「Swagger 文件」。Swagger 是 OpenAPI 以前的名字，現在大多用來指 Swagger UI 這個網頁。
+</div>
+
+</v-click>
+
+<!--
+這裡會出現三個名字，我們一次分清楚。
+
+（下一步）第一個，OpenAPI。它是一種描述 API 的標準格式。就像全國統一的指南格式，每一間學校都照同樣的欄位寫。因為格式統一，所以各種工具都讀得懂。
+
+（下一步）第二個，Swagger UI。它是一個網頁，把 OpenAPI 格式的文件顯示得漂漂亮亮，而且可以直接在上面發請求。就像貼在牆上、可以直接試辦的指南。
+
+（下一步）第三個，springdoc-openapi。它是 Spring Boot 用的套件，就是那位自動讀櫃台、寫出指南的助手。它會讀我們的 Controller，產生 OpenAPI 格式的文件，並且把 Swagger UI 一起帶進來。
+
+（下一步）你也會聽到有人說「Swagger 文件」。Swagger 是 OpenAPI 以前的名字。現在大多用來指 Swagger UI 這個網頁。聽到的時候，知道是在講 API 文件就可以了。
+-->
+
+---
+
+# 想一想
+
+<Poll question="手寫 API 文件，最根本的問題是什麼？" options="Word 太難用|文件和程式分開維護，容易對不起來|前端的同事不喜歡看文件|文件一定要用英文寫" answer="2" />
+
+<!--
+來想一題。
+
+手寫 API 文件，最根本的問題是什麼？
+
+（等大家作答）
+
+（下一步）答案是：文件和程式分開維護，容易對不起來。
+
+所以解決的方向是，讓文件直接從程式產生。
 -->
 
 ---
@@ -166,63 +237,109 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-
-## 加入 springdoc-openapi
+# 加一行，文件就出現
 
 <!--
-理解了概念，直接來加依賴，看看效果。
+實際加進專案。
 -->
 
 ---
 
-# 加入 Gradle 依賴
+# 加入依賴
 
-在 `build.gradle` 的 `dependencies` 中加入：
+在 `build.gradle` 的 `dependencies` 裡加一行：
 
 ```groovy
 implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
 ```
 
-| 說明 | 詳情 |
-| --- | --- |
-| `springdoc-openapi-starter-webmvc-ui` | Spring Boot 3.x / 4.x 皆使用此 artifact 名稱 |
-| `3.0.3` | Spring Boot 4.x 需搭配 springdoc v3.x（v2.x 只支援 Boot 3.x） |
-| 零設定啟動 | 加完依賴重新啟動，文件即自動出現 |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>版本對應：</b> Spring Boot 2.x 用 <code>springdoc-openapi-ui</code>（v1.x）；Spring Boot 3.x 用 <code>springdoc-openapi-starter-webmvc-ui</code> v2.x；Spring Boot 4.x 必須用 v3.x，三者不能混用。
-</div>
+- 這個套件不是 Spring 官方的，所以要自己寫版本號
+- `3.x` 搭配 Spring Boot 4；如果你是 Spring Boot 3，請用 `2.x`（例如 `2.8.13`）
+- 加完之後：專案按右鍵 → **Gradle** → **Refresh Gradle Project**，再重新啟動
+
+</v-clicks>
 
 <!--
-只需要在 build.gradle 加上這一行依賴，重新啟動 Spring Boot，Swagger UI 就會自動出現。
+打開 build.gradle，在 dependencies 裡加這一行。
 
-特別注意版本：Spring Boot 4.x 對應 springdoc-openapi v3.x，如果用 v2.x 或 v1.x 會有相容性問題。
+（下一步）這個套件不是 Spring 官方的，所以要自己寫版本號。和第二十九章加 MyBatis 的時候一樣。
 
-記住這個規律：Boot 2 → springdoc v1，Boot 3 → v2，Boot 4 → v3；Boot 3 之後 artifact 名稱要加 -starter-webmvc-ui。
+（下一步）版本要和 Spring Boot 對起來。3 開頭的版本搭配 Spring Boot 4。如果你的專案是 Spring Boot 3，請用 2 開頭的版本。版本不對，啟動的時候會出錯。
+
+（下一步）加完之後，在專案上按右鍵，選 Gradle，再選 Refresh Gradle Project。然後重新啟動 Spring Boot。
+
+就這樣，不用寫任何程式，也不用加任何設定。
 -->
 
 ---
 
-# 啟動即可存取 — 預設 URL
+# 打開看看
 
-加入依賴後，啟動 Spring Boot，瀏覽器開啟：
+啟動之後，用瀏覽器打開：
 
-| 功能 | URL | 說明 |
-| --- | --- | --- |
-| Swagger UI | `http://localhost:8080/swagger-ui/index.html` | 互動式 API 文件頁面 |
-| OpenAPI JSON | `http://localhost:8080/v3/api-docs` | 機器可讀的 JSON 規格 |
-| OpenAPI YAML | `http://localhost:8080/v3/api-docs.yaml` | YAML 格式的規格文件 |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>不需要額外設定：</b> springdoc-openapi 自動掃描所有 <code>@RestController</code>，並列出所有 API 端點。
+- `http://localhost:8080/swagger-ui/index.html` → **Swagger UI**，給人看的文件網頁
+- `http://localhost:8080/v3/api-docs` → OpenAPI 格式的文件（JSON），給工具讀的
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+✅ 上一章寫的五支學生 API 和三支社團 API，全部已經列在上面了。springdoc 會自動找出所有的 <code>@RestController</code>。
 </div>
 
+</v-click>
+
 <!--
-加完依賴啟動之後，打開瀏覽器，輸入 http://localhost:8080/swagger-ui/index.html，就會看到 Swagger UI 的介面。
+啟動之後，用瀏覽器打開兩個網址。
 
-上面會列出你所有 Controller 的 API，點開任何一個就能看到它需要哪些參數、會回傳什麼。
+（下一步）第一個，localhost:8080/swagger-ui/index.html。這就是 Swagger UI，給人看的文件網頁。
 
-甚至可以直接在頁面上點「Try it out」，填入參數、點 Execute，就能直接發出請求、看到回應。不需要 Postman，瀏覽器裡就能測試所有 API。
+（下一步）第二個，localhost:8080/v3/api-docs。這是 OpenAPI 格式的文件本體，是一大段 JSON。它是給工具讀的，我們平常不會直接看它。Swagger UI 顯示的內容，就是從這裡來的。
+
+（下一步）打開 Swagger UI，你會看到上一章寫的五支學生 API，還有練習做的三支社團 API，全部已經列在上面了。我們什麼都沒寫。springdoc 會自動找出所有的 @RestController，把裡面的每一個方法整理出來。
+-->
+
+---
+
+# 在 Swagger UI 上直接試
+
+<v-clicks>
+
+1. 點開 `POST /students` 那一列
+2. 按右邊的 **Try it out**
+3. 在 Request body 填入 JSON
+4. 按 **Execute**
+5. 下面的 **Responses** 會顯示狀態碼和回傳的內容
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 效果和 Postman 一樣，但是不用自己輸入網址、選方法。參數的格子、JSON 的樣子，頁面上都準備好了。
+</div>
+
+</v-click>
+
+<!--
+Swagger UI 不只可以看，還可以直接試。
+
+（下一步）第一步，點開 POST /students 那一列。
+
+（下一步）第二步，按右邊的 Try it out。
+
+（下一步）第三步，在 Request body 的格子裡填入 JSON。它已經幫你放好一個範本，有 name、idNumber、score 三個欄位，改成你要的值就可以。
+
+（下一步）第四步，按 Execute，送出請求。
+
+（下一步）第五步，往下看 Responses，會顯示狀態碼和回傳的內容。
+
+（下一步）效果和 Postman 一樣。但是不用自己輸入網址、不用選方法。參數的格子、JSON 的樣子，頁面上都準備好了。前端的同事打開這一頁，就可以自己試每一支 API。
 -->
 
 ---
@@ -231,159 +348,187 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 3
-
-## OpenAPI 常用 Annotation
+# 把指南寫得更清楚
 
 <!--
-預設的 Swagger UI 已經有基本資訊，但說明文字很少。加上這幾個 Annotation，文件就更完整了。
+自動產生的文件已經可以用了。不過它只知道網址和欄位的名字，不知道每個東西是什麼意思。
 -->
 
 ---
 
-# OpenAPI 核心 Annotation 總覽
+# 五個補充說明用的 Annotation
 
-| Annotation | 套用位置 | 用途 |
-| --- | --- | --- |
-| `@Tag` | Controller 類別 | 為整個 Controller 加上分組標籤和說明 |
-| `@Operation` | 方法 | 描述單一 API 的功能摘要與詳細說明 |
-| `@ApiResponse` | 方法 | 描述可能的 HTTP 回應狀態碼與說明 |
-| `@Parameter` | 方法參數 | 描述路徑參數或查詢參數的用途與範例值 |
-| `@Schema` | DTO 欄位 | 描述 Request / Response 物件的欄位說明與範例 |
+<Pairs left="要說明的對象" right="Annotation" rows="clerk,整個 Controller：這個櫃台辦哪一類的事=code,@Tag|doc,一個方法：這支 API 做什麼=code,@Operation|ok,一個方法：可能回覆哪些狀態碼=code,@ApiResponse|what,一個參數：這個參數是什麼=code,@Parameter|form,DTO 的一個欄位：這一格填什麼=code,@Schema" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 它們<b>完全不影響程式的行為</b>，只會改變文件上顯示的文字。import 的時候，請選 <code>io.swagger.v3.oas.annotations</code> 開頭的。
+</div>
+
+</v-click>
 
 <!--
-這五個 Annotation 都來自 io.swagger.v3.oas.annotations 套件，springdoc-openapi 會讀取它們來產生更豐富的文件。
+springdoc 提供了一組 Annotation，讓我們補上說明。常用的有五個，差別在於說明的對象不同。
 
-不加 Annotation 也能用，只是文件說明比較少；加了之後，文件品質就接近正式專案的水準了。
+（下一步）@Tag，說明整個 Controller：這個櫃台辦哪一類的事。
 
-接下來一個一個看用法。
+（下一步）@Operation，說明一個方法：這支 API 做什麼。
+
+（下一步）@ApiResponse，也是寫在方法上，說明可能回覆哪些狀態碼。
+
+（下一步）@Parameter，說明一個參數是什麼。
+
+（下一步）@Schema，說明 DTO 的一個欄位：這一格要填什麼。
+
+（下一步）這五個 Annotation 完全不影響程式的行為，只會改變文件上顯示的文字。另外，import 的時候請注意，要選 io.swagger.v3.oas.annotations 開頭的。有些名字在別的套件裡也有，選錯會沒有效果。
+
+接下來一個一個加到上一章的程式上。
 -->
 
 ---
 
-# @Tag — 為 Controller 加上分組標籤
+# @Tag：幫 Controller 取名字
 
-| 屬性 | 說明 |
-| --- | --- |
-| `name` | 標籤名稱，Swagger UI 依此分組顯示 |
-| `description` | 對這個 Controller 群組的整體說明 |
-
-在 `StudentController` 類別上加 `@Tag`：
-
-```java
-@Tag(name = "Student", description = "學生管理 API")
+```java {1}
+@Tag(name = "學生管理", description = "新增、查詢、修改、刪除學生資料")
 @RestController
-@RequestMapping("/students")
-public class StudentController { ... }
+public class StudentController {
+    // …
+}
 ```
 
+<v-clicks>
+
+- `name`：分類的名稱。Swagger UI 會用它把 API 分組
+- `description`：這一組 API 的說明
+- 沒加的時候，顯示的是 `student-controller`
+
+</v-clicks>
+
 <!--
-@Tag 加在 Controller 類別上，把這個 Controller 的所有 API 歸到同一個「群組」。
+第一個，@Tag。加在 Controller 類別的上面。
 
-Swagger UI 介面上，左側會出現「Student」這個群組，點開後才能看到這個 Controller 的所有方法。
+（下一步）name 是分類的名稱。Swagger UI 會用它把 API 分組，同一個 Controller 的 API 會放在一起。
 
-如果有多個 Controller，每個加上不同的 @Tag，Swagger UI 就會分開顯示，很清楚。
+（下一步）description 是這一組 API 的說明。
+
+（下一步）沒有加 @Tag 的時候，分組的名稱是 springdoc 用類別名稱自動取的，叫做 student-controller。加了之後，就會顯示「學生管理」，後面跟著說明。
+
+加完重新啟動，重新整理 Swagger UI，就可以看到變化。
 -->
 
 ---
 
-# @Operation — 描述單一 API 方法
+# @Operation：說明一支 API
 
-| 屬性 | 說明 |
-| --- | --- |
-| `summary` | 一句話說明，顯示在 Swagger UI 的操作標題列表 |
-| `description` | 詳細說明文字，展開後才看到 |
-
-```java
-@Operation(summary = "查詢所有學生", description = "回傳資料庫中所有學生資料")
-@GetMapping
+```java {1}
+@Operation(summary = "查詢所有學生", description = "回傳所有學生的成績單，不含身分證字號")
+@GetMapping("/students")
 public List<StudentResponse> getAllStudents() {
     return studentService.getAllStudents();
 }
 ```
 
+<v-clicks>
+
+- `summary`：一句話的標題，顯示在列表上
+- `description`：比較詳細的說明，點開之後才看得到
+
+</v-clicks>
+
 <!--
-@Operation 加在方法上，讓每支 API 都有自己的說明。
+第二個，@Operation。加在方法的上面。
 
-summary 是短說明，直接顯示在 Swagger UI 的列表上；description 是詳細說明，要點開才看到。
+（下一步）summary 是一句話的標題。它會顯示在列表上，網址的右邊。
 
-一般至少填 summary，讓人一眼就知道這支 API 的目的，溝通成本大幅降低。
+（下一步）description 是比較詳細的說明，要把那一列點開之後才看得到。
+
+summary 建議每一支 API 都寫，這樣整個列表掃過去，就知道每一支在做什麼。
 -->
 
 ---
 
-# @ApiResponse — 描述回應狀態碼
+# @ApiResponse 和 @Parameter
 
-| 屬性 | 說明 |
-| --- | --- |
-| `responseCode` | HTTP 狀態碼，字串格式（"200"、"404"、"500"） |
-| `description` | 說明此狀態碼代表的意義 |
-
-```java
+```java {2-3|6}
+@Operation(summary = "用編號查詢一位學生")
 @ApiResponse(responseCode = "200", description = "查詢成功")
-@ApiResponse(responseCode = "404", description = "找不到指定學生")
-@GetMapping("/{id}")
-public ResponseEntity<StudentResponse> getById(@PathVariable("id") Integer id) { ... }
-```
-
-<!--
-@ApiResponse 可以重複疊加，一次描述多個可能的 HTTP 回應狀態碼。
-
-在 Swagger UI 上，每支 API 都會顯示它可能的回應碼和對應說明，方便前端同事知道要處理哪些情況。
-
-例如 200 代表成功，404 代表找不到，500 代表伺服器錯誤，把這些都寫清楚，API 使用者就不需要靠猜。
--->
-
----
-
-# @Parameter — 描述路徑與查詢參數
-
-| 屬性 | 說明 |
-| --- | --- |
-| `description` | 參數的用途說明 |
-| `example` | 範例值，顯示在 Swagger UI 的輸入欄位 |
-
-```java
-@GetMapping("/{id}")
-public ResponseEntity<StudentResponse> getById(
-    @Parameter(description = "學生 ID", example = "1")
-    @PathVariable("id") Integer id
-) { ... }
-```
-
-<!--
-@Parameter 加在方法的參數前面，描述這個參數的用途和範例值。
-
-在 Swagger UI 的「Try it out」模式下，example 的值會預填到輸入框，讓使用者測試時有個參考起點。
-
-@PathVariable 和 @RequestParam 的參數都可以加 @Parameter 來說明。
--->
-
----
-
-# @Schema — 描述 DTO 欄位
-
-在 Request / Response DTO 的欄位上加入說明與範例：
-
-```java
-public class CreateStudentRequest {
-    @Schema(description = "學生姓名", example = "王小明")
-    private String name;
-
-    @Schema(description = "登入密碼，至少 6 個字元")
-    private String password;
-
-    @Schema(description = "考試分數，需在 0–100 之間", example = "85")
-    private Integer score;
-    // Getter 和 Setter（省略）
+@ApiResponse(responseCode = "404", description = "沒有這位學生")
+@GetMapping("/students/{id}")
+public ResponseEntity<StudentResponse> getStudentById(
+        @Parameter(description = "學生的編號", example = "1")
+        @PathVariable("id") Integer id) {
+    // …
 }
 ```
 
+- `@ApiResponse`：一個狀態碼寫一個。`responseCode` 是**文字**，要加雙引號
+- `@Parameter`：寫在參數的前面。`example` 是範例值，會自動填進 Swagger UI 的格子
+
 <!--
-@Schema 加在 DTO 的欄位上，讓 Swagger UI 顯示每個欄位的說明和範例值。
+第三和第四個，一起看。我們加在「用編號查詢」這支 API 上。
 
-這樣前端工程師在 Swagger UI 看 Request Body 的格式時，每個欄位旁邊都會有說明，不需要再開另一份文件對照。
+第二、三行是 @ApiResponse。這支 API 可能回覆兩種狀態碼：200 查詢成功，404 沒有這位學生。一個狀態碼寫一個 @ApiResponse。要注意 responseCode 是文字，所以數字的外面要加雙引號。
 
-注意 password 欄位刻意不填 example——密碼欄位不適合放範例值，避免使用者誤以為那是有效的密碼格式。這是小地方的安全意識。
+如果沒有寫，文件上只會出現 200。前端的同事不會知道這支 API 可能回覆 404。
+
+（下一步）第六行是 @Parameter。它寫在參數的前面，和 @PathVariable 放在一起。description 是這個參數的說明。example 是範例值，會自動填進 Swagger UI 的輸入格子裡，試的時候很方便。
+-->
+
+---
+
+# @Schema：說明 DTO 的欄位
+
+```java {4,7,10}
+@Getter
+@Setter
+public class CreateStudentRequest {
+    @Schema(description = "學生姓名", example = "Judy")
+    private String name;
+
+    @Schema(description = "身分證字號：1 個英文字母加 9 個數字", example = "A223456789")
+    private String idNumber;
+
+    @Schema(description = "成績，0 到 100 之間", example = "85")
+    private Integer score;
+}
+```
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+✅ 加了之後，Swagger UI 裡 Request body 的範本會變成 <code>{"name": "Judy", "idNumber": "A223456789", "score": 85}</code>，可以直接送出。
+</div>
+
+</v-click>
+
+<!--
+第五個，@Schema。它不是加在 Controller 上，而是加在 DTO 的欄位上。
+
+每個欄位上面加一行。description 說明這一格是什麼，example 給一個範例值。
+
+（下一步）加了之後有兩個效果。第一，文件最下面的 Schemas 區塊，會顯示每個欄位的說明。第二，Swagger UI 裡 Request body 的範本，會從原本沒有意義的 "string" 和 0，變成我們給的範例值，可以直接送出。
+
+StudentResponse 的欄位也可以用同樣的方式加上說明。
+-->
+
+---
+
+# 想一想
+
+<Poll question="想讓 Swagger UI 的列表上，每支 API 旁邊顯示一句標題，要用哪一個？" options="@Tag|@Operation 的 summary|@Schema|@Parameter" answer="2" />
+
+<!--
+確認一下。
+
+想讓 Swagger UI 的列表上，每支 API 旁邊顯示一句標題，要用哪一個？
+
+（等大家作答）
+
+（下一步）答案是 @Operation 的 summary。
+
+@Tag 是說明整個 Controller。@Schema 是說明 DTO 的欄位。@Parameter 是說明參數。
 -->
 
 ---
@@ -392,182 +537,219 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 4
-
-## 自訂 API 資訊
+# 文件的標題，以及上線前的提醒
 
 <!--
-預設的 Swagger UI 標題是「OpenAPI definition」，版本也是空的。可以用 OpenApiConfig 自訂。
+最後兩件事。
 -->
 
 ---
 
-# OpenApiConfig Bean — 自訂 API 標題與版本
+# 自訂文件的標題
 
-```java
+新增一個 `config` 資料夾，建立 `OpenApiConfig`：
+
+```java {1-2|4-5|6-10|all}
 @Configuration
 public class OpenApiConfig {
+
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
             .info(new Info()
-                .title("學生管理系統 API")
+                .title("教務處學生管理 API")
                 .version("1.0.0")
-                .description("Spring Boot 練習用 API 文件"));
+                .description("Spring Boot 課程的練習專案"));
     }
 }
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>import 路徑：</b> <code>OpenAPI</code> → <code>io.swagger.v3.oas.models.OpenAPI</code>；<code>Info</code> → <code>io.swagger.v3.oas.models.info.Info</code>（注意是 <code>models</code> 套件，不是 <code>annotations</code>）
-</div>
-
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-📁 <b>放置位置：</b> <code>OpenApiConfig</code> 放在 <code>config/</code> 套件下——<code>src/main/java/com/example/demo/config/OpenApiConfig.java</code>，與其他 <code>@Configuration</code> 類別放一起。
-</div>
+- `@Configuration`：這是一個放設定的類別
+- `@Bean`：這個方法回傳的物件，請 Spring 收下來當成 Bean。springdoc 會來找它
+- import 請選 `io.swagger.v3.oas.models` 開頭的 `OpenAPI` 和 `Info`
 
 <!--
-建立一個 @Configuration 類別，回傳一個 OpenAPI Bean，就可以自訂 Swagger UI 頁面頂部的 API 名稱、版本號和說明文字。
+Swagger UI 最上面的標題，預設是 OpenAPI definition。我們可以換成自己的。
 
-這個設定適合放在正式專案中，讓 API 文件有清楚的識別資訊。
+在 com.example.school 下面新增一個 config 資料夾，專門放設定用的類別。在裡面建立 OpenApiConfig。
 
-import 路徑有兩組——Annotation 用 io.swagger.v3.oas.annotations，Bean 的類別用 io.swagger.v3.oas.models，容易搞混，IDE 自動 import 時要注意選對。
+（下一步）類別上面加 @Configuration，意思是：這是一個放設定的類別。
 
-放置位置：所有 @Configuration 類別慣例集中在 config/ 套件下，和 entity、dto、service 分開，方便一眼找到全域設定類。
+（下一步）方法上面加 @Bean。這是一個新的寫法。以前我們是在類別上面加 @Component 這一類的標記，請 Spring 幫我們建立 Bean。但是 OpenAPI 這個類別是別人寫好的，我們沒辦法在它上面加標記。所以換一種方式：自己寫一個方法把物件建立好，加上 @Bean，請 Spring 把這個方法回傳的物件收下來當成 Bean。springdoc 啟動的時候會來找這個 Bean，照它的內容顯示。
+
+（下一步）方法裡建立一個 OpenAPI 物件，設定標題、版本、說明。這種一個點接一個點的寫法，是連續呼叫設定的方法，一次設定好幾樣。
+
+（下一步）import 的時候要注意，OpenAPI 和 Info 這兩個類別，請選 io.swagger.v3.oas.models 開頭的。不是剛才 annotations 那一個。
+
+重新啟動之後，Swagger UI 最上面就會顯示我們的標題和說明。
 -->
 
 ---
 
-# application.properties — 生產環境設定
+# 上線之前：把指南收起來
 
-| 設定 | 說明 |
-| --- | --- |
-| `springdoc.swagger-ui.enabled` | 是否開啟 Swagger UI 頁面（預設 `true`） |
-| `springdoc.api-docs.enabled` | 是否開啟 `/v3/api-docs` 端點（預設 `true`） |
+<v-clicks>
+
+- 貼在櫃台的指南，是給**自己人**看的
+- 如果整份貼到校門口，路過的人都知道教務處有哪些業務、每一格怎麼填
+- 想動歪腦筋的人，等於拿到一張地圖
+
+</v-clicks>
+
+<v-click>
 
 ```properties
-# 生產環境建議關閉，避免暴露 API 結構
 springdoc.swagger-ui.enabled=false
 springdoc.api-docs.enabled=false
 ```
 
-<div class="mt-4 p-3 bg-red-50 border-l-4 border-red-400 text-gray-700 text-sm text-left">
-⚠️ <b>安全提醒：</b> Swagger UI 會公開所有 API 端點的詳細資訊。生產環境若不需要對外開放文件，建議設成 <code>false</code>。
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 正式上線的環境，如果文件不需要對外公開，建議在 <code>application.properties</code> 加這兩行把它關掉。<b>開發的時候不要加</b>。
 </div>
 
+</v-click>
+
 <!--
-開發環境開著 Swagger UI 很方便，但部署到生產環境時要注意——Swagger UI 會把所有 API 的路徑、參數、回應格式全部列出來，如果對外公開，等於把整個 API 結構暴露給任何人看。
+最後是一個提醒。
 
-實務上的做法是：開發環境 enabled=true，生產環境 enabled=false，或者搭配 Spring Profile 控制，讓不同環境有不同的設定。
+（下一步）貼在櫃台的指南，是給自己人看的。
 
-這不是必要的設定，但養成習慣，對安全性有幫助。
+（下一步）如果整份貼到校門口，路過的人都知道教務處有哪些業務、每一格怎麼填。
+
+（下一步）想動歪腦筋的人，等於拿到一張地圖。
+
+（下一步）Swagger UI 會把所有 API 的網址、參數、格式全部列出來。所以正式上線的環境，如果文件不需要對外公開，建議在 application.properties 加這兩行，把 Swagger UI 和 api-docs 都關掉。
+
+開發的時候不要加，不然自己也看不到了。現在只要知道有這個設定就可以。
 -->
 
 ---
-layout: default
+layout: section
+class: flex flex-col justify-center items-center text-center
 ---
 
-# 練習 1：幫 StudentController 加上 API 文件
-### 任務說明
-
-替 `StudentController` 加上文件說明：
-
-1. 在 `StudentController` 類別上加 `@Tag(name = "Student", description = "學生管理 API")`
-2. 在 `createStudent()` 方法上加 `@Operation(summary = "新增學生")`
-3. 在 `getStudentById()` 方法上加 `@ApiResponse(responseCode = "200", description = "查詢成功")`
-4. 啟動 Spring Boot，開啟 `http://localhost:8080/swagger-ui/index.html` 查看結果
+# Part 5
+# 動手練習
 
 <!--
-這個練習讓大家在熟悉的 StudentController 上加文件，可以馬上看到 Swagger UI 的變化。
-
-重點是要有「所見即所得」的感受——加上 Annotation 後重新整理 Swagger UI，說明文字就出現了。
+請大家自己做一次。
 -->
 
 ---
-layout: default
----
 
-# 練習 1：解題提示
-### 提示說明
+# 練習：幫社團 API 補上說明
 
-1. `@Tag` 加在 class 層級，`@Operation` 加在方法層級，位置不要放錯
-2. import 路徑：`io.swagger.v3.oas.annotations.tags.Tag`、`io.swagger.v3.oas.annotations.Operation`
-3. 啟動後如果找不到 Swagger UI，確認 URL 是 `http://localhost:8080/swagger-ui/index.html`（注意是 `index.html`，不是舊版的 `swagger-ui.html`）
-4. 頁面頂部顯示「OpenAPI definition」是正常的——可以建立 `OpenApiConfig` Bean 改掉
+替上一章練習的 `ClubController` 和 DTO 加上文件說明：
+
+1. `ClubController` 加 `@Tag`：名稱「社團管理」
+2. 三個方法各加 `@Operation`，寫上 `summary`
+3. `deleteClub()` 的參數加 `@Parameter`，說明是「社團的編號」，範例值 `1`
+4. `CreateClubRequest` 的三個欄位各加 `@Schema`，寫上說明和範例值
+5. 重新啟動，打開 Swagger UI，用 **Try it out** 新增一個社團
 
 <!--
-Annotation 的 import 是最容易出錯的地方——IDE 有時候會提示多個同名的 class，要確認選的是 io.swagger.v3.oas.annotations 開頭的。
+練習題。請替上一章練習做的 ClubController 和 DTO，加上文件說明。
 
-Swagger UI URL 在 springdoc 2.x / 3.x 都是 /swagger-ui/index.html，不是舊版的 /swagger-ui.html（舊版 URL 會自動 redirect，但記住正確路徑比較保險）。
+第一，ClubController 加 @Tag，名稱是「社團管理」。
+
+第二，三個方法各加 @Operation，寫上 summary。
+
+第三，deleteClub 的參數加 @Parameter，說明是「社團的編號」，範例值是 1。
+
+第四，CreateClubRequest 的三個欄位各加 @Schema，寫上說明和範例值。
+
+第五，重新啟動，打開 Swagger UI。這次不用 Postman，直接用 Try it out 新增一個社團。
+
+請先暫停，自己做做看。
 -->
 
 ---
-layout: default
----
 
-# 練習 2：替 DTO 加上 @Schema 說明
-### 任務說明
+# 練習：參考答案
 
-為 `CreateStudentRequest` 欄位加上 `@Schema` 說明：
+```java
+@Tag(name = "社團管理", description = "查詢、新增、刪除社團")
+@RestController
+public class ClubController {
+    @Operation(summary = "查詢所有社團")
+    @GetMapping("/clubs")
+    public List<ClubResponse> getAllClubs() { … }
 
-1. 在 `name` 欄位加上 `@Schema(description = "學生姓名", example = "王小明")`
-2. 在 `score` 欄位加上 `@Schema(description = "考試分數，需在 0–100 之間", example = "85")`
-3. 建立 `OpenApiConfig` Bean，自訂 API 標題為「學生管理系統 API」
-4. 在 Swagger UI 的 Request Body 區塊確認欄位說明出現
+    @Operation(summary = "新增社團")
+    @PostMapping("/clubs")
+    public ClubResponse createClub(@RequestBody CreateClubRequest req) { … }
+
+    @Operation(summary = "刪除社團")
+    @DeleteMapping("/clubs/{id}")
+    public void deleteClub(
+            @Parameter(description = "社團的編號", example = "1")
+            @PathVariable("id") Integer id) { … }
+}
+```
+
+```java
+@Schema(description = "社團名稱", example = "攝影社")
+private String name;
+```
 
 <!--
-這個練習讓大家看到 @Schema 的效果——在 Swagger UI 點開 POST /students 的 Request Body，每個欄位旁邊都會有說明文字和範例值。
+參考答案。
 
-OpenApiConfig 讓大家練習建立一個 @Configuration Bean，並且看到 Swagger UI 頂部的標題改變了。
+上面是 ClubController。類別上面加 @Tag。三個方法各加一個 @Operation。deleteClub 的參數前面加 @Parameter。方法的內容都沒有變，投影片上省略了。
+
+下面是 CreateClubRequest 其中一個欄位的寫法。另外兩個欄位 fee 和 advisorPhone 也是同樣的方式。
+
+做完之後打開 Swagger UI，應該會看到「社團管理」這一組，每支 API 旁邊都有標題。點開新增社團，按 Try it out，範本裡已經是你給的範例值。
 -->
 
 ---
-layout: default
----
 
-# 練習 2：解題提示
-### 提示說明
+# 複習：教務處對照表
 
-1. `@Schema` 的 import：`io.swagger.v3.oas.annotations.media.Schema`
-2. `OpenApiConfig` 的 import：`io.swagger.v3.oas.models.OpenAPI` 和 `io.swagger.v3.oas.models.info.Info`（注意是 `models`，不是 `annotations`）
-3. `OpenApiConfig` 建立後，重新啟動 Spring Boot，Swagger UI 頂部標題就會更新
-4. `password` 欄位可以加 `@Schema(description = "登入密碼，至少 6 個字元")`，但刻意不填 example
+<Pairs left="教務處" right="程式" rows="doc,辦事指南=code,API 文件|form,全國統一的指南格式=code,OpenAPI|shop,貼在牆上、可以試辦的指南=browser,Swagger UI（/swagger-ui/index.html）|staff,自動寫指南的助手=code,springdoc-openapi|you,在指南上補幾句說明=code,@Tag、@Operation、@ApiResponse、@Parameter、@Schema|key,指南不要貼到校門口=code,上線時關閉 springdoc" />
 
 <!--
-兩組 import 的套件名不同，第一次使用時容易搞混：
+我們用一張圖複習今天的內容。
 
-Annotation（加在程式碼上）→ io.swagger.v3.oas.annotations.*
-Model Bean（OpenApiConfig 裡的類別）→ io.swagger.v3.oas.models.*
+（下一步）辦事指南，是 API 文件。
 
-記住這個規律，之後就不容易選錯。
+（下一步）全國統一的指南格式，是 OpenAPI。
 
-password 的 example 刻意不填，提醒大家：密碼欄位不適合放範例值，安全意識從細節養成。
+（下一步）貼在牆上、可以試辦的指南，是 Swagger UI。
+
+（下一步）自動寫指南的助手，是 springdoc-openapi。
+
+（下一步）在指南上補幾句說明，是那五個 Annotation。
+
+（下一步）指南不要貼到校門口，是上線時把 springdoc 關閉。
 -->
 
 ---
 
 # 章節總結
 
-| 重點 | 說明 |
-| --- | --- |
-| OpenAPI 是規範 | 描述 RESTful API 的標準格式，機器可讀 |
-| springdoc-openapi 3.x | Spring Boot 4.x 整合工具，加一行依賴即啟用（Boot 3.x 用 v2.x） |
-| Swagger UI URL | `http://localhost:8080/swagger-ui/index.html` |
-| `@Tag` / `@Operation` | 為 Controller 和方法加上說明 |
-| `@ApiResponse` / `@Parameter` / `@Schema` | 描述回應、參數、DTO 欄位 |
-| 生產環境 | 建議將 `springdoc.swagger-ui.enabled` 設為 `false` |
+<v-clicks>
+
+- **API 文件**：告訴使用的人，有哪些 API、怎麼用
+- **OpenAPI** 是格式；**Swagger UI** 是網頁；**springdoc-openapi** 是自動產生文件的套件
+- **加一行依賴**，打開 `/swagger-ui/index.html` 就有文件，還能直接試
+- **補充說明**：`@Tag`（Controller）、`@Operation`、`@ApiResponse`（方法）、`@Parameter`（參數）、`@Schema`（DTO 欄位）
+- **上線前**：不需要公開的話，用設定把文件關掉
+
+</v-clicks>
+
+<v-click>
+
+下一章：同學亂填申請表怎麼辦？讓櫃台在收件的時候就檢查。
+
+</v-click>
 
 <!--
-今天的重點：
+最後整理今天的重點。
 
-第一，OpenAPI 是標準規範，Swagger UI 是視覺化工具，springdoc-openapi 是 Spring Boot 的整合層。
+（依序按下一步）API 文件告訴使用的人，有哪些 API、怎麼用。OpenAPI 是格式，Swagger UI 是網頁，springdoc-openapi 是自動產生文件的套件。加一行依賴，打開 Swagger UI 的網址就有文件，還能直接試。補充說明用五個 Annotation。上線前，不需要公開的話，用設定把文件關掉。
 
-第二，只需要加一個 Gradle 依賴，就能在 /swagger-ui/index.html 看到自動產生的 API 文件。
-
-第三，@Tag、@Operation、@ApiResponse、@Parameter、@Schema 五個 Annotation，讓文件說明更完整。
-
-第四，生產環境記得考慮是否要關閉 Swagger UI，避免暴露 API 結構。
-
-從今天起，API 文件就不需要手動維護了——程式碼就是文件。
+（最後一步）還記得上一章，成績填 200 會得到 500 嗎？下一章就來解決它：讓櫃台在收件的時候就檢查申請表。
 -->
 
 ---
@@ -576,6 +758,10 @@ layout: end
 
 # Q & A
 
+有任何問題嗎？
+
 <!--
-今天的內容就到這裡。大家有任何問題嗎？
+今天的內容到這邊。
+
+有任何問題歡迎提出來。
 -->
