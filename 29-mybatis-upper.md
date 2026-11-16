@@ -46,83 +46,35 @@ style: |
 </div>
 
 <!--
-大家好，我們已經學了 Spring JDBC 和 Spring Data JPA 兩種資料庫操作方式。
+大家好，歡迎來到第二十九章。
 
-今天要介紹第三種：MyBatis。
+我們已經認識兩位幫手。Spring JDBC 什麼都自己來，Spring Data JPA 幾乎什麼都交給助理。
 
-MyBatis 的定位介於兩者之間——像 Spring JDBC 一樣需要寫 SQL，但 SQL 直接寫在 Annotation 裡，用 @Mapper 介面來定義操作，比 Spring JDBC 更簡潔，同時保有對 SQL 的完整控制。
--->
-
----
-layout: default
----
-
-# Outline
-
-- **什麼是 MyBatis？** — 定位、與 Spring JDBC 及 JPA 的差異
-- **設定 MyBatis** — 依賴加入、application.properties 設定
-- **`@Mapper` 介面定義操作** — 介面即 Dao，不需要實作類別
-- **`@Insert`、`@Update`、`@Delete` 執行 CUD** — SQL 寫在 Annotation 中
-- **串接三層式架構** — Controller + Service + Dao 完整程式碼與 Postman 測試
-- **章節總結** — MyBatis CUD 整理，下一章預告
-
-<!--
-今天先介紹 MyBatis 的特色，然後設定環境，最後學 CUD 三個操作的寫法。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# 前言
-
-## 什麼是 MyBatis？
-
-<!--
-先來認識 MyBatis 在三種資料庫框架中的定位。
+今天認識第三位：MyBatis。他站在中間：申請單我們自己寫，但是送件和整理資料都交給他。
 -->
 
 ---
 
-# 什麼是 MyBatis？
+# 今天要搞懂的三件事
 
-| 項目 | 說明 |
-| --- | --- |
-| 定義 | 一個半自動化的 ORM 框架，SQL 由開發者自行撰寫 |
-| 特色 | SQL 寫在 Annotation（或 XML）中，映射到 Java 方法 |
-| 核心概念 | `@Mapper` 介面 + SQL Annotation（`@Select`、`@Insert` 等） |
-| 參數語法 | 用 `#{paramName}` 當作 SQL 的動態佔位符 |
+<v-clicks>
 
-<!--
-MyBatis 的中文直譯是「My 持久層框架」。它的設計哲學是：SQL 由開發者掌控，但透過 Annotation 的方式把 SQL 和 Java 方法綁在一起，讓程式碼更整潔。
+- **MyBatis 是誰？** 申請單自己寫，雜事交給他
+- **申請單寫在哪？** 貼在介面的方法上：`@Mapper`、`@Insert`、`@Update`、`@Delete`
+- **空格怎麼填？** `#{名字}`，直接從資料卡上抄
 
-和 Spring JDBC 相比：MyBatis 不需要手動建 Map，參數直接從方法參數讀取。
-和 Spring Data JPA 相比：MyBatis 需要自己寫 SQL，但 SQL 控制更精確。
-
-在國內很多公司的後端專案（尤其是電商、金融系統）中，MyBatis 是最常見的資料庫框架之一。
--->
-
----
-
-# 三種框架比較
-
-| 比較項目 | Spring JDBC | MyBatis | Spring Data JPA |
-| --- | --- | --- | --- |
-| SQL 掌控 | 完全自己寫 | 自己寫（Annotation）| 框架自動產生 |
-| 參數傳遞 | Map | 方法參數（`#{}`） | 方法命名規則 |
-| 程式碼量 | 多 | 中 | 少 |
-| 複雜查詢 | 最靈活 | 很靈活 | 較受限 |
-| 業界使用 | 中 | 高（尤其 Java 後端） | 高 |
+</v-clicks>
 
 <!--
-把三種框架放在一起比較，更容易理解 MyBatis 的定位。
+今天要搞懂三件事。
 
-Spring JDBC：程式碼最多，但完全掌控 SQL。
-Spring Data JPA：程式碼最少，但 SQL 由框架決定。
-MyBatis：介於中間，SQL 自己寫，但程式碼比 Spring JDBC 簡潔。
+（下一步）第一，MyBatis 是誰。一句話：申請單自己寫，雜事交給他。
 
-在業界，MyBatis 在 Java 後端是非常主流的選擇，尤其適合查詢邏輯較複雜的系統。
+（下一步）第二，申請單寫在哪。貼在一個介面的方法上，會用到 @Mapper、@Insert、@Update、@Delete。
+
+（下一步）第三，空格怎麼填。寫法是井字號加大括號，裡面放名字。它會直接從資料卡上抄。
+
+今天先學新增、修改、刪除，查詢留到下一章。
 -->
 
 ---
@@ -131,16 +83,71 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-
-## 設定 MyBatis
+# 第三位幫手：MyBatis
 
 <!--
-來設定 MyBatis 的環境。
+先看這位幫手站在什麼位置。
 -->
 
 ---
 
-# Step 1：在 build.gradle 加入依賴
+# 三位幫手，分工不一樣
+
+<Pairs left="誰來做" right="三位幫手" rows="form,申請單（SQL）誰寫？=code,JDBC：自己 ／ MyBatis：自己 ／ JPA：助理|doc,空格的值誰填？=code,JDBC：自己準備 Map ／ MyBatis：他填 ／ JPA：助理|card,查回來的表格誰抄成資料卡？=code,JDBC：自己寫 RowMapper ／ MyBatis：他抄 ／ JPA：助理" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <b>MyBatis</b>：SQL 自己掌握，填空格和抄資料卡這些雜事交給他。業界用得非常多。
+</div>
+
+</v-click>
+
+<!--
+三位幫手的分工不一樣，我們用三件事來比較。
+
+（下一步）第一件，申請單，也就是 SQL，誰寫？Spring JDBC 自己寫。MyBatis 也是自己寫。JPA 是助理寫。
+
+（下一步）第二件，空格的值誰填？Spring JDBC 要自己準備 Map。MyBatis 他會幫忙填。JPA 是助理處理。
+
+（下一步）第三件，查回來的表格，誰抄成資料卡？Spring JDBC 要自己寫 RowMapper。MyBatis 他會抄。JPA 也是助理處理。
+
+（下一步）所以 MyBatis 的定位是：SQL 自己掌握，填空格和抄資料卡這些雜事交給他。因為 SQL 看得到、改得動，業界用得非常多。
+-->
+
+---
+
+# 想一想
+
+<Poll question="哪一個描述最符合 MyBatis？" options="完全不用寫 SQL|SQL 自己寫，但不用自己準備 Map 和 RowMapper|SQL、Map、RowMapper 全部都要自己寫|只能查詢，不能新增資料" answer="2" />
+
+<!--
+確認一下。
+
+哪一個描述最符合 MyBatis？
+
+（等大家作答）
+
+（下一步）答案是第二個：SQL 自己寫，但是不用自己準備 Map 和 RowMapper。
+
+第一個是 JPA，第三個是 Spring JDBC。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 2
+# 請 MyBatis 來上班：設定
+
+<!--
+先把他請進來。
+-->
+
+---
+
+# Step 1：在 build.gradle 加入 MyBatis
 
 ```groovy
 dependencies {
@@ -153,29 +160,29 @@ compileJava {
 }
 ```
 
-| 設定 | 說明 |
-| --- | --- |
-| `mybatis-spring-boot-starter:4.0.1` | MyBatis Starter（4.0.x 對應 Spring Boot 4.x；3.0.x 只支援 Boot 3.2–3.5） |
-| `mysql-connector-j` | MySQL 驅動程式，版本由 Spring Boot BOM 管理（與之前相同） |
-| `compileJava -parameters` | Spring Boot 3.2+ / 4.x 必要，讓 `#{}` 能解析方法參數名稱 |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>加完記得：</b> 右鍵 → <b>Gradle → Refresh Gradle Project</b>，並執行 <code>./gradlew clean bootRun</code> 讓編譯旗標生效。
-</div>
+- `mybatis-spring-boot-starter`：MyBatis 本人。`4.0.x` 搭配 Spring Boot 4；如果你是 Spring Boot 3，請用 `3.0.x`
+- `mysql-connector-j`：翻譯，之前加過了
+- `compileJava` 那一段：讓 MyBatis 看得到方法參數的名字，等一下填空格會用到
+
+</v-clicks>
 
 <!--
-MyBatis 的 Gradle 依賴是 mybatis-spring-boot-starter，注意這個不是 Spring 官方提供的，而是 MyBatis 社群維護的 Starter。
+第一步，在 build.gradle 加入 MyBatis。
 
-版本要選擇 4.x，對應 Spring Boot 4.x。如果用 3.x 版的 Starter，搭配 Spring Boot 4.x 會有相容性問題。
+（下一步）mybatis-spring-boot-starter 就是 MyBatis 本人。注意它要寫版本號。4.0 開頭的版本搭配 Spring Boot 4；如果你的專案是 Spring Boot 3，請用 3.0 開頭的版本。
 
-MySQL 驅動程式和 Spring JDBC 時用的完全一樣。
+（下一步）mysql-connector-j 是翻譯，之前加過了。
+
+（下一步）下面多了一段 compileJava。它的作用是讓 MyBatis 看得到方法參數的名字，等一下填空格會用到。照著加就好。
+
+改完一樣要 Refresh Gradle Project。
 -->
 
 ---
 
-# Step 2：application.properties 設定
-
-MyBatis 使用和 Spring JDBC 相同的 datasource 設定，不需要額外修改：
+# Step 2：application.properties 不用改
 
 ```properties
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
@@ -184,77 +191,20 @@ spring.datasource.username=root
 spring.datasource.password=（你的 MySQL 密碼）
 ```
 
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>好消息：</b> 如果已經有 Spring JDBC 或 JPA 的 datasource 設定，完全不需要修改，MyBatis 會直接使用。
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+✅ 檔案室還是同一間，門禁也是同一張。MyBatis 直接用原本的連線設定。
 </div>
 
-<!--
-MyBatis 的 datasource 設定和 Spring JDBC 完全一樣。
-
-如果你的專案已經設定好 datasource，直接加入 MyBatis 依賴就能使用，不需要改任何設定。
-
-mybatis-spring-boot-starter 會自動讀取 spring.datasource.* 的設定，完成 MyBatis 的初始化。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# Part 2
-
-## 用 @Mapper 介面定義操作
+</v-click>
 
 <!--
-設定好環境，來學 MyBatis 的核心——@Mapper 介面。
--->
+第二步，application.properties。好消息是完全不用改。
 
----
+（下一步）檔案室還是同一間，門禁也是同一張。MyBatis 會直接用第二十三章寫好的那四行連線設定。
 
-# 什麼是 @Mapper？
-
-| 項目 | 說明 |
-| --- | --- |
-| `@Mapper` | 標記這個介面是 MyBatis 的 Mapper，Spring Boot 自動掃描並注入 |
-| 介面方法 | 每個方法對應一個 SQL 操作，SQL 寫在方法上的 Annotation |
-| 使用方式 | `@Autowired StudentMapper studentMapper`，和注入 Bean 一樣 |
-| `#{paramName}` | SQL 的動態佔位符，對應方法參數的名稱 |
-
-<!--
-@Mapper 是 MyBatis 最核心的 Annotation。
-
-它標記一個 Java 介面，告訴 MyBatis：「這個介面裡的每個方法，都對應一個 SQL 操作。」
-
-方法的參數就是 SQL 的動態值，用 #{參數名稱} 的格式嵌入 SQL 字串裡。
-
-Spring Boot 會自動掃描所有加了 @Mapper 的介面，建立實作並注入 IoC 容器，我們就能用 @Autowired 注入使用。
--->
-
----
-
-# 建立 StudentMapper 介面
-
-```java
-import org.apache.ibatis.annotations.Mapper;
-
-@Mapper
-public interface StudentMapper {
-    // 方法在這裡定義，SQL 寫在 Annotation 上
-}
-```
-
-| 說明 | 詳情 |
-| --- | --- |
-| `@Mapper` | MyBatis 的標記 Annotation，不是 Spring 的 |
-| 只需要介面 | 不需要寫實作類別，MyBatis 自動產生 |
-| import | `org.apache.ibatis.annotations.Mapper` |
-
-<!--
-建立 StudentMapper 介面很簡單，只需要加上 @Mapper 就好。
-
-注意這個 @Mapper 是 MyBatis 的 Annotation，import 的是 org.apache.ibatis.annotations.Mapper，不是 Spring 的任何東西。
-
-介面裡不需要寫任何實作，MyBatis 在啟動時會自動根據介面和 Annotation 建立對應的實作，我們只需要定義「要執行什麼 SQL」就好。
+上一章 JPA 的那兩行設定可以留著，不會互相影響。
 -->
 
 ---
@@ -263,107 +213,120 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 3
-
-## 用 @Insert、@Update、@Delete 執行 CUD
+# 把申請單貼在方法上
 
 <!--
-來學 CUD 三個操作的寫法。
+接下來看 MyBatis 的寫法。
 -->
 
 ---
 
-# @Insert — 新增資料
-
-在 `StudentMapper` 中定義新增方法：
+# 建立 StudentMapper
 
 ```java
+@Mapper
+public interface StudentMapper {
+}
+```
+
+<v-clicks>
+
+- 它是一個**介面**，和 JPA 的 `StudentRepository` 一樣不用寫實作
+- `@Mapper`：告訴 MyBatis「這個介面交給你處理」，它會自動變成 Bean
+- 接下來每加一個方法，就在方法上面貼一張申請單（SQL）
+
+</v-clicks>
+
+<!--
+建立一個新的介面，叫 StudentMapper。
+
+（下一步）它是一個介面，和 JPA 的 StudentRepository 一樣，不用寫實作的類別。
+
+（下一步）上面加 @Mapper，告訴 MyBatis：這個介面交給你處理。MyBatis 會自動產生做好的物件，並且變成 Bean，所以可以直接注入。import 的時候請選 org.apache.ibatis 開頭的。
+
+（下一步）接下來每加一個方法，就在方法上面貼一張申請單，也就是 SQL。
+-->
+
+---
+
+# 新增、修改、刪除
+
+<CodeSteps>
+
+```java {1-2|4-5|7-8|all}
 @Insert("INSERT INTO student(id, name) VALUES (#{id}, #{name})")
 int insert(Student student);
-```
 
-| 說明 | 詳情 |
-| --- | --- |
-| `@Insert("SQL")` | SQL 直接寫在 Annotation 的字串裡 |
-| `#{id}`、`#{name}` | 對應 `student` 物件的 `getId()` 和 `getName()` |
-| 回傳 `int` | 受影響的行數（成功新增 1 行回傳 1） |
-
-<!--
-@Insert 非常直觀：SQL 字串直接寫在 Annotation 裡，#{} 裡填寫參數名稱。
-
-當方法參數是一個物件（如 Student），#{id} 會自動對應到 student.getId()，#{name} 對應到 student.getName()。
-
-這比 Spring JDBC 的 Map 簡潔多了——不需要建 HashMap 再 put 每個值，MyBatis 自動從物件讀取。
--->
-
----
-
-# @Update — 更新資料
-
-在 `StudentMapper` 中定義更新方法：
-
-```java
 @Update("UPDATE student SET name = #{name} WHERE id = #{id}")
 int update(Student student);
-```
 
-| 說明 | 詳情 |
-| --- | --- |
-| `@Update("SQL")` | UPDATE SQL 直接寫在 Annotation |
-| `WHERE id = #{id}` | 必須加 WHERE 條件，避免更新所有資料 |
-| `#{name}`、`#{id}` | 從 `student` 物件自動讀取對應欄位值 |
-
-<!--
-@Update 的寫法和 @Insert 完全一樣的模式。
-
-⚠️ 同樣要記住：WHERE 條件一定要加，否則 UPDATE 會修改整張表的所有資料。
-
-#{} 的值從方法的 Student 參數自動讀取，不需要手動 Map.put()。
--->
-
----
-
-# @Delete — 刪除資料
-
-在 `StudentMapper` 中定義刪除方法：
-
-```java
 @Delete("DELETE FROM student WHERE id = #{id}")
 int deleteById(Integer id);
 ```
 
-| 說明 | 詳情 |
-| --- | --- |
-| `@Delete("SQL")` | DELETE SQL 直接寫在 Annotation |
-| `#{id}` | 對應方法的 `Integer id` 參數（單一參數可直接使用） |
-| 方法參數 | 當參數是 primitive / 包裝類型，`#{}` 可用任意名稱 |
+- `@Insert`：括號裡就是 SQL；`#{id}`、`#{name}` 是空格
+- `@Update`：一樣的寫法，記得要有 `WHERE`
+- `@Delete`：參數只有一個編號，直接填進 `#{id}`
+- 三個方法都回傳 `int`：動到幾筆
+
+</CodeSteps>
 
 <!--
-@Delete 最簡單——通常只需要 id 這一個參數。
+在 StudentMapper 裡加三個方法。
 
-⚠️ WHERE 條件同樣不能忘，否則整張表的資料都會被刪除。
+（下一步）新增。方法上面貼 @Insert，括號裡就是 SQL。要填值的地方寫井字號加大括號，裡面是名字。這就是 MyBatis 的空格。
 
-和 @Insert/@Update 不同的是，這裡的方法參數是 Integer id，不是物件。
-當方法只有一個 primitive 類型的參數，#{} 裡可以寫任何名字，MyBatis 都能對應到。
+（下一步）修改。貼 @Update，寫法一樣。記得要有 WHERE。
+
+（下一步）刪除。貼 @Delete。這個方法的參數只有一個編號，就直接填進空格。
+
+（下一步）三個方法都回傳 int，代表動到幾筆。
+
+和第二十四章比一下：SQL 幾乎一樣，但是沒有 Map，也沒有呼叫 update() 的那幾行。
 -->
 
 ---
 
-# #{} 參數語法總結
+# 空格的值從哪裡來？
 
-| 情況 | 方法簽名 | SQL 寫法 |
-| --- | --- | --- |
-| 參數是物件 | `insert(Student student)` | `#{id}`、`#{name}` → 對應 getter |
-| 參數是單一值 | `deleteById(Integer id)` | `#{id}` 或 `#{value}` |
-| 多個基本類型參數 | `findBy(Integer id, String name)` | 需加 `@Param` 標記 |
+<Pairs left="方法的參數" right="#{ } 怎麼填" rows="card,一張資料卡：insert(Student student)=code,#{name} → 抄資料卡上的 name（呼叫 getName()）|what,單獨一個值：deleteById(Integer id)=code,#{id} → 就是那個值|doc,好幾個值：find(Integer id、String name)=code,每個參數前面加 @Param(&quot;名字&quot;) 標清楚" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 和 Spring JDBC 比：以前要自己 <code>map.put("studentName", student.getName())</code>，現在 MyBatis 直接從資料卡上抄。
+</div>
+
+</v-click>
 
 <!--
-#{} 是 MyBatis 的參數佔位符，對應方法的參數值。
+空格的值從哪裡來？看方法的參數是什麼。
 
-當傳入物件時，#{欄位名} 對應物件的 getter 方法。
-當傳入單一 primitive 或包裝類型，#{} 裡的名字可以自訂。
-當有多個 primitive 參數，需要在方法參數前加 @Param("名稱") 指定對應關係。
+（下一步）如果參數是一張資料卡，像 insert(Student student)，那麼 #{name} 就是抄資料卡上的 name。MyBatis 會自己呼叫 getName()。
 
-和 Spring JDBC 的 :paramName 概念相同，只是語法從 : 改成了 #{}。
+（下一步）如果參數是單獨一個值，像 deleteById(Integer id)，那麼 #{id} 就是那個值。
+
+（下一步）如果參數有好幾個值，就在每個參數前面加 @Param，把名字標清楚。這個下一章會用到。
+
+（下一步）和 Spring JDBC 比一下。以前要自己寫 map.put，把值一個一個放進對照表。現在 MyBatis 直接從資料卡上抄，對照表不用準備了。
+-->
+
+---
+
+# 想一想
+
+<Poll question='方法是 int update(Student student)，SQL 裡寫 #{name}。MyBatis 會填入什麼？' options="字串 name|student.getName() 的值|方法的名稱 update|資料表裡原本的 name" answer="2" />
+
+<!--
+確認一下。
+
+方法是 update(Student student)，SQL 裡寫 #{name}。MyBatis 會填入什麼？
+
+（等大家作答）
+
+（下一步）答案是 student.getName() 的值。
+
+參數是一張資料卡，所以空格的名字會對應到資料卡上同名的變數。
 -->
 
 ---
@@ -372,73 +335,61 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 4
-
-## 串接三層式架構
+# 把三層接起來
 
 <!--
-CUD 方法都會用了，比照 Spring JDBC 和 JPA 章節，把 Service 和 Controller 補上，讓前端能透過 API 操作資料庫。
+申請單寫好了，接到三層裡。
 -->
 
 ---
 
-# 回顧：三層式架構的呼叫鏈
+# 開始之前：整理一下舊程式
 
-架構和 ch24（Spring JDBC）、ch26（JPA）完全相同，只有 Dao 的內部實作換了：
+承辦人員要從 JPA 換成 MyBatis：
 
-| 分層 | 類別 | 這一章的寫法 |
-| --- | --- | --- |
-| Controller | `StudentController` | 和 ch24 一樣：POST / PUT / DELETE 三個 API |
-| Service | `StudentService` | 和 ch24 一樣：轉呼叫 Dao |
-| Dao | `StudentDao` | 不寫 SQL 組裝邏輯，改呼叫 `StudentMapper` 的方法 |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>分層的好處：</b> 從 Spring JDBC / JPA 換成 MyBatis，只需要改 Dao 這一層——Controller 和 Service 一行都不用動。
+- `StudentDao`：把呼叫 `StudentRepository` 的內容清掉，等一下重寫
+- `StudentService`、`StudentController` 裡**查詢**的方法：先刪掉，下一章用 MyBatis 重新寫
+- `Student` 類別和 `StudentRepository`：留著沒關係，JPA 和 MyBatis 可以同時存在
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+✅ 新增、修改、刪除的 Service 和 Controller，一樣<b>不用動</b>。
 </div>
 
+</v-click>
+
 <!--
-把 Service 和 Controller 補上，前端才能透過 API 操作資料庫。
+開始之前，和第二十六章一樣，先整理一下舊程式。這次承辦人員要從 JPA 換成 MyBatis。
 
-重點：三層式架構和前面章節完全相同，唯一的差別在 Dao 的內部——
-現在 Dao 改成注入 StudentMapper，呼叫 insert()、update()、deleteById() 這些方法，SQL 已經寫在 Mapper 的 Annotation 裡。
+（下一步）StudentDao：把呼叫 StudentRepository 的內容清掉，等一下重寫。
 
-這正是分層架構的價值：底層技術從 JDBC/JPA 換成 MyBatis，上面的 Controller 和 Service 完全不受影響。
+（下一步）StudentService 和 StudentController 裡查詢的方法，先刪掉。下一章用 MyBatis 重新寫。
+
+（下一步）Student 類別和 StudentRepository 留著沒關係。JPA 和 MyBatis 可以同時存在同一個專案裡。
+
+（下一步）新增、修改、刪除的 Service 和 Controller，一樣不用動。
 -->
 
 ---
 
-# StudentDao（1/2）— 注入 StudentMapper
+# 新的 StudentDao
 
-和前面章節一樣：`@Repository` + 建構子注入，只是注入的對象換成 `StudentMapper`：
+<CodeSteps>
 
-```java
-import org.springframework.stereotype.Repository;
-
+```java {3-7|9-11|13-15|17-19|all}
 @Repository
 public class StudentDao {
-
     private final StudentMapper studentMapper;
 
     public StudentDao(StudentMapper studentMapper) {
         this.studentMapper = studentMapper;
     }
 
-    // 三個 CUD 方法，下一頁補上
-}
-```
-
-<!--
-Dao 的寫法和前面章節一樣：@Repository + 建構子注入，只是注入的對象換成 StudentMapper。
-
-先看骨架：建構子把 StudentMapper 存進 final 欄位，接下來三個方法都會用到它。
--->
-
----
-
-# StudentDao（2/2）— 三個 CUD 方法
-
-三個方法各自轉呼叫 `StudentMapper` 對應的方法：
-
-```java
     public void createStudent(Student student) {
         studentMapper.insert(student);
     }
@@ -450,176 +401,135 @@ Dao 的寫法和前面章節一樣：@Repository + 建構子注入，只是注�
     public void deleteStudent(Integer studentId) {
         studentMapper.deleteById(studentId);
     }
-```
-
-<!--
-三個方法都只是單純轉呼叫，SQL 已經寫在 StudentMapper 介面的 @Insert / @Update / @Delete 裡，Dao 不需要知道細節。
--->
-
----
-
-# StudentService（1/2）— 注入 Dao、新增與刪除
-
-和 ch24／ch26 完全相同：`@Service` + 建構子注入，`createStudent()` 和 `deleteStudent()` 單純轉呼叫：
-
-```java
-@Service
-public class StudentService {
-
-    private final StudentDao studentDao;
-
-    public StudentService(StudentDao studentDao) {
-        this.studentDao = studentDao;
-    }
-
-    public void createStudent(Student student) {
-        studentDao.createStudent(student);
-    }
-
-    public void deleteStudent(Integer studentId) {
-        studentDao.deleteStudent(studentId);
-    }
 }
 ```
 
+- 注入的工具換成 `StudentMapper`
+- 新增：呼叫 `insert()`
+- 修改：呼叫 `update()`
+- 刪除：呼叫 `deleteById()`
+- SQL 都在 `StudentMapper` 裡，Dao 這邊很乾淨
+
+</CodeSteps>
+
 <!--
-Service 層和前面章節一模一樣：@Service + 建構子注入。
+新的 StudentDao 長這樣。
 
-createStudent、deleteStudent 單純轉呼叫：收到什麼參數，原封不動傳給 Dao。
+（下一步）注入的工具換成 StudentMapper。
 
-下一頁的 updateStudent 多一步組裝動作。
+（下一步）新增，呼叫 insert()。
+
+（下一步）修改，呼叫 update()。
+
+（下一步）刪除，呼叫 deleteById()。
+
+（下一步）SQL 都在 StudentMapper 裡，Dao 這邊很乾淨。
+
+你可能會想：Dao 只是轉交，為什麼不讓組長直接找 StudentMapper？可以，很多專案確實這樣做。我們保留 Dao，是為了讓三種工具的架構一致，方便比較。
 -->
 
 ---
 
-# StudentService（2/2）— 修改：組裝資料
+# 又一次：只改了一層
 
-`updateStudent()` 多一步組裝：把 URL 的 id 設回 `student` 物件：
-
-```java
-    public void updateStudent(Integer studentId, Student student) {
-        // URL 的 id 設回 student 物件
-        student.setId(studentId);
-
-        // Dao 轉呼叫 studentMapper.update()，SQL 的 WHERE id = #{id} 從這裡取值
-        studentDao.updateStudent(student);
-    }
-```
+<Pairs left="哪一層" right="換成 MyBatis 之後" sign="→" rows="clerk,櫃台：StudentController=ok,不用改|teacher,組長：StudentService=ok,不用改|staff,承辦人員：StudentDao=doc,改成呼叫 StudentMapper|cabinet,檔案室：MySQL=ok,不用改" />
 
 <!--
-updateStudent 多一步組裝：把 URL 傳進來的 studentId 設回 student 物件，因為 SQL 裡的 WHERE id = #{id} 要從 student.getId() 取值。
+和第二十六章一樣，這次也只改了一層。
 
-這個組裝動作和 ch26（JPA）一模一樣，只是背後機制不同：JPA 是讓 save() 判斷「id 有值」執行 UPDATE；這裡是讓 XML/Annotation 的 #{id} 佔位符能取到值。
+（下一步）櫃台，不用改。
+
+（下一步）組長，不用改。組長的 updateStudent 還是一樣，先把網址上的 id 寫進資料卡，再交給承辦人員。這次 id 會被填進 SQL 的 #{id}。
+
+（下一步）承辦人員，改成呼叫 StudentMapper。
+
+（下一步）檔案室，不用改。
+
+從 Spring JDBC 換到 JPA，再換到 MyBatis，櫃台和組長的程式從頭到尾都沒變。
 -->
 
 ---
 
-# StudentController（1/2）— 注入 Service、新增 API
+# 用 Postman 測試
 
-和前面章節相同：只注入 Service，不直接碰 Dao：
+<v-clicks>
 
-```java
-@RestController
-public class StudentController {
+- **新增**：`POST /students`，Body：`{"id": 10, "name": "Judy"}` → 多一筆 Judy
+- **修改**：`PUT /students/10`，Body：`{"name": "John"}` → 10 號的名字變成 John
+- **刪除**：`DELETE /students/10` → 10 號那一筆消失
 
-    private final StudentService studentService;
+</v-clicks>
 
-    public StudentController(StudentService studentService) {
-        this.studentService = studentService;
-    }
+<v-click>
 
-    @PostMapping("/students")
-    public String create(@RequestBody Student student) {
-        studentService.createStudent(student);
-        return "新增成功";
-    }
-}
-```
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 這次的 SQL 寫了 <code>id</code> 這個欄位，所以 Body 要自己帶 id。請選一個資料表裡還沒用過的號碼。
+</div>
+
+</v-click>
 
 <!--
-Controller 只注入 StudentService，不直接碰 Dao，寫法和前面章節完全相同。
+啟動 Spring Boot，用 Postman 測試。網址和之前完全一樣。
 
-POST /students 新增，body 的 JSON 由 @RequestBody 轉成 Student 物件。
+（下一步）新增：POST /students，Body 給 id 和 name。
+
+（下一步）修改：PUT /students/10，Body 給新的 name。
+
+（下一步）刪除：DELETE /students/10。
+
+（下一步）注意，這次我們的 INSERT 寫了 id 這個欄位，所以 Body 要自己帶 id。請選一個資料表裡還沒用過的號碼，不然會因為編號重複而失敗。
+
+每做完一步，一樣到資料表確認結果。
 -->
 
 ---
 
-# StudentController（2/2）— 修改與刪除 API
+# 複習：教務處對照表
 
-`PUT` 和 `DELETE` 一樣用 `@PathVariable` 從 URL 取得 id：
-
-```java
-    @PutMapping("/students/{studentId}")
-    public String update(@PathVariable(name = "studentId") Integer studentId,
-                         @RequestBody Student student) {
-        studentService.updateStudent(studentId, student);
-        return "修改成功";
-    }
-
-    @DeleteMapping("/students/{studentId}")
-    public String delete(@PathVariable(name = "studentId") Integer studentId) {
-        studentService.deleteStudent(studentId);
-        return "刪除成功";
-    }
-```
-
-| API | URL 的 id | Request Body |
-| --- | --- | --- |
-| `PUT`（修改） | 要改哪一筆（WHERE） | 要改成什麼（新的 `name`） |
-| `DELETE`（刪除） | 要刪哪一筆（WHERE） | 不需要 |
+<Pairs left="教務處" right="程式" rows="staff,第三位幫手：申請單自己寫，雜事交給他=code,MyBatis|doc,放申請單的地方=code,@Mapper 介面|form,貼在方法上的申請單=code,@Insert、@Update、@Delete|what,申請單上的空格=code,#{名字}|card,空格的值從資料卡上抄=code,自動呼叫 Getter" />
 
 <!--
-修改和刪除的 API，和前面章節一模一樣：
+我們用一張圖複習今天的內容。
 
-PUT /students/{studentId}：「改哪一筆」在 URL、「改成什麼」在 body。
-DELETE /students/{studentId}：只需要 URL 的 id。
--->
+（下一步）第三位幫手，是 MyBatis。
 
----
+（下一步）放申請單的地方，是 @Mapper 介面。
 
-# 用 Postman 測試三層式架構
+（下一步）貼在方法上的申請單，是 @Insert、@Update、@Delete。
 
-啟動 Spring Boot，依序測試三個 API：
+（下一步）申請單上的空格，是井字號加大括號。
 
-| 操作 | HTTP 方法 + URL | Request Body（JSON） | 預期結果 |
-| --- | --- | --- | --- |
-| 新增 | `POST /students` | `{"id": 1, "name": "Judy"}` | 資料表多一筆 Judy |
-| 修改 | `PUT /students/1` | `{"name": "John"}` | id=1 的 name 變成 John |
-| 刪除 | `DELETE /students/1` | 不需要 | id=1 那筆資料消失 |
-
-<!--
-最後實際測試整條鏈路。
-
-注意 MyBatis 的 @Insert 沒有像 JPA 的 @GeneratedValue 那樣自動產生主鍵的機制（除非額外設定 useGeneratedKeys），所以這裡示範的 POST body 仍手動帶 id，和 ch24 的 Spring JDBC 相同。
-
-MyBatis 預設不會像 JPA 一樣自動印出 SQL，要觀察執行的 SQL 需要額外設定 logging 等級，這是和前面章節不同的地方。
+（下一步）空格的值從資料卡上抄，也就是自動呼叫 Getter。
 -->
 
 ---
 
 # 章節總結
 
-| 重點 | 說明 |
-| --- | --- |
-| MyBatis 定位 | 介於 Spring JDBC 和 JPA 之間，SQL 自己寫但語法更簡潔 |
-| build.gradle | `mybatis-spring-boot-starter:4.0.1` + `compileJava -parameters` |
-| `@Mapper` | 標記 Mapper 介面，Spring Boot 自動掃描注入 |
-| `@Insert` / `@Update` / `@Delete` | SQL 寫在 Annotation 字串裡 |
-| `#{}` 語法 | 動態參數佔位符，對應方法參數的名稱 |
-| WHERE 提醒 | UPDATE 和 DELETE 一定要加 WHERE 條件 |
-| 三層式架構 | Controller / Service 和 ch24、ch26 完全相同，只有 Dao 改呼叫 `StudentMapper` |
+<v-clicks>
+
+- **MyBatis**：SQL 自己寫，填值和整理結果交給它
+- **設定**：加入 `mybatis-spring-boot-starter` 和 `-parameters`；連線設定不用改
+- **`@Mapper`**：只寫介面，不用寫實作
+- **`@Insert` / `@Update` / `@Delete`**：SQL 直接寫在方法上面
+- **`#{}`**：參數是物件就對應它的變數；單獨一個值就直接填
+- **`UPDATE`、`DELETE`**：一樣不能忘記 `WHERE`
+- **分層**：這次也只改了 Dao
+
+</v-clicks>
+
+<v-click>
+
+下一章：用 `@Select` 查詢資料。
+
+</v-click>
 
 <!--
-今天的重點總結。
+最後整理今天的重點。
 
-第一，MyBatis 介於 Spring JDBC 和 JPA 之間，需要自己寫 SQL，但語法比 Spring JDBC 簡潔。
-第二，加入 mybatis-spring-boot-starter:4.0.1 依賴。
-第三，@Mapper 標記介面，不需要寫實作類別。
-第四，@Insert/@Update/@Delete 把 SQL 寫在 Annotation 裡。
-第五，#{} 是參數佔位符，對應方法參數。
-第六，三層式架構和前面章節相同，只有 Dao 改注入 StudentMapper。
+（依序按下一步）MyBatis 是 SQL 自己寫，填值和整理結果交給它。設定要加一個工具和一個編譯參數。@Mapper 只寫介面。SQL 用 @Insert、@Update、@Delete 寫在方法上面。#{} 是空格。UPDATE 和 DELETE 不能忘記 WHERE。這次也只改了 Dao。
 
-下一章學查詢操作：@Select 和 MyBatis 的自動映射機制。
+（最後一步）下一章，用 @Select 查詢資料。
 -->
 
 ---
@@ -628,6 +538,12 @@ layout: end
 
 # Q & A
 
+有任何問題嗎？
+
 <!--
-今天的內容就到這裡。大家有任何問題嗎？
+今天的內容到這邊。
+
+課後請把三個 API 測試一次，並且比較一下第二十四章的 StudentDao 和今天的 StudentMapper，感受兩者的差別。
+
+有任何問題歡迎提出來。
 -->

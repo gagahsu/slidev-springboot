@@ -46,27 +46,33 @@ style: |
 </div>
 
 <!--
-大家好，上一章我們學了 MyBatis 的設定，以及 @Insert、@Update、@Delete 的用法。
+大家好，歡迎來到第三十章。
 
-今天是中篇——學習 @Select，用 MyBatis 從資料庫查詢資料。
+上一章我們用 MyBatis 做了新增、修改、刪除。今天補上最後一塊：查詢，用的是 @Select。
 
-MyBatis 的查詢特別之處在於「自動映射」——只要資料庫欄位名稱和 Java 物件的屬性名稱一致，MyBatis 會自動把查詢結果映射成 Java 物件，不需要像 Spring JDBC 那樣手寫 RowMapper。
+學完這一章，三位幫手的 CRUD 就全部學齊了，最後我們會把三位放在一起比較。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要搞懂的三件事
 
-- **`@Select` 用法介紹** — SQL 寫在 Annotation、自動映射機制說明
-- **使用 `@Select` 查詢資料** — 查全部、查單筆實作
-- **`@Select` 用法總結** — 與 Spring JDBC RowMapper 的差異比較
-- **串接三層式架構** — Controller + Service + Dao 完整程式碼與 Postman 測試
-- **章節總結** — 三種框架 CRUD 全部學齊
+<v-clicks>
+
+- **查詢的申請單**：`@Select`
+- **查回來的表格誰來抄？** MyBatis 照「名字一樣」的規則自動抄
+- **三位幫手總比較**：同一件事，三種寫法
+
+</v-clicks>
 
 <!--
-今天的核心是 @Select 和 MyBatis 的自動映射機制。學完之後，三種框架的 CRUD 操作就全部學齊了。
+今天要搞懂三件事。
+
+（下一步）第一，查詢的申請單，@Select。
+
+（下一步）第二，查回來的表格誰來抄成資料卡。MyBatis 會照「名字一樣」的規則自動抄。
+
+（下一步）第三，三位幫手總比較。同一件事，三種寫法。
 -->
 
 ---
@@ -75,55 +81,68 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-
-## @Select 方法的用法介紹
+# MyBatis 怎麼抄資料卡？
 
 <!--
-先了解 @Select 的架構和它的自動映射機制。
+先看 MyBatis 怎麼處理查回來的表格。
 -->
 
 ---
 
-# @Select vs 其他框架的查詢方式
+# 名字一樣，就自動抄過去
 
-| 比較項目 | Spring JDBC | Spring Data JPA | MyBatis |
-| --- | --- | --- | --- |
-| 查詢方式 | `query(sql, map, rowMapper)` | `findAll()` / 方法命名 | `@Select("SQL")` |
-| 結果映射 | 手寫 RowMapper | 自動（@Entity 定義） | 自動（欄位名稱對應） |
-| SQL 掌控 | 最高 | 低（框架決定） | 高（自己寫） |
-| 程式碼量 | 最多 | 最少 | 中等 |
+<Pairs left="學籍簿的欄位" right="資料卡的變數" sign="→" rows="book,id 欄=card,Student 的 id|book,name 欄=card,Student 的 name|what,名字對不上的欄位=no,不會抄，那一格是空的（null）" />
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>MyBatis 的優勢：</b> 自己寫 SQL（掌控性高），但不需要 RowMapper（比 Spring JDBC 簡潔）。
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 第二十五章要自己寫 <code>StudentRowMapper</code>。MyBatis 幫我們做了同一件事，條件是<b>欄位名稱和變數名稱一樣</b>。
 </div>
 
-<!--
-用表格比較三種框架的查詢方式，可以清楚看到 MyBatis 的定位。
+</v-click>
 
-Spring JDBC：SQL 自己寫，但需要 RowMapper 手動映射，最繁瑣。
-Spring Data JPA：幾乎不寫 SQL，最簡潔，但複雜查詢受限。
-MyBatis：SQL 自己寫，但自動映射，兼顧掌控性和簡潔性。
+<!--
+MyBatis 抄資料卡的規則很簡單：名字一樣，就自動抄過去。
+
+（下一步）學籍簿的 id 欄，抄到 Student 的 id。
+
+（下一步）name 欄，抄到 Student 的 name。
+
+（下一步）如果有欄位的名字和變數對不上，MyBatis 不會抄，資料卡上那一格就是空的，也就是 null。
+
+（下一步）第二十五章用 Spring JDBC 的時候，我們要自己寫 StudentRowMapper。MyBatis 幫我們做了同一件事，條件是欄位名稱和變數名稱要一樣。型別也會自動轉換：資料庫的文字變成 String，整數變成 Integer。
 -->
 
 ---
 
-# MyBatis 的自動映射機制
+# 名字對不上的時候
 
-| 條件 | 說明 |
-| --- | --- |
-| 欄位名稱一致 | 資料庫欄位 `name` ↔ Java 屬性 `name`，自動映射 |
-| 類型對應 | `VARCHAR` → `String`，`INT` → `Integer`，自動轉換 |
-| 不需要 RowMapper | MyBatis 自動完成 ResultSet → Java 物件的轉換 |
-| 命名不一致時 | 可用 `@Results` 和 `@Result` 手動指定映射關係 |
+第二十八章加的欄位叫 `class_name`，變數卻叫 `className`，名字不一樣：
+
+```properties
+mybatis.configuration.map-underscore-to-camel-case=true
+```
+
+<v-clicks>
+
+- 在 `application.properties` 加這一行
+- MyBatis 就會把「底線」的欄位名稱，自動對應到「駝峰」的變數名稱
+- `class_name` → `className`
+
+</v-clicks>
 
 <!--
-MyBatis 的自動映射比 Spring JDBC 方便很多。
+那名字對不上的時候怎麼辦？我們剛好有一個例子。
 
-只要資料庫的欄位名稱和 Java 物件的屬性名稱一致，MyBatis 就會自動把查詢結果映射到物件上，完全不需要 RowMapper。
+第二十八章加的欄位叫 class_name，用底線分開。但是 Java 的變數叫 className。名字不一樣，MyBatis 預設不會抄。
 
-例如 SELECT id, name FROM student，MyBatis 自動把 id 填進 Student.id，name 填進 Student.name。
+（下一步）解法是在 application.properties 加這一行設定。
 
-如果欄位名稱不一致（例如資料庫是 student_name，Java 是 name），可以用 @Results 手動指定，但入門階段先讓欄位名稱一致就好。
+（下一步）加了之後，MyBatis 會把用底線的欄位名稱，自動對應到駝峰寫法的變數名稱。駝峰就是像 className 這樣，第二個字開頭大寫。
+
+（下一步）所以 class_name 就能對應到 className 了。
+
+今天的例子只查 id 和 name，用不到這個設定。但是實際工作上幾乎都會開。
 -->
 
 ---
@@ -132,98 +151,82 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-
-## 使用 @Select 查詢數據
+# 用 @Select 查詢
 
 <!--
-了解了自動映射，來看程式碼範例。
+來寫查詢的申請單。
 -->
 
 ---
 
-# @Select — 查詢所有學生
+# 三張查詢的申請單
 
-在 `StudentMapper` 介面中定義查詢方法：
+<CodeSteps>
 
-```java
+```java {1-2|4-5|7-8|all}
 @Select("SELECT id, name FROM student")
 List<Student> findAll();
-```
 
-| 說明 | 詳情 |
-| --- | --- |
-| `@Select("SQL")` | SELECT SQL 直接寫在 Annotation 字串 |
-| 回傳 `List<Student>` | MyBatis 自動把每行資料映射成一個 Student 物件 |
-| 不需要 RowMapper | 欄位名稱和屬性名稱一致，自動映射 |
-
-<!--
-看 @Select 的範例，非常簡潔。
-
-一行 SQL Annotation，一行方法宣告，就能查詢所有學生資料。
-
-和 Spring JDBC 相比：Spring JDBC 需要 sql 字串 + 空 Map + StudentRowMapper + query()，至少四行。
-MyBatis 只需要一行 @Select + 一行方法宣告，差異很明顯。
--->
-
----
-
-# @Select — 根據 id 查詢單筆學生
-
-```java
 @Select("SELECT id, name FROM student WHERE id = #{id}")
 Student findById(@Param("id") Integer id);
+
+@Select("SELECT id, name FROM student WHERE id = #{id} AND name = #{name}")
+Student findByIdAndName(@Param("id") Integer id, @Param("name") String name);
 ```
 
-| 說明 | 詳情 |
-| --- | --- |
-| `WHERE id = #{id}` | `#{id}` 對應方法的 `Integer id` 參數 |
-| `@Param("id")` | Spring Boot 3.2+ / 4.x 需明確指定，否則參數名稱無法反射取得 |
-| 回傳 `Student` | 查詢單筆時直接回傳物件（非 Optional） |
-| id 不存在時 | 回傳 `null`（不同於 JPA 的 Optional） |
+- 查全部：回傳型別寫 `List<Student>`，每一列自動變成一個 `Student`
+- 查一位：回傳型別寫 `Student`；查不到就回傳 `null`
+- 兩個條件：每個參數用 `@Param` 標上名字，對應 SQL 裡的空格
+- 都加在上一章的 `StudentMapper` 裡
+
+</CodeSteps>
 
 <!--
-查詢單筆學生，在 SQL 加上 WHERE 條件，用 #{id} 對應方法的參數。
+在上一章的 StudentMapper 裡加三個方法。
 
-注意 MyBatis 的查詢方法回傳值是 Student，不是 Optional<Student>（JPA 的做法）。
-如果 id 不存在，MyBatis 回傳 null。
+（下一步）查全部。方法上面貼 @Select，寫 SELECT 的 SQL。回傳型別寫 List<Student>，MyBatis 就會把每一列自動變成一個 Student。
 
-這是和 Spring Data JPA 的差異點：JPA 用 Optional 保護 null，MyBatis 直接回傳 null，使用時需要自己做 null 檢查。
+（下一步）查一位。SQL 多了 WHERE。回傳型別寫 Student，代表只要一筆。如果查不到，會回傳 null。這裡和 JPA 不一樣，沒有 Optional 那個信封。參數前面的 @Param("id")，是把這個參數標上名字，對應 SQL 裡的 #{id}。
+
+（下一步）兩個條件。上一章說過，參數有好幾個值的時候，每個都要用 @Param 標上名字。
+
+（下一步）這三個方法都加在 StudentMapper 裡。
 -->
 
 ---
 
-# 呼叫 @Select 方法
+# 想一想
 
-在 `StudentDao` 中注入 `StudentMapper`，包裝成方法供外部呼叫：
-
-```java
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Repository;
-import java.util.List;
-
-@Repository
-public class StudentDao {
-    @Autowired
-    private StudentMapper studentMapper;
-
-    public List<Student> getStudentList() {
-        return studentMapper.findAll();
-    }
-
-    public Student getStudentById(Integer studentId) {
-        return studentMapper.findById(studentId);
-    }
-}
-```
+<Poll question="用 MyBatis 的 findById(99) 查一位不存在的同學，會得到什麼？" options="null|空的 Optional|空的 List|程式報錯" answer="1" />
 
 <!--
-使用方式和 Spring Data JPA 的 Repository 非常相似。
+確認一下。
 
-@Autowired 注入 StudentMapper，直接呼叫定義好的方法。
+用 MyBatis 的 findById 查一位不存在的同學，會得到什麼？
 
-不需要手動建立 SQL 字串、不需要 Map、不需要 RowMapper，MyBatis 在背後全部處理好了。
+（等大家作答）
 
-呼叫 findAll() 回傳 List<Student>，可以直接 return 給 Controller；呼叫 findById(id) 回傳 Student 物件，記得做 null 檢查。
+（下一步）答案是 null。
+
+回傳型別是 Student，查不到就是 null。JPA 的 findById 才是回傳 Optional。
+-->
+
+---
+
+# 四種申請單，一次整理
+
+<Pairs left="貼在方法上的標註" right="做什麼、回傳什麼" rows="form,@Insert=code,新增 → int（動到幾筆）|doc,@Update=code,修改 → int|no,@Delete=code,刪除 → int|card,@Select=code,查詢 → 一個物件，或 List" />
+
+<!--
+MyBatis 的四種申請單，一次整理。
+
+（下一步）@Insert 是新增，回傳 int，代表動到幾筆。
+
+（下一步）@Update 是修改，回傳 int。
+
+（下一步）@Delete 是刪除，回傳 int。
+
+（下一步）@Select 是查詢，回傳一個物件，或是一個 List。看我們回傳型別怎麼寫。
 -->
 
 ---
@@ -232,90 +235,136 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 3
-
-## @Select 方法的用法總結
+# 把三層接起來
 
 <!--
-補充更多查詢場景，並做整體總結。
+一樣把三層接起來。
 -->
 
 ---
 
-# 帶多個條件的查詢
+# 承辦人員和組長
 
-當 SQL 有多個動態條件時，使用 `@Param` 明確指定參數名稱：
+<CodeSteps>
 
-```java
-@Select("SELECT id, name FROM student WHERE id = #{id} AND name = #{name}")
-Student findByIdAndName(@Param("id") Integer id, @Param("name") String name);
+```java {1-12|14-25|all}
+// StudentDao：加三個方法
+public List<Student> getStudentList() {
+    return studentMapper.findAll();
+}
+
+public Student getStudentById(Integer studentId) {
+    return studentMapper.findById(studentId);
+}
+
+public Student getStudentByIdAndName(Integer id, String name) {
+    return studentMapper.findByIdAndName(id, name);
+}
+
+// StudentService：加三個方法
+public List<Student> getStudentList() {
+    return studentDao.getStudentList();
+}
+
+public Student getStudentById(Integer studentId) {
+    return studentDao.getStudentById(studentId);
+}
+
+public Student getStudentByIdAndName(Integer studentId, String name) {
+    return studentDao.getStudentByIdAndName(studentId, name);
+}
 ```
 
+- 承辦人員（Dao）：呼叫 `StudentMapper` 的三個查詢方法
+- 組長（Service）：轉交給承辦人員，把結果 `return` 回來
+
+</CodeSteps>
+
 <!--
-當方法有多個基本類型參數時，需要加 @Param("名稱") 告訴 MyBatis 每個參數對應哪個 #{} 佔位符。
+承辦人員和組長各加三個方法。
 
-不加 @Param 的話，MyBatis 無法判斷 #{id} 對應哪個參數，會出錯。
+（下一步）上半部是 StudentDao，呼叫 StudentMapper 的三個查詢方法。
 
-當方法參數是物件時（如 Student），不需要 @Param，直接用 #{欄位名} 就能對應。
+（下一步）下半部是 StudentService，轉交給承辦人員，再把結果 return 回來。
+
+這些結構前面寫過很多次了。
 -->
 
 ---
 
-# StudentDao — 補上多條件查詢
+# 櫃台：三個查詢 API
 
-回到 `StudentDao`，補上轉呼叫 `findByIdAndName` 的方法：
+<CodeSteps>
 
-```java
-    // 接續 StudentDao，新增方法
-    public Student getStudentByIdAndName(Integer id, String name) {
-        return studentMapper.findByIdAndName(id, name);
-    }
+```java {1-4|6-9|11-15|all}
+@GetMapping("/students")
+public List<Student> getStudentList() {
+    return studentService.getStudentList();
+}
+
+@GetMapping("/students/{studentId}")
+public Student getStudentById(@PathVariable(name = "studentId") Integer studentId) {
+    return studentService.getStudentById(studentId);
+}
+
+@GetMapping("/students/search")
+public Student getStudentByIdAndName(@RequestParam(name = "id") Integer id,
+                                     @RequestParam(name = "name") String name) {
+    return studentService.getStudentByIdAndName(id, name);
+}
 ```
 
-<!--
-StudentMapper 的方法定義好了，回到 StudentDao 補上對應的轉呼叫方法。
+- 查全部：`GET /students`
+- 查一位：`GET /students/1`
+- 兩個條件：`GET /students/search?id=1&name=Judy`
+- 用編號指出某一位，放在路徑；搜尋條件，放在問號後面
 
-和前面兩個方法（getStudentList、getStudentById）一樣的模式：Dao 只是薄薄一層轉呼叫，SQL 邏輯全部交給 StudentMapper。
+</CodeSteps>
+
+<!--
+在 StudentController 加三個方法。
+
+（下一步）查全部：GET /students。
+
+（下一步）查一位：GET /students/ 加上編號。
+
+（下一步）兩個條件：GET /students/search，問號後面 id=1、name=Judy。
+
+（下一步）一樣的慣例：用編號指出某一位，放在路徑；搜尋條件，放在問號後面。
 -->
 
 ---
 
-# MyBatis 四個 SQL Annotation 總覽
+# 用 Postman 測試
 
-| Annotation | 對應 SQL | 回傳值 | 用途 |
-| --- | --- | --- | --- |
-| `@Insert` | INSERT | `int`（影響行數） | 新增資料 |
-| `@Update` | UPDATE | `int`（影響行數） | 更新資料 |
-| `@Delete` | DELETE | `int`（影響行數） | 刪除資料 |
-| `@Select` | SELECT | `物件` 或 `List<物件>` | 查詢資料 |
+先新增 Judy、Tom 兩位同學，再測試：
 
-<!--
-用這張表格把 MyBatis 的四個 SQL Annotation 放在一起比較。
+<v-clicks>
 
-四個 Annotation 分別對應 SQL 的 INSERT、UPDATE、DELETE、SELECT，和 CRUD 完全對應。
+- `GET /students` → 一個陣列，裡面是所有同學
+- `GET /students/1` → `{"id":1,"name":"Judy", …}`，一個物件
+- `GET /students/search?id=1&name=Judy` → 同一位同學
 
-CUD 的回傳值都是 int（影響行數），Select 的回傳值根據查詢結果是否為多筆，分別是物件或 List<物件>。
--->
+</v-clicks>
 
----
+<v-click>
 
-# 三種框架 CRUD 實作比較
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 回傳的 JSON 裡 <code>className</code> 和 <code>score</code> 會是 <code>null</code>，因為我們的 SQL 只查了 <code>id</code> 和 <code>name</code>。SQL 寫什麼，就只拿到什麼。
+</div>
 
-| 操作 | Spring JDBC | Spring Data JPA | MyBatis |
-| --- | --- | --- | --- |
-| 新增 | `update(INSERT SQL, map)` | `save(entity)` | `@Insert("SQL")` |
-| 更新 | `update(UPDATE SQL, map)` | `save(entity)` | `@Update("SQL")` |
-| 刪除 | `update(DELETE SQL, map)` | `deleteById(id)` | `@Delete("SQL")` |
-| 查詢全部 | `query(sql, map, rowMapper)` | `findAll()` | `@Select("SQL")` |
-| 查詢單筆 | `query(sql+WHERE, map, rowMapper)` | `findById(id)` | `@Select("SQL+WHERE")` |
+</v-click>
 
 <!--
-用這張表格做最終的三框架比較總覽。
+啟動 Spring Boot，先新增 Judy 和 Tom 兩位同學，再測試。
 
-Spring JDBC：最靈活，完全掌控，但程式碼最多。
-Spring Data JPA：最簡潔，幾乎不寫 SQL，但複雜查詢較受限。
-MyBatis：介於中間，SQL 精確，程式碼比 JDBC 少，比 JPA 靈活。
+（下一步）GET /students，拿到一個陣列，裡面是所有同學。
 
-三種框架各有優缺點，在實務上可以根據場景混搭使用。
+（下一步）GET /students/1，拿到一個物件。請把 1 換成你實際的編號。
+
+（下一步）GET /students/search，帶 id 和 name 兩個條件，拿到同一位同學。
+
+（下一步）你會注意到，回傳的 JSON 裡 className 和 score 是 null。因為我們的 SQL 只查了 id 和 name 兩個欄位。這就是自己寫 SQL 的特色：SQL 寫什麼，就只拿到什麼。
 -->
 
 ---
@@ -324,167 +373,91 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 4
-
-## 串接三層式架構
+# 三位幫手總比較
 
 <!--
-查詢方法都會用了，比照 ch27（JPA 查詢）把 Service 和 Controller 補上，讓前端能透過 GET API 查詢資料。
+到這裡，三位幫手的 CRUD 都學完了。把他們放在一起看。
 -->
 
 ---
 
-# 回顧：三層式架構的呼叫鏈
+# 同一件事，三種寫法
 
-架構和 ch27（JPA 查詢）完全相同，只有 Dao 呼叫的對象換成 `StudentMapper`：
-
-| 分層 | 類別 | 這一章的寫法 |
-| --- | --- | --- |
-| Controller | `StudentController` | 和 ch27 一樣：三個 GET API |
-| Service | `StudentService` | 和 ch27 一樣：轉呼叫 Dao |
-| Dao | `StudentDao`（已在 Part 2／Part 3 完成） | 注入 `StudentMapper`，呼叫 `findAll()`、`findById()`、`findByIdAndName()` |
+| 要做的事 | Spring JDBC | Spring Data JPA | MyBatis |
+| --- | --- | --- | --- |
+| 新增 | `update(sql, map)` | `save()` | `@Insert` |
+| 修改 | `update(sql, map)` | `save()` | `@Update` |
+| 刪除 | `update(sql, map)` | `deleteById()` | `@Delete` |
+| 查全部 | `query(sql, map, rowMapper)` | `findAll()` | `@Select` |
+| 查一筆 | `query()` 加 `WHERE` | `findById()` | `@Select` 加 `WHERE` |
 
 <!--
-StudentDao 前面已經寫好，這裡把 Service 和 Controller 補上，前端才能透過 API 查詢資料。
+同一件事，三種寫法。這張表可以當成這個單元前半段的總整理。
 
-和前面 CUD 一樣的道理：三層式架構不變，只有 Dao 內部呼叫的物件從 JpaRepository 換成 StudentMapper。
+新增、修改、刪除：Spring JDBC 都用 update()，自己準備 SQL 和 Map。JPA 用 save() 和 deleteById()。MyBatis 用 @Insert、@Update、@Delete。
+
+查詢：Spring JDBC 用 query()，還要寫 RowMapper。JPA 用 findAll() 和 findById()。MyBatis 用 @Select。
 -->
 
 ---
 
-# StudentService — 查詢方法
+# 怎麼選？
 
-和 ch27 完全相同：`@Service` + 建構子注入，單純轉呼叫 Dao：
+<v-clicks>
 
-```java
-@Service
-public class StudentService {
+- **Spring Data JPA**：寫得最少。一般的新增、修改、刪除、簡單查詢，用它最快
+- **MyBatis**：SQL 自己掌握。查詢複雜、想自己調整 SQL 的時候很好用
+- **Spring JDBC**：最貼近原理。現在比較少直接用，但是學過它，才看得懂另外兩位在背後做什麼
 
-    private final StudentDao studentDao;
+</v-clicks>
 
-    public StudentService(StudentDao studentDao) {
-        this.studentDao = studentDao;
-    }
+<v-click>
 
-    public List<Student> getStudentList() {
-        return studentDao.getStudentList();
-    }
-
-    public Student getStudentById(Integer studentId) {
-        return studentDao.getStudentById(studentId);
-    }
-
-    public Student getStudentByIdAndName(Integer studentId, String name) {
-        return studentDao.getStudentByIdAndName(studentId, name);
-    }
-}
-```
-
-<!--
-Service 層的寫法和 ch27 一模一樣：注入 Dao，方法內容單純轉呼叫。
-
-getStudentByIdAndName 對應 Part 3 定義的 findByIdAndName 多條件查詢，Dao 已在 Part 3 補上轉呼叫方法。
--->
-
----
-
-# StudentController（1/2）— 注入 Service、基本查詢
-
-和前面章節相同：只注入 Service，不直接碰 Dao：
-
-```java
-@RestController
-public class StudentController {
-
-    private final StudentService studentService;
-
-    public StudentController(StudentService studentService) {
-        this.studentService = studentService;
-    }
-
-    @GetMapping("/students")
-    public List<Student> getStudentList() {
-        return studentService.getStudentList();
-    }
-
-    @GetMapping("/students/{studentId}")
-    public Student getStudentById(@PathVariable(name = "studentId") Integer studentId) {
-        return studentService.getStudentById(studentId);
-    }
-}
-```
-
-<!--
-Controller 只注入 StudentService，不直接碰 Dao，寫法和前面章節完全相同。
-
-查全部、依 id 查單筆兩個 API，和 ch27 的 JPA 版本一模一樣。
--->
-
----
-
-# StudentController（2/2）— 多條件搜尋 API
-
-`findByIdAndName` 開一個 API，用 `@RequestParam` 接收兩個搜尋條件：
-
-```java
-    @GetMapping("/students/search")
-    public Student getStudentByIdAndName(@RequestParam(name = "id") Integer id,
-                                         @RequestParam(name = "name") String name) {
-        return studentService.getStudentByIdAndName(id, name);
-    }
-```
-
-<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>REST 慣例：</b> 用 id 定位單筆走 <code>@PathVariable</code>；多條件搜尋走 query string 的 <code>@RequestParam</code>——這是 ch25 講過的慣例，MyBatis 章節依然適用。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 三種可以放在同一個專案裡一起用。工作上用哪一種，通常看團隊的習慣。
 </div>
 
-<!--
-GET /students/search?id=1&name=Judy 對應 findByIdAndName，整條鏈路走到底，SQL 是 StudentMapper 的 @Select Annotation 產生的。
--->
-
----
-
-# 用 Postman 測試三層式架構
-
-啟動 Spring Boot，依序測試三個 API：
-
-| 操作 | HTTP 方法 + URL | 預期結果 |
-| --- | --- | --- |
-| 查全部 | `GET /students` | `[{"id":1,"name":"Judy"},{"id":2,"name":"Tom"}]` |
-| 查單筆 | `GET /students/1` | `{"id":1,"name":"Judy"}` — 單一物件，不是陣列 |
-| 多條件查詢 | `GET /students/search?id=1&name=Judy` | `{"id":1,"name":"Judy"}` |
-
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>觀察：</b> 查單筆和多條件查詢都回傳 <code>{ }</code> 物件，不是 <code>[ ]</code> 陣列——因為 `findById()`、`findByIdAndName()` 的回傳型別本來就是單一 `Student`，不需要像 Spring JDBC 那樣包一層 List。
-</div>
+</v-click>
 
 <!--
-最後實際測試整條鏈路，重點觀察查單筆和多條件查詢的回傳格式——單一物件而非陣列，這是 findById()、findByIdAndName() 回傳型別本身就是 Student 的緣故，和 ch27 的 JPA findById() 效果一致。
+那要怎麼選？
+
+（下一步）Spring Data JPA 寫得最少。一般的新增、修改、刪除、簡單查詢，用它最快。
+
+（下一步）MyBatis 是 SQL 自己掌握。查詢比較複雜、想自己調整 SQL 的時候很好用。
+
+（下一步）Spring JDBC 最貼近原理。現在比較少直接用它寫，但是學過它，才看得懂另外兩位在背後幫我們做了什麼。
+
+（下一步）三種可以放在同一個專案裡一起用。工作上用哪一種，通常看團隊的習慣。
 -->
 
 ---
 
 # 章節總結
 
-| 重點 | 說明 |
-| --- | --- |
-| `@Select` | SELECT SQL 寫在 Annotation 裡，自動映射到 Java 物件 |
-| 自動映射 | 欄位名稱和屬性名稱一致時，不需要 RowMapper |
-| 回傳 null | id 不存在時回傳 null（非 Optional） |
-| `@Param` | 多個 primitive 參數時，需用 @Param 指定名稱 |
-| 三層式架構 | Controller / Service 和 ch27 完全相同，只有 Dao 改呼叫 `StudentMapper` |
-| 三框架 CRUD | Spring JDBC / JPA / MyBatis 各有優缺點，可混搭使用 |
+<v-clicks>
+
+- **`@Select`**：查詢的 SQL 寫在方法上面
+- **自動對應**：欄位名稱和變數名稱一樣，就自動變成物件，不用 `RowMapper`
+- **底線轉駝峰**：`map-underscore-to-camel-case=true`
+- **查不到**：回傳 `null`，沒有 `Optional`
+- **`@Param`**：參數不只一個時，替每個參數標上名字
+- **三種工具**：各有擅長，可以一起用
+
+</v-clicks>
+
+<v-click>
+
+下一章：申請單越寫越多、越寫越長，我們把它們收進一本範本夾：XML Mapper。
+
+</v-click>
 
 <!--
-今天的重點總結。
+最後整理今天的重點。
 
-第一，@Select 把 SELECT SQL 寫在 Annotation，MyBatis 自動映射結果。
-第二，欄位名稱和屬性名稱一致時，自動映射不需要 RowMapper。
-第三，查詢不到資料時回傳 null，記得做 null 檢查。
-第四，多個 primitive 參數時需要加 @Param。
-第五，三層式架構和 ch27 相同，只有 Dao 改注入 StudentMapper。
-第六，三種框架 CRUD 全部學完，可以根據需求選擇或混搭使用。
+（依序按下一步）@Select 把查詢的 SQL 寫在方法上面。欄位名稱和變數名稱一樣，就自動變成物件。名字是底線和駝峰的差別，可以用一行設定解決。查不到會回傳 null。參數不只一個時，用 @Param 標上名字。三種工具各有擅長，可以一起用。
 
-下一章學 MyBatis XML Mapper 的寫法——用 XML 檔管理複雜的 SQL，特別適合多條件動態查詢。
+（最後一步）MyBatis 還有一半沒講。當申請單越寫越多、越寫越長，貼在方法上面會很擠。下一章我們把它們收進一本範本夾，叫做 XML Mapper。
 -->
 
 ---
@@ -493,6 +466,12 @@ layout: end
 
 # Q & A
 
+有任何問題嗎？
+
 <!--
-今天的內容就到這裡。大家有任何問題嗎？
+今天的內容到這邊。
+
+課後可以試著把 SQL 改成也查 class_name 和 score，加上那一行設定，看看 JSON 裡的 className 會不會出現。
+
+有任何問題歡迎提出來。
 -->
