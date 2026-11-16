@@ -46,29 +46,38 @@ style: |
 </div>
 
 <!--
-大家好，上一章我們學了 Spring Data JPA 的命名查詢——findByName、findByAgeGreaterThan 等。
+大家好，歡迎來到第二十八章。
 
-但現實開發中，有些查詢很複雜，命名查詢的方法名稱會變得又臭又長，甚至無法表達。這時候就需要 @Query 讓我們直接寫 SQL 或 JPQL 語法。
+上一章我們學會照格式取方法名稱，助理就會自己查。但是條件一多，方法名稱會變得又長又難讀，有些查詢甚至講不出來。
 
-今天要學的就是 @Query、JPQL、以及 @Modifying 讓我們能直接執行 UPDATE / INSERT / DELETE。
+今天學另一種做法：自己寫一張便條，直接告訴助理要執行什麼。這張便條叫做 @Query。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要搞懂的四件事
 
-- **什麼是 JPQL？** — 與 SQL 的差異、操作對象是 Entity
-- **@Query 基本用法** — nativeQuery = false（JPQL）vs true（原生 SQL）
-- **參數傳遞方式** — `:name` 命名參數 vs `?1` 位置參數
-- **@Modifying — UPDATE / DELETE** — 修改操作必加的 Annotation
-- **INSERT** — 只能用 nativeQuery = true
-- **SELECT 進階** — distinct、order by、like、join、`JoinVo` 自訂回傳類別
-- **分頁查詢** — `Page`、`Pageable`、`PageRequest`
+<v-clicks>
+
+- **便條有兩種寫法**：JPQL 和原生 SQL
+- **便條上的空格怎麼填？** `?1` 和 `:名字`
+- **要改資料的便條**：多加 `@Modifying` 和 `@Transactional`
+- **進階的查詢**：排序、不重複、模糊查詢、兩本簿子一起查、分頁
+
+</v-clicks>
 
 <!--
-今天內容偏實用，以程式碼範例為主。重點是理解 nativeQuery = true 和 false 的差異，以及什麼操作必須加 @Modifying。
+今天要搞懂四件事。
+
+（下一步）第一，便條有兩種寫法：JPQL 和原生 SQL。
+
+（下一步）第二，便條上的空格怎麼填。有 ?1 和冒號加名字兩種。
+
+（下一步）第三，要改資料的便條，要多加 @Modifying 和 @Transactional。
+
+（下一步）第四，幾種進階的查詢：排序、不重複、模糊查詢、兩本簿子一起查、分頁。
+
+今天的內容比較像一本小手冊。不用全部背起來，知道有這些寫法，要用的時候回來查就好。
 -->
 
 ---
@@ -77,36 +86,85 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-
-## 什麼是 JPQL？
+# 為什麼要自己寫便條？
 
 <!--
-先了解 JPQL 和 SQL 的差別。
+先看什麼時候會需要 @Query。
 -->
 
 ---
 
-# JPQL vs 原生 SQL
+# 方法名稱講不清楚的時候
 
-JPQL（Java Persistence Query Language）是 JPA 定義的查詢語言，語法和 SQL 相似，但操作對象不同：
+想查「三年二班、成績在 60 到 80 之間、照成績從高排到低」：
 
-| 比較項目 | SQL | JPQL |
-| --- | --- | --- |
-| 操作對象 | 資料表（Table）和欄位（Column） | Java Entity 類別和屬性 |
-| 表格名稱 | `person_info`（資料庫名稱） | `PersonInfo`（Java 類別名稱） |
-| 欄位名稱 | `name`（資料庫欄位） | `name`（Java 屬性名稱） |
-| 跨資料庫 | 依賴資料庫語法 | 由 JPA 轉換為各資料庫 SQL |
+```java
+List<Student> findByClassNameAndScoreBetweenOrderByScoreDesc(String className, int min, int max);
+```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>選擇時機：</b> 簡單查詢用 JPQL（跨資料庫）；需要資料庫特有語法（如 REGEXP）用 nativeQuery = true。
-</div>
+<v-clicks>
+
+- 能用，但是名字太長，很難讀、很容易打錯
+- 有些事情方法名稱根本講不出來，例如兩張資料表一起查
+- 這時候改成**自己寫一張便條**，貼在方法上面：`@Query`
+
+</v-clicks>
 
 <!--
-JPQL 的優勢是「跨資料庫」——寫 JPQL 換成 PostgreSQL 或 Oracle 不用改，JPA 自動翻譯成對應的 SQL。
+假設我們想查：三年二班、成績在 60 到 80 之間、照成績從高排到低。
 
-缺點是不支援某些資料庫特有語法，例如 MySQL 的 REGEXP、LIMIT（需要改用 Pageable）。
+用上一章的方法，名字會變成畫面上這樣。
 
-用哪個取決於查詢複雜度和跨資料庫需求。一般業務查詢用 JPQL 就夠，複雜的報表查詢可以用 nativeQuery = true。
+（下一步）它能用，但是名字太長，很難讀，也很容易打錯。
+
+（下一步）而且有些事情，方法名稱根本講不出來，例如兩張資料表一起查。
+
+（下一步）這時候我們改成自己寫一張便條，貼在方法上面。這張便條就是 @Query。助理看到便條，就照便條上寫的去做，不再去猜方法名稱。
+-->
+
+---
+
+# 先幫學生資料卡加兩格
+
+<CodeSteps>
+
+```java {8-9|all}
+@Getter
+@Setter
+@Entity
+public class Student {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+    private String name;
+    private String className;
+    private Integer score;
+}
+```
+
+- 多兩個變數：`className`（班級）、`score`（成績）
+- 重新啟動後，助理會自動幫資料表加上 `class_name` 和 `score` 兩個欄位
+
+</CodeSteps>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 注意名字不一樣：Java 的變數叫 <code>className</code>，資料表的欄位叫 <code>class_name</code>。等一下會用到。
+</div>
+
+</v-click>
+
+<!--
+為了讓今天的例子有東西可以查，先幫學生資料卡加兩格。
+
+（下一步）多兩個變數：className 是班級，score 是成績。
+
+（下一步）重新啟動 Spring Boot 之後，因為我們設定了 ddl-auto=update，助理會自動幫 student 資料表加上兩個欄位。
+
+（下一步）注意一件事：Java 的變數叫 className，中間的 N 大寫。但是助理建立的欄位叫 class_name，用底線分開。這是兩邊各自的命名習慣，助理會自動轉換。這個差別等一下會用到。
+
+加好之後，請用 POST 多新增幾位同學，Body 裡記得帶上 className 和 score。
 -->
 
 ---
@@ -115,96 +173,108 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-
-## @Query 基本用法
+# 便條的兩種寫法
 
 <!--
-來看 @Query 怎麼寫，以及 nativeQuery 兩種模式的差別。
+便條可以用兩種語言寫。
 -->
 
 ---
 
-# @Query — nativeQuery = false（JPQL，預設）
+# JPQL 和原生 SQL
 
-`@Query` 的 `nativeQuery` 預設是 `false`，使用 JPQL 語法：
-
-| 說明 | 規則 |
-| --- | --- |
-| 表格名稱 | Entity 的**類別名稱**（`PersonInfo`） |
-| 欄位名稱 | Entity 的**屬性名稱**（`name`、`age`） |
-| 別名 | `select p from PersonInfo as p` |
-
-```java
-// JPQL：操作 Entity 類別名和屬性名
-@Query("select p from PersonInfo as p where p.city = ?1")
-List<PersonInfo> findByCity(String city);
-```
+<Pairs left="JPQL（預設）" right="原生 SQL" sign="vs" rows="card,照「資料卡」上的名字寫=book,照「學籍簿」上的名字寫|code,類別名稱：Student=code,資料表名稱：student|code,變數名稱：className=code,欄位名稱：class_name|ok,換一種資料庫也不用改=what,可以用 MySQL 專屬的語法" />
 
 <!--
-JPQL 的 select 語法：from 後面是 Entity 類別名（大寫開頭），不是資料表名。
+便條有兩種寫法。
 
-使用別名（as p）可以讓後面的 where、order by 更簡潔。
+（下一步）第一種叫 JPQL，是預設的寫法。它照資料卡上的名字寫。第二種是原生 SQL，就是我們熟悉的 SQL，照學籍簿上的名字寫。
 
-注意：?1 表示第一個方法參數，?2 表示第二個，以此類推。
+（下一步）JPQL 裡，要查哪裡，寫的是類別名稱 Student，S 大寫。原生 SQL 寫的是資料表名稱 student。
+
+（下一步）JPQL 裡，條件寫的是變數名稱 className。原生 SQL 寫的是欄位名稱 class_name。
+
+（下一步）JPQL 的好處：助理會幫我們翻譯成資料庫聽得懂的 SQL，所以換一種資料庫也不用改。原生 SQL 的好處：可以用 MySQL 專屬的語法。
+
+JPQL 是 Java Persistence Query Language 的縮寫，長得和 SQL 很像，只是名字用 Java 這邊的。
 -->
 
 ---
 
-# @Query — nativeQuery = true（原生 SQL）
+# 兩種寫法放在一起看
 
-加上 `nativeQuery = true` 後，使用真實的資料庫 SQL：
+<CodeSteps>
 
-| 說明 | 規則 |
-| --- | --- |
-| 表格名稱 | 資料庫的**表格名稱**（`person_info`） |
-| 欄位名稱 | 資料庫的**欄位名稱**（`name`、`age`） |
-| 特有語法 | 可使用 MySQL 的 REGEXP、LIMIT 等 |
+```java {1-2|4-5|all}
+@Query("select s from Student s where s.className = ?1")
+List<Student> findByClass(String className);
 
-```java
-// 原生 SQL：操作資料表名和欄位名
-@Query(value = "select * from person_info where city = ?1",
-       nativeQuery = true)
-List<PersonInfo> findByCityNative(String city);
+@Query(value = "select * from student where class_name = ?1", nativeQuery = true)
+List<Student> findByClassNative(String className);
 ```
 
+- JPQL：`Student` 是類別名稱，`s` 是幫它取的簡稱，`s.className` 是變數
+- 原生 SQL：加上 `nativeQuery = true`，裡面就是一般的 SQL
+- 兩個方法查到的結果一樣。都寫在 `StudentRepository` 裡
+
+</CodeSteps>
+
 <!--
-nativeQuery = true 寫的是真實 SQL，所以 from 後面是資料表名（person_info），不是 Entity 類別名。
+同一個查詢，兩種寫法放在一起看。它們都寫在 StudentRepository 裡。
 
-優點是可以用資料庫特有語法；缺點是換資料庫時 SQL 可能需要調整。
+（下一步）第一個是 JPQL。select s from Student s，這裡的 Student 是類別名稱，後面的 s 是幫它取的簡稱。where s.className，用的是變數名稱。最後的 ?1 是空格，等一下說明。
 
-⚠️ 注意：JPQL 和原生 SQL 的表格名、欄位名不能搞混，是最常犯的錯誤。
+（下一步）第二個是原生 SQL。@Query 裡多寫 nativeQuery = true，意思是「這張便條是原生的 SQL」。裡面就是一般的 SQL：資料表 student，欄位 class_name。
+
+（下一步）兩個方法查到的結果一樣。方法名稱現在可以自己取了，因為助理看的是便條，不是名字。
 -->
 
 ---
 
-# 參數傳遞：兩種方式
+# 想一想
 
-`@Query` 支援兩種傳遞參數的方式：
-
-| 方式 | 語法 | 特點 |
-| --- | --- | --- |
-| **位置參數** | `?1`、`?2` | 依方法參數順序，容易出錯 |
-| **命名參數** | `:name`、`:city` + `@Param` | 明確對應，推薦使用 |
-
-```java
-// 位置參數
-@Query("select p from PersonInfo p where p.id = ?1 and p.name = ?2")
-Optional<PersonInfo> findByIdAndName(String id, String name);
-
-// 命名參數（推薦）
-@Query("select p from PersonInfo p where p.id = :inputId")
-Optional<PersonInfo> findById2(@Param("inputId") String id);
-```
+<Poll question='這張便條是 JPQL：@Query("select s from ___ s where s.score > 60")。空格裡應該填什麼？' options="student（資料表名稱）|Student（類別名稱）|students|StudentRepository" answer="2" />
 
 <!--
-命名參數更好：
-1. 不依賴參數順序，維護時不容易搞錯
-2. 參數名稱是文件，一看就知道對應哪個值
-3. 如果方法參數順序調整，SQL 不需要改
+來想一題。
 
-業界一律推薦用 :name 搭配 @Param，養成好習慣。
+這張便條是 JPQL，沒有寫 nativeQuery = true。from 後面的空格應該填什麼？
 
-@Param 的 import 是 org.springframework.data.repository.query.Param。
+（等大家作答）
+
+（下一步）答案是 Student，S 大寫，類別名稱。
+
+JPQL 照資料卡上的名字寫，所以用類別名稱。如果寫成小寫的 student，啟動時就會報錯。
+-->
+
+---
+
+# 便條上的空格：兩種填法
+
+<CodeSteps>
+
+```java {1-2|4-5|all}
+@Query("select s from Student s where s.className = ?1 and s.name = ?2")
+List<Student> findByClassAndName(String className, String name);
+
+@Query("select s from Student s where s.className = :inputClass")
+List<Student> findByClass2(@Param("inputClass") String className);
+```
+
+- `?1`、`?2`：照順序，第 1 個參數填 `?1`，第 2 個填 `?2`
+- `:名字`：照名字，參數前面用 `@Param("名字")` 標明要填哪一格
+- 建議用 `:名字`，和第二十四章「空格要取名字」是同一個道理
+
+</CodeSteps>
+
+<!--
+便條上的空格有兩種填法。
+
+（下一步）第一種是問號加數字。?1 填方法的第 1 個參數，?2 填第 2 個參數。照順序來。
+
+（下一步）第二種是冒號加名字。參數前面用 @Param 標明它要填哪一格。這裡 @Param("inputClass")，對應便條上的 :inputClass。
+
+（下一步）建議用第二種。這和第二十四章說的「空格要取名字」是同一個道理：參數一多，照順序很容易填錯。
 -->
 
 ---
@@ -213,67 +283,105 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 3
-
-## @Modifying — UPDATE / DELETE
+# 要改資料的便條
 
 <!--
-UPDATE 和 DELETE 不只是查詢，需要額外的 Annotation。
+便條不只能查詢，也能改資料。但是要多貼兩張標籤。
 -->
 
 ---
 
-# @Modifying 是什麼？
+# 修改和刪除：多加兩個標註
 
-執行 **UPDATE、DELETE** 的 `@Query` 必須加上 `@Modifying`，告訴 JPA「這是修改操作」：
+<CodeSteps>
 
-| Annotation | 說明 |
-| --- | --- |
-| `@Query` | 定義要執行的 SQL / JPQL |
-| `@Modifying` | 標記為修改操作（非查詢），UPDATE / DELETE 必加 |
-| `@Transactional` | 修改操作必須在事務中執行 |
+```java {3|2|1|4-5|all}
+@Transactional
+@Modifying
+@Query("update Student set name = :newName where id = :inputId")
+int updateNameById(@Param("inputId") Integer id,
+                   @Param("newName") String name);
+```
+
+- 便條的內容是 `update`（`delete` 也一樣）
+- `@Modifying`：告訴助理「這張便條會改資料，不是查詢」
+- `@Transactional`：改資料必須加。它保證「要嘛全部成功，要嘛全部不算」，第三十二章會細講
+- 回傳 `int`：動到幾筆
+
+</CodeSteps>
+
+<!--
+來看修改資料的便條。
+
+（下一步）便條的內容是 update：把某個 id 的同學，名字改成新的。delete 也是一樣的寫法。
+
+（下一步）上面要多加 @Modifying。因為助理預設把便條當成查詢，要明確告訴他「這張便條會改資料」。
+
+（下一步）再加 @Transactional。改資料的便條必須加這個，不加的話執行時會報錯。它的作用是保證「要嘛全部成功，要嘛全部不算」。這個觀念第三十二章會細講，現在先照著加。
+
+（下一步）方法回傳 int，代表動到幾筆。和 Spring JDBC 的 update() 一樣。
+-->
+
+---
+
+# 改完再查，卻拿到舊資料？
+
+```java
+@Transactional
+@Modifying(clearAutomatically = true)
+@Query("update Student set name = :newName where id = :inputId")
+int updateNameById(@Param("inputId") Integer id, @Param("newName") String name);
+```
+
+<v-clicks>
+
+- 助理手邊會留著**剛查過的資料卡**，下次要用就不必再跑檔案室
+- 但是用便條直接改資料庫，助理手邊的那一張**不會跟著變**
+- 加上 `clearAutomatically = true`：改完就把手邊的資料卡丟掉，下次重新去拿
+
+</v-clicks>
+
+<!--
+用便條改資料，有一個小陷阱：改完馬上再查同一筆，有時候會拿到舊的資料。
+
+（下一步）原因是助理很勤快。他手邊會留著剛查過的資料卡，下次要用就不必再跑一趟檔案室。
+
+（下一步）但是用便條改資料，是直接改檔案室裡的那一本簿子。助理手邊的那一張不會跟著變。
+
+（下一步）解法是在 @Modifying 後面加 clearAutomatically = true。意思是改完之後，就把手邊的資料卡丟掉，下次重新去檔案室拿。
+-->
+
+---
+
+# 新增：只能用原生 SQL
 
 ```java
 @Transactional
 @Modifying
-@Query("update PersonInfo set name = :newName where id = :inputId")
-int updateNameById(@Param("inputId") String id,
-                   @Param("newName") String name);
+@Query(value = "insert into student (name, class_name, score) "
+             + "values (:inputName, :inputClass, :inputScore)",
+       nativeQuery = true)
+int insert(@Param("inputName") String name,
+           @Param("inputClass") String className,
+           @Param("inputScore") Integer score);
 ```
 
-<!--
-為什麼需要 @Modifying？JPA 預設假設 @Query 是查詢，如果是修改操作要明確告知。
+<v-clicks>
 
-三個 Annotation 的順序沒有強制規定，但業界慣例是從上到下：@Transactional → @Modifying → @Query。
+- JPQL 沒有這種 `insert … values` 的寫法，所以要寫 `nativeQuery = true`
+- 既然是原生 SQL，名字就要用資料表的：`student`、`class_name`
+- 平常新增用 `save()` 就好，這個寫法知道有就可以
 
-方法回傳型別可以是 int（影響行數）或 void。
--->
-
----
-
-# @Modifying — clearAutomatically
-
-UPDATE 後再查詢同一筆資料，可能拿到**舊值**（JPA 快取）：
-
-```java
-// 加上 clearAutomatically = true，清除持久化上下文快取
-@Modifying(clearAutomatically = true)
-@Transactional
-@Query("update PersonInfo set name = :newName where id = :inputId")
-int updateNameById(@Param("inputId") String id,
-                   @Param("newName") String name);
-```
-
-| 情境 | 說明 |
-| --- | --- |
-| 預設（無 clearAutomatically） | 更新後再查詢，可能讀到快取舊值 |
-| `clearAutomatically = true` | 清除快取，下次查詢強制從資料庫讀取 |
+</v-clicks>
 
 <!--
-這是一個很容易踩坑的地方。JPA 有持久化上下文（Persistence Context），會暫存讀到的 Entity。
+新增也可以用便條，但是只能用原生 SQL。
 
-執行 @Modifying UPDATE 之後，持久化上下文的快取還是舊值。如果接著查詢同一筆資料，JPA 可能直接回傳快取，而不是資料庫的最新值。
+（下一步）JPQL 沒有 insert values 這種寫法，所以要寫 nativeQuery = true。
 
-clearAutomatically = true 讓 JPA 在執行修改後清除快取，確保下次查詢是最新資料。
+（下一步）既然是原生 SQL，名字就要用資料表的：student、class_name。
+
+（下一步）不過平常新增資料，用上一章的 save() 就好，簡單很多。這個寫法知道有就可以。
 -->
 
 ---
@@ -282,48 +390,182 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 4
-
-## INSERT
+# 進階的查詢
 
 <!--
-INSERT 有額外的限制，來看怎麼做。
+接著看幾種常用的進階查詢。這一段像手冊，要用的時候回來查。
 -->
 
 ---
 
-# INSERT — 只能用 nativeQuery = true
+# 排序、不重複、模糊查詢
 
-JPQL 不支援 INSERT，必須使用 `nativeQuery = true`：
+<CodeSteps>
 
-```java
-// 寫法一：位置參數 ?1
-@Modifying
-@Transactional
-@Query(value = "insert into person_info (id, name, age, city)"
-             + " values (?1, ?2, ?3, ?4)",
-       nativeQuery = true)
-int insert(String id, String name, int age, String city);
+```java {1-2|4-5|7-8|all}
+@Query("select s from Student s where s.className = ?1 order by s.score desc")
+List<Student> findByClassOrderByScoreDesc(String className);
+
+@Query("select distinct s.className from Student s")
+List<String> findAllClassNames();
+
+@Query("select s from Student s where s.name like %?1%")
+List<Student> findByNameLike(String keyword);
 ```
 
-```java
-// 寫法二：命名參數 :param（推薦）
-@Modifying
-@Transactional
-@Query(value = "insert into person_info (id, name, age, city)"
-             + " values (:inputId, :inputName, :inputAge, :inputCity)",
-       nativeQuery = true)
-int insert2(@Param("inputId") String id,
-            @Param("inputName") String name,
-            @Param("inputAge") int age,
-            @Param("inputCity") String city);
-```
+- `order by`：排序。後面加 `desc` 是從大到小，不加是從小到大
+- `distinct`：不重複。這裡只查班級名稱，所以回傳 `List<String>`
+- `like %?1%`：模糊查詢，名字裡**包含**這些字就算
+
+</CodeSteps>
 
 <!--
-JPQL 語法只支援 SELECT、UPDATE、DELETE，不支援 INSERT。
+三種常用的寫法。
 
-如果要用 @Query 做 INSERT，必須加 nativeQuery = true 使用原生 SQL。
+（下一步）order by 是排序。這個例子查某一班的同學，照成績排。後面加 desc 是從大排到小，不加的話是從小排到大。
 
-同樣地，必須搭配 @Modifying 和 @Transactional。回傳 int 代表插入的筆數（成功是 1）。
+（下一步）distinct 是不重複。這個例子想知道學校有哪些班級。很多同學是同一班，加了 distinct，同一個班級只會出現一次。因為只查班級名稱這一個變數，所以回傳的是一串文字 List<String>。
+
+（下一步）like 是模糊查詢。兩邊的百分比符號代表「前後可以有任何字」，所以只要名字裡包含這些字就算。
+-->
+
+---
+
+# 兩本簿子一起查：join
+
+教務處還有一本**班級簿**，記錄每一班的導師：
+
+```java
+@Getter
+@Setter
+@Entity
+public class Classroom {
+    @Id
+    private String className;
+    private String teacherName;
+}
+```
+
+<v-clicks>
+
+- 想查「每位同學的導師是誰」：同學在學籍簿，導師在班級簿
+- 要用**班級名稱**把兩本簿子對起來，這個動作叫 **join**
+- 查回來的東西兩邊各拿一些，所以要準備一張新的卡片來裝
+
+</v-clicks>
+
+<!--
+最後一種：兩本簿子一起查。
+
+教務處還有一本班級簿，記錄每一班的導師是誰。對應到程式是 Classroom 這個 Entity，有班級名稱和導師姓名。這裡的主鍵是班級名稱。
+
+（下一步）現在想查「每位同學的導師是誰」。同學的資料在學籍簿，導師的資料在班級簿。
+
+（下一步）所以要用班級名稱把兩本簿子對起來：這位同學是三年二班，就去班級簿找三年二班的導師。這個動作在 SQL 裡叫 join。
+
+（下一步）查回來的東西，兩邊各拿一些：同學的編號和名字、班級簿的導師姓名。它不是 Student，也不是 Classroom，所以要準備一張新的卡片來裝。
+-->
+
+---
+
+# join 的寫法
+
+<CodeSteps>
+
+```java {1-7|9-11|all}
+@Getter
+@AllArgsConstructor
+public class StudentTeacherVo {
+    private Integer id;
+    private String name;
+    private String teacherName;
+}
+
+@Query("select new com.example.demo.StudentTeacherVo(s.id, s.name, c.teacherName) "
+     + "from Student s join Classroom c on s.className = c.className")
+List<StudentTeacherVo> findStudentWithTeacher();
+```
+
+- 新卡片 `StudentTeacherVo`：不加 `@Entity`；`@AllArgsConstructor` 會產生「三個變數都要給」的建構子
+- 便條裡用 `new 完整的 package 路徑.類別名稱(…)`，把查到的值照順序放進新卡片
+- `join … on …`：用班級名稱把兩邊對起來
+- 括號裡的順序，要和類別裡變數的順序一樣
+
+</CodeSteps>
+
+<!--
+join 的寫法分兩個部分。
+
+（下一步）上半部是新卡片 StudentTeacherVo，有編號、名字、導師姓名三個變數。它只是用來裝查詢結果，不對應資料表，所以不加 @Entity。上面的 @AllArgsConstructor 是 Lombok，會自動產生一個「三個變數都要給」的建構子。
+
+（下一步）下半部是便條。select 後面寫 new，再寫新卡片完整的 package 路徑和類別名稱，括號裡是要放進去的三個值。from Student s join Classroom c on，後面是對起來的條件：兩邊的班級名稱相同。
+
+（下一步）join on 就是「用什麼把兩邊對起來」。
+
+（下一步）要注意，new 後面括號裡的順序，要和類別裡變數的順序一樣。package 路徑也要寫完整，請換成你自己專案的路徑。
+
+VO 是 Value Object 的縮寫，第三十六章會正式介紹。現在把它當成「專門用來裝結果的卡片」就好。
+-->
+
+---
+
+# 便條也可以分頁
+
+```java
+@Query("select s from Student s where s.className = :inputClass")
+Page<Student> findByClassPaging(@Param("inputClass") String className, Pageable pageable);
+```
+
+呼叫的時候：
+
+```java
+Page<Student> result = studentRepository.findByClassPaging("三年二班", PageRequest.of(0, 3));
+```
+
+<v-clicks>
+
+- 參數最後加一個 `Pageable`，回傳型別改成 `Page<Student>`
+- 10 筆資料、每頁 3 筆：`of(0, 3)` 是第 1～3 筆，`of(1, 3)` 是第 4～6 筆，`of(3, 3)` 只剩最後 1 筆
+
+</v-clicks>
+
+<!--
+上一章學的分頁，便條也可以用。
+
+（下一步）做法是：方法的參數最後加一個 Pageable，回傳型別改成 Page<Student>。呼叫的時候，一樣用 PageRequest.of 告訴它第幾頁、一頁幾筆。
+
+（下一步）舉個例子。假設符合條件的有 10 筆，每頁 3 筆。of(0, 3) 拿到第 1 到第 3 筆，of(1, 3) 拿到第 4 到第 6 筆，of(3, 3) 是第 4 頁，只剩最後 1 筆。頁碼從 0 開始，這一點要記得。
+-->
+
+---
+
+# 便條寫好了，誰來呼叫？
+
+```java
+// StudentDao
+public List<Student> getStudentsByClass(String className) {
+    return studentRepository.findByClass(className);
+}
+
+public int updateName(Integer studentId, String name) {
+    return studentRepository.updateNameById(studentId, name);
+}
+```
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 便條是貼在 <code>StudentRepository</code> 的方法上。用的時候和其他方法一樣：承辦人員（Dao）呼叫它，再往上接組長和櫃台。
+</div>
+
+</v-click>
+
+<!--
+便條寫好了，誰來呼叫？
+
+和前兩章一樣。在 StudentDao 裡呼叫 StudentRepository 的方法就可以了。
+
+（下一步）便條是貼在 StudentRepository 的方法上。用的時候和其他方法沒有差別：承辦人員呼叫它，再往上接組長和櫃台。三層的接法前面練過很多次，這裡就不重複了。
 -->
 
 ---
@@ -332,205 +574,50 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 5
-
-## SELECT 進階
+# 動手練習
 
 <!--
-查詢是最複雜的部分，來看幾個常用的進階寫法。
+最後來做兩個練習。
 -->
 
 ---
 
-# SELECT — order by / distinct
+# 練習 1：用 @Query 寫查詢和修改
 
-```java
-// order by：預設 ASC，可省略
-@Query("select p from PersonInfo p where p.city = ?1 order by p.age")
-List<PersonInfo> findByCityOrderByAge(String city);
+在 `StudentRepository` 加兩個方法：
 
-// order by DESC
-@Query("select p from PersonInfo p where p.city = ?1 order by p.age desc")
-List<PersonInfo> findByCityOrderByAgeDesc(String city);
+<v-clicks>
 
-// distinct：取不重複的城市
-@Query("select distinct new PersonInfo(p.city) from PersonInfo p")
-List<PersonInfo> findDistinctCity();
-```
+- `findByScoreRange(int min, int max)`：查成績在 min 到 max 之間的學生（包含兩端）
+- `updateScoreById(int id, int score)`：把某個 id 的學生成績改掉
+
+</v-clicks>
+
+<v-click>
+
+**要求：**
+
+1. 空格用 `:名字` 的寫法
+2. 修改的方法要加 `@Modifying`、`@Transactional`，回傳 `int`
+3. 提示：SQL 裡「介於兩個值之間」寫作 `between … and …`
+
+</v-click>
 
 <!--
-JPQL 的 order by 用 Entity 屬性名（age），不是資料庫欄位名（age 碰巧一樣，但如果欄位叫 person_age，JPQL 要寫 personAge）。
+練習 1。請在 StudentRepository 加兩個方法。
 
-distinct 用於取不重複值，搭配建構方法 new PersonInfo(city) 只取部分欄位。PersonInfo 必須有對應的建構方法才能用這個寫法。
+（下一步）第一個，findByScoreRange，查成績在 min 到 max 之間的學生，包含兩端。
 
-⚠️ JPQL 不支援 LIMIT，要限制回傳筆數需改用 Pageable（下一頁介紹）。
+（下一步）第二個，updateScoreById，把某個 id 的學生成績改掉。
+
+（下一步）三個要求。空格用冒號加名字的寫法。修改的方法要加 @Modifying 和 @Transactional，回傳 int。提示：SQL 裡「介於兩個值之間」寫作 between and。
+
+請先暫停，自己試試看，再看下一頁。
 -->
 
 ---
 
-# SELECT — like / join
-
-```java
-// like：模糊查詢（% 符號放在值裡）
-@Query("select p from PersonInfo p where p.city like %?1%")
-List<PersonInfo> findByCityLike(String keyword);
-
-// join：跨 Entity 查詢，回傳自訂 VO
-@Query("select new com.example.demo.ch28.JoinVo(p.id, p.name, a.amount) "
-     + "from PersonInfo p join Atm a on p.id = a.account")
-List<JoinVo> joinPersonAndAtm();
-```
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>join 的 VO：</b> 跨 Entity 查詢建議建立 VO 類別，用 <code>new 完整包路徑.VO(欄位...)</code> 語法取回特定欄位。VO 需要有對應的建構方法。
-</div>
-
-<!--
-like 的 % 放在參數值裡，不是放在 SQL 字串裡——% 是模式的一部分，JPQL 的 %?1% 表示在值的前後各加 %。
-
-join 查詢涉及多張表，回傳的欄位來自不同 Entity，所以要建立 VO 類別專門裝這些欄位。
-
-VO 類別不需要加 @Entity，但要有包含所有查詢欄位的建構方法，而且 @Query 裡要寫 VO 的完整路徑（包含 package）。
--->
-
----
-
-# JoinVo — 自訂回傳類別
-
-`JoinVo` 是專門接收 join 查詢結果的類別，**不加 `@Entity`**，只需要一個建構方法：
-
-```java
-package com.example.demo.ch28;
-
-public class JoinVo {
-
-    private String id;
-    private String name;
-    private int amount;
-
-    // 建構方法欄位順序必須和 @Query 的 new JoinVo(...) 完全一致
-    public JoinVo(String id, String name, int amount) {
-        this.id = id;
-        this.name = name;
-        this.amount = amount;
-    }
-
-    // Getter 和 Setter
-}
-```
-
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>兩個必要條件：</b> ① VO 有對應的建構方法 ② <code>@Query</code> 裡使用 VO 的<b>完整 package 路徑</b>（<code>com.example.demo.ch28.JoinVo</code>）
-</div>
-
-<!--
-JoinVo 的建構方法參數順序要和 @Query 的 new JoinVo(p.id, p.name, a.amount) 完全一致。
-JPA 是用建構方法來組裝回傳物件，順序錯了就會拿到錯誤的值或出現類型不符的例外。
-
-VO 放在 vo 套件下是業界慣例，和 Entity 分開管理。
-如果有 Lombok，可以加 @AllArgsConstructor + @Getter 省略手寫建構方法和 Getter。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# Part 6
-
-## 分頁查詢
-
-<!--
-最後學分頁——取代 JPQL 不支援的 LIMIT。
--->
-
----
-
-# 分頁查詢：Page / Pageable / PageRequest
-
-JPA 的分頁 API 取代 SQL 的 `LIMIT`：
-
-| 類型 | 說明 |
-| --- | --- |
-| `Pageable` | 介面，傳入 Repository 方法 |
-| `PageRequest` | Pageable 的實作，呼叫時建立 |
-| `Page<T>` | 回傳值，包含資料和分頁資訊 |
-| `PageRequest.of(page, size)` | page 從 0 開始；size 每頁筆數 |
-
-```java
-// Repository 定義（回傳 Page）
-Page<PersonInfo> findAll(Pageable pageable);
-
-// 呼叫（第 1 頁，每頁 4 筆）
-Page<PersonInfo> result =
-    personInfoDao.findAll(PageRequest.of(0, 4));
-```
-
-<!--
-分頁是業界非常常用的功能——清單 API 幾乎都需要分頁，不可能一次回傳全部資料。
-
-PageRequest.of(0, 4) 的第一個參數是頁碼（從 0 開始），第二個是每頁筆數。
-
-Page<T> 回傳的物件包含 getContent()（資料列表）、getTotalElements()（總筆數）、getTotalPages()（總頁數）等實用方法。
--->
-
----
-
-# 分頁查詢 — 範例
-
-10 筆資料，每頁 3 筆的分頁結果：
-
-| 呼叫 | 回傳頁 | 資料索引 |
-| --- | --- | --- |
-| `PageRequest.of(0, 3)` | 第 1 頁 | index 0–2 |
-| `PageRequest.of(1, 3)` | 第 2 頁 | index 3–5 |
-| `PageRequest.of(2, 3)` | 第 3 頁 | index 6–8 |
-| `PageRequest.of(3, 3)` | 第 4 頁 | index 9（最後 1 筆） |
-
-**自訂查詢方法也支援分頁：**
-
-```java
-@Query("select p from PersonInfo p where p.city = :city")
-Page<PersonInfo> findByCityPaging(
-    @Param("city") String city, Pageable pageable);
-```
-
-<!--
-分頁的 page 參數從 0 開始，這是初學者最常搞錯的地方。「第 1 頁」是 PageRequest.of(0, size)，不是 of(1, size)。
-
-自訂查詢加 Pageable 參數的方式很統一：在方法最後加上 Pageable pageable 參數，回傳 Page<T>，JPA 自動處理分頁邏輯。
-
-join 查詢因為不支援 LIMIT，也可以用這個方式限制回傳筆數：把 List 回傳型別改成 Page，或直接傳 Pageable。
--->
-
----
-layout: default
----
-
-# 練習 1：用 @Query 實作複雜查詢
-### 任務說明
-
-在 `StudentRepository` 中加入以下兩個自訂查詢方法：
-
-| 方法 | 說明 |
-| --- | --- |
-| `findByScoreRange(int min, int max)` | 查詢分數在 min~max 之間的學生（含端點） |
-| `updateScoreById(int id, int score)` | 更新指定 id 的學生分數 |
-
-請確認：
-1. 查詢方法使用命名參數 `:min`、`:max`
-2. 更新方法加上 `@Modifying`、`@Transactional`，回傳 `int`
-
-<!--
-這個練習把今天學的 @Query、命名參數、@Modifying 全部用上。
-
-大家先自己寫，思考：查詢用 JPQL 還是 nativeQuery = true？更新呢？
-
-想好了再看提示！
--->
-
----
-
-# 練習 1：解題提示
+# 練習 1：參考答案
 
 ```java
 @Query("select s from Student s where s.score between :min and :max")
@@ -543,86 +630,107 @@ List<Student> findByScoreRange(@Param("min") int min,
 int updateScoreById(@Param("id") int id, @Param("score") int score);
 ```
 
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>成功標準：</b> 用 Postman 呼叫 API，查詢分數 60~80 的學生，以及更新某個學生分數後再查詢確認。
+<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-left">
+✅ 接上三層之後，用 Postman 查成績 60～80 的學生；再改一位同學的成績，重新查一次確認。
 </div>
 
 <!--
-between :min and :max 是 JPQL 的範圍語法，等同 SQL 的 BETWEEN。
+這是參考答案。
 
-更新方法加了 @Modifying 和 @Transactional，回傳 int 代表影響行數。如果 id 不存在，回傳 0。
--->
+第一個方法是 JPQL，from Student，條件是 s.score between :min and :max。兩個參數各用 @Param 標明。
 
----
-layout: default
----
+第二個方法，便條是 update Student set score，上面加了 @Transactional 和 @Modifying，回傳 int。
 
-# 練習 2：為查詢加上分頁
-### 任務說明
-
-承接練習 1，將 `findByScoreRange` 改成支援分頁的版本：
-
-1. 修改方法簽名，加入 `Pageable` 參數，回傳型別改為 `Page<Student>`
-2. 在 Service 層呼叫時，傳入 `PageRequest.of(0, 5)`（第 1 頁，每頁 5 筆）
-3. 在 Controller 回傳 `Page<Student>`，前端可取得 `content`（資料）和 `totalElements`（總筆數）
-
-<!--
-分頁幾乎是所有清單 API 的標準配備，這個練習讓大家實際體驗一次完整流程。
-
-用 Postman 呼叫後，觀察回傳的 JSON 結構，看看 Page 物件包含哪些分頁資訊。
+接上三層之後，用 Postman 查成績 60 到 80 的學生。再改一位同學的成績，重新查一次，確認結果有變。
 -->
 
 ---
 
-# 練習 2：解題提示
+# 練習 2：加上分頁
+
+把練習 1 的查詢改成可以分頁的版本：
+
+1. 參數加上 `Pageable`，回傳型別改成 `Page<Student>`
+2. 呼叫時傳入 `PageRequest.of(0, 5)`：第 1 頁、每頁 5 筆
+3. Controller 直接回傳 `Page<Student>`
+
+<v-click>
 
 ```java
 @Query("select s from Student s where s.score between :min and :max")
-Page<Student> findByScoreRangePaging(
-    @Param("min") int min,
-    @Param("max") int max,
-    Pageable pageable);
+Page<Student> findByScoreRangePaging(@Param("min") int min,
+                                     @Param("max") int max,
+                                     Pageable pageable);
 ```
 
-Service 呼叫：
-
-```java
-Page<Student> result = studentRepo.findByScoreRangePaging(
-    60, 80, PageRequest.of(0, 5));
-```
-
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>成功標準：</b> 回傳 JSON 含 <code>content</code>（最多 5 筆）、<code>totalElements</code>（符合條件的總筆數）、<code>totalPages</code>。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+✅ 回傳的 JSON 裡會有 <code>content</code>（最多 5 筆）、<code>totalElements</code>（總筆數）、<code>totalPages</code>（總頁數）。
 </div>
 
-<!--
-Pageable 的 import 是 org.springframework.data.domain.Pageable。
-PageRequest 的 import 是 org.springframework.data.domain.PageRequest。
+</v-click>
 
-Page<T> 回傳的 JSON 會包含很多分頁相關的欄位，前端可以直接用 content 取資料、totalPages 知道共幾頁。
+<!--
+練習 2，把練習 1 的查詢改成可以分頁的版本。
+
+三個步驟：參數加上 Pageable，回傳型別改成 Page<Student>。呼叫時傳入 PageRequest.of(0, 5)。Controller 直接回傳 Page<Student>。
+
+請先自己試試看。
+
+（下一步）參考答案在這裡。便條的內容完全不用改，只是參數多了 Pageable，回傳型別換成 Page。
+
+Controller 直接回傳 Page 的話，JSON 裡會有 content，是這一頁的資料，最多 5 筆；還有 totalElements 總筆數、totalPages 總頁數。
+-->
+
+---
+
+# 複習：教務處對照表
+
+<Pairs left="教務處" right="程式" rows="doc,自己寫給助理的便條=code,@Query|card,照資料卡的名字寫=code,JPQL：Student、className|book,照學籍簿的名字寫=code,原生 SQL：nativeQuery = true|what,便條上的空格=code,?1 或 :名字 + @Param|form,會改資料的便條=code,@Modifying + @Transactional|cabinet,兩本簿子對起來查=code,join … on …" />
+
+<!--
+我們用一張圖複習今天的內容。
+
+（下一步）自己寫給助理的便條，是 @Query。
+
+（下一步）照資料卡的名字寫，是 JPQL。
+
+（下一步）照學籍簿的名字寫，是原生 SQL，要加 nativeQuery = true。
+
+（下一步）便條上的空格，用 ?1，或是冒號加名字再配上 @Param。
+
+（下一步）會改資料的便條，要加 @Modifying 和 @Transactional。
+
+（下一步）兩本簿子對起來查，是 join。
 -->
 
 ---
 
 # 章節總結
 
-| 重點 | 說明 |
-| --- | --- |
-| JPQL | 操作 Entity 類別名和屬性名；跨資料庫 |
-| nativeQuery = false | JPQL（預設）；表名用 Entity 類別名 |
-| nativeQuery = true | 原生 SQL；表名用資料庫表格名 |
-| 命名參數 | `:name` + `@Param("name")`，推薦使用 |
-| @Modifying | UPDATE / DELETE / INSERT 必加 |
-| clearAutomatically | 修改後清除 JPA 快取，避免讀到舊值 |
-| INSERT | 只能 nativeQuery = true |
-| 分頁 | `PageRequest.of(page, size)` + `Page<T>` 回傳 |
+<v-clicks>
+
+- **`@Query`**：方法名稱講不清楚時，自己寫要執行的內容
+- **JPQL**（預設）：用類別名稱和變數名稱，換資料庫不用改
+- **原生 SQL**：`nativeQuery = true`，用資料表名稱和欄位名稱
+- **參數**：建議用 `:名字` 搭配 `@Param`
+- **修改、刪除、新增**：加 `@Modifying` 和 `@Transactional`；新增只能用原生 SQL
+- **`clearAutomatically = true`**：改完清掉手邊的舊資料
+- **分頁**：參數加 `Pageable`，回傳 `Page`
+
+</v-clicks>
+
+<v-click>
+
+JPA 到這裡告一段落。下一章認識第三位幫手：MyBatis。
+
+</v-click>
 
 <!--
-今天的重點總結。
+最後整理今天的重點。
 
-最容易搞混的是：nativeQuery = false 用 Entity 名，nativeQuery = true 用資料庫名。記住：false 操作的是 Java 世界，true 操作的是資料庫世界。
+（依序按下一步）@Query 讓我們自己寫要執行的內容。JPQL 用類別名稱和變數名稱。原生 SQL 要加 nativeQuery = true，用資料表和欄位的名稱。參數建議用冒號加名字。會改資料的便條要加 @Modifying 和 @Transactional，新增只能用原生 SQL。clearAutomatically 讓助理改完就清掉手邊的舊資料。分頁只要加 Pageable。
 
-學完今天，大家應該可以說：「我知道什麼時候用命名查詢、什麼時候用 @Query 了！」
+（最後一步）JPA 到這裡告一段落。下一章認識第三位幫手：MyBatis。
 -->
 
 ---
@@ -631,6 +739,12 @@ layout: end
 
 # Q & A
 
+有任何問題嗎？
+
 <!--
-今天的 @Query 與 JPQL 章節就到這裡。大家有任何問題嗎？
+今天的內容到這邊。
+
+今天的寫法很多，不需要背。記得一個原則就好：簡單的查詢用方法名稱，複雜的查詢用 @Query。
+
+有任何問題歡迎提出來。
 -->
