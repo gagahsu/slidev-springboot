@@ -314,14 +314,14 @@ Method、URL、Header、Body。這四個名字請多念幾次。
 <CodeSteps>
 
 ```text {1|2-3|5}
-POST /users HTTP/1.1
+POST /orders HTTP/1.1
 Host: localhost:8080
 Content-Type: application/json
 
-{"name": "Alice", "age": 20}
+{"drinkName": "珍珠奶茶", "ice": "less"}
 ```
 
-- 第一行：**Method**（`POST`）和要找的路徑（`/users`）
+- 第一行：**Method**（`POST`）和要找的路徑（`/orders`）
 - 中間幾行：**Header**，一行寫一個備註
 - 空一行之後：**Body**，要送過去的資料
 
@@ -330,7 +330,7 @@ Content-Type: application/json
 <!--
 這是一張真正的 Http Request 寫出來的樣子。先說，這個不用背，只要看得出哪一塊是哪一塊就好。
 
-第一行，最前面的 POST 就是 Method。後面的 /users 是要找的路徑，也就是 URL 的一部分。
+第一行，最前面的 POST 就是 Method。後面的 /orders 是要找的路徑，也就是 URL 的一部分。
 
 （下一步）中間這幾行是 Header。一行寫一個備註，格式是「名稱、冒號、內容」。
 

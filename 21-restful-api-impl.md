@@ -46,56 +46,51 @@ style: |
 </div>
 
 <!--
-大家好，上一章我們學了 RESTful API 的設計概念：Http Method 代表操作、URL 代表資源、Response 回傳 JSON。
+大家好，歡迎來到第二十一章，也是手搖飲店這個單元的最後一章。
 
-今天要把這些概念真正落地——用 Spring Boot 實作一個完整的 CRUD RESTful API。
+上一章我們學了 RESTful 的三條規則，但只有觀念。
 
-我們還會學到四個更精簡的 Annotation：@GetMapping、@PostMapping、@PutMapping、@DeleteMapping，讓程式碼更簡潔易讀。
--->
-
----
-layout: default
----
-
-# Outline
-
-- **回顧：什麼是 RESTful API？** — Method 代表動作、URL 代表資源
-- **設計 RESTful API** — 規劃 CRUD 的路徑與 Method 對應
-- **在 Spring Boot 中實作** — @GetMapping、@PostMapping、@PutMapping、@DeleteMapping
-- **完整 CRUD 實作** — 逐一完成查詢、新增、更新、刪除四個端點
-- **章節總結** — 核心模式整理
-
-<!--
-今天會從設計開始，一路做到完整的 CRUD 實作。整個流程走完，大家就有了開發真實 API 的基礎能力。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# 回顧
-
-## 什麼是 RESTful API？
-
-<!--
-先快速回顧一下上一章的三大規則。
+今天要動手，把這間店的「訂單」做成一套完整的 RESTful API。前面八章學的東西，今天全部會用上。
 -->
 
 ---
 
-# 回顧：RESTful API 三大規則
+# 今天要搞懂的三件事
 
-| 規則 | 說明 | 本章如何實作 |
-| --- | --- | --- |
-| 規則 1 | Http Method 代表 CRUD 操作 | 使用 @GetMapping / @PostMapping 等 |
-| 規則 2 | URL 路徑描述資源層級 | 設計 `/students` 和 `/students/{id}` |
-| 規則 3 | Response 回傳 JSON | `@RestController` 自動處理（已學） |
+<v-clicks>
+
+- **先設計**：訂單的新增、查詢、修改、刪除，各自長什麼樣子
+- **更短的寫法**：`@GetMapping`、`@PostMapping`、`@PutMapping`、`@DeleteMapping`
+- **動手做**：完成一個完整的 `OrderController`
+
+</v-clicks>
 
 <!--
-三大規則的回顧。
+今天要搞懂三件事。
 
-這章的重點是規則 1 和規則 2 的實作：怎麼用 Spring Boot 的 Annotation 讓不同 Http Method 對應到不同的 Controller 方法，以及怎麼設計清晰的 URL 結構。
+（下一步）第一，先設計。訂單的新增、查詢、修改、刪除，各自的 API 長什麼樣子。
+
+（下一步）第二，學四個更短的寫法，取代又長又囉唆的 @RequestMapping 加 method。
+
+（下一步）第三，動手做，完成一個完整的 OrderController。
+-->
+
+---
+
+# 回顧：RESTful 的三條規則
+
+- **規則 1**：動作用 Http Method 表示　→ 今天學四個新的 Annotation
+- **規則 2**：路徑只寫東西　→ 今天設計 `/orders` 和 `/orders/{orderId}`
+- **規則 3**：回傳 JSON　→ `@RestController` 已經做到
+
+<!--
+先複習上一章的三條規則，順便看今天怎麼把它們做出來。
+
+規則一，動作用 Http Method 表示。今天會學四個新的 Annotation 來做這件事。
+
+規則二，路徑只寫東西。今天會設計 /orders 和 /orders 加上訂單編號這兩種路徑。
+
+規則三，回傳 JSON。@RestController 已經幫我們做到了。
 -->
 
 ---
@@ -104,33 +99,48 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-
-## 設計 RESTful API
+# 先設計，再寫程式
 
 <!--
-動手之前，先把 API 設計好。
+寫程式之前，先把 API 設計好。就像開店之前，先把菜單寫好。
 -->
 
 ---
 
-# 設計學生資源的 RESTful API
+# 訂單的四個 API
 
-以「學生（Student）」為資源，設計完整的 CRUD API：
-
-| 操作 | Http Method | URL | 說明 |
-| --- | --- | --- | --- |
-| 新增學生 | `POST` | `/students` | Request Body 帶學生資料 |
-| 查詢學生 | `GET` | `/students/{studentId}` | 路徑帶學生 ID |
-| 更新學生 | `PUT` | `/students/{studentId}` | 路徑帶 ID，Body 帶更新資料 |
-| 刪除學生 | `DELETE` | `/students/{studentId}` | 路徑帶學生 ID |
+<Pairs left="客人想做的事" right="API" rows="form,點一張新的訂單=code,POST /orders（Body 帶訂單內容）|what,查某一張訂單=code,GET /orders/{orderId}|doc,修改某一張訂單=code,PUT /orders/{orderId}（Body 帶新內容）|no,取消某一張訂單=code,DELETE /orders/{orderId}" />
 
 <!--
-這張表格就是我們今天要實作的 API 設計。
+客人對訂單會做四件事，我們各設計一個 API。
 
-注意看：同樣是 /students/{studentId} 這個 URL，根據 Http Method 的不同，對應的操作也完全不同。
-GET 是查，PUT 是更新，DELETE 是刪除——這就是 RESTful 風格的精髓。
+（下一步）點一張新的訂單：POST /orders。訂單的內容放在 Body 裡。新增的時候還沒有編號，所以路徑後面不用加東西。
 
-設計好了，接下來看怎麼在 Spring Boot 裡實作。
+（下一步）查某一張訂單：GET /orders 加上訂單編號。
+
+（下一步）修改某一張訂單：PUT /orders 加上訂單編號。新的內容放在 Body 裡。
+
+（下一步）取消某一張訂單：DELETE /orders 加上訂單編號。
+
+你會發現，後面三個的路徑一模一樣，只有 Http Method 不同。這就是 RESTful 的樣子。
+-->
+
+---
+
+# 小測驗：修改訂單要帶什麼？
+
+<Poll question="PUT /orders/25 要「把 25 號訂單改成綠茶」。後端需要從哪些地方讀資料？" options="只需要路徑裡的 25|只需要 Body 裡的新內容|路徑裡的 25，加上 Body 裡的新內容|Header 裡的會員卡" answer="3" />
+
+<!--
+來一題確認一下。
+
+PUT /orders/25，要把 25 號訂單改成綠茶。後端需要從哪些地方讀資料？
+
+（等大家作答）
+
+（下一步）答案是兩個地方都要：路徑裡的 25，告訴我們改哪一張；Body 裡的新內容，告訴我們改成什麼。
+
+也就是說，等一下修改訂單的方法，會同時用到 @PathVariable 和 @RequestBody。
 -->
 
 ---
@@ -139,56 +149,73 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-
-## 在 Spring Boot 中實作 RESTful API
+# 四個更短的寫法
 
 <!--
-來看 Spring Boot 怎麼支援 RESTful API 的實作。
+設計好了，寫程式之前，先學一個讓程式更短的寫法。
 -->
 
 ---
 
 # 從舊寫法到新寫法
 
-`@RequestMapping` 指定 method 的寫法太冗長，Spring Boot 提供更精簡的 Annotation：
+<CodeSteps>
 
-| 操作 | 舊寫法（@RequestMapping） | 新寫法 |
-| --- | --- | --- |
-| GET | `@RequestMapping(value="/students", method=RequestMethod.GET)` | `@GetMapping("/students")` |
-| POST | `@RequestMapping(value="/students", method=RequestMethod.POST)` | `@PostMapping("/students")` |
-| PUT | `@RequestMapping(value="/students/{id}", method=RequestMethod.PUT)` | `@PutMapping("/students/{id}")` |
-| DELETE | `@RequestMapping(value="/students/{id}", method=RequestMethod.DELETE)` | `@DeleteMapping("/students/{id}")` |
+```java {1-2|4-5|all}
+// 舊寫法：又長又容易打錯
+@RequestMapping(value = "/orders", method = RequestMethod.POST)
+
+// 新寫法：意思完全一樣
+@PostMapping("/orders")
+```
+
+- 之前為了指定 POST，要寫 `value` 又要寫 `method`
+- `@PostMapping`：把「POST」直接寫進名字裡，括號只要放路徑
+- 兩種寫法效果完全相同，之後我們都用新寫法
+
+</CodeSteps>
 
 <!--
-在第十四章，我們用 @RequestMapping + method 屬性來限制 Http Method。
+（第一步）之前為了指定只收 POST，我們要寫 value，又要寫 method，一行很長，也容易打錯。
 
-Spring Boot 提供了四個更簡潔的 Annotation，把 Method 限制和路徑直接合在一起：
-@GetMapping、@PostMapping、@PutMapping、@DeleteMapping。
+（下一步）Spring Boot 提供了更短的寫法：@PostMapping。它把 POST 直接寫進名字裡，括號裡只要放路徑就好。
 
-兩者功能完全一樣，新寫法更短、更直覺，現代 Spring Boot 開發一律用新寫法。
+（下一步）兩種寫法的效果完全相同。之後我們都用新寫法。
 -->
 
 ---
 
-# 四個新 Annotation 說明
+# 四個動作，四個 Annotation
 
-| Annotation | 對應 Http Method | 適合操作 |
-| --- | --- | --- |
-| `@GetMapping` | GET | 查詢資料（Read） |
-| `@PostMapping` | POST | 新增資料（Create） |
-| `@PutMapping` | PUT | 完整更新資料（Update） |
-| `@DeleteMapping` | DELETE | 刪除資料（Delete） |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>提示：</b> 這四個 Annotation 和 @RequestMapping 完全相容，只是更精簡的語法糖。
+- `@GetMapping`：只收 **GET**，用來查詢
+- `@PostMapping`：只收 **POST**，用來新增
+- `@PutMapping`：只收 **PUT**，用來修改
+- `@DeleteMapping`：只收 **DELETE**，用來刪除
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 就像店員的牌子直接印好「只接新訂單」「只接取消」，一眼就知道他負責什麼動作。
 </div>
 
+</v-click>
+
 <!--
-這四個 Annotation 就是現代 Spring Boot RESTful 開發的標準工具。
+四個動作，各有一個對應的 Annotation。
 
-記憶口訣：Get查、Post新增、Put更新、Delete刪除。
+（下一步）@GetMapping，只收 GET，用來查詢。
 
-從這章開始，我們就不再用 @RequestMapping + method 的冗長寫法了，全面改用這四個精簡 Annotation。
+（下一步）@PostMapping，只收 POST，用來新增。
+
+（下一步）@PutMapping，只收 PUT，用來修改。
+
+（下一步）@DeleteMapping，只收 DELETE，用來刪除。
+
+（下一步）還記得第十四章店員身上的牌子嗎？這就像牌子上直接印好「只接新訂單」、「只接取消」，一眼就知道他負責什麼動作。
 -->
 
 ---
@@ -197,183 +224,301 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 3
-
-## 具體實作
+# 動手做：OrderController
 
 <!--
-好，準備好了，開始動手實作。
+開始動手。
 -->
 
 ---
 
-# 準備：建立 Student 類別
+# 開始之前：整理一下
 
-建立 `Student.java`，需包含欄位及對應的 Getter / Setter：
+<v-clicks>
+
+- 前幾章練習時，我們在 `OrderController` 裡寫過 `/orders` 相關的方法
+- 請把 `OrderController` 裡**原本的方法都刪掉**，今天重新寫一份整齊的
+- `Order` 類別（第十六章建立的）**留著**，今天會繼續用
+
+</v-clicks>
 
 ```java
-public class Student {
+@Data
+public class Order {
     private Integer id;
-    private String name;
-    // 需加上 getId、setId、getName、setName
+    private String drinkName;
+    private Double price;
+    private Boolean paid;
 }
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>提醒：</b> Eclipse 右鍵 → Source → Generate Getters and Setters，自動產生所有 Getter / Setter。
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 如果不刪，同一個路徑、同一個 Method 會有兩個方法搶著負責，Spring Boot 啟動時會報錯。
 </div>
 
+</v-click>
+
 <!--
-實作之前，先準備 Student 類別。
+開始之前，先整理一下專案。
 
-這個類別我們在第十六章和第十八章都用過了，一樣的結構：私有欄位加上 Getter / Setter。
+（下一步）前幾章練習的時候，我們在 OrderController 裡寫過好幾個 /orders 相關的方法。
 
-記得用 Eclipse 的自動產生功能，省去手打 Getter / Setter 的時間。
+（下一步）請把 OrderController 裡原本的方法都刪掉。今天我們要重新寫一份整齊的。
+
+（下一步）Order 類別，也就是第十六章建立的那個，請留著，今天會繼續用。
+
+（下一步）為什麼要刪？因為如果不刪，同一個路徑、同一個 Method，會有兩個方法搶著負責。就像兩位店員掛了一模一樣的牌子，接待不知道要交給誰，Spring Boot 啟動的時候就會報錯。
 -->
 
 ---
 
-# 實作 Create & Read
+# 新增訂單（Create）
 
-在 `StudentController` 中實作 POST 新增 和 GET 查詢：
+<CodeSteps>
 
-```java
-// 新增學生
-@PostMapping("/students")
-public String create(@RequestBody Student student) {
-    return "執行資料庫的 Create 操作";
-}
-// 查詢學生
-@GetMapping("/students/{studentId}")
-public String read(@PathVariable("studentId") Integer studentId) {
-    return "執行資料庫的 Read 操作";
+```java {1|2|3|all}
+@PostMapping("/orders")
+public String create(@RequestBody Order order) {
+    return "新增訂單：" + order.getDrinkName();
 }
 ```
 
+- `@PostMapping("/orders")`：收 POST `/orders`
+- `@RequestBody Order order`：把 Body 裡的 JSON 填進 `Order` 物件
+- 現在先回傳一句話，代表「這裡之後要把訂單存起來」
+- 對應設計：點一張新的訂單
+
+</CodeSteps>
+
 <!--
-看 Create 和 Read 的實作。
+第一個，新增訂單。
 
-POST /students：用 @PostMapping，接收 @RequestBody 的 JSON，對應新增操作。
-GET /students/{studentId}：用 @GetMapping，接收 @PathVariable 的 studentId，對應查詢操作。
+（第一步）@PostMapping("/orders")，收 POST /orders 的請求。
 
-注意這裡我們還沒有連接資料庫，所以 return 的是說明文字。
-真正的資料庫操作要等到後面的 Spring JDBC 章節再加上去。
+（下一步）@RequestBody Order order，把 Body 裡的 JSON 填進 Order 物件。這是第十八章學的。
 
-兩個方法放在同一個 StudentController 類別裡，類別上加 @RestController。
+（下一步）方法裡，我們先回傳一句話。真正的系統會在這裡把訂單存進資料庫，但資料庫是下一個單元的主題，所以現在先用一句話代表。
+
+（下一步）這就對應到我們設計的第一個 API：點一張新的訂單。
 -->
 
 ---
 
-# 實作 Update & Delete
+# 查詢訂單（Read）
 
-繼續在 `StudentController` 中實作 PUT 更新 和 DELETE 刪除：
+<CodeSteps>
 
-```java
-// 更新學生
-@PutMapping("/students/{studentId}")
-public String update(@PathVariable("studentId") Integer studentId,
-                     @RequestBody Student student) {
-    return "執行資料庫的 Update 操作";
-}
-// 刪除學生
-@DeleteMapping("/students/{studentId}")
-public String delete(@PathVariable("studentId") Integer studentId) {
-    return "執行資料庫的 Delete 操作";
+```java {1|2|3|all}
+@GetMapping("/orders/{orderId}")
+public String read(@PathVariable("orderId") Integer orderId) {
+    return "查詢 " + orderId + " 號訂單";
 }
 ```
 
+- `@GetMapping("/orders/{orderId}")`：收 GET，路徑後面帶訂單編號
+- `@PathVariable("orderId")`：把路徑裡的編號讀出來
+- 先回傳一句話，代表「這裡之後要去找出這張訂單」
+- 對應設計：查某一張訂單
+
+</CodeSteps>
+
 <!--
-PUT /students/{studentId}：用 @PutMapping，同時接收路徑的 studentId 和 Body 的更新資料，對應完整更新操作。
+第二個，查詢訂單。
 
-注意 update 方法有兩個參數：@PathVariable("studentId") 告訴我們要更新哪一筆，@RequestBody Student student 是更新後的內容。
+（第一步）@GetMapping，路徑是 /orders 加上 {orderId}。大括號是第十九章學的，代表這裡的值每次都不一樣。
 
-DELETE /students/{studentId}：用 @DeleteMapping，只需要路徑的 studentId，不需要 Body。
+（下一步）@PathVariable("orderId")，把路徑裡的編號讀出來。
 
-⚠️ 大家可能會問：為什麼 DELETE 不需要 Body？因為刪除操作只需要知道「刪除誰」，不需要傳入任何更新內容。
+（下一步）一樣先回傳一句話，代表這裡之後要去資料庫找出這張訂單。
+
+（下一步）對應設計：查某一張訂單。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
+
+# 修改訂單（Update）
+
+<CodeSteps>
+
+```java {1|2|3|4-5|all}
+@PutMapping("/orders/{orderId}")
+public String update(@PathVariable("orderId") Integer orderId,
+                     @RequestBody Order order) {
+    return "把 " + orderId + " 號訂單改成：" + order.getDrinkName();
+}
+```
+
+- `@PutMapping`：收 PUT
+- `@PathVariable`：從路徑知道要改**哪一張**
+- `@RequestBody`：從 Body 知道要改成**什麼**
+- 把兩項資料組成一句話回傳
+- 一個方法可以同時用兩個工具，中間用逗號隔開
+
+</CodeSteps>
+
+<!--
+第三個，修改訂單。這是四個裡面最完整的一個。
+
+（第一步）@PutMapping，收 PUT。
+
+（下一步）@PathVariable，從路徑知道要改哪一張。
+
+（下一步）@RequestBody，從 Body 知道要改成什麼。
+
+（下一步）把兩項資料組成一句話回傳。
+
+（下一步）就像剛剛小測驗的答案：一個方法可以同時用兩個工具，中間用逗號隔開。
+-->
+
 ---
 
-# 完整 StudentController
+# 刪除訂單（Delete）
+
+<CodeSteps>
+
+```java {1|2|3|all}
+@DeleteMapping("/orders/{orderId}")
+public String delete(@PathVariable("orderId") Integer orderId) {
+    return "刪除 " + orderId + " 號訂單";
+}
+```
+
+- `@DeleteMapping`：收 DELETE
+- `@PathVariable`：從路徑知道要刪哪一張
+- 回傳一句話
+- 刪除只需要知道「哪一張」，所以不需要 Body
+
+</CodeSteps>
+
+<!--
+第四個，刪除訂單。
+
+（第一步）@DeleteMapping，收 DELETE。
+
+（下一步）@PathVariable，從路徑知道要刪哪一張。
+
+（下一步）回傳一句話。
+
+（下一步）刪除只需要知道是哪一張，所以不需要 Body。
+-->
+
+---
+
+# 完整的 OrderController
 
 ```java
 @RestController
-public class StudentController {
-    @PostMapping("/students")
-    public String create(@RequestBody Student student) {
-        return "執行資料庫的 Create 操作";
+public class OrderController {
+
+    @PostMapping("/orders")
+    public String create(@RequestBody Order order) {
+        return "新增訂單：" + order.getDrinkName();
     }
-    @GetMapping("/students/{studentId}")
-    public String read(@PathVariable("studentId") Integer studentId) {
-        return "執行資料庫的 Read 操作";
+
+    @GetMapping("/orders/{orderId}")
+    public String read(@PathVariable("orderId") Integer orderId) {
+        return "查詢 " + orderId + " 號訂單";
     }
-    @PutMapping("/students/{studentId}")
-    public String update(@PathVariable("studentId") Integer studentId,
-                         @RequestBody Student student) {
-        return "執行資料庫的 Update 操作";
+
+    @PutMapping("/orders/{orderId}")
+    public String update(@PathVariable("orderId") Integer orderId,
+                         @RequestBody Order order) {
+        return "把 " + orderId + " 號訂單改成：" + order.getDrinkName();
     }
-    @DeleteMapping("/students/{studentId}")
-    public String delete(@PathVariable("studentId") Integer studentId) {
-        return "執行資料庫的 Delete 操作";
+
+    @DeleteMapping("/orders/{orderId}")
+    public String delete(@PathVariable("orderId") Integer orderId) {
+        return "刪除 " + orderId + " 號訂單";
     }
 }
 ```
 
 <!--
-把四個方法合在一起，看完整的 StudentController 類別結構。
+把四個方法放在一起，就是完整的 OrderController。
 
-類別上加 @RestController，宣告這是 RESTful API 的控制器。
-四個方法各自對應 POST / GET / PUT / DELETE，覆蓋 CRUD 完整操作。
-
-目前 return 的是說明文字，後面 Spring JDBC 章節會替換成真正的資料庫操作。
+請大家對照自己的程式，確認四個方法都有，最上面也有 @RestController。然後重新啟動 Spring Boot。
 -->
 
 ---
 
-# 完整 API 路由總覽
+# 用 Postman 測試四個 API
 
-| Http Method | URL | Annotation | 說明 |
-| --- | --- | --- | --- |
-| `POST` | `/students` | `@PostMapping` | 新增學生，Body 帶資料 |
-| `GET` | `/students/{studentId}` | `@GetMapping` | 查詢指定學生 |
-| `PUT` | `/students/{studentId}` | `@PutMapping` | 更新指定學生 |
-| `DELETE` | `/students/{studentId}` | `@DeleteMapping` | 刪除指定學生 |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>恭喜：</b> 這就是一個完整的 RESTful API 骨架！後續章節加上資料庫操作，就是真實的後端 API。
+- `POST /orders`，Body：`{"drinkName": "珍珠奶茶", "price": 50.0}` → **新增訂單：珍珠奶茶**
+- `GET /orders/25` → **查詢 25 號訂單**
+- `PUT /orders/25`，Body：`{"drinkName": "綠茶", "price": 30.0}` → **把 25 號訂單改成：綠茶**
+- `DELETE /orders/25` → **刪除 25 號訂單**
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+✅ 這就是一套完整的 RESTful API 骨架。之後接上資料庫，它就是真正能用的後端。
 </div>
 
+</v-click>
+
 <!--
-這張表格就是我們今天實作完成的完整 RESTful API。
+用 Postman 把四個 API 都測一次。
 
-四個 Http Method 對應四個 CRUD 操作，URL 設計清楚、語意明確，這正是業界標準的 RESTful API 風格。
+（下一步）POST /orders，Body 帶一張珍珠奶茶的訂單。回應：新增訂單，珍珠奶茶。
 
-雖然目前方法裡只有 return 說明文字，但架構已經完整了。
-接下來學完 Spring JDBC，我們就能把這些 return 替換成真正的資料庫操作，完成一個可以上線的後端 API！
+（下一步）GET /orders/25。回應：查詢 25 號訂單。
+
+（下一步）PUT /orders/25，Body 帶新的內容。回應：把 25 號訂單改成綠茶。
+
+（下一步）DELETE /orders/25。回應：刪除 25 號訂單。
+
+（下一步）恭喜大家，這就是一套完整的 RESTful API 骨架。現在每個方法都只回傳一句話，等我們學會資料庫之後，把那句話換成真正的存取動作，它就是真正能用的後端了。
+-->
+
+---
+
+# 複習：這個單元學了什麼
+
+<Pairs left="飲料店" right="程式" rows="clerk,掛著「只接某種動作」牌子的店員=code,@GetMapping / @PostMapping / @PutMapping / @DeleteMapping|ok,報上的訂單編號=code,@PathVariable|form,交出來的訂單內容=code,@RequestBody|shop,全店統一的點單規則=code,RESTful API" />
+
+<!--
+用一張圖複習今天，也複習整個單元。
+
+（下一步）掛著「只接某種動作」牌子的店員，是 @GetMapping、@PostMapping、@PutMapping、@DeleteMapping。
+
+（下一步）報上的訂單編號，用 @PathVariable 讀。
+
+（下一步）交出來的訂單內容，用 @RequestBody 讀。
+
+（下一步）全店統一的點單規則，是 RESTful API。
 -->
 
 ---
 
 # 章節總結
 
-| 重點 | 說明 |
-| --- | --- |
-| 精簡 Annotation | `@GetMapping`、`@PostMapping`、`@PutMapping`、`@DeleteMapping` |
-| 取代舊寫法 | 比 `@RequestMapping + method` 更短、更直覺 |
-| 搭配使用 | 查詢用 `@PathVariable`；新增/更新用 `@RequestBody` |
-| CRUD 對應 | POST=Create、GET=Read、PUT=Update、DELETE=Delete |
-| 下一步 | 學習 Spring JDBC，讓 API 真正連接資料庫 |
+<v-clicks>
+
+- **四個新 Annotation**：`@GetMapping`、`@PostMapping`、`@PutMapping`、`@DeleteMapping`
+- **取代舊寫法**：比 `@RequestMapping` 加 `method` 更短、更清楚
+- **CRUD 對應**：POST 新增、GET 查詢、PUT 修改、DELETE 刪除
+- **搭配使用**：指定哪一筆用 `@PathVariable`，帶內容用 `@RequestBody`
+
+</v-clicks>
+
+<v-click>
+
+下一個單元，我們會學資料庫，讓這些 API 真的把資料存起來。
+
+</v-click>
 
 <!--
-好，今天的重點總結。
+最後整理今天的重點。
 
-第一，四個精簡 Annotation 取代冗長的 @RequestMapping + method 寫法。
-第二，配合 @PathVariable 和 @RequestBody，就能實作完整的 CRUD API。
-第三，目前的實作是骨架，後面連接 Spring JDBC 就能變成真實可用的後端 API。
+（依序按下一步）四個新的 Annotation。它們取代了 @RequestMapping 加 method 的舊寫法。POST 新增、GET 查詢、PUT 修改、DELETE 刪除。指定哪一筆用 @PathVariable，帶內容用 @RequestBody。
 
-學完今天，大家已經具備設計和實作 RESTful API 的基礎能力了！
+（最後一步）手搖飲店的故事到這裡告一段落。下一個單元，我們會學資料庫，讓這些 API 真的把資料存起來。
 -->
 
 ---
@@ -382,6 +527,12 @@ layout: end
 
 # Q & A
 
+有任何問題嗎？
+
 <!--
-今天的內容就到這裡。大家有任何問題嗎？
+今天的內容到這邊，手搖飲店這個單元也結束了。
+
+回想一下我們走過的路：店面和吧台、點單和取餐單、店員的牌子、杯子上的標籤、開口問和填單、會員卡和取餐號碼，最後是全店統一的規則。每一個畫面，都對應到一個你現在已經會寫的東西。
+
+有任何問題歡迎提出來。
 -->
