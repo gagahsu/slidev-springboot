@@ -46,67 +46,57 @@ style: |
 </div>
 
 <!--
-大家好，今天我們要聊的是後端開發中最常用到的兩個 Http Method：GET 和 POST。
+大家好，歡迎來到第十七章。
 
-在第十三章介紹 Http 協議時，我們提到 Http Method 代表「想對資源做什麼動作」。
-但我們還沒有深入講 GET 和 POST 在傳遞資料的方式上有什麼不同。
+前面我們一直說 Http Method 是「想做什麼動作」，但沒有仔細講。
 
-這一章就是要把這個問題講清楚。學完之後，大家就會知道什麼情況該用 GET，什麼情況該用 POST。
+今天要把最常用的兩個動作講清楚：GET 和 POST。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要搞懂的三件事
 
-- **回顧：什麼是 Http Method？** — 五種 Method 與對應的 CRUD 操作
-- **GET 的用法和特性** — 參數放 URL Query String、明信片比喻、適用情境
-- **POST 的用法和特性** — 參數放 Request Body、信封比喻、適用情境
-- **GET 和 POST 的比較** — 差異對照、Postman 實際操作
-- **章節總結** — 核心規則整理，下一章預告
+<v-clicks>
+
+- **客人在櫃台會做哪兩種事？** 開口問，或是填單交出去
+- **GET 和 POST 差在哪？** 資料放的位置不一樣
+- **動手做**：同一個路徑，GET 和 POST 各做各的事
+
+</v-clicks>
 
 <!--
-先看今天的大綱。我們會先快速回顧 Http Method 的概念，然後分別深入看 GET 和 POST，最後做個比較。
--->
+今天要搞懂三件事。
 
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
+（下一步）第一，客人走到櫃台，其實只會做兩種事：開口問，或是填單交出去。
 
-# 回顧
+（下一步）第二，GET 和 POST 差在哪裡。重點是資料放的位置不一樣。
 
-## 什麼是 Http Method？
-
-<!--
-先回顧一下第十三章的內容。
+（下一步）第三，動手做：讓同一個路徑，GET 和 POST 各做各的事。
 -->
 
 ---
 
-# 回顧：什麼是 Http Method？
+# 回顧：Http Method 是「想做什麼」
 
-Http Method 代表「前端想對後端的資源做什麼動作」：
+第十三章提過，點單的第一格是 Http Method：
 
-| Http Method | 對應操作 | 說明 |
-| --- | --- | --- |
-| **GET** | 查詢（Read） | 取得資料 |
-| **POST** | 新增（Create） | 送出資料，新增資源 |
-| PUT | 完整更新（Update） | 取代整筆資料 |
-| PATCH | 部分更新（Update） | 只修改部分欄位 |
-| DELETE | 刪除（Delete） | 刪除資源 |
+- **GET**：我想「看」　← 今天的主角
+- **POST**：我想「新增」　← 今天的主角
+- PUT：我想把整筆資料換掉
+- PATCH：我想改其中一部分
+- DELETE：我想刪除
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>本章重點：</b> GET 和 POST 是最常用的兩種 Method，也是傳遞資料方式差異最大的兩種。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 GET 和 POST 最常用，而且「資料怎麼帶」的方式差最多，所以先學這兩個。
 </div>
 
 <!--
-五種 Http Method 我們在第十三章都介紹過了。
+先複習一下。第十三章提過，點單的第一格是 Http Method，代表前端想做什麼動作。
 
-今天的重點放在 GET 和 POST，因為這兩個是日常開發中最常用到的，也是傳遞資料方式最不一樣的兩種。
+常見的有五種：GET 是想看，POST 是想新增，PUT、PATCH 是修改，DELETE 是刪除。
 
-GET 用來查詢資料，POST 用來新增資料。但更重要的是，它們傳遞參數的方式完全不同，這正是今天要深入探討的核心。
+今天只學 GET 和 POST。它們最常用，而且資料怎麼帶的方式差最多。其他三個，第二十章會一起學。
 -->
 
 ---
@@ -115,90 +105,64 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-
-## GET 的用法和特性
+# 在櫃台會做的兩種事
 
 <!--
-先來看 GET。
+我們回到手搖飲店的櫃台。
 -->
 
 ---
 
-# GET 的概念與特性
+# 開口問，還是填單？
 
-GET 就像寄一張「明信片」——內容完全公開，任何人都能看到：
-
-| 特性 | 說明 |
-| --- | --- |
-| 參數位置 | 加在 URL 的後面（Query String） |
-| 參數格式 | `?key=value`，多個用 `&` 分隔 |
-| 可見性 | 參數**完全公開**，出現在 URL 裡 |
-| 適合情境 | 查詢資料、搜尋、不含敏感資訊的請求 |
-| 不適合情境 | 傳遞密碼、信用卡號等敏感資訊 |
+<AskOrOrder />
 
 <!--
-古古用明信片來比喻 GET。明信片沒有信封，上面寫的東西任何人都能看到——郵差看得到，路上的人也看得到。
+客人走到櫃台，會做的事其實只有兩種。
 
-GET 就是這樣：我們把資料放在 URL 的後面，以 Query String 的方式傳送。
-URL 是公開的，瀏覽器的網址列看得到，伺服器的 Log 也會記錄下來。
+（下一步）第一種是開口問。例如小明問：珍珠奶茶多少錢？問題是用講的，所以旁邊排隊的人都聽得到。
 
-所以 GET 適合查詢資料，比如搜尋商品、查詢天氣，這些不含敏感資訊的請求。
-但如果是密碼或信用卡號，千萬不要放在 GET 的 URL 裡。
+（下一步）店員回答：50 元。回答完之後，店裡什麼都沒有改變。沒有多一張訂單，也沒有少一杯飲料。小明問十次，結果都一樣。
+
+（下一步）第二種是填一張點單交出去。小明要的東西比較多：珍珠奶茶、少冰、半糖。這些內容寫在單子上，不是用喊的，旁邊的人看不到。
+
+（下一步）店員收下單子之後，店裡的訂單簿就多了一筆新訂單。這一次，店裡的狀態改變了。
 -->
 
 ---
 
-# GET 的 Query String 格式
+# 把兩種動作搬進程式裡
 
-GET 的參數跟在 URL 後面，用 `?` 開頭：
-
-| 元素 | 說明 | 範例 |
-| --- | --- | --- |
-| `?` | Query String 的開始符號 | `http://localhost:8080/users?` |
-| `key=value` | 一組參數 | `id=123` |
-| `&` | 多個參數的分隔符號 | `id=123&name=Judy` |
-
-完整範例：
-
-```
-http://localhost:8080/users?id=123&name=Judy
-```
+<Pairs left="飲料店" right="Http" rows="what,開口問=code,GET：查詢資料|customer,問題是用講的，大家都聽得到=code,參數放在 URL 裡，公開可見|form,填單交出去=code,POST：新增資料|doc,內容寫在單子裡=code,參數放在 Request Body 裡" />
 
 <!--
-來看 GET 的 Query String 格式。
+把這兩種動作搬進程式裡。
 
-用問號 ? 開始，後面接 key=value 的組合。
-如果有多個參數，用 & 符號分隔。
+（下一步）開口問，就是 GET。它用來查詢資料。
 
-所以 http://localhost:8080/users?id=123&name=Judy 這個 URL，就是向 /users 路徑發送 GET 請求，帶了兩個參數：id 是 123，name 是 Judy。
+（下一步）問題是用講的，大家都聽得到。對應到 GET：參數放在 URL 裡，是公開可見的。
 
-大家有沒有在瀏覽器的網址列看過類似的 URL？例如 Google 搜尋的結果頁面，網址裡就有 q=搜尋關鍵字，那就是 Query String。
+（下一步）填單交出去，就是 POST。它用來新增資料。
+
+（下一步）內容寫在單子裡。對應到 POST：參數放在 Request Body 裡。Request Body 就是第十三章說的，點單上的第四格。
 -->
 
 ---
 
-# 在 Spring Boot 中使用 GET
+# 小測驗：該用哪一個？
 
-用 `@RequestMapping` 加上 `method = RequestMethod.GET` 限制只接受 GET 請求：
-
-```java
-@RestController
-public class MyController {
-
-    @RequestMapping(value = "/users", method = RequestMethod.GET)
-    public String getUsers() {
-        return "取得使用者清單";
-    }
-}
-```
+<Poll question="前端想知道「店裡現在有哪些飲料」，只是看一下，不改變任何資料。應該用哪一個 Http Method？" options="GET|POST|兩個都可以，沒有差別" answer="1" />
 
 <!--
-在 Spring Boot 中，我們在 @RequestMapping 加上 method = RequestMethod.GET，就能讓這個路徑只接受 GET 請求。
+來一題確認一下。
 
-如果前端用 POST 來呼叫 /users，Spring Boot 會回傳 405 Method Not Allowed 的錯誤。
+前端想知道店裡現在有哪些飲料，只是看一下，不改變任何資料。應該用哪一個？
 
-注意我們目前還不知道怎麼接收 Query String 的參數，那是下一章要學的 @RequestParam。
-現在先確認我們知道怎麼讓路徑只接受 GET 請求。
+（等大家作答）
+
+（下一步）答案是 GET。
+
+只是看、只是問，不會改變後端的資料，就用 GET。
 -->
 
 ---
@@ -207,84 +171,86 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-
-## POST 的用法和特性
+# GET：開口問
 
 <!--
-了解 GET 之後，來看 POST。
+接下來分別仔細看。先看 GET。
 -->
 
 ---
 
-# POST 的概念與特性
+# GET 的特性
 
-POST 就像寄一個「密封信封」——內容藏在裡面，外人看不到：
+<v-clicks>
 
-| 特性 | 說明 |
-| --- | --- |
-| 參數位置 | 放在 Request 的 **Body** 裡 |
-| 參數格式 | 通常是 JSON 格式 |
-| 可見性 | 參數**隱藏**在 Body 中，不出現在 URL |
-| 適合情境 | 新增資料、傳遞敏感資訊（如帳號密碼） |
-| 不適合情境 | 單純查詢，不需要傳送資料的操作 |
+- **用途**：查詢資料，例如看清單、搜尋
+- **參數放哪裡**：接在 URL 的後面，也就是 Query String
+- **公開可見**：參數會直接出現在網址列上
+- **不適合**：傳密碼、信用卡號這類不能被看到的資料
+
+</v-clicks>
 
 <!--
-POST 就像密封的信封。信封封起來之後，除了收件人，其他人看不到裡面的內容。
+GET 有這幾個特性。
 
-POST 的參數不放在 URL 裡，而是放在 Http Request 的 Body 裡。
-Body 的內容不會顯示在瀏覽器的網址列，也相對較難被攔截和篡改。
+（下一步）用途是查詢資料，例如看清單、搜尋。
 
-所以 POST 適合新增資料，以及傳遞敏感資訊，例如登入時的帳號密碼就應該用 POST。
+（下一步）參數接在 URL 的後面，也就是第十四章提過的 Query String。
+
+（下一步）因為參數在 URL 裡，所以會直接出現在瀏覽器的網址列上，是公開可見的。
+
+（下一步）所以 GET 不適合傳密碼、信用卡號這類不能被看到的資料。就像你不會在櫃台大聲喊出自己的提款卡密碼。
 -->
 
 ---
 
-# POST 的 Request Body 格式
+# GET 的參數怎麼寫？
 
-POST 的參數放在 Request Body，通常以 JSON 格式傳送：
+<UrlParts parts="localhost:8080/drinks;;網址本體;;哪間店、什麼品項;;前面這一段是第十四章學過的：Host、Port 和 Path||?;;問號;;參數開始;;問號：代表後面開始是參數||name=milktea;;key=value;;一組參數;;一組參數的寫法是 key=value：name 是 milktea||&;;& 符號;;下一組;;& 符號：把兩組參數隔開||ice=less;;key=value;;另一組參數;;第二組參數：ice 是 less" />
 
-```json
-{
-    "id": 123,
-    "name": "Judy"
+<!--
+GET 的參數寫在 URL 後面，有固定的寫法。
+
+（下一步）前面這一段是第十四章學過的：Host、Port 和 Path。
+
+（下一步）接著是一個問號。它代表後面開始是參數。
+
+（下一步）一組參數的寫法是 key 等於 value。這裡是 name 等於 milktea。
+
+（下一步）如果還有下一組參數，中間用 & 符號隔開。
+
+（下一步）第二組參數：ice 等於 less。
+
+整句的意思就像小明開口問：「我要查飲料，名稱是 milktea，冰塊是 less。」
+-->
+
+---
+
+# 在 Spring Boot 裡收 GET 請求
+
+<CodeSteps>
+
+```java {1|2-4|all}
+@RequestMapping(value = "/drinks", method = RequestMethod.GET)
+public String getDrinks() {
+    return "查詢飲料清單";
 }
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>補充：</b> 在 Postman 中，於 Body 分頁選擇 <code>raw</code>、格式選 <code>JSON</code>，直接輸入 JSON 內容送出。
-</div>
+- `method = RequestMethod.GET`：這位店員**只回答用問的**
+- 收到 GET `/drinks`，回傳「查詢飲料清單」
+- 這個寫法第十四章看過一次，現在知道它的意思了
+
+</CodeSteps>
 
 <!--
-POST 的 Body 通常以 JSON 格式呈現，這也是為什麼我們在第十五章先學 JSON 格式。
+在 Spring Boot 裡要怎麼只收 GET 請求？
 
-用 Postman 發送 POST 請求時，要在 Body 分頁選擇 raw、格式選 JSON，然後填入你要傳送的 JSON 資料。
+（第一步）在 @RequestMapping 裡加上 method = RequestMethod.GET。意思是：這位店員只回答用問的。
 
-選了 raw + JSON 之後，Postman 會自動在 Request Header 加上 Content-Type: application/json，告訴後端「我傳的是 JSON 格式」。
--->
+（下一步）收到 GET /drinks 的請求，就回傳「查詢飲料清單」。
 
----
-
-# 在 Spring Boot 中使用 POST
-
-用 `@RequestMapping` 加上 `method = RequestMethod.POST` 限制只接受 POST 請求：
-
-```java
-@RestController
-public class MyController {
-
-    @RequestMapping(value = "/users", method = RequestMethod.POST)
-    public String createUser() {
-        return "新增使用者";
-    }
-}
-```
-
-<!--
-和 GET 一樣，只要把 method 改成 RequestMethod.POST，這個路徑就只接受 POST 請求。
-
-如果前端用 GET 來呼叫 /users，會收到 405 Method Not Allowed。
-
-同樣地，我們現在還不知道怎麼從 Request Body 讀取 JSON 資料，那是下一章要學的 @RequestBody。
+（下一步）這個寫法第十四章看過一次，現在你知道它是什麼意思了。
 -->
 
 ---
@@ -293,81 +259,181 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 3
-
-## GET 和 POST 的比較
+# POST：填單交出去
 
 <!--
-分別介紹完 GET 和 POST，來做個總結比較。
+再來看 POST。
 -->
 
 ---
 
-# GET 和 POST 的比較
+# POST 的特性
 
-| 比較項目 | GET | POST |
-| --- | --- | --- |
-| 類比 | 明信片 | 密封信封 |
-| 參數位置 | URL Query String | Request Body |
-| 參數可見性 | 公開，出現在 URL | 隱藏，放在 Body |
-| 適合操作 | 查詢（Read） | 新增（Create） |
-| 安全性 | 較低 | 較高 |
-| 常見使用場景 | 搜尋、篩選、查詢資料 | 登入、送出表單、新增資料 |
+<v-clicks>
 
-<!--
-這張表格總結了 GET 和 POST 的核心差異。
+- **用途**：新增資料，例如點一杯新的飲料、註冊帳號
+- **參數放哪裡**：放在 Request Body 裡，通常寫成 JSON
+- **不會出現在網址上**：適合傳送內容多、或不想公開的資料
+- **不適合**：單純查詢
 
-最重要的一點就是參數位置：GET 放在 URL，POST 放在 Body。
-這個差異決定了安全性、可見性、以及適合的使用場景。
+</v-clicks>
 
-另外補充一個實務上常見的問題：有些開發者習慣「什麼都用 POST」，理由是 POST 比較安全。
-這個想法不算錯，但不夠精準。查詢資料用 GET 是語意上的約定，能讓 API 更容易理解和維護。
--->
+<v-click>
 
----
-
-# 在 Postman 中測試 GET 和 POST
-
-| 步驟 | GET 請求 | POST 請求 |
-| --- | --- | --- |
-| Method 選擇 | 選 `GET` | 選 `POST` |
-| URL | `http://localhost:8080/users?id=123` | `http://localhost:8080/users` |
-| Body | 不需要填寫 | 選 `raw` + `JSON`，填入 `{"id": 123, "name": "Judy"}` |
-| Content-Type | 不需要設定 | 選了 raw + JSON 後 Postman 自動帶上 `application/json` |
-
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>注意：</b> 用 GET 卻設定了 Body、或用 POST 卻把參數放在 URL，都是常見的初學者錯誤。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 帳號密碼這類資料，要放在 POST 的 Body 裡，而且網站要用 https，才真的安全。
 </div>
 
+</v-click>
+
 <!--
-最後來看怎麼在 Postman 中發送 GET 和 POST 請求。
+POST 有這幾個特性。
 
-GET：選 GET Method，把參數加在 URL 後面的 Query String，Body 留空。
-POST：選 POST Method，URL 不加參數，在 Body 分頁選 raw + JSON 填入資料，Content-Type 由 Postman 自動帶上 application/json。
+（下一步）用途是新增資料，例如點一杯新的飲料、註冊一個帳號。
 
-⚠️ 初學者最常犯的錯誤是：發 GET 卻去填 Body，或是發 POST 卻把參數放在 URL。
+（下一步）參數放在 Request Body 裡，通常寫成第十五章學過的 JSON。
 
-記住口訣：GET 參數在 URL，POST 參數在 Body。
+（下一步）因為不在 URL 裡，所以不會出現在網址列上。適合傳送內容比較多、或不想公開的資料。
+
+（下一步）單純的查詢，就不適合用 POST。
+
+（下一步）補充一點：帳號密碼這類資料要放在 POST 的 Body 裡，不要放在網址上。不過光是這樣還不夠，網站還要用 https 加密，才真的安全。
 -->
 
 ---
 
-# 章節總結
+# POST 的資料長這樣
 
-| 重點 | 說明 |
-| --- | --- |
-| GET | 參數放 URL（Query String），公開可見，適合查詢 |
-| POST | 參數放 Request Body（JSON），隱藏，適合新增 |
-| 明信片 vs 信封 | GET = 公開；POST = 密封 |
-| Spring Boot 寫法 | `method = RequestMethod.GET / POST` |
-| 下一步 | 學習 `@RequestParam` 讀取 GET 參數、`@RequestBody` 讀取 POST 資料 |
+Request Body 裡放的，就是一張 JSON：
+
+```json
+{
+    "name": "珍珠奶茶",
+    "ice": "less",
+    "sugar": 0.5
+}
+```
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 在 Postman 裡：點 <b>Body</b> 分頁 → 選 <b>raw</b> → 格式選 <b>JSON</b>，就可以填入這段內容。
+</div>
+
+</v-click>
 
 <!--
-好，今天的重點總結。
+POST 的資料長這樣。Request Body 裡放的，就是一張 JSON。這張單子寫的是：珍珠奶茶、少冰、半糖。
 
-第一，GET 參數在 URL 的 Query String，POST 參數在 Request Body。
-第二，GET 像明信片（公開），POST 像信封（密封）。
-第三，Spring Boot 用 method = RequestMethod.GET/POST 來限制接受的 Method。
-第四，下一章我們會學 @RequestParam 和 @RequestBody，就能真正讀取前端傳來的參數了！
+（下一步）在 Postman 裡要怎麼填？點 Body 分頁，選 raw，右邊的格式選 JSON，就可以把這段內容填進去。
+-->
+
+---
+
+# 在 Spring Boot 裡收 POST 請求
+
+<CodeSteps>
+
+```java {1|2-4|all}
+@RequestMapping(value = "/drinks", method = RequestMethod.POST)
+public String createDrink() {
+    return "新增一杯飲料";
+}
+```
+
+- `method = RequestMethod.POST`：這位店員**只收填好的單子**
+- 收到 POST `/drinks`，回傳「新增一杯飲料」
+- 路徑和剛剛一樣是 `/drinks`，只是動作不同
+
+</CodeSteps>
+
+<!--
+在 Spring Boot 裡收 POST 請求，寫法幾乎一樣。
+
+（第一步）把 method 改成 RequestMethod.POST。意思是：這位店員只收填好的單子。
+
+（下一步）收到 POST /drinks 的請求，就回傳「新增一杯飲料」。
+
+（下一步）注意，路徑和剛剛一樣是 /drinks，只是動作不同。Spring Boot 會依照 Method，把請求交給對的方法。
+
+至於怎麼把單子裡的內容讀出來，是下一章的主題。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 4
+# GET 和 POST 放在一起看
+
+<!--
+最後把兩個放在一起比較。
+-->
+
+---
+
+# GET vs POST
+
+<Pairs left="GET" right="POST" sign="vs" rows="what,開口問=form,填單交出去|code,參數在 URL（Query String）=code,參數在 Request Body（JSON）|browser,公開，出現在網址列=doc,不會出現在網址列|ok,適合：查詢、搜尋=ok,適合：新增、登入、送出表單" />
+
+<!--
+把 GET 和 POST 放在一起看。
+
+（下一步）GET 是開口問，POST 是填單交出去。
+
+（下一步）GET 的參數在 URL 的 Query String，POST 的參數在 Request Body。
+
+（下一步）GET 的參數是公開的，會出現在網址列。POST 的參數不會出現在網址列。
+
+（下一步）GET 適合查詢、搜尋。POST 適合新增、登入、送出表單。
+-->
+
+---
+
+# 在 Postman 裡怎麼測？
+
+<v-clicks>
+
+- **測 GET**：Method 選 `GET`，網址填 `http://localhost:8080/drinks?name=milktea`，Body 不用填
+- **測 POST**：Method 選 `POST`，網址填 `http://localhost:8080/drinks`，Body 選 raw + JSON 後填入內容
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 初學者常犯的錯：用 GET 卻去填 Body，或用 POST 卻把參數寫在網址上。
+</div>
+
+</v-click>
+
+<!--
+在 Postman 裡要怎麼測試？
+
+（下一步）測 GET：Method 選 GET，參數直接寫在網址後面，Body 不用填。
+
+（下一步）測 POST：Method 選 POST，網址後面不用加參數，到 Body 分頁選 raw 和 JSON，再填入內容。
+
+（下一步）初學者常犯的錯有兩個：用 GET 卻去填 Body，或者用 POST 卻把參數寫在網址上。記得：用問的就不用寫單子，寫了單子就不用再喊一次。
+-->
+
+---
+
+# 小測驗：登入要用哪一個？
+
+<Poll question="使用者要登入，前端需要把帳號和密碼傳給後端。應該用哪一個 Http Method？" options="GET，因為比較簡單|POST，因為資料不該出現在網址上|都可以，沒有差別" answer="2" />
+
+<!--
+再來一題。
+
+使用者要登入，前端需要把帳號和密碼傳給後端。應該用哪一個？
+
+（等大家作答）
+
+（下一步）答案是 POST。
+
+如果用 GET，密碼會直接出現在網址列上，還會留在瀏覽紀錄裡。這就像在櫃台大聲喊出密碼。
 -->
 
 ---
@@ -376,91 +442,151 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # 實作練習
-
-## 同一個路徑，GET 和 POST 各司其職
+# 同一個路徑，兩種動作
 
 <!--
-學完了 GET 和 POST，我們來動手練習一次。
+換大家動手做。
 -->
 
 ---
 
-# 實作題目：商品 API 的 GET 與 POST
+# 題目：訂單 API 的 GET 和 POST
 
-請在同一個路徑 `/products` 上，建立兩個分別接受 GET 和 POST 的 API：
+請在同一個路徑 `/orders` 上做出兩個 API：
 
-| # | 要求 |
-| --- | --- |
-| 1 | `GET /products` → 回傳字串 `"查詢商品列表"` |
-| 2 | `POST /products` → 回傳字串 `"新增一個商品"` |
-| 3 | 用 Postman 分別發送 GET 和 POST 請求，確認回應正確 |
-| 4 | 用 **PUT** 呼叫 `/products`，觀察 Spring Boot 回傳什麼狀態碼？ |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>提示：</b> 同一個路徑可以寫成兩個不同的方法，只要 <code>method</code> 不同，Spring Boot 就能正確分流。
+- `GET /orders` → 回傳文字「查詢訂單列表」
+- `POST /orders` → 回傳文字「新增一張訂單」
+- 用 Postman 分別測試，確認回應正確
+- 加分題：用 **PUT** 請求 `/orders`，觀察回傳的 Status Code 是多少
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 提示：同一個路徑可以寫成兩個方法，只要 <code>method</code> 不同就不會衝突。
 </div>
 
+</v-click>
+
 <!--
-這個題目的重點是：同一個 URL 路徑，可以根據 Http Method 的不同，對應到不同的處理方法。
+題目是這樣：請在同一個路徑 /orders 上做出兩個 API。
 
-這正是 REST API 的核心精神——URL 代表資源（商品），Method 代表動作（查詢或新增）。
+（下一步）GET /orders，回傳「查詢訂單列表」。
 
-第四小題是個小實驗：用一個我們沒有定義的 Method（PUT）去呼叫，看看 Spring Boot 會怎麼回應。
-大家先自己做做看，再看下一頁的參考解答。
+（下一步）POST /orders，回傳「新增一張訂單」。
+
+（下一步）用 Postman 分別測試。
+
+（下一步）加分題：故意用 PUT 去請求 /orders，觀察回傳的 Status Code 是多少。
+
+（下一步）提示：同一個路徑可以寫成兩個方法，只要 method 不同就不會衝突。
+
+請先暫停，自己寫寫看。
 -->
 
 ---
 
-# 參考解答（1/2）：程式碼
-
-同一個路徑寫成兩個方法，`method` 不同即可分流：
+# 參考解答：程式
 
 ```java
 @RestController
-public class ProductController {
+public class OrderController {
 
-    // GET /products → 查詢
-    @RequestMapping(value = "/products", method = RequestMethod.GET)
-    public String getProducts() {
-        return "查詢商品列表";
+    @RequestMapping(value = "/orders", method = RequestMethod.GET)
+    public String getOrders() {
+        return "查詢訂單列表";
     }
 
-    // POST /products → 新增
-    @RequestMapping(value = "/products", method = RequestMethod.POST)
-    public String createProduct() {
-        return "新增一個商品";
+    @RequestMapping(value = "/orders", method = RequestMethod.POST)
+    public String createOrder() {
+        return "新增一張訂單";
     }
 }
 ```
 
 <!--
-參考解答：兩個方法都對應 /products 這個路徑，但 method 一個是 GET、一個是 POST。
+這是參考解答。同一個路徑 /orders，寫成兩個方法。第一個只收 GET，第二個只收 POST。
 
-Spring Boot 收到請求時，會同時比對「路徑」和「Http Method」，找到對應的方法來執行。
-
-下一頁我們看實際測試的結果。
+如果你上一章已經建立過 OrderController，把這兩個方法加進去就可以了。
 -->
 
 ---
 
-# 參考解答（2/2）：測試結果
+# 參考解答：測試結果
 
-| 測試 | 結果 |
-| --- | --- |
-| `GET /products` | `200 OK`，回應 `查詢商品列表` |
-| `POST /products` | `200 OK`，回應 `新增一個商品` |
-| `PUT /products` | `405 Method Not Allowed`（沒有方法接受 PUT） |
+<v-clicks>
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>404 vs 405：</b> 404 是「路徑不存在」；405 是「路徑存在，但不接受這個 Http Method」。
+- `GET /orders` → **200 OK**，回應「查詢訂單列表」
+- `POST /orders` → **200 OK**，回應「新增一張訂單」
+- `PUT /orders` → **405 Method Not Allowed**
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <b>404</b>：這個品項沒有人負責。<b>405</b>：有人負責這個品項，但不接受你這種動作。
 </div>
 
+</v-click>
+
 <!--
-測試結果：GET 和 POST 各自對應到正確的方法，回傳 200。
+測試結果應該是這樣。
 
-第四小題的答案是 405 Method Not Allowed——路徑 /products 存在，但沒有任何方法宣告接受 PUT，所以 Spring Boot 回傳 405，而不是 404。
+（下一步）GET /orders，200 OK，回應查詢訂單列表。
 
-這個 404 和 405 的差別很值得記住：404 是「路徑不存在」，405 是「路徑存在，但不接受這個 Method」。
+（下一步）POST /orders，200 OK，回應新增一張訂單。
+
+（下一步）PUT /orders，會得到 405 Method Not Allowed。
+
+（下一步）這裡多認識一個 Status Code。404 是這個品項沒有人負責。405 是有人負責這個品項，但是不接受你這種動作。兩個都是 4 開頭，代表是前端這邊的問題。
+-->
+
+---
+
+# 複習：飲料店對照表
+
+<Pairs left="飲料店" right="程式" rows="what,開口問=code,GET：查詢，參數在 URL|form,填單交出去=code,POST：新增，參數在 Request Body|no,店員不接受這種動作=code,405 Method Not Allowed" />
+
+<!--
+我們用一張圖複習今天的內容。
+
+（下一步）開口問，是 GET：查詢，參數在 URL。
+
+（下一步）填單交出去，是 POST：新增，參數在 Request Body。
+
+（下一步）店員不接受這種動作，是 405 Method Not Allowed。
+-->
+
+---
+
+# 章節總結
+
+<v-clicks>
+
+- **GET**：查詢資料；參數放在 URL 的 Query String，公開可見
+- **POST**：新增資料；參數放在 Request Body，通常是 JSON
+- **Spring Boot 寫法**：`method = RequestMethod.GET` 或 `RequestMethod.POST`
+- **同一個路徑**可以依照 Method 交給不同的方法
+- **405**：路徑存在，但不接受這個 Method
+
+</v-clicks>
+
+<v-click>
+
+下一章我們會學怎麼把參數「讀出來」：`@RequestParam` 和 `@RequestBody`。
+
+</v-click>
+
+<!--
+最後整理今天的重點。
+
+（依序按下一步）GET 用來查詢，參數放在 URL。POST 用來新增，參數放在 Request Body。在 Spring Boot 裡用 method 來指定。同一個路徑可以依照 Method 交給不同的方法。405 代表路徑存在，但不接受這個 Method。
+
+（最後一步）今天我們只讓店員分辨「問」和「填單」，還沒有真的去聽客人問了什麼、單子上寫了什麼。下一章就來學怎麼把參數讀出來。
 -->
 
 ---
@@ -469,6 +595,12 @@ layout: end
 
 # Q & A
 
+有任何問題嗎？
+
 <!--
-今天的內容就到這裡。大家有任何問題嗎？
+今天的內容到這邊。
+
+記得那句話：用問的是 GET，填單交出去是 POST。
+
+有任何問題歡迎提出來。
 -->
