@@ -46,27 +46,33 @@ style: |
 </div>
 
 <!--
-大家好，今天我們要介紹一個現代後端開發中非常重要的概念——RESTful API。
+大家好，歡迎來到第二十章。
 
-在前幾章，我們學了 Http Method、URL 設計、@PathVariable 等工具。
-今天要把這些工具的設計哲學串聯起來，讓大家理解為什麼業界普遍採用 RESTful 風格來設計 API。
+前面幾章，我們學會了設定路徑、回傳 JSON、讀出前端帶來的資料。工具都齊了。
 
-學完這一章，大家就能看懂和設計符合業界慣例的 API 了。
+今天不學新工具，而是學一套「大家約好的規則」，讓我們設計出來的 API 整齊、好懂。它叫做 RESTful API。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要搞懂的三件事
 
-- **什麼是 API？** — 定義、前後端溝通的橋樑
-- **什麼是 RESTful API？** — REST 設計風格、URL 代表資源、Method 代表動作
-- **RESTful API 的注意事項** — 常見誤用、命名規範、業界慣例
-- **章節總結** — 核心規則整理
+<v-clicks>
+
+- **API 到底是什麼？** 就是店裡那張菜單
+- **RESTful 是什麼？** 全店統一的點單規則，只有三條
+- **什麼時候可以不照規則？** 它是約定，不是法律
+
+</v-clicks>
 
 <!--
-今天的結構很清楚：先搞清楚 API 是什麼，再介紹 RESTful 的設計規則，最後說明使用上的注意事項。
+今天要搞懂三件事。
+
+（下一步）第一，API 到底是什麼。這個詞我們用了很多次，今天正式介紹。它就是店裡那張菜單。
+
+（下一步）第二，RESTful 是什麼。它是全店統一的點單規則，總共只有三條。
+
+（下一步）第三，什麼時候可以不照規則。因為它是約定，不是法律。
 -->
 
 ---
@@ -75,60 +81,40 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-
-## 什麼是 API？
-
-<!--
-先從最基本的問題開始：API 是什麼？
--->
-
----
-
 # 什麼是 API？
 
-| 項目 | 說明 |
-| --- | --- |
-| 全名 | Application Programming Interface |
-| 定義 | 「用工程師的方式，說明某個功能的使用方法」 |
-| 用途 | 讓其他開發者不需要看原始碼，就能使用這個功能 |
-| 常見形式 | 文件說明：URL 路徑、Http Method、參數格式、回應格式 |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>白話說：</b> API 就像「說明書」——我不用知道你的程式怎麼寫，只要照說明書操作就能得到結果。
-</div>
-
 <!--
-API 的全名是 Application Programming Interface，但記全名不重要，重要的是理解它的用途。
-
-舉個例子：你寫了一個查詢使用者資料的功能，前端工程師要怎麼使用它？
-他不可能去看你的 Spring Boot 程式碼，而是看你提供的 API 文件：
-「發送 GET 請求到 /users/123，就能拿到 id=123 的使用者資料。」
-
-這個說明，就是 API。
+先把 API 這個詞講清楚。
 -->
 
 ---
 
-# API 的生活比喻
+# API 就是那張菜單
 
-**比喻：餐廳的菜單**
+<Pairs left="飲料店" right="程式" rows="machine,吧台裡怎麼做飲料=server,後端的程式怎麼寫|form,菜單：有什麼可以點、要怎麼點=code,API：有哪些功能、要怎麼呼叫|customer,客人看菜單點飲料=browser,前端工程師看 API 文件發請求|cup,拿到飲料=code,拿到 Response（JSON）" />
 
-| 角色 | 對應 |
-| --- | --- |
-| 餐廳（廚房） | 後端（Spring Boot 程式） |
-| 菜單 | API 文件 |
-| 客人（點餐者） | 前端工程師 |
-| 點餐動作 | 發送 Http Request |
-| 上菜（料理） | Http Response（JSON 資料） |
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <b>API</b>（Application Programming Interface）：一份「這個功能要怎麼用」的說明。照著用就好，不用知道裡面怎麼做。
+</div>
+
+</v-click>
 
 <!--
-用餐廳來比喻最直觀。
+客人走進飲料店，不需要知道吧台裡怎麼煮珍珠。他只需要看菜單。
 
-客人不需要知道廚房怎麼烹飪，只需要看菜單，選一道菜，告訴服務生，等上菜就好。
+（下一步）吧台裡怎麼做飲料，對應到後端的程式怎麼寫。這是店家自己的事。
 
-前端工程師也一樣。他不需要看 Spring Boot 的原始碼，只需要看 API 文件：發送什麼請求、帶什麼參數、會得到什麼回應。
+（下一步）菜單告訴客人：有什麼可以點、要怎麼點。對應到程式，這就是 API：它說明後端有哪些功能、要怎麼呼叫。
 
-後端工程師的工作就是「設計好菜單（API）」和「做出料理（功能實作）」。
+（下一步）客人看菜單點飲料。對應到程式：前端工程師看 API 文件，然後發請求。
+
+（下一步）最後拿到飲料，也就是拿到 Response。
+
+（下一步）API 的全名是 Application Programming Interface。白話說，它是一份「這個功能要怎麼用」的說明。照著用就好，不用知道裡面怎麼做。
+
+一份 API 的說明，通常會寫清楚四件事：路徑是什麼、用哪個 Http Method、要帶什麼參數、會回傳什麼。這四件事我們前面都學過了。
 -->
 
 ---
@@ -137,129 +123,217 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-
-## 什麼是 RESTful API？
+# 每間分店的點法都不一樣？
 
 <!--
-了解 API 之後，來看 RESTful API 是什麼。
+知道 API 是菜單之後，來看一個問題。
 -->
 
 ---
 
-# 什麼是 RESTful API？
+# 沒有規則的時候
 
-| 項目 | 說明 |
-| --- | --- |
-| REST 全名 | Representational State Transfer |
-| RESTful 意思 | 「符合 REST 風格的」API |
-| 本質 | 一套 API 設計的風格與約定，不是強制規範 |
-| 目標 | 讓 API 的設計有一致性、可讀性、易於理解 |
+這間手搖飲店開了三間分店，每間的店長各自設計「查訂單」的點法：
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>補充：</b> RESTful 是目前業界最主流的 API 設計風格，幾乎所有現代 Web API 都採用這個風格。
+<v-clicks>
+
+- A 分店：`GET /getOrder?id=25`
+- B 分店：`POST /showMeTheOrder`
+- C 分店：`GET /order_query/25`
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+❓ 都是「查 25 號訂單」，卻有三種點法。客人每到一間店，都要重新學一次。
 </div>
 
+</v-click>
+
 <!--
-RESTful API 就是「符合 REST 風格的 API」。
+這間手搖飲店生意很好，開了三間分店。但是總部沒有訂規則，每間的店長各自設計「查訂單」的點法。
 
-REST 是一套設計哲學，定義了如何用 Http 協議來設計出清晰、易懂的 API。
-它不是一個必須嚴格遵守的規範，而是一套業界大家都認可的設計約定。
+（下一步）A 分店：GET /getOrder，號碼放在問號後面。
 
-接下來我們看 RESTful API 的三個核心設計規則。
+（下一步）B 分店：用 POST，路徑叫 /showMeTheOrder。
+
+（下一步）C 分店：GET /order_query，號碼放在路徑裡。
+
+（下一步）三種都能用，程式也都不會錯。但是明明都是查 25 號訂單，卻有三種點法。客人每到一間店，都要重新學一次。
+
+寫程式也一樣。如果每個工程師都照自己的習慣命名，前端工程師會很痛苦。
 -->
 
 ---
 
-# RESTful 規則 1：用正確的 Http Method 代表操作
+# 總部訂了一套統一規則
 
-不同的操作對應不同的 Http Method：
+**RESTful API：一套大家約好的 API 設計規則，讓所有 API 看起來都是同一個樣子。**
 
-| Http Method | 對應操作 | 範例 URL | 說明 |
-| --- | --- | --- | --- |
-| `GET` | 查詢（Read） | `GET /users` | 取得所有使用者 |
-| `POST` | 新增（Create） | `POST /users` | 新增一個使用者 |
-| `PUT` | 完整更新（Update） | `PUT /users/123` | 更新 id=123 的使用者 |
-| `DELETE` | 刪除（Delete） | `DELETE /users/123` | 刪除 id=123 的使用者 |
+<v-clicks>
+
+- **REST** 是 Representational State Transfer 的縮寫，名字不用背
+- **RESTful** 的意思是「符合 REST 風格的」
+- 它是目前**最主流**的 API 設計風格
+- 規則只有**三條**
+
+</v-clicks>
 
 <!--
-第一個規則：用 Http Method 來表達對資源要做什麼動作。
+所以總部訂了一套全店統一的點單規則。在程式的世界裡，這套規則叫做 RESTful API。
 
-GET = 查；POST = 新增；PUT = 更新；DELETE = 刪除。
+用一句話說：它是一套大家約好的 API 設計規則，讓所有 API 看起來都是同一個樣子。
 
-注意到了嗎？同一個 URL /users 可以對應四種操作，差別就在 Http Method 不同。
-這正是 RESTful 的精妙之處：URL 代表「資源是誰」，Method 代表「要做什麼」。
+（下一步）REST 是三個英文字的縮寫，這個全名很抽象，不用背。
+
+（下一步）RESTful 多了 ful，意思是「符合 REST 風格的」。
+
+（下一步）它是目前最主流的 API 設計風格，你以後接觸到的 API 幾乎都長這樣。
+
+（下一步）而且規則只有三條。我們一條一條看。
 -->
 
 ---
 
-# RESTful 規則 2：URL 路徑代表資源層級
+# 規則 1：動作，用 Http Method 表示
 
-URL 的設計要能清楚描述資源的結構關係：
+<Pairs left="客人想做的事" right="Http Method" rows="what,看一下訂單=code,GET：查詢|form,點一張新的訂單=code,POST：新增|doc,把訂單的內容改掉=code,PUT：修改|no,取消訂單=code,DELETE：刪除" />
 
-| URL | 語意 |
-| --- | --- |
-| `GET /users` | 取得所有使用者 |
-| `GET /users/123` | 取得 id=123 的使用者 |
-| `GET /users/123/orders` | 取得 id=123 的使用者的所有訂單 |
-| `GET /users/123/orders/456` | 取得 id=123 的使用者的 id=456 訂單 |
+<v-click>
 
-<!--
-第二個規則：URL 要能清楚表達資源的層級關係。
-
-用斜線 / 分隔層級，越往右越具體。
-
-/users 是所有使用者，/users/123 是某個特定使用者，/users/123/orders 是這個使用者的所有訂單。
-
-這種設計就像資料夾結構一樣直覺，光看 URL 就知道在操作什麼資源。
-這也是為什麼上一章我們需要 @PathVariable——它讓 URL 路徑可以帶入動態的 id 值。
--->
-
----
-
-# RESTful vs 非 RESTful URL 設計
-
-| 操作 | 非 RESTful 風格 | RESTful 風格 |
-| --- | --- | --- |
-| 取得使用者 | `GET /getUser?id=123` | `GET /users/123` |
-| 新增使用者 | `POST /createUser` | `POST /users` |
-| 更新使用者 | `POST /updateUser` | `PUT /users/123` |
-| 刪除使用者 | `POST /deleteUser?id=123` | `DELETE /users/123` |
-
-<div class="mt-4 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ <b>RESTful 風格的優點：</b> URL 簡潔、語意清楚、統一風格，前端工程師一看就懂。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 這四個動作合起來常被叫做 <b>CRUD</b>：新增（Create）、查詢（Read）、修改（Update）、刪除（Delete）。
 </div>
 
+</v-click>
+
 <!--
-用這個對比表格最能感受到 RESTful 的好處。
+規則一：客人想做什麼動作，用 Http Method 來表示。
 
-非 RESTful 風格：URL 裡帶了動詞，像 getUser、createUser，而且不同操作的 Method 混亂。
-RESTful 風格：URL 只描述資源，動作由 Http Method 表達，整體更簡潔、一致。
+（下一步）看一下訂單，用 GET。
 
-學會 RESTful 風格之後，你設計的 API 就能讓其他工程師一看就理解，這是專業後端工程師的基本素養。
+（下一步）點一張新的訂單，用 POST。這兩個第十七章學過。
+
+（下一步）把訂單的內容改掉，用 PUT。
+
+（下一步）取消訂單，用 DELETE。
+
+（下一步）新增、查詢、修改、刪除，這四個動作合起來有一個常見的稱呼，叫做 CRUD，是四個英文字的開頭。以後看到 CRUD，就是指這四個基本動作。
 -->
 
 ---
 
-# RESTful 規則 3：Response 回傳 JSON 格式
+# 規則 2：路徑，只寫「東西」
 
-| 項目 | 說明 |
-| --- | --- |
-| 回傳格式 | Response Body 應為 **JSON** 格式（或 XML，但 JSON 為主流） |
-| Spring Boot 實作 | `@RestController` 自動將 Java 物件轉成 JSON（第十六章） |
-| Content-Type | Response Header 應包含 `Content-Type: application/json` |
+動作已經交給 Http Method 了，所以路徑裡**不要再寫動詞**，只寫「對哪個東西」：
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>好消息：</b> 我們在第十六章學到的 @RestController 已經自動幫我們處理 JSON 回傳，完全符合 RESTful 規範。
+<v-clicks>
+
+- `/orders` → 所有的訂單
+- `/orders/25` → 25 號訂單
+- `/members/7/orders` → 7 號會員的所有訂單
+- `/members/7/orders/25` → 7 號會員的 25 號訂單
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 東西用<b>複數名詞</b>（orders、members）；越往右，指的範圍越小、越具體。
 </div>
 
+</v-click>
+
 <!--
-第三個規則：Response 要回傳 JSON 格式。
+規則二：路徑只寫「東西」。
 
-這個規則我們已經在第十五章學 JSON、第十六章學 @RestController 時實作過了。
+動作已經交給 Http Method 表示了，所以路徑裡不要再出現 get、create、delete 這些動詞，只要寫「對哪個東西」。
 
-@RestController 自動把 Java 物件轉成 JSON，Response Header 也自動設定 Content-Type: application/json。
+（下一步）/orders，代表所有的訂單。
 
-所以我們從第十六章開始寫的 API 就已經符合 RESTful 的第三個規則了，很棒！
+（下一步）/orders/25，代表 25 號訂單。後面的 25，就是上一章 @PathVariable 讀的那個值。
+
+（下一步）/members/7/orders，代表 7 號會員的所有訂單。
+
+（下一步）/members/7/orders/25，代表 7 號會員的 25 號訂單。
+
+（下一步）兩個習慣：東西用複數名詞，像 orders、members。路徑越往右，指的範圍越小、越具體。
+-->
+
+---
+
+# 把規則 1 和規則 2 合起來
+
+<Pairs left="沒有規則" right="RESTful" sign="→" rows="what,GET /getOrder?id=25=ok,GET /orders/25|what,POST /createOrder=ok,POST /orders|what,POST /updateOrder?id=25=ok,PUT /orders/25|what,POST /deleteOrder?id=25=ok,DELETE /orders/25" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+✅ 路徑只剩 <code>/orders</code> 和 <code>/orders/25</code> 兩種，動作看 Http Method 就知道。
+</div>
+
+</v-click>
+
+<!--
+把前兩條規則合起來，看看差別。左邊是沒有規則的寫法，右邊是 RESTful 的寫法。
+
+（下一步）查 25 號訂單：GET /orders/25。
+
+（下一步）新增訂單：POST /orders。
+
+（下一步）修改 25 號訂單：PUT /orders/25。
+
+（下一步）刪除 25 號訂單：DELETE /orders/25。
+
+（下一步）右邊的路徑只剩下兩種：/orders 和 /orders/25。想做什麼動作，看 Http Method 就知道。不管到哪一間分店，點法都一樣。
+-->
+
+---
+
+# 規則 3：回傳 JSON
+
+<v-clicks>
+
+- Response Body 用 **JSON** 格式
+- 在 Spring Boot 裡，`@RestController` 已經自動幫我們做到了（第十六章）
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 所以第三條規則，我們其實早就遵守了。
+</div>
+
+</v-click>
+
+<!--
+規則三最簡單：回傳的資料用 JSON 格式。
+
+（下一步）Response Body 用 JSON。
+
+（下一步）在 Spring Boot 裡，@RestController 已經自動幫我們做到了，就是第十六章的標籤機。
+
+（下一步）所以第三條規則，我們其實早就遵守了。
+-->
+
+---
+
+# 小測驗：哪一個符合 RESTful？
+
+<Poll question="要「刪除 25 號訂單」，哪一個寫法符合 RESTful 風格？" options="POST /deleteOrder?id=25|GET /orders/delete/25|DELETE /orders/25|DELETE /deleteOrder/25" answer="3" />
+
+<!--
+來一題確認一下。
+
+要刪除 25 號訂單，哪一個寫法符合 RESTful 風格？
+
+（等大家作答）
+
+（下一步）答案是 DELETE /orders/25。
+
+動作用 Http Method 表示，所以是 DELETE。路徑只寫東西，所以是 /orders/25，裡面沒有 delete 這個動詞。
 -->
 
 ---
@@ -268,64 +342,94 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 3
-
-## RESTful API 的注意事項
+# 規則不是法律
 
 <!--
-最後，來看一些使用 RESTful API 時的注意事項。
+最後要提醒一件事。
 -->
 
 ---
 
-# RESTful API 的注意事項
+# RESTful 是約定，不是硬性規定
 
-**REST 是設計風格，不是強制規範**
+<v-clicks>
 
-| 情況 | 說明 |
-| --- | --- |
-| 一般情境 | 盡量遵守 RESTful 設計原則，讓 API 一致、易讀 |
-| 安全性考量 | 敏感 id（如身分證號）不適合放在 URL，可改用 POST + Body 傳遞 |
-| 複雜操作 | 某些動作難以用 CRUD 對應，可適度調整（如 `POST /users/123/activate`） |
-| 團隊約定 | 最重要的是團隊內部保持一致，而非強求百分百符合 RESTful |
+- **平常**：盡量照 RESTful 設計，讓 API 整齊好讀
+- **敏感資料**：像身分證字號，不適合放在路徑上，可以改用 POST 放在 Body
+- **不像 CRUD 的動作**：例如「啟用會員」，可以彈性寫成 `POST /members/7/activate`
+- **最重要的**：同一個團隊裡，大家的寫法要一致
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>提醒：</b> 遇到安全性或業務邏輯衝突時，安全性優先，RESTful 風格其次。
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 規則和安全性衝突的時候，<b>安全性優先</b>。
 </div>
 
+</v-click>
+
 <!--
-RESTful 是一套風格指南，不是法律。
+RESTful 是大家的約定，不是硬性規定。不照著寫，程式也不會壞。
 
-最常見的例外：敏感資訊不能放在 URL 裡。
-比如查詢用戶資料時，如果 id 是身分證號，那 GET /users/A123456789 就把身分證號暴露在 URL 裡了，這是不安全的。
-這種情況可以改用 POST，把身分證號放在 Body 裡傳遞，即使這樣不完全符合 RESTful。
+（下一步）平常，我們盡量照 RESTful 設計，讓 API 整齊好讀。
 
-另外，有些操作很難對應到 CRUD，例如「封鎖一個使用者」，可能會設計成 POST /users/123/block，這也是可以接受的。
+（下一步）但是遇到敏感資料，像身分證字號，就不適合放在路徑上。這時候可以改用 POST，把它放在 Body 裡。
 
-記住：安全性和業務邏輯優先，RESTful 是工具，不是枷鎖。
+（下一步）有些動作不太像新增、查詢、修改、刪除，例如「啟用會員」。這時候可以彈性一點，在路徑最後加一個動作。
+
+（下一步）最重要的是：同一個團隊裡，大家的寫法要一致。
+
+（下一步）記得，規則和安全性衝突的時候，安全性優先。
+-->
+
+---
+
+# 複習：飲料店對照表
+
+<Pairs left="飲料店" right="程式" rows="form,菜單=code,API|shop,全店統一的點單規則=code,RESTful API|what,客人想做的動作=code,Http Method：GET / POST / PUT / DELETE|cup,對哪一個東西=code,路徑：/orders、/orders/25|cup,貼好標籤的飲料=code,回傳 JSON" />
+
+<!--
+我們用一張圖複習今天的內容。
+
+（下一步）菜單，是 API。
+
+（下一步）全店統一的點單規則，是 RESTful API。
+
+（下一步）客人想做的動作，用 Http Method 表示。
+
+（下一步）對哪一個東西，用路徑表示。
+
+（下一步）貼好標籤的飲料，就是回傳 JSON。
 -->
 
 ---
 
 # 章節總結
 
-| 重點 | 說明 |
-| --- | --- |
-| API | 「說明某個功能使用方法」的說明書，讓開發者互相溝通 |
-| RESTful API | 符合 REST 風格的 API，業界最主流的設計約定 |
-| 規則 1 | Http Method 代表操作：GET=查、POST=新增、PUT=更新、DELETE=刪除 |
-| 規則 2 | URL 路徑描述資源層級，越具體越往右 |
-| 規則 3 | Response 回傳 JSON 格式（@RestController 自動處理） |
-| 注意事項 | RESTful 是風格指南，安全性和業務邏輯衝突時可適度調整 |
+<v-clicks>
+
+- **API**：說明「這個功能怎麼用」的菜單
+- **RESTful API**：最主流的 API 設計約定
+- **規則 1**：動作用 Http Method 表示（GET 查、POST 新增、PUT 修改、DELETE 刪除）
+- **規則 2**：路徑只寫東西，用複數名詞，越往右越具體
+- **規則 3**：回傳 JSON
+- **彈性**：它是約定；和安全性衝突時，安全性優先
+
+</v-clicks>
+
+<v-click>
+
+下一章我們要動手，做出一套完整的 RESTful 飲料訂單 API。
+
+</v-click>
 
 <!--
-好，今天的重點總結。
+最後整理今天的重點。
 
-第一，API 是功能的說明書，讓工程師之間能溝通。
-第二，RESTful API 是符合 REST 風格的 API，業界最主流。
-第三，三大規則：Http Method = CRUD、URL = 資源層級、Response = JSON。
-第四，RESTful 是風格指南，不是強制規範，安全性優先。
+（依序按下一步）API 是說明功能怎麼用的菜單。RESTful API 是最主流的設計約定。規則一，動作用 Http Method 表示。規則二，路徑只寫東西。規則三，回傳 JSON。它是約定，和安全性衝突時，安全性優先。
 
-從這章開始，大家設計 API 時就有了一套清楚的參考依據。
+（最後一步）今天只有觀念，沒有程式。下一章我們要動手，做出一套完整的 RESTful 飲料訂單 API。
 -->
 
 ---
@@ -334,6 +438,12 @@ layout: end
 
 # Q & A
 
+有任何問題嗎？
+
 <!--
-今天的內容就到這裡。大家有任何問題嗎？
+今天的內容到這邊。
+
+課後可以觀察一下你常用的網站，網址列上的路徑是不是也長得像 /東西/編號 的樣子。
+
+有任何問題歡迎提出來。
 -->
