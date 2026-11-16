@@ -22,6 +22,7 @@ import Counter from './anim/Counter.vue'
 import ShopLayout from './anim/ShopLayout.vue'
 import UrlParts from './anim/UrlParts.vue'
 import Dispatch from './anim/Dispatch.vue'
+import CupLabel from './anim/CupLabel.vue'
 import AspectTimeline from './anim/AspectTimeline.vue'
 import Flow from './anim/Flow.vue'
 import HttpExchange from './anim/HttpExchange.vue'
@@ -69,5 +70,6 @@ createApp(App)
   .component('ShopLayout', ShopLayout)
   .component('UrlParts', UrlParts)
   .component('Dispatch', Dispatch)
+  .component('CupLabel', CupLabel)
   .component('AspectTimeline', AspectTimeline)
   .mount('#app')
