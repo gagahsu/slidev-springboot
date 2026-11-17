@@ -7,11 +7,15 @@ import { room } from './room'
  * classroom features (remote room, student questions, join by code) are hidden.
  */
 const KEY = 'deck-settings'
-export const settings = reactive({ interactive: false })
+export const settings = reactive({ interactive: false, route: 'full' as 'full' | 'lite' })
 
 function load(raw: string | null) {
-  try { settings.interactive = !!JSON.parse(raw ?? '{}').interactive }
-  catch { settings.interactive = false }
+  try {
+    const v = JSON.parse(raw ?? '{}')
+    settings.interactive = !!v.interactive
+    settings.route = v.route === 'lite' ? 'lite' : 'full'
+  }
+  catch { settings.interactive = false; settings.route = 'full' }
 }
 try { load(localStorage.getItem(KEY)) }
 catch {}

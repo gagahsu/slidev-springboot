@@ -614,7 +614,7 @@ public class ValidationExceptionHandler {
 <!--
 在 com.example.school 下面新增一個 exception 資料夾，建立 ValidationExceptionHandler。
 
-（下一步）類別上面加 @RestControllerAdvice。意思是：這個類別負責處理所有 Controller 丟出來的例外，而且回傳的東西會自動變成 JSON。它就是那個退件窗口。第十一章提過的 @ControllerAdvice 就是它的基本款；多了 Rest，和 @RestController 一樣，代表回傳的是資料。
+（下一步）類別上面加 @RestControllerAdvice。意思是：這個類別負責處理所有 Controller 丟出來的例外，而且回傳的東西會自動變成 JSON。它就是那個退件窗口。名字裡的 Rest，和 @RestController 一樣，代表回傳的是資料。
 
 （下一步）方法上面加兩個 Annotation。@ExceptionHandler 後面寫例外的類別，意思是「這種例外交給我處理」。這裡寫的是 @Valid 檢查沒過時的那一個。@ResponseStatus 指定回覆的狀態碼，BAD_REQUEST 就是 400。
 

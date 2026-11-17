@@ -1,6 +1,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { chapterAt, chapterById, loadChapter, type Slide } from './deck'
+import { chapterById, loadChapter, type Slide } from './deck'
+import { routeChapterAt } from './route'
 import { clearPage, draw, redo, undo } from './draw'
 import { visit } from './progress'
 import { room } from './room'
@@ -25,8 +26,8 @@ export function useDeck(role: Role) {
   })
   const slide = computed(() => slides.value[index.value])
   const unit = computed(() => unitOf(chapter.value?.num ?? 1))
-  const nextChapter = computed(() => chapterAt(1, chId.value))
-  const prevChapter = computed(() => chapterAt(-1, chId.value))
+  const nextChapter = computed(() => routeChapterAt(1, chId.value))
+  const prevChapter = computed(() => routeChapterAt(-1, chId.value))
   const atEnd = computed(() => index.value >= slides.value.length - 1)
   /** key under which this slide's drawings are stored and synced */
   const drawKey = computed(() => `${chId.value}/${index.value}`)

@@ -616,7 +616,7 @@ public void process() { ... }
 <v-click>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
-💡 原因是第十一章的 <b>AOP</b>：<code>@Transactional</code> 是 Spring 在「外面的人呼叫這個方法」時幫忙加上去的。從類別裡面自己呼叫自己，Spring 插不上手。
+💡 原因：<code>@Transactional</code> 是 Spring 在「外面的人呼叫這個方法」時幫忙加上去的。從類別裡面自己呼叫自己，Spring 插不上手。
 </div>
 
 </v-click>
@@ -630,7 +630,7 @@ public void process() { ... }
 
 （下一步）第三，類別要是 Spring 的 Bean，例如有加 @Service。
 
-（下一步）這三點的原因其實是同一個，就是第十一章學的 AOP。@Transactional 是 Spring 在「外面的人呼叫這個方法」的時候，幫忙在前後加上開始交易和結束交易。從類別裡面自己呼叫自己，Spring 插不上手。
+（下一步）這三點的原因其實是同一個。學過第十一章的同學會認得，這就是 AOP 的做法。@Transactional 是 Spring 在「外面的人呼叫這個方法」的時候，幫忙在前後加上開始交易和結束交易。從類別裡面自己呼叫自己，Spring 插不上手。
 
 遇到第二種情況，解法是把 B 方法搬到另一個 Service 裡。
 -->

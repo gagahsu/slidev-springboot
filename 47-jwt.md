@@ -1010,7 +1010,7 @@ class: flex flex-col justify-center items-center text-center
 <v-click>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
-💡 提示：預設值的寫法在第四十四章用過：<code>@Value("${名稱:預設值}")</code>。
+💡 提示：沒有設定時的預設值，寫在名稱後面的冒號之後：<code>@Value("${名稱:預設值}")</code>。
 </div>
 
 </v-click>
@@ -1026,7 +1026,7 @@ class: flex flex-col justify-center items-center text-center
 
 （下一步）第四，測試。登入後馬上查詢，應該是 200。等超過一分鐘再查詢，應該是 401。
 
-（下一步）提示：預設值的寫法在第四十四章用過。錢字號大括號裡面，名稱後面加冒號，再寫預設值。
+（下一步）提示：預設值的寫法是，錢字號大括號裡面，名稱後面加冒號，再寫預設值。設定檔沒有這一項的時候，就用冒號後面的值。
 
 請先暫停，自己試試看。
 -->

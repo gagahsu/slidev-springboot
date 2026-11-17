@@ -264,7 +264,7 @@ implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
 <!--
 打開 build.gradle，在 dependencies 裡加這一行。
 
-（下一步）這個套件不是 Spring 官方的，所以要自己寫版本號。和第三十章加 MyBatis 的時候一樣。
+（下一步）這個套件不是 Spring 官方的，所以要自己寫版本號。Spring 官方的套件，Spring Boot 會幫我們選好版本；其他人做的套件，就要自己指定。
 
 （下一步）版本要和 Spring Boot 對起來。3 開頭的版本搭配 Spring Boot 4。如果你的專案是 Spring Boot 3，請用 2 開頭的版本。版本不對，啟動的時候會出錯。
 

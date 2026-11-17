@@ -369,7 +369,7 @@ class: flex flex-col justify-center items-center text-center
 
 （下一步）src/main/resources，放設定檔，例如 application.properties，第九章會用到。
 
-（下一步）src/test/java，放測試程式，第四十三章會用到。
+（下一步）src/test/java，放測試程式，第四十三章會介紹。
 
 （下一步）build.gradle，記錄這個專案需要哪些套件。剛才勾的 Spring Web 就寫在這裡。
 

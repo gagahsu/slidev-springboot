@@ -2,10 +2,11 @@
 import { computed, inject, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Icon from '../components/Icon.vue'
-import { chapterById, chapters, totalSlides } from '../lib/deck'
+import { chapterById, chapters } from '../lib/deck'
 import { progress } from '../lib/progress'
 import { normalizeCode } from '../lib/room'
-import { liveClass } from '../lib/settings'
+import { routeChapters } from '../lib/route'
+import { liveClass, settings } from '../lib/settings'
 import { units } from '../lib/units'
 
 const openSearch = inject<() => void>('openSearch')!
@@ -18,7 +19,8 @@ function join() {
 }
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 
-const groups = units.map(u => ({ ...u, chapters: chapters.filter(c => c.num >= u.from && c.num <= u.to) })).filter(g => g.chapters.length)
+const groups = computed(() => units.map(u => ({ ...u, chapters: routeChapters.value.filter(c => c.num >= u.from && c.num <= u.to) })).filter(g => g.chapters.length))
+const routeSlides = computed(() => routeChapters.value.reduce((n, c) => n + c.count, 0))
 
 const resume = computed(() => {
   const last = progress.last
@@ -41,7 +43,7 @@ onMounted(() => { document.title = 'Spring Boot Backend Masterclass' })
         <span class="logo" aria-hidden="true">S</span>
         <div>
           <h1>Spring Boot Backend Masterclass</h1>
-          <p>{{ chapters.length }} 章 · {{ totalSlides.toLocaleString() }} 張投影片</p>
+          <p>{{ routeChapters.length }} 章 · {{ routeSlides.toLocaleString() }} 張投影片</p>
         </div>
       </div>
       <form v-if="liveClass && joining" class="join" @submit.prevent="join">
@@ -63,6 +65,15 @@ onMounted(() => { document.title = 'Spring Boot Backend Masterclass' })
         </div>
         <span class="btn primary"><Icon name="play" />繼續</span>
       </RouterLink>
+
+      <div class="route">
+        <div class="seg" role="radiogroup" aria-label="學習路線">
+          <button role="radio" :aria-checked="settings.route === 'full'" :class="{ on: settings.route === 'full' }" @click="settings.route = 'full'">完整課程</button>
+          <button role="radio" :aria-checked="settings.route === 'lite'" :class="{ on: settings.route === 'lite' }" @click="settings.route = 'lite'">精簡路線</button>
+        </div>
+        <p v-if="settings.route === 'lite'">只留下完成「動態問卷系統」後端需要的章節，略過 {{ chapters.length - routeChapters.length }} 章（@PostConstruct、AOP、MyBatis、SQL Injection、測試與日誌、排程、Cache、Spring Cloud）。章節編號不變，「下一章」會自動跳過略過的章節。</p>
+        <p v-else>全部 {{ chapters.length }} 章。只想完成實戰專題的話，可以切換成精簡路線。</p>
+      </div>
 
       <section v-for="(g, gi) in groups" :key="g.title" class="unit" :class="`u-${g.color}`">
         <div class="unit-head">
@@ -109,6 +120,12 @@ main { max-width: 1080px; margin: 0 auto; padding: 24px 20px 80px; }
 .resume strong { font-size: 19px; font-weight: 900; color: #2b2b2b; }
 .resume span:not(.btn) { color: var(--c-ink-soft); font-size: 14px; font-weight: 700; }
 
+.route { margin-top: 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.route p { flex: 1; min-width: 240px; margin: 0; color: var(--c-ink-soft); font-size: 14px; font-weight: 700; line-height: 1.5; }
+.seg { display: inline-flex; padding: 4px; border: 2px solid var(--c-line); border-radius: 14px; background: var(--c-snow); }
+.seg button { padding: 8px 16px; border: 0; border-radius: 10px; background: transparent; color: var(--c-muted); font: inherit; font-size: 15px; font-weight: 900; cursor: pointer; }
+.seg button.on { background: var(--c-brand); color: #fff; box-shadow: 0 3px 0 var(--c-brand-dark); }
+.seg button:focus-visible { outline: 3px solid var(--c-blue); outline-offset: 2px; }
 .unit { margin-top: 36px; }
 .unit-head { padding: 18px 24px; border-radius: 18px; background: var(--u); box-shadow: 0 5px 0 var(--u-dark); color: #fff; }
 .unit-head small { font-size: 12.5px; font-weight: 900; letter-spacing: .08em; opacity: .9; }

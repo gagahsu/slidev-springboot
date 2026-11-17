@@ -364,7 +364,7 @@ public class SecurityConfig {
 
 （下一步）中間有三行設定。第一行 authorizeHttpRequests 是路徑規則，現在寫的是：任何請求都要登入。第二行 httpBasic，接受剛才用的 Basic Auth。第三行把 CSRF 關掉，它是什麼，本章最後會補充。現在先知道：不關掉的話，Postman 送 POST、PUT、DELETE 都會被擋。
 
-這裡有箭頭的寫法，例如 auth 箭頭 auth 點什麼。第四十三章看過類似的。意思是：Spring 把一個叫 auth 的設定工具交給我們，箭頭後面寫我們要對它做的設定。
+這裡有箭頭的寫法，例如 auth 箭頭 auth 點什麼。第三十八章學過，這種寫法叫 Lambda。意思是：Spring 把一個叫 auth 的設定工具交給我們，箭頭後面寫我們要對它做的設定。
 
 （下一步）最後一定要 http.build()，把守則組起來回傳。少了這一行，守則不會成立。
 -->
