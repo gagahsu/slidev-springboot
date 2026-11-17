@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: JWT 認證
-routeAlias: ch45
+routeAlias: ch47
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,7 +46,7 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第四十五章。
+大家好，歡迎來到第四十七章。
 
 上一章我們請了警衛，用的證件是帳號和密碼，而且每一次請求都要帶。
 
@@ -68,7 +68,7 @@ style: |
 <!--
 今天要搞懂三件事。
 
-（下一步）第一，為什麼需要新的證件。上一章的帳號密碼，和第四十章的號碼牌，各有什麼不方便。
+（下一步）第一，為什麼需要新的證件。上一章的帳號密碼，和第四十二章的號碼牌，各有什麼不方便。
 
 （下一步）第二，JWT 是什麼。先劇透：它是一張自己帶著資料、蓋了鋼印的通行證。
 
@@ -125,7 +125,7 @@ class: flex flex-col justify-center items-center text-center
 
 # 號碼牌只有一個櫃台認得
 
-第四十章的 Session 就是「登入後換一張證件」。但是學校變大之後：
+第四十二章的 Session 就是「登入後換一張證件」。但是學校變大之後：
 
 <v-clicks>
 
@@ -144,7 +144,7 @@ class: flex flex-col justify-center items-center text-center
 </v-click>
 
 <!--
-第四十章的 Session，其實就是登入後換一張證件：號碼牌。它解決了剛才的問題。但是學校變大之後，出現新的問題。
+第四十二章的 Session，其實就是登入後換一張證件：號碼牌。它解決了剛才的問題。但是學校變大之後，出現新的問題。
 
 （下一步）學校開了第二個校區，有 A、B 兩個櫃台。在程式的世界，就是有兩台伺服器一起服務。使用者多的網站都是這樣。
 
@@ -1010,7 +1010,7 @@ class: flex flex-col justify-center items-center text-center
 <v-click>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
-💡 提示：預設值的寫法在第四十二章用過：<code>@Value("${名稱:預設值}")</code>。
+💡 提示：預設值的寫法在第四十四章用過：<code>@Value("${名稱:預設值}")</code>。
 </div>
 
 </v-click>
@@ -1026,7 +1026,7 @@ class: flex flex-col justify-center items-center text-center
 
 （下一步）第四，測試。登入後馬上查詢，應該是 200。等超過一分鐘再查詢，應該是 401。
 
-（下一步）提示：預設值的寫法在第四十二章用過。錢字號大括號裡面，名稱後面加冒號，再寫預設值。
+（下一步）提示：預設值的寫法在第四十四章用過。錢字號大括號裡面，名稱後面加冒號，再寫預設值。
 
 請先暫停，自己試試看。
 -->

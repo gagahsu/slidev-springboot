@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: Spring Boot Validation
-routeAlias: ch39
+routeAlias: ch41
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,9 +46,9 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第三十九章，也是「架構與實務」這個單元的最後一章。
+大家好，歡迎來到第四十一章，也是「架構與實務」這個單元的最後一章。
 
-第三十七章的最後，我們留下了一個問題：新增同學的時候，成績填 200，得到的是 500。今天就來解決它。
+第三十九章的最後，我們留下了一個問題：新增同學的時候，成績填 200，得到的是 500。今天就來解決它。
 
 今天的主題是 Validation，中文叫做驗證：在資料進來的時候，先檢查它合不合規定。今天繼續使用 school 專案。
 -->
@@ -983,11 +983,11 @@ public ClubResponse createClub(@Valid @RequestBody CreateClubRequest req) { … 
 
 <v-clicks>
 
-- **人的分工**：Controller、Service、Dao 三層，和四條規則（第 35 章）
-- **紙的分工**：PO、DTO、VO，以及 DAO（第 36 章）
-- **從頭做一次**：新專案、分 package、完整的 CRUD（第 37 章）
-- **辦事指南**：OpenAPI 和 Swagger UI（第 38 章）
-- **收件檢查**：Validation 和統一的錯誤回應（第 39 章）
+- **人的分工**：Controller、Service、Dao 三層，和四條規則（第 36 章）
+- **紙的分工**：PO、DTO、VO，以及 DAO（第 37 章）
+- **從頭做一次**：新專案、分 package、完整的 CRUD（第 39 章）
+- **辦事指南**：OpenAPI 和 Swagger UI（第 40 章）
+- **收件檢查**：Validation 和統一的錯誤回應（第 41 章）
 
 </v-clicks>
 
@@ -1000,7 +1000,7 @@ public ClubResponse createClub(@Valid @RequestBody CreateClubRequest req) { … 
 <!--
 這一章也是架構與實務單元的最後一章。我們回頭看一下走過的路。
 
-（依序按下一步）第三十五章是人的分工：三層和四條規則。第三十六章是紙的分工：PO、DTO、VO，還有 DAO。第三十七章從頭做了一次：開新專案、分 package、寫出完整的 CRUD。第三十八章是辦事指南：OpenAPI 和 Swagger UI。今天是收件檢查：Validation 和統一的錯誤回應。
+（依序按下一步）第三十六章是人的分工：三層和四條規則。第三十七章是紙的分工：PO、DTO、VO，還有 DAO。第三十九章從頭做了一次：開新專案、分 package、寫出完整的 CRUD。第四十章是辦事指南：OpenAPI 和 Swagger UI。今天是收件檢查：Validation 和統一的錯誤回應。
 
 （最後一步）到這裡，你寫出來的 API 已經有一個正式專案該有的樣子了。下一個單元是進階功能。第一站要談的是：怎麼讓伺服器記得「這個人剛才來過」。
 -->

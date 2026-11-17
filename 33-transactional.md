@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: "@Transactional — Spring 事務管理"
-routeAlias: ch32
+routeAlias: ch33
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,7 +46,7 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第三十二章。
+大家好，歡迎來到第三十三章。
 
 前面我們學會了三種存取資料庫的方式。到目前為止，每一個功能都只改一筆資料。
 

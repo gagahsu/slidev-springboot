@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: Spring Boot 排程
-routeAlias: ch42
+routeAlias: ch44
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,7 +46,7 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第四十二章。
+大家好，歡迎來到第四十四章。
 
 到目前為止，我們寫的程式都是被動的：有人發請求，它才做事。
 
@@ -474,7 +474,7 @@ public class FailingReportScheduler {
 
 （下一步）類別上面一樣是 @Slf4j 和 @Component。
 
-（下一步）注入 StudentService。因為排程的類別是 Bean，所以可以注入其他的 Bean。注意這裡找的是組長，不是直接找 Repository。工友和櫃台一樣，是事情的起點，要遵守第三十五章的規則：不跨層。
+（下一步）注入 StudentService。因為排程的類別是 Bean，所以可以注入其他的 Bean。注意這裡找的是組長，不是直接找 Repository。工友和櫃台一樣，是事情的起點，要遵守第三十六章的規則：不跨層。
 
 （下一步）@Scheduled 用 cron，每天凌晨 1 點半。統計這類工作通常安排在半夜，那時候使用的人最少。
 

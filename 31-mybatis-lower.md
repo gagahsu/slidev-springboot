@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: MyBatis 的用法（中）—執行查詢操作
-routeAlias: ch30
+routeAlias: ch31
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,7 +46,7 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第三十章。
+大家好，歡迎來到第三十一章。
 
 上一章我們用 MyBatis 做了新增、修改、刪除。今天補上最後一塊：查詢，用的是 @Select。
 

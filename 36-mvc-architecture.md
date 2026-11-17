@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: MVC 架構模式—Controller-Service-Dao 三層式架構
-routeAlias: ch35
+routeAlias: ch36
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,7 +46,7 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第三十五章，也是新單元「架構與實務」的第一章。
+大家好，歡迎來到第三十六章，也是新單元「架構與實務」的第一章。
 
 前面三個單元，我們學了很多工具。這個單元不學新工具，而是回頭把寫過的程式整理好：東西要放哪裡、誰可以找誰。
 
@@ -439,7 +439,7 @@ public class StudentDao {
 
 - Controller → Service → Dao，呼叫的方向**只有這一個**
 - Service 不能反過來呼叫 Controller；Dao 不能反過來呼叫 Service
-- 一個 Service 可以找**好幾個** Dao（第三十二章的記過：`StudentDao` + `PenaltyDao`）
+- 一個 Service 可以找**好幾個** Dao（第三十三章的記過：`StudentDao` + `PenaltyDao`）
 
 </v-clicks>
 
@@ -458,7 +458,7 @@ public class StudentDao {
 
 （下一步）反過來不行。Service 不能呼叫 Controller，Dao 不能呼叫 Service。承辦人員不會跑去指揮組長，組長也不會跑去指揮櫃台。
 
-（下一步）不過同一個方向上，可以找不只一個人。一個 Service 可以找好幾個 Dao。第三十二章的記過就是這樣：組長同時用到了 StudentDao 和 PenaltyDao。
+（下一步）不過同一個方向上，可以找不只一個人。一個 Service 可以找好幾個 Dao。第三十三章的記過就是這樣：組長同時用到了 StudentDao 和 PenaltyDao。
 
 （下一步）整理成一句話：單一方向。外層認識內層，內層不知道外層是誰。
 

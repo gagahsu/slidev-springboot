@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: 實戰演練：動態問卷系統
-routeAlias: ch47
+routeAlias: ch49
 style: |
   .slidev-layout p,
   .slidev-layout li,

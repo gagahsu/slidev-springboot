@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: Spring Security
-routeAlias: ch44
+routeAlias: ch46
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,7 +46,7 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第四十四章，也是新單元「安全與微服務」的第一章。
+大家好，歡迎來到第四十六章，也是新單元「安全與微服務」的第一章。
 
 到目前為止，我們的 school 專案功能越來越多，但是有一個很大的問題：任何人都可以呼叫任何一個 API。
 
@@ -162,7 +162,7 @@ Tom 來到校門口，想進學校辦事。
 
 （下一步）查成績是 GET /students，學生可以做，回覆 200。改成績是 PUT /students/1，學生不能做，回覆 403。
 
-（下一步）兩關擋下來的時候，狀態碼不一樣。第一關沒過，也就是不知道你是誰，是 401。這個狀態碼我們在第四十章用過。第二關沒過，知道你是誰，但是你不能做這件事，是 403。
+（下一步）兩關擋下來的時候，狀態碼不一樣。第一關沒過，也就是不知道你是誰，是 401。這個狀態碼我們在第四十二章用過。第二關沒過，知道你是誰，但是你不能做這件事，是 403。
 -->
 
 ---
@@ -356,15 +356,15 @@ public class SecurityConfig {
 </CodeSteps>
 
 <!--
-在 config 資料夾新增一個類別，叫做 SecurityConfig。config 資料夾是第三十八章建立的。
+在 config 資料夾新增一個類別，叫做 SecurityConfig。config 資料夾是第四十章建立的。
 
-（下一步）@Configuration 我們在第三十八章用過，代表這是一個設定類別。下面多了一個 @EnableWebSecurity，意思是：這裡是警衛的守則。
+（下一步）@Configuration 我們在第四十章用過，代表這是一個設定類別。下面多了一個 @EnableWebSecurity，意思是：這裡是警衛的守則。
 
 （下一步）用 @Bean 交出一個物件，型別是 SecurityFilterChain。警衛會照這個物件做事。方法的參數 HttpSecurity 是 Spring 交給我們的工具，守則都透過它來寫。後面的 throws Exception 請照抄。
 
 （下一步）中間有三行設定。第一行 authorizeHttpRequests 是路徑規則，現在寫的是：任何請求都要登入。第二行 httpBasic，接受剛才用的 Basic Auth。第三行把 CSRF 關掉，它是什麼，本章最後會補充。現在先知道：不關掉的話，Postman 送 POST、PUT、DELETE 都會被擋。
 
-這裡有箭頭的寫法，例如 auth 箭頭 auth 點什麼。第四十一章看過類似的。意思是：Spring 把一個叫 auth 的設定工具交給我們，箭頭後面寫我們要對它做的設定。
+這裡有箭頭的寫法，例如 auth 箭頭 auth 點什麼。第四十三章看過類似的。意思是：Spring 把一個叫 auth 的設定工具交給我們，箭頭後面寫我們要對它做的設定。
 
 （下一步）最後一定要 http.build()，把守則組起來回傳。少了這一行，守則不會成立。
 -->
@@ -759,7 +759,7 @@ class: flex flex-col justify-center items-center text-center
 <v-click>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
-💡 這四層的分工，和第三十七章的 <code>Student</code> 完全一樣。新的東西只有一個：<code>AccountService</code> 要告訴警衛「怎麼從資料庫查出一個帳號」。
+💡 這四層的分工，和第三十九章的 <code>Student</code> 完全一樣。新的東西只有一個：<code>AccountService</code> 要告訴警衛「怎麼從資料庫查出一個帳號」。
 </div>
 
 </v-click>
@@ -775,7 +775,7 @@ class: flex flex-col justify-center items-center text-center
 
 （下一步）controller 裡的 AccountController，提供註冊的 API。
 
-（下一步）這四層的分工，和第三十七章的 Student 完全一樣。新的東西只有一個：AccountService 要告訴警衛，怎麼從資料庫查出一個帳號。
+（下一步）這四層的分工，和第三十九章的 Student 完全一樣。新的東西只有一個：AccountService 要告訴警衛，怎麼從資料庫查出一個帳號。
 
 類別取名叫 Account，不叫 User，是因為 Spring Security 已經有一個類別叫 User 了，剛才才用過。取不同的名字，才不會搞混。
 -->
@@ -943,7 +943,7 @@ public String register(RegisterRequest request) {
 <!--
 名冊現在是空的，要有一個註冊的功能。
 
-先在 dto 資料夾新增 RegisterRequest。兩個欄位：帳號和密碼。它是第三十六章說的 Request DTO，前端送進來的資料。
+先在 dto 資料夾新增 RegisterRequest。兩個欄位：帳號和密碼。它是第三十七章說的 Request DTO，前端送進來的資料。
 
 接著在 AccountService 加東西。
 
@@ -1062,7 +1062,7 @@ public String me(Authentication authentication) {
 
 在 AccountController 加一個方法，GET /me。
 
-（下一步）在參數寫 Authentication authentication。和第四十章的 HttpSession 一樣，只要寫在參數，Spring 就會把東西交給我們。這裡交進來的是：通過第一關的這個人。import 請選 org.springframework.security.core 開頭的。
+（下一步）在參數寫 Authentication authentication。和第四十二章的 HttpSession 一樣，只要寫在參數，Spring 就會把東西交給我們。這裡交進來的是：通過第一關的這個人。import 請選 org.springframework.security.core 開頭的。
 
 （下一步）getName()，拿到他的帳號名稱。
 
@@ -1090,7 +1090,7 @@ class: flex flex-col justify-center items-center text-center
 <v-clicks>
 
 - **CSRF** 是一種攻擊：壞網站偷偷讓你的瀏覽器，對「你已經登入的網站」送出請求
-- 它利用的是第四十章學的特性：瀏覽器會**自動帶上 Cookie**
+- 它利用的是第四十二章學的特性：瀏覽器會**自動帶上 Cookie**
 - Spring Security 預設會防它：`POST`、`PUT`、`DELETE` 要多帶一組驗證碼，沒帶就是 403
 - 我們的 API 不靠 Cookie 認人（每次都自己帶帳號密碼），所以可以關掉
 
@@ -1109,7 +1109,7 @@ class: flex flex-col justify-center items-center text-center
 
 （下一步）CSRF 是一種攻擊。壞網站偷偷讓你的瀏覽器，對你已經登入的網站送出請求。例如你登入了銀行網站，又去逛一個壞網站。壞網站偷偷送出一個轉帳的請求到銀行。
 
-（下一步）它利用的是第四十章學的特性：瀏覽器會自動帶上 Cookie。所以銀行以為是你本人送的。
+（下一步）它利用的是第四十二章學的特性：瀏覽器會自動帶上 Cookie。所以銀行以為是你本人送的。
 
 （下一步）Spring Security 預設會防這種攻擊。做法是 POST、PUT、DELETE 這些會改資料的請求，要多帶一組驗證碼，沒帶就是 403。Postman 不會帶，所以會被擋。
 
@@ -1150,7 +1150,7 @@ class: flex flex-col justify-center items-center text-center
 
 （下一步）這也是 SecurityFilterChain 這個名字的由來。我們寫的守則，其實是在設定這一排關卡。下一章會在這一排裡，加一個我們自己寫的關卡。
 
-（下一步）順便提醒：加了 Spring Security 之後，第三十八章的 Swagger UI 也會被鎖住。想公開的話，在規則最前面加這一條。
+（下一步）順便提醒：加了 Spring Security 之後，第四十章的 Swagger UI 也會被鎖住。想公開的話，在規則最前面加這一條。
 -->
 
 ---
@@ -1308,7 +1308,7 @@ public String changePassword(@RequestBody ChangePasswordRequest request, Authent
 <!--
 參考答案。ChangePasswordRequest 只有一個欄位 newPassword，寫法和 RegisterRequest 一樣，這裡省略。
 
-AccountService 的 changePassword：用帳號名稱查出 Account，把新密碼 encode 之後放進去，再 save。save 遇到已經有 id 的資料，會做更新，這是第三十七章學過的。
+AccountService 的 changePassword：用帳號名稱查出 Account，把新密碼 encode 之後放進去，再 save。save 遇到已經有 id 的資料，會做更新，這是第三十九章學過的。
 
 AccountController：PUT /me/password。參數有兩個，一個是 Body，一個是 Authentication。把現在這個人的帳號名稱，和新密碼，交給 Service。
 

@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: MyBatis 的用法（上）—設定與 CUD 操作
-routeAlias: ch29
+routeAlias: ch30
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,7 +46,7 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第二十九章。
+大家好，歡迎來到第三十章。
 
 我們已經認識兩位幫手。Spring JDBC 什麼都自己來，Spring Data JPA 幾乎什麼都交給助理。
 

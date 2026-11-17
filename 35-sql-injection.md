@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: SQL Injection 防範
-routeAlias: ch34
+routeAlias: ch35
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,7 +46,7 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第三十四章，也是資料庫這個單元的最後一章。
+大家好，歡迎來到第三十五章，也是資料庫這個單元的最後一章。
 
 前面我們學了很多種把資料存進資料庫、拿出來的方法。今天換一個角度：如果有人不懷好意，故意在申請單上動手腳呢？
 
@@ -613,9 +613,9 @@ public List<Student> searchByName(String name) {
 - **承辦人員自己來**：Spring JDBC 的 `update()`、`query()`（第 24–25 章）
 - **資深助理**：Spring Data JPA、`@Query`（第 26–28 章）
 - **申請單自己寫、雜事交給他**：MyBatis 和 XML Mapper（第 29–31 章）
-- **兩件事算同一件**：交易 `@Transactional`（第 32 章）
-- **同時搶同一筆**：悲觀鎖、樂觀鎖（第 33 章）
-- **申請單被動手腳**：SQL Injection（第 34 章）
+- **兩件事算同一件**：交易 `@Transactional`（第 33 章）
+- **同時搶同一筆**：悲觀鎖、樂觀鎖（第 34 章）
+- **申請單被動手腳**：SQL Injection（第 35 章）
 
 </v-clicks>
 

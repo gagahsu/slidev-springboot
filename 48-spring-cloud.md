@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: Spring Cloud 微服務
-routeAlias: ch46
+routeAlias: ch48
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,7 +46,7 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第四十六章。
+大家好，歡迎來到第四十八章。
 
 到目前為止，我們所有的功能都寫在同一個專案裡：學生、社團、帳號、排程，全部在 school 這一個專案。
 
@@ -395,7 +395,7 @@ eureka.client.fetch-registry=false
 </v-click>
 
 <!--
-到 start.spring.io 建立新專案，步驟和第三十七章一樣。
+到 start.spring.io 建立新專案，步驟和第三十九章一樣。
 
 （下一步）Artifact 填 eureka-server。其他和以前一樣，Gradle - Groovy、Java。
 
@@ -1188,7 +1188,7 @@ ClubController 加一個方法，呼叫 studentClient.getStudents()，用 size()
 
 （依序按下一步）微服務是把大系統拆成各自獨立的小服務，換來彈性，也換來管理的複雜度。Eureka 讓服務在啟動時登記自己的名字和位置，大家用名字互相找。OpenFeign 讓我們寫一個介面，就能呼叫另一個服務的 API。Gateway 讓前端只認一個入口，由它照路徑轉給對的服務。熔斷器和 Config，一個讓服務不被別人拖累，一個讓設定集中管理，今天先懂觀念。
 
-（最後一步）安全與微服務這個單元到這裡結束。第四十四章請了警衛，第四十五章換了通行證，今天把學校拆成了好幾個處室。下一章是最後一章：把學過的東西組起來，做一個完整的專題。
+（最後一步）安全與微服務這個單元到這裡結束。第四十六章請了警衛，第四十七章換了通行證，今天把學校拆成了好幾個處室。下一章是最後一章：把學過的東西組起來，做一個完整的專題。
 -->
 
 ---

@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: Spring Boot 資料物件—PO、DTO、VO、DAO
-routeAlias: ch36
+routeAlias: ch37
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,7 +46,7 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第三十六章。
+大家好，歡迎來到第三十七章。
 
 上一章我們整理了「人」的分工：櫃台、組長、承辦人員。今天整理的是「紙」的分工。
 

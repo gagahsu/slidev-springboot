@@ -518,9 +518,9 @@ class: flex flex-col justify-center items-center text-center
 
 <v-clicks>
 
-- **檢查權限**：現在大多交給 Spring Security（第 44 章）
+- **檢查權限**：現在大多交給 Spring Security（第 46 章）
 - **統一處理錯誤**：現在大多用 `@ControllerAdvice`
-- **交易管理**：用 `@Transactional`（第 32 章），它背後就是 AOP
+- **交易管理**：用 `@Transactional`（第 33 章），它背後就是 AOP
 - **自訂 log、計時**：還是很適合自己寫 `@Aspect`
 
 </v-clicks>
@@ -536,11 +536,11 @@ class: flex flex-col justify-center items-center text-center
 <!--
 第二件補充：現在的專案還常寫 @Aspect 嗎？
 
-（下一步）檢查權限，現在大多交給 Spring Security，第 44 章會學。
+（下一步）檢查權限，現在大多交給 Spring Security，第 46 章會學。
 
 （下一步）統一處理錯誤，現在大多用 @ControllerAdvice。
 
-（下一步）交易管理，用 @Transactional，第 32 章會學。它背後其實就是 AOP。
+（下一步）交易管理，用 @Transactional，第 33 章會學。它背後其實就是 AOP。
 
 （下一步）自訂 log 和計時，還是很適合自己寫 @Aspect。
 

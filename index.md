@@ -217,96 +217,101 @@ style: |
     </Link>
     <Link to="ch29" class="chapter-card">
       <div class="chapter-num">Ch 29</div>
-      <div>MyBatis（上）</div>
-      <div class="chapter-subtitle">@Mapper / @Insert / @Update / @Delete</div>
+      <div>Spring Data JPA — 資料表關聯</div>
+      <div class="chapter-subtitle">@ManyToOne / @OneToMany / @ManyToMany</div>
     </Link>
     <Link to="ch30" class="chapter-card">
       <div class="chapter-num">Ch 30</div>
-      <div>MyBatis（中）</div>
-      <div class="chapter-subtitle">@Select / 自動映射</div>
+      <div>MyBatis（上）</div>
+      <div class="chapter-subtitle">@Mapper / @Insert / @Update / @Delete</div>
     </Link>
     <Link to="ch31" class="chapter-card">
       <div class="chapter-num">Ch 31</div>
-      <div>MyBatis（下）</div>
-      <div class="chapter-subtitle">XML Mapper / 動態 SQL</div>
+      <div>MyBatis（中）</div>
+      <div class="chapter-subtitle">@Select / 自動映射</div>
     </Link>
     <Link to="ch32" class="chapter-card">
       <div class="chapter-num">Ch 32</div>
-      <div>@Transactional 事務管理</div>
-      <div class="chapter-subtitle">ACID / rollbackFor / noRollbackFor</div>
+      <div>MyBatis（下）</div>
+      <div class="chapter-subtitle">XML Mapper / 動態 SQL</div>
     </Link>
     <Link to="ch33" class="chapter-card">
       <div class="chapter-num">Ch 33</div>
-      <div>樂觀鎖 & 悲觀鎖</div>
-      <div class="chapter-subtitle">@Version / @Lock / LockModeType</div>
+      <div>@Transactional 事務管理</div>
+      <div class="chapter-subtitle">ACID / rollbackFor / noRollbackFor</div>
     </Link>
     <Link to="ch34" class="chapter-card">
       <div class="chapter-num">Ch 34</div>
-      <div>SQL Injection 防範</div>
-      <div class="chapter-subtitle">參數化查詢 / PreparedStatement</div>
+      <div>樂觀鎖 & 悲觀鎖</div>
+      <div class="chapter-subtitle">@Version / @Lock / LockModeType</div>
     </Link>
     <Link to="ch35" class="chapter-card">
       <div class="chapter-num">Ch 35</div>
-      <div>MVC 架構模式</div>
-      <div class="chapter-subtitle">Controller-Service-Dao 三層架構</div>
+      <div>SQL Injection 防範</div>
+      <div class="chapter-subtitle">參數化查詢 / PreparedStatement</div>
     </Link>
     <Link to="ch36" class="chapter-card">
       <div class="chapter-num">Ch 36</div>
-      <div>Spring Boot 資料物件</div>
-      <div class="chapter-subtitle">PO / DTO / VO / DAO</div>
+      <div>MVC 架構模式</div>
+      <div class="chapter-subtitle">Controller-Service-Dao 三層架構</div>
     </Link>
     <Link to="ch37" class="chapter-card">
       <div class="chapter-num">Ch 37</div>
-      <div>實戰：JPA CRUD API</div>
-      <div class="chapter-subtitle">Entity / Repository / Service / Controller</div>
-    </Link>
-    <Link to="ch38" class="chapter-card">
-      <div class="chapter-num">Ch 38</div>
-      <div>OpenAPI 與 Swagger UI</div>
-      <div class="chapter-subtitle">springdoc / @Operation / @Schema</div>
+      <div>Spring Boot 資料物件</div>
+      <div class="chapter-subtitle">PO / DTO / VO / DAO</div>
     </Link>
     <Link to="ch39" class="chapter-card">
       <div class="chapter-num">Ch 39</div>
-      <div>Spring Boot Validation</div>
-      <div class="chapter-subtitle">Bean Validation / @Valid / @Validated</div>
+      <div>實戰：JPA CRUD API</div>
+      <div class="chapter-subtitle">Entity / Repository / Service / Controller</div>
     </Link>
     <Link to="ch40" class="chapter-card">
       <div class="chapter-num">Ch 40</div>
-      <div>HttpSession 管理</div>
-      <div class="chapter-subtitle">Session / JSESSIONID / invalidate</div>
+      <div>OpenAPI 與 Swagger UI</div>
+      <div class="chapter-subtitle">springdoc / @Operation / @Schema</div>
     </Link>
     <Link to="ch41" class="chapter-card">
       <div class="chapter-num">Ch 41</div>
-      <div>單元測試與日誌</div>
-      <div class="chapter-subtitle">JUnit 5 / Mockito / SLF4J / Logback</div>
+      <div>Spring Boot Validation</div>
+      <div class="chapter-subtitle">Bean Validation / @Valid / @Validated</div>
     </Link>
     <Link to="ch42" class="chapter-card">
       <div class="chapter-num">Ch 42</div>
-      <div>Spring Boot 排程</div>
-      <div class="chapter-subtitle">@Scheduled / @EnableScheduling / Cron</div>
+      <div>HttpSession 管理</div>
+      <div class="chapter-subtitle">Session / JSESSIONID / invalidate</div>
     </Link>
     <Link to="ch43" class="chapter-card">
       <div class="chapter-num">Ch 43</div>
-      <div>Spring Boot Cache</div>
-      <div class="chapter-subtitle">@Cacheable / @CacheEvict / @CachePut</div>
+      <div>單元測試與日誌</div>
+      <div class="chapter-subtitle">JUnit 5 / Mockito / SLF4J / Logback</div>
     </Link>
     <Link to="ch44" class="chapter-card">
       <div class="chapter-num">Ch 44</div>
-      <div>Spring Security</div>
-      <div class="chapter-subtitle">SecurityFilterChain / BCrypt / CSRF</div>
+      <div>Spring Boot 排程</div>
+      <div class="chapter-subtitle">@Scheduled / @EnableScheduling / Cron</div>
     </Link>
     <Link to="ch45" class="chapter-card">
       <div class="chapter-num">Ch 45</div>
-      <div>JWT 認證</div>
-      <div class="chapter-subtitle">jjwt / OncePerRequestFilter / Stateless</div>
+      <div>Spring Boot Cache</div>
+      <div class="chapter-subtitle">@Cacheable / @CacheEvict / @CachePut</div>
     </Link>
     <Link to="ch46" class="chapter-card">
       <div class="chapter-num">Ch 46</div>
-      <div>Spring Cloud 微服務</div>
-      <div class="chapter-subtitle">Eureka / Gateway / OpenFeign / Config</div>
+      <div>Spring Security</div>
+      <div class="chapter-subtitle">SecurityFilterChain / BCrypt / CSRF</div>
     </Link>
     <Link to="ch47" class="chapter-card">
       <div class="chapter-num">Ch 47</div>
+      <div>JWT 認證</div>
+      <div class="chapter-subtitle">jjwt / OncePerRequestFilter / Stateless</div>
+    </Link>
+    <Link to="ch48" class="chapter-card">
+      <div class="chapter-num">Ch 48</div>
+      <div>Spring Cloud 微服務</div>
+      <div class="chapter-subtitle">Eureka / Gateway / OpenFeign / Config</div>
+    </Link>
+    <Link to="ch49" class="chapter-card">
+      <div class="chapter-num">Ch 49</div>
       <div>實戰：動態問卷系統</div>
       <div class="chapter-subtitle">CRUD / Session / JWT Auth</div>
     </Link>
@@ -399,60 +404,63 @@ src: ./27-jpa-lower.md
 src: ./28-jpa-query.md
 ---
 ---
-src: ./29-mybatis-upper.md
+src: ./29-jpa-relations.md
 ---
 ---
-src: ./30-mybatis-lower.md
+src: ./30-mybatis-upper.md
 ---
 ---
-src: ./31-mybatis-xml.md
+src: ./31-mybatis-lower.md
 ---
 ---
-src: ./32-transactional.md
+src: ./32-mybatis-xml.md
 ---
 ---
-src: ./33-lock.md
+src: ./33-transactional.md
 ---
 ---
-src: ./34-sql-injection.md
+src: ./34-lock.md
 ---
 ---
-src: ./35-mvc-architecture.md
+src: ./35-sql-injection.md
 ---
 ---
-src: ./36-data-objects.md
+src: ./36-mvc-architecture.md
 ---
 ---
-src: ./37-jpa-practice.md
+src: ./37-data-objects.md
 ---
 ---
-src: ./38-openapi.md
+src: ./39-jpa-practice.md
 ---
 ---
-src: ./39-validation.md
+src: ./40-openapi.md
 ---
 ---
-src: ./40-httpsession.md
+src: ./41-validation.md
 ---
 ---
-src: ./41-unit-test-logging.md
+src: ./42-httpsession.md
 ---
 ---
-src: ./42-scheduling.md
+src: ./43-unit-test-logging.md
 ---
 ---
-src: ./43-cache.md
+src: ./44-scheduling.md
 ---
 ---
-src: ./44-spring-security.md
+src: ./45-cache.md
 ---
 ---
-src: ./45-jwt.md
+src: ./46-spring-security.md
 ---
 ---
-src: ./46-spring-cloud.md
+src: ./47-jwt.md
 ---
 ---
-src: ./47-dynamic-survey.md
+src: ./48-spring-cloud.md
+---
+---
+src: ./49-dynamic-survey.md
 ---
 

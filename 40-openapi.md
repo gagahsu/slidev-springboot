@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: OpenAPI 與 Swagger UI
-routeAlias: ch38
+routeAlias: ch40
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,7 +46,7 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第三十八章。
+大家好，歡迎來到第四十章。
 
 上一章我們做出了一套完整的學生管理 API。今天不寫新的功能，而是解決一個合作上的問題：別人要怎麼知道我們的 API 怎麼用？
 
@@ -264,7 +264,7 @@ implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
 <!--
 打開 build.gradle，在 dependencies 裡加這一行。
 
-（下一步）這個套件不是 Spring 官方的，所以要自己寫版本號。和第二十九章加 MyBatis 的時候一樣。
+（下一步）這個套件不是 Spring 官方的，所以要自己寫版本號。和第三十章加 MyBatis 的時候一樣。
 
 （下一步）版本要和 Spring Boot 對起來。3 開頭的版本搭配 Spring Boot 4。如果你的專案是 Spring Boot 3，請用 2 開頭的版本。版本不對，啟動的時候會出錯。
 

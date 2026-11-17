@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: 實戰：用 JPA 打造完整的 CRUD API
-routeAlias: ch37
+routeAlias: ch39
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,7 +46,7 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第三十七章。
+大家好，歡迎來到第三十九章。
 
 前兩章我們談了很多觀念：三層的分工、四條規則、PO 和 DTO 這些資料物件。但是都只有用看的。
 
@@ -640,7 +640,7 @@ public class StudentController {
 </v-click>
 
 <!--
-第七個檔案，在 controller 資料夾建立 StudentController。注入的是 StudentService，不是 Repository。這是第三十五章的規則一。
+第七個檔案，在 controller 資料夾建立 StudentController。注入的是 StudentService，不是 Repository。這是第三十六章的規則一。
 
 （下一步）查全部。GET /students，回傳一疊成績單。方法裡只有一行，轉交給組長。
 
@@ -680,7 +680,7 @@ public void deleteStudent(@PathVariable("id") Integer id) {
 <!--
 在同一個類別裡，再加三個方法。
 
-上面是查單一一位。回傳型別用的是第三十三章學過的 ResponseEntity，它可以讓我們自己決定狀態碼。如果組長回傳 null，代表沒有這位同學，我們回覆 404。notFound().build() 的意思是：狀態碼 404，沒有內容。有找到的話，回覆 200 加上成績單。
+上面是查單一一位。回傳型別用的是第三十四章學過的 ResponseEntity，它可以讓我們自己決定狀態碼。如果組長回傳 null，代表沒有這位同學，我們回覆 404。notFound().build() 的意思是：狀態碼 404，沒有內容。有找到的話，回覆 200 加上成績單。
 
 （下一步）中間是修改。PUT /students/ 加上編號。編號從網址拿，新的內容從 Body 拿。一樣，找不到就回覆 404。
 
@@ -776,7 +776,7 @@ class: flex flex-col justify-center items-center text-center
 <v-click>
 
 <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
-⚠️ 最後一個：<code>ScoreVO</code> 有擋下來，資料沒有存進去。但是 500 的意思是「伺服器出錯」，其實是前端填錯。這個問題留到第三十九章解決。
+⚠️ 最後一個：<code>ScoreVO</code> 有擋下來，資料沒有存進去。但是 500 的意思是「伺服器出錯」，其實是前端填錯。這個問題留到第四十一章解決。
 </div>
 
 </v-click>
@@ -794,7 +794,7 @@ class: flex flex-col justify-center items-center text-center
 
 （下一步）POST /students，成績填 200。狀態碼是 500。
 
-（下一步）最後這一個要說明一下。ScoreVO 有把不合法的成績擋下來，資料沒有存進去，這是對的。但是 500 的意思是「伺服器出錯」。這次其實是前端填錯資料，應該回覆 400 才對，而且最好告訴他是哪一格填錯。這個問題，我們留到第三十九章解決。
+（下一步）最後這一個要說明一下。ScoreVO 有把不合法的成績擋下來，資料沒有存進去，這是對的。但是 500 的意思是「伺服器出錯」。這次其實是前端填錯資料，應該回覆 400 才對，而且最好告訴他是哪一格填錯。這個問題，我們留到第四十一章解決。
 -->
 
 ---

@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: 樂觀鎖 & 悲觀鎖
-routeAlias: ch33
+routeAlias: ch34
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,7 +46,7 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第三十三章。
+大家好，歡迎來到第三十四章。
 
 上一章的交易，解決的是「一個人做兩件事，做到一半出錯」的問題。
 

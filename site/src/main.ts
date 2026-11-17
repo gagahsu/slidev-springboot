@@ -35,6 +35,7 @@ import GateGuard from './anim/GateGuard.vue'
 import PassCard from './anim/PassCard.vue'
 import Campus from './anim/Campus.vue'
 import Breaker from './anim/Breaker.vue'
+import LinkTables from './anim/LinkTables.vue'
 import TwoBooks from './anim/TwoBooks.vue'
 import SeatRace from './anim/SeatRace.vue'
 import AskOrOrder from './anim/AskOrOrder.vue'
@@ -98,6 +99,7 @@ createApp(App)
   .component('PassCard', PassCard)
   .component('Campus', Campus)
   .component('Breaker', Breaker)
+  .component('LinkTables', LinkTables)
   .component('TwoBooks', TwoBooks)
   .component('SeatRace', SeatRace)
   .component('AskOrOrder', AskOrOrder)

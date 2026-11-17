@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: Spring Boot Cache
-routeAlias: ch43
+routeAlias: ch45
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,7 +46,7 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第四十三章，也是「進階功能」這個單元的最後一章。
+大家好，歡迎來到第四十五章，也是「進階功能」這個單元的最後一章。
 
 今天的主題是 Cache，中文叫做快取。它要解決的問題很單純：同樣的東西一直被查，每次都去資料庫拿，太慢了。
 
@@ -632,7 +632,7 @@ class: flex flex-col justify-center items-center text-center
 <!--
 什麼時候適合用 Cache？
 
-（下一步）查的次數遠多於改的次數，適合。資料一直在變，不適合。例如第三十三章選課的剩餘名額，每一秒都可能不一樣。
+（下一步）查的次數遠多於改的次數，適合。資料一直在變，不適合。例如第三十四章選課的剩餘名額，每一秒都可能不一樣。
 
 （下一步）查一次很花時間，適合。本來就查得很快，不需要。
 
@@ -731,7 +731,7 @@ class: flex flex-col justify-center items-center text-center
 5. 測試：連續查兩次同一個社團，日誌只出現一次；刪除之後再查，得到 404
 
 <!--
-練習一。幫第三十七章的社團加上 Cache。
+練習一。幫第三十九章的社團加上 Cache。
 
 第一，ClubService 新增一個 getClubById。查不到回傳 null。方法開頭寫一筆日誌，方便觀察。
 
@@ -907,10 +907,10 @@ public class CacheCleanScheduler {
 
 <v-clicks>
 
-- **號碼牌和置物櫃**：Session，讓伺服器記得使用者（第 40 章）
-- **演練清單和值班日誌**：單元測試、Mock、Log（第 41 章）
-- **工友的時間表**：排程 `@Scheduled`（第 42 章）
-- **櫃台上的便利貼**：Cache（第 43 章）
+- **號碼牌和置物櫃**：Session，讓伺服器記得使用者（第 42 章）
+- **演練清單和值班日誌**：單元測試、Mock、Log（第 43 章）
+- **工友的時間表**：排程 `@Scheduled`（第 44 章）
+- **櫃台上的便利貼**：Cache（第 45 章）
 
 </v-clicks>
 
@@ -923,7 +923,7 @@ public class CacheCleanScheduler {
 <!--
 這一章也是進階功能單元的最後一章。我們回頭看一下走過的路。
 
-（依序按下一步）第四十章，號碼牌和置物櫃，是 Session。第四十一章，演練清單和值班日誌，是單元測試和 Log。第四十二章，工友的時間表，是排程。今天，櫃台上的便利貼，是 Cache。
+（依序按下一步）第四十二章，號碼牌和置物櫃，是 Session。第四十三章，演練清單和值班日誌，是單元測試和 Log。第四十四章，工友的時間表，是排程。今天，櫃台上的便利貼，是 Cache。
 
 （最後一步）這四樣東西，都不是「新的功能」，而是讓系統更好用、更可靠、更快的工具。下一個單元是安全與微服務。第一站要談的是：誰可以進教務處、誰可以辦哪些事。
 -->

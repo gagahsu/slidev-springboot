@@ -305,7 +305,7 @@ int updateNameById(@Param("inputId") Integer id,
 
 - 便條的內容是 `update`（`delete` 也一樣）
 - `@Modifying`：告訴助理「這張便條會改資料，不是查詢」
-- `@Transactional`：改資料必須加。它保證「要嘛全部成功，要嘛全部不算」，第三十二章會細講
+- `@Transactional`：改資料必須加。它保證「要嘛全部成功，要嘛全部不算」，第三十三章會細講
 - 回傳 `int`：動到幾筆
 
 </CodeSteps>
@@ -317,7 +317,7 @@ int updateNameById(@Param("inputId") Integer id,
 
 （下一步）上面要多加 @Modifying。因為助理預設把便條當成查詢，要明確告訴他「這張便條會改資料」。
 
-（下一步）再加 @Transactional。改資料的便條必須加這個，不加的話執行時會報錯。它的作用是保證「要嘛全部成功，要嘛全部不算」。這個觀念第三十二章會細講，現在先照著加。
+（下一步）再加 @Transactional。改資料的便條必須加這個，不加的話執行時會報錯。它的作用是保證「要嘛全部成功，要嘛全部不算」。這個觀念第三十三章會細講，現在先照著加。
 
 （下一步）方法回傳 int，代表動到幾筆。和 Spring JDBC 的 update() 一樣。
 -->
@@ -504,7 +504,7 @@ join 的寫法分兩個部分。
 
 （下一步）要注意，new 後面括號裡的順序，要和類別裡變數的順序一樣。package 路徑也要寫完整，請換成你自己專案的路徑。
 
-VO 是 Value Object 的縮寫，第三十六章會正式介紹。現在把它當成「專門用來裝結果的卡片」就好。
+VO 是 Value Object 的縮寫，第三十七章會正式介紹。現在把它當成「專門用來裝結果的卡片」就好。
 -->
 
 ---
@@ -721,7 +721,7 @@ Controller 直接回傳 Page 的話，JSON 裡會有 content，是這一頁的�
 
 <v-click>
 
-JPA 到這裡告一段落。下一章認識第三位幫手：MyBatis。
+下一章：兩本簿子之間的關係，也可以交給助理來顧。
 
 </v-click>
 
@@ -730,7 +730,7 @@ JPA 到這裡告一段落。下一章認識第三位幫手：MyBatis。
 
 （依序按下一步）@Query 讓我們自己寫要執行的內容。JPQL 用類別名稱和變數名稱。原生 SQL 要加 nativeQuery = true，用資料表和欄位的名稱。參數建議用冒號加名字。會改資料的便條要加 @Modifying 和 @Transactional，新增只能用原生 SQL。clearAutomatically 讓助理改完就清掉手邊的舊資料。分頁只要加 Pageable。
 
-（最後一步）JPA 到這裡告一段落。下一章認識第三位幫手：MyBatis。
+（最後一步）下一章：兩本簿子之間的關係，也可以交給助理來顧。
 -->
 
 ---

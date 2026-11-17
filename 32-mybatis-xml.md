@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: MyBatis 的用法（下）—XML Mapper 寫法
-routeAlias: ch31
+routeAlias: ch32
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,7 +46,7 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第三十一章。
+大家好，歡迎來到第三十二章。
 
 前兩章，我們把 MyBatis 的申請單直接貼在方法上面。簡單的 SQL 這樣寫很方便。
 

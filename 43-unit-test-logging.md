@@ -7,7 +7,7 @@ drawings:
   persist: false
 transition: slide-left
 title: 單元測試與日誌
-routeAlias: ch41
+routeAlias: ch43
 style: |
   .slidev-layout p,
   .slidev-layout li,
@@ -46,7 +46,7 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第四十一章。
+大家好，歡迎來到第四十三章。
 
 今天的主題和「新功能」無關，而是兩個讓我們寫程式更安心的工具。
 
