@@ -46,35 +46,33 @@ style: |
 </div>
 
 <!--
-歡迎來到第 45 章！今天要講的是 JWT 認證。
+大家好，歡迎來到第四十五章。
 
-想像你去遊樂園玩，入場時工作人員在你手腕戴上一條手環。之後你不管去哪個遊樂設施，只要亮出手環，工作人員就知道你已經付費入場了 — 根本不需要每次都跑回售票口驗證你的身份。
+上一章我們請了警衛，用的證件是帳號和密碼，而且每一次請求都要帶。
 
-JWT 就是這條「手環」！伺服器把你的身份資訊加密簽名後交給你，之後每次請求你帶著它來，伺服器一看就知道你是誰，完全不需要自己記憶。
+今天要換一種證件：一張蓋了鋼印的通行證。它的名字叫做 JWT。今天繼續使用 school 專案，接著上一章的程式往下改。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要搞懂的三件事
 
-- **Session 的水平擴展問題** — 為什麼需要 JWT？
-- **JWT 結構** — Header、Payload、Signature 三個組成部分
-- **JWT Claims 詳解** — 標準 Claims 與自訂 Claims
-- **JWT vs Session 比較** — 無狀態 vs 有狀態
-- **jjwt 0.12.x 依賴設定** — build.gradle 設定
-- **JwtUtil** — 生成與驗證 Token
-- **JwtAuthFilter** — `OncePerRequestFilter` 攔截請求
-- **SecurityFilterChain** — 整合 JWT 的安全設定
-- **Java record** — DTO / VO 都適用
-- **AuthController** — 登入端點實作
-- **完整登入流程** — 端對端流程圖解
-- **安全最佳實踐** — Token 管理注意事項
-- **實作練習**
+<v-clicks>
+
+- **為什麼需要新的證件？** 帳號密碼和號碼牌，各有什麼不方便
+- **JWT 是什麼？** 一張自己帶著資料、蓋了鋼印的通行證
+- **程式怎麼寫？** 登入時發證，之後每個請求驗證
+
+</v-clicks>
 
 <!--
-這是本章的學習路線圖。我們先從「為什麼需要 JWT」出發，理解 Session 在分散式系統的痛點；接著深入 JWT 的結構與原理；然後實作整套 Spring Boot 的 JWT 認證流程。
+今天要搞懂三件事。
+
+（下一步）第一，為什麼需要新的證件。上一章的帳號密碼，和第四十章的號碼牌，各有什麼不方便。
+
+（下一步）第二，JWT 是什麼。先劇透：它是一張自己帶著資料、蓋了鋼印的通行證。
+
+（下一步）第三，程式怎麼寫。分成兩件事：登入的時候發證，之後每個請求進來的時候驗證。
 -->
 
 ---
@@ -83,39 +81,162 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-## HttpSession 的水平擴展問題
+# 兩種舊證件的麻煩
 
 <!--
-在講 JWT 之前，我們先來看看傳統的 Session 認證遇到了什麼問題。
+先看目前有的兩種做法，各有什麼問題。
 -->
 
 ---
 
-# HttpSession 的問題
+# 每次都出示帳號密碼
 
-| 情境 | 說明 |
-|------|------|
-| 單台伺服器 | ✅ 完全沒問題，Session 就在記憶體裡 |
-| 兩台伺服器（Load Balancer） | ❌ A 台登入的 Session，B 台不認識！ |
-| 自動擴展（Auto Scaling） | ❌ 新開的 Pod 沒有舊的 Session 資料 |
-| 容器化部署（K8s） | ❌ Pod 重啟後 Session 全部消失 |
+上一章的 Basic Auth：每個請求都帶著帳號和密碼。
+
+<v-clicks>
+
+- 密碼在網路上**傳了一次又一次**，被偷看到的機會變多
+- 前端必須把密碼**一直留著**，才能每次都帶
+- 伺服器每次都要查資料庫、跑一次攪碎機核對，比較慢
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 比較好的做法：密碼<b>只在登入的時候出示一次</b>。登入成功後換一張別的證件，之後都用那張證件。
+</div>
+
+</v-click>
 
 <!--
-想像一個大型主題樂園，有兩個售票口。你在左邊售票口登記了，拿到一張號碼牌。但右邊售票口的工作人員根本不知道你登記過！這就是水平擴展時 Session 的問題。
+上一章的 Basic Auth，每個請求都帶著帳號和密碼。它很簡單，但是有幾個缺點。
+
+（下一步）密碼在網路上傳了一次又一次。傳越多次，被偷看到的機會越多。
+
+（下一步）前端必須把密碼一直留著，才能每次都帶。密碼放在前端越久，越危險。
+
+（下一步）伺服器每次都要查資料庫、跑一次攪碎機來核對。攪碎機是故意設計得比較慢的，每個請求都跑一次，很浪費。
+
+（下一步）比較好的做法是：密碼只在登入的時候出示一次。登入成功後，換一張別的證件，之後都用那張證件。
 -->
 
 ---
 
-# HttpSession 的解法比較
+# 號碼牌只有一個櫃台認得
 
-| 解法 | 缺點 |
-|------|------|
-| Sticky Session | 失去水平擴展的彈性 |
-| Session 共享（Redis） | 增加基礎設施複雜度 |
-| **JWT（無狀態）** | **⭐ 伺服器完全不需要儲存狀態** |
+第四十章的 Session 就是「登入後換一張證件」。但是學校變大之後：
+
+<v-clicks>
+
+- 學校開了第二個校區，有 A、B 兩個櫃台（兩台伺服器）
+- Tom 在 A 櫃台登入，置物櫃開在 **A 櫃台後面**
+- 下一次他被分到 B 櫃台。B 櫃台找不到這個號碼的置物櫃：「請問你是哪一位？」
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ Session 的資料放在<b>某一台伺服器</b>上。伺服器一多，每一台都要查得到同一份資料才行，這件事做起來很麻煩。
+</div>
+
+</v-click>
 
 <!--
-JWT 提供了另一條路：讓客戶端自己帶著身份證明！
+第四十章的 Session，其實就是登入後換一張證件：號碼牌。它解決了剛才的問題。但是學校變大之後，出現新的問題。
+
+（下一步）學校開了第二個校區，有 A、B 兩個櫃台。在程式的世界，就是有兩台伺服器一起服務。使用者多的網站都是這樣。
+
+（下一步）Tom 在 A 櫃台登入。置物櫃開在 A 櫃台後面。
+
+（下一步）下一次他被分到 B 櫃台。B 櫃台看了號碼牌，找不到這個號碼的置物櫃。只好問：請問你是哪一位？
+
+（下一步）問題的根源是：Session 的資料放在某一台伺服器上。伺服器一多，每一台都要查得到同一份資料才行。這件事做得到，但是很麻煩。
+-->
+
+---
+
+# 新的做法：蓋了鋼印的通行證
+
+<PassCard />
+
+<!--
+學校想了一個新的做法。
+
+Tom 到 A 櫃台，報上帳號和密碼。
+
+（下一步）A 櫃台核對之後，發一張通行證給他。和號碼牌不一樣的地方是：資料直接寫在證上。姓名 Tom、身分學生、有效期限到今天下午五點。最後蓋上學校的鋼印。
+
+（下一步）Tom 拿著通行證到 B 櫃台。B 櫃台只要檢查鋼印是不是學校的。鋼印正確，就相信證上寫的資料。不用查任何置物櫃，因為資料就在證上。
+
+（下一步）那如果有人把證上的「學生」塗改成「老師」呢？鋼印是照著原本的內容蓋的。內容一改，鋼印就對不上了，櫃台會拒絕。
+
+所以這張通行證有兩個特點：資料自己帶著，而且改不了。
+-->
+
+---
+
+# 對照到程式
+
+<PassCard terms />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <b>JWT</b>（JSON Web Token）：一段文字，裡面有使用者的資料，加上伺服器的簽章。Token 這個字的意思是「代表身分的憑證」。
+</div>
+
+</v-click>
+
+<!--
+同一張圖，換成程式的名字。
+
+（下一步）通行證，叫做 JWT。A 櫃台發證，是登入的 API：POST /auth/login。證上的姓名、身分、期限，各有一個英文縮寫，等一下會介紹。鋼印叫做 Signature，中文是簽章。
+
+（下一步）B 櫃台可以是任何一台伺服器。只要它有同一顆鋼印，就能檢查。
+
+（下一步）鋼印對不上的時候，回覆 401。
+
+（下一步）JWT 的全名是 JSON Web Token。它是一段文字，裡面有使用者的資料，加上伺服器的簽章。Token 這個字的意思是：代表身分的憑證。之後我們也會直接說 Token。
+-->
+
+---
+
+# 整理：號碼牌和通行證
+
+<Pairs left="號碼牌（Session）" right="通行證（JWT）" sign="vs" rows="cabinet,資料放在櫃台後面的置物櫃=card,資料寫在證上，自己帶著|what,只有開置物櫃的那個櫃台認得=ok,有鋼印的櫃台都認得|no,櫃台要替每個人保管東西=ok,櫃台什麼都不用保管|ok,想作廢：把置物櫃清空就好=what,發出去就收不回來，只能等它過期" />
+
+<!--
+把兩種證件放在一起比較。
+
+（下一步）號碼牌的資料，放在櫃台後面的置物櫃。通行證的資料寫在證上，自己帶著。
+
+（下一步）號碼牌只有開置物櫃的那個櫃台認得。通行證只要是有鋼印的櫃台都認得。
+
+（下一步）用號碼牌，櫃台要替每個人保管東西。用通行證，櫃台什麼都不用保管。這種做法延續了 HTTP 無狀態的特性。
+
+（下一步）最後一點是通行證的缺點。號碼牌想作廢，把置物櫃清空就好。通行證發出去就收不回來，只能等它過期。所以有效期限不能設太長。
+
+兩種做法沒有誰一定比較好。傳統網站常用 Session，手機 App 和前後端分離的系統常用 JWT。
+-->
+
+---
+
+# 想一想
+
+<Poll question="B 櫃台沒有查任何置物櫃，為什麼還是敢相信通行證上寫的「身分：學生」？" options="因為 Tom 看起來很老實|因為證上有學校的鋼印，而且內容一改鋼印就對不上|因為 B 櫃台打電話問過 A 櫃台|因為通行證是加密的，沒有人看得懂" answer="2" />
+
+<!--
+來想一題。
+
+B 櫃台沒有查任何置物櫃，為什麼還是敢相信通行證上寫的「身分：學生」？
+
+（等大家作答）
+
+（下一步）答案是：因為證上有學校的鋼印，而且內容一改，鋼印就對不上。
+
+請特別注意第四個選項是錯的。通行證沒有加密，上面的字誰都看得懂。它靠的是鋼印，不是保密。這一點等一下會再說明。
 -->
 
 ---
@@ -124,42 +245,125 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-## JWT 結構：Header.Payload.Signature
+# 通行證長什麼樣子
 
 <!--
-現在我們來解剖 JWT，看看這條「手環」到底是怎麼做成的。
+來看 JWT 實際的樣子。
 -->
 
 ---
 
-# JWT 長什麼樣子？
+# 一段文字，用兩個點分成三段
 
-**一個真實的 JWT Token 由三段組成，用「.」分隔：**
+<UrlParts parts="eyJhbGciOiJI…;;Header;;證件的種類;;第一段是 Header，說明這是哪一種證件、鋼印是用什麼方法蓋的||.eyJzdWIiOiJ0b20i…;;Payload;;證上寫的資料;;第二段是 Payload，證上寫的資料：是誰、什麼時候到期||.Gt5rBb0rmOvF…;;Signature;;鋼印;;第三段是 Signature，伺服器用密鑰算出來的簽章，也就是鋼印" />
 
-| 部分 | 內容 | 說明 |
-|------|------|------|
-| **Header** | `eyJhbGci...` | 演算法類型（Base64Url 編碼） |
-| **Payload** | `eyJzdWIi...` | 使用者資訊（Base64Url 編碼） |
-| **Signature** | `SflKxwRJ...` | 用密鑰簽名，防止竄改 |
+<!--
+JWT 是一段很長的文字。仔細看，中間有兩個點，把它分成三段。
+
+（下一步）第一段叫做 Header。說明這是哪一種證件、鋼印是用什麼方法蓋的。這一段我們不用管。
+
+（下一步）第二段叫做 Payload。就是證上寫的資料：這個人是誰、什麼時候到期。
+
+（下一步）第三段叫做 Signature，簽章，也就是鋼印。它是伺服器用一把密鑰，照著前兩段的內容算出來的。
+
+這三段看起來都是亂碼，但是前兩段其實只是換了一種寫法，任何人都可以轉回來看。
+-->
+
+---
+
+# Payload：證上寫了什麼
+
+把第二段轉回來，是一個 JSON：
 
 ```json
-// Payload 解碼後：
 {
-  "sub": "alice",
-  "iat": 1717400000,
-  "exp": 1717486400,
-  "roles": ["ROLE_USER"]
+  "sub": "tom",
+  "iat": 1794888214,
+  "exp": 1794891814
 }
 ```
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>重要：</b> Payload 是 Base64Url 編碼，不是加密！任何人都能解碼讀取，切勿存放密碼或機敏資料。
+<v-clicks>
+
+- `sub`（subject）：這張證是誰的。我們放帳號名稱
+- `iat`（issued at）：什麼時候發的
+- `exp`（expiration）：什麼時候到期。過了這個時間，證就失效
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ Payload <b>沒有加密</b>，任何人拿到 Token 都看得到內容（把 Token 貼到 jwt.io 網站就能看）。所以<b>絕對不要把密碼放進去</b>。
 </div>
 
-<!--
-JWT 就是三段 Base64Url 字串，用點號連接。Base64Url 不是加密！只是編碼！
+</v-click>
 
-JWT 的安全性來自第三段 Signature。伺服器用密鑰對 Header+Payload 計算出簽名。如果有人篡改了 Payload，簽名就對不上，伺服器馬上知道這個 Token 是假的。
+<!--
+把第二段轉回來，是一個 JSON。
+
+（下一步）sub，是 subject 的縮寫，代表這張證是誰的。我們放帳號名稱。
+
+（下一步）iat，是 issued at 的縮寫，什麼時候發的。
+
+（下一步）exp，是 expiration 的縮寫，什麼時候到期。過了這個時間，證就失效。時間是一個很大的數字，它是從 1970 年開始算的秒數，程式會自己換算。
+
+這些欄位的名字是 JWT 規定好的。我們也可以加自己的欄位，例如身分，練習的時候會做。
+
+（下一步）很重要的一點：Payload 沒有加密。任何人拿到 Token，都看得到內容。有一個網站叫 jwt.io，把 Token 貼上去就能看。所以絕對不要把密碼，或是其他不能公開的資料放進去。
+-->
+
+---
+
+# Signature：為什麼改不了
+
+<v-clicks>
+
+- 伺服器有一把**密鑰**（一串只有伺服器知道的文字），這就是那顆鋼印
+- 發證時：用密鑰，照著 Header 和 Payload 的內容算出簽章
+- 驗證時：用同一把密鑰再算一次，和 Token 上的簽章比對
+- 內容被改過 → 算出來的簽章不一樣 → 拒絕
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 沒有密鑰的人，算不出正確的簽章。所以<b>密鑰絕對不能外流</b>。密鑰一外流，任何人都能自己做通行證。
+</div>
+
+</v-click>
+
+<!--
+再來看第三段，簽章。為什麼有了它，內容就改不了？
+
+（下一步）伺服器有一把密鑰。它是一串只有伺服器知道的文字。這就是故事裡的那顆鋼印。
+
+（下一步）發證的時候，伺服器用密鑰，照著 Header 和 Payload 的內容，算出一個簽章，放在第三段。
+
+（下一步）驗證的時候，伺服器用同一把密鑰，照著收到的內容再算一次，然後和 Token 上的簽章比對。
+
+（下一步）如果內容被改過，算出來的簽章就會不一樣。伺服器就拒絕。
+
+（下一步）沒有密鑰的人，算不出正確的簽章。所以密鑰絕對不能外流。密鑰一外流，任何人都能自己做通行證，想當老師就當老師。
+-->
+
+---
+
+# 想一想
+
+<Poll question="下面哪一樣東西，可以放進 JWT 的 Payload？" options="使用者的密碼|使用者的帳號名稱|伺服器的密鑰|信用卡號碼" answer="2" />
+
+<!--
+來想一題。
+
+下面哪一樣東西，可以放進 JWT 的 Payload？
+
+（等大家作答）
+
+（下一步）答案是：使用者的帳號名稱。
+
+Payload 是任何人都看得到的。密碼、密鑰、信用卡號碼，都不能放。帳號名稱和身分這一類的資料可以放。
 -->
 
 ---
@@ -168,33 +372,179 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 3
-## JWT Claims 詳解
+# 發證的工具：JwtUtil
 
 <!--
-Payload 裡面的每個欄位叫做 Claim（聲明）。我們來仔細看看有哪些標準 Claims。
+來寫程式。先準備發證和驗證的工具。
 -->
 
 ---
 
-# JWT Claims：標準欄位
+# 加入依賴，準備密鑰
 
-| Claim | 全名 | 說明 |
-|-------|------|------|
-| `sub` | Subject | 主體（通常是使用者帳號） |
-| `iat` | Issued At | Token 發行時間（Unix 時間戳） |
-| `exp` | Expiration | Token 過期時間（Unix 時間戳） |
-| `iss` | Issuer | 發行者 |
-| `aud` | Audience | 目標接收者 |
-| `jti` | JWT ID | 唯一識別碼（防重放攻擊） |
+`build.gradle`：
 
-**Custom Claims（自訂欄位）：**
+```groovy
+implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
+runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
+runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
+```
 
-> 任何業務需要的欄位都可以加入，例如 `"roles": ["ROLE_ADMIN"]`
+`application.properties`：
+
+```properties
+jwt.secret=school-project-jwt-secret-key-please-change-me-2026
+```
+
+<v-clicks>
+
+- `jjwt` 是幫我們產生和檢查 JWT 的套件，要加三行
+- `jwt.secret` 是密鑰，自己取。**至少要 32 個英文字或數字**，太短會出錯
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 這裡為了練習，把密鑰寫在設定檔。正式的系統不能這樣做，更不能把密鑰上傳到 GitHub。
+</div>
+
+</v-click>
 
 <!--
-Claims 就像手環上印的資訊。標準 Claims 有固定的縮寫名稱，是 JWT 規格定義好的。最重要的三個是 sub（誰）、iat（何時發行）、exp（何時過期）。
+第一步，在 build.gradle 加入依賴。這個套件叫做 jjwt，它幫我們產生和檢查 JWT。要加三行，版本都一樣。加完記得按 Gradle 的重新整理。
 
-自訂 Claims 讓你可以在 Token 裡帶更多業務資訊，比如使用者的角色、部門等。
+第二步，在 application.properties 加一行 jwt.secret。這就是密鑰。
+
+（下一步）jjwt 要加三行，第一行是寫程式的時候用的，後面兩行是執行的時候用的，所以開頭是 runtimeOnly。
+
+（下一步）密鑰的內容自己取。但是至少要三十二個英文字或數字。太短的話，程式啟動後一發證就會出錯，因為太短的密鑰不安全。
+
+（下一步）這裡為了練習，把密鑰寫在設定檔。正式的系統不能這樣做，更不能把密鑰上傳到 GitHub。正式的做法是放在伺服器的環境設定裡，這個部分超出今天的範圍。
+-->
+
+---
+
+# JwtUtil：拿到密鑰
+
+新增一個資料夾 `security`，在裡面新增 `JwtUtil`：
+
+```java {1-2|4-5|7-9}
+@Component
+public class JwtUtil {
+
+    @Value("${jwt.secret}")
+    private String secret;
+
+    private SecretKey getKey() {
+        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    }
+}
+```
+
+<v-clicks>
+
+- `@Component`：交給 Spring 管理，別的類別才能用 `@Autowired` 拿到它
+- `@Value`：從設定檔讀出密鑰（第九章學過）
+- `getKey()`：把文字變成 jjwt 看得懂的「鑰匙」物件。這一行請照抄
+
+</v-clicks>
+
+<!--
+新增一個資料夾，叫做 security。在裡面新增一個類別 JwtUtil。Util 是工具的意思。
+
+（下一步）@Component，把它交給 Spring 管理。這樣別的類別才能用 @Autowired 拿到它。
+
+（下一步）@Value，從設定檔讀出密鑰。這是第九章學過的寫法。
+
+（下一步）getKey 這個方法，把密鑰的文字變成 jjwt 看得懂的鑰匙物件。這一行不用理解細節，請照抄。等一下發證和驗證都會用到它。
+-->
+
+---
+
+# 發證：generateToken
+
+<CodeSteps>
+
+```java {2-3|4-5|6|7|8|9}
+public String generateToken(String username) {
+    Date now = new Date();
+    Date expireAt = new Date(now.getTime() + 60 * 60 * 1000);
+    return Jwts.builder()
+            .subject(username)
+            .issuedAt(now)
+            .expiration(expireAt)
+            .signWith(getKey())
+            .compact();
+}
+```
+
+- 現在的時間，和一小時後的時間（單位是毫秒：60 分 × 60 秒 × 1000）
+- `subject`：這張證是誰的（`sub`）
+- `issuedAt`：什麼時候發的（`iat`）
+- `expiration`：什麼時候到期（`exp`）
+- `signWith`：用密鑰蓋鋼印
+- `compact`：組成最後那一段文字
+
+</CodeSteps>
+
+<!--
+在 JwtUtil 加第一個方法，generateToken，發證。給它帳號名稱，回傳一段 Token 文字。
+
+（下一步）先準備兩個時間。now 是現在。expireAt 是一小時後。getTime 拿到的單位是毫秒，所以一小時是六十分乘六十秒乘一千。
+
+（下一步）用 Jwts.builder() 開始，一項一項填。subject，這張證是誰的，對應 Payload 的 sub。
+
+（下一步）issuedAt，什麼時候發的，對應 iat。
+
+（下一步）expiration，什麼時候到期，對應 exp。
+
+（下一步）signWith，用密鑰蓋鋼印。
+
+（下一步）compact，組成最後那一段有兩個點的文字。
+-->
+
+---
+
+# 驗證：getUsername
+
+<CodeSteps>
+
+```java {2-4|5|6-7}
+public String getUsername(String token) {
+    return Jwts.parser()
+            .verifyWith(getKey())
+            .build()
+            .parseSignedClaims(token)
+            .getPayload()
+            .getSubject();
+}
+```
+
+- 準備一台檢查機，告訴它要用哪一把密鑰
+- 檢查 Token：**鋼印對不對、有沒有過期**。有問題就丟出例外
+- 檢查通過，從 Payload 拿出 `sub`，也就是帳號名稱
+
+</CodeSteps>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 所以這個方法做了兩件事：檢查這張證是不是真的，然後告訴我們它是誰的。只要有拿到帳號名稱，就代表檢查通過了。
+</div>
+
+</v-click>
+
+<!--
+第二個方法，getUsername。給它一段 Token，回傳這張證是誰的。
+
+（下一步）Jwts.parser() 準備一台檢查機。verifyWith 告訴它要用哪一把密鑰。build() 完成。
+
+（下一步）parseSignedClaims，檢查 Token。它會檢查兩件事：鋼印對不對，以及有沒有過期。任何一項有問題，它就丟出例外。
+
+（下一步）檢查通過的話，getPayload 拿到證上的資料，getSubject 拿出 sub，也就是帳號名稱。
+
+（下一步）所以這個方法做了兩件事：檢查這張證是不是真的，然後告訴我們它是誰的。只要有拿到帳號名稱，就代表檢查通過了。
 -->
 
 ---
@@ -203,33 +553,96 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 4
-## JWT vs Session 比較
+# 登入：核對密碼，發出通行證
 
 <!--
-理解了 JWT 的結構後，我們來做一個完整的比較。
+工具準備好了。接著寫登入的 API。
 -->
 
 ---
 
-# JWT vs Session 全面比較
+# 兩個 DTO，和 AccountService 的 login()
 
-| 特性 | HttpSession | JWT |
-|------|------------|-----|
-| **狀態** | Stateful（伺服器儲存） | Stateless（客戶端儲存） |
-| **水平擴展** | 需要共享 Session Store | 天然支援，無需額外設施 |
-| **廢止 Token** | 直接刪除 Session | 需要 Blacklist 機制 |
-| **資料大小** | Session ID 很小 | Token 較大（帶有資料） |
-| **跨域支援** | Cookie 有跨域限制 | Header 方式天然跨域 |
-| **適合場景** | 單體應用、需要即時廢止 | 微服務、API、行動端 |
+```java
+@Getter @Setter
+public class LoginRequest { private String username; private String password; }
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>JWT 的缺點：</b> 一旦發出去，在過期前無法單方面廢止（除非維護黑名單）。如果需要「立刻踢出使用者」，要麼用 Session，要麼實作 JWT Blacklist。
-</div>
+@Getter @Setter
+public class LoginResponse { private String token; }
+```
+
+<CodeSteps>
+
+```java {2|3-5|6-8|9}
+public String login(LoginRequest request) {
+    Account account = accountRepository.findByUsername(request.getUsername());
+    if (account == null) {
+        return null;
+    }
+    if (!passwordEncoder.matches(request.getPassword(), account.getPassword())) {
+        return null;
+    }
+    return jwtUtil.generateToken(account.getUsername());
+}
+```
+
+- 用帳號名稱到資料庫查
+- 沒有這個帳號：回傳 `null`
+- 密碼核對不過：也回傳 `null`
+- 都通過：發一張通行證
+
+</CodeSteps>
 
 <!--
-這張表格是面試常考題，背起來！
+先在 dto 資料夾新增兩個類別。LoginRequest 是前端送進來的帳號和密碼。LoginResponse 是回給前端的，只有一個欄位 token。為了省空間，這裡把欄位寫在同一行，實際上請照平常的寫法分行。
 
-所以如果你的應用需要「立刻踢出使用者」的功能，要麼用 Session，要麼實作 JWT Blacklist。
+然後在上一章的 AccountService 裡，用 @Autowired 多拿一個 JwtUtil，再加一個 login 方法。
+
+（下一步）用帳號名稱到資料庫查。
+
+（下一步）沒有這個帳號，回傳 null。
+
+（下一步）有這個帳號，就核對密碼。用的是上一章學的 matches：前面放使用者輸入的密碼，後面放資料庫裡的亂碼。前面有一個驚嘆號，意思是「如果核對不過」。核對不過也回傳 null。
+
+（下一步）兩關都通過，就呼叫 JwtUtil 發一張通行證，回傳 Token。
+
+這裡刻意讓「沒有這個帳號」和「密碼錯誤」得到一樣的結果。這樣想亂試的人，分不出是帳號錯還是密碼錯。
+-->
+
+---
+
+# AuthController：POST /auth/login
+
+```java {7-8|9-12|13-15}
+@RestController
+public class AuthController {
+
+    @Autowired
+    private AccountService accountService;
+
+    @PostMapping("/auth/login")
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+        String token = accountService.login(request);
+        if (token == null) {
+            return ResponseEntity.status(401).build();
+        }
+        LoginResponse response = new LoginResponse();
+        response.setToken(token);
+        return ResponseEntity.ok(response);
+    }
+}
+```
+
+<!--
+在 controller 資料夾新增 AuthController。
+
+（下一步）POST /auth/login，用 @RequestBody 接收帳號和密碼。
+
+（下一步）交給 AccountService。如果拿到的是 null，代表帳號或密碼不對，回覆 401。後面的 build() 意思是不帶內容。
+
+（下一步）拿到 Token 的話，把它放進 LoginResponse，回覆 200。
+
+到這裡，發證的部分完成了。接下來是另一半：每個請求進來的時候，怎麼檢查通行證。
 -->
 
 ---
@@ -238,28 +651,136 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 5
-## jjwt 0.12.x 依賴設定
+# 驗證：在警衛那一排加一關
 
 <!--
-好了，原理講完了！現在來實作。第一步是加入 jjwt 依賴。注意版本：我們用的是 0.12.x，API 跟舊版 0.11.x 有重大差異。
+上一章最後提到，警衛其實是一排關卡。今天要在這一排裡，加一個我們自己寫的關卡。
 -->
 
 ---
 
-# build.gradle：加入 jjwt 依賴
+# 這一關要做什麼
 
-```groovy
-implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
-runtimeOnly    'io.jsonwebtoken:jjwt-impl:0.12.5'
-runtimeOnly    'io.jsonwebtoken:jjwt-jackson:0.12.5'
+前端之後的每個請求，都要在 Header 帶上通行證：
+
+```text
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0b20i…
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>注意：</b> jjwt-impl 和 jjwt-jackson 都要設 <code>runtimeOnly</code>！jjwt-api 是編譯期介面，後兩者是執行期實作。
+<v-clicks>
+
+1. 看請求有沒有 `Authorization` 這個 Header，而且是 `Bearer ` 開頭
+2. 把後面的 Token 拿出來，交給 `JwtUtil` 檢查
+3. 檢查通過：告訴警衛「這個人是 tom，身分是學生」
+4. 不管有沒有通過，都把請求**交給下一關**
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <code>Bearer</code> 的意思是「持有這張證的人」。它和 Token 之間有<b>一個空格</b>，少了就認不出來。
 </div>
 
+</v-click>
+
 <!--
-jjwt 拆成三個 JAR 是有原因的：jjwt-api 提供介面，你的程式碼只依賴介面；jjwt-impl 是實作，設成 runtime scope 表示編譯時不需要，執行時才載入；jjwt-jackson 負責把 Claims 序列化成 JSON。
+先說明前端要怎麼帶通行證。和上一章一樣，放在 Authorization 這個 Header 裡。內容是 Bearer、一個空格，後面接 Token。
+
+我們要寫的這一關，做四件事。
+
+（下一步）第一，看請求有沒有 Authorization 這個 Header，而且是 Bearer 加空格開頭。
+
+（下一步）第二，把後面的 Token 拿出來，交給 JwtUtil 檢查。
+
+（下一步）第三，檢查通過的話，告訴警衛：這個人是 tom，身分是學生。
+
+（下一步）第四，不管有沒有通過，都把請求交給下一關。沒帶證的人不是在這一關被擋的。這一關只負責「認人」。後面的關卡發現沒有人被認出來，才會依照規則決定要不要擋。這樣公開的網址才能正常使用。
+
+（下一步）Bearer 這個字的意思是：持有這張證的人。它和 Token 之間有一個空格，少了就認不出來。這是最常見的錯誤。
+-->
+
+---
+
+# JwtAuthFilter（上）：拿出 Token
+
+在 `security` 資料夾新增 `JwtAuthFilter`：
+
+```java {1-2|4-7|9-11|12-14}
+@Component
+public class JwtAuthFilter extends OncePerRequestFilter {
+
+    @Autowired
+    private JwtUtil jwtUtil;
+    @Autowired
+    private AccountService accountService;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
+        String header = request.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            String token = header.substring(7);
+            // 下一頁：檢查 Token
+        }
+        filterChain.doFilter(request, response);
+    }
+}
+```
+
+<!--
+在 security 資料夾新增 JwtAuthFilter。Filter 就是關卡。
+
+（下一步）@Component，加上 extends OncePerRequestFilter。extends 是繼承，意思是：我是一個關卡，而且每個請求只會經過我一次。
+
+（下一步）用 @Autowired 拿到兩個幫手：JwtUtil 和上一章的 AccountService。
+
+（下一步）關卡要做的事，寫在 doFilterInternal 這個方法裡。它的參數很長，請讓 IntelliJ 幫忙產生：在類別裡按 Ctrl 加 O，選這個方法。參數有三個：request 是請求，response 是回應，filterChain 是後面的關卡。
+
+（下一步）先從請求拿出 Authorization 這個 Header。如果有，而且是 Bearer 加空格開頭，就用 substring(7) 把前面七個字去掉。Bearer 是六個字，加上一個空格，一共七個。剩下的就是 Token。
+
+最後一行，filterChain.doFilter，把請求交給下一關。它寫在 if 的外面，所以不管有沒有帶 Token 都會執行。這一行如果忘了寫，所有請求都會卡在這裡，得不到回應。
+-->
+
+---
+
+# JwtAuthFilter（下）：檢查，然後告訴警衛
+
+<CodeSteps>
+
+```java {1,8-10|2|3|4-6|7}
+try {
+    String username = jwtUtil.getUsername(token);
+    UserDetails user = accountService.loadUserByUsername(username);
+    UsernamePasswordAuthenticationToken authentication =
+            new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+    // 上面兩行是同一句
+    SecurityContextHolder.getContext().setAuthentication(authentication);
+} catch (Exception e) {
+    // 通行證有問題：什麼都不做，當作沒有帶
+}
+```
+
+- 整段包在 `try` 裡：通行證過期或被改過時會丟出例外，接住它，不要讓程式出錯
+- 檢查 Token，拿到帳號名稱
+- 用上一章的名冊，查出這個人的資料和身分
+- 做一張「這個人已經通過認證」的紀錄
+- 把紀錄交給警衛。後面的關卡和 Controller 就知道現在是誰了
+
+</CodeSteps>
+
+<!--
+if 裡面的內容。
+
+（下一步）整段包在 try 和 catch 裡。因為通行證過期、或是被改過的時候，getUsername 會丟出例外。我們把它接住，什麼都不做，當作這個人沒有帶證。如果不接住，使用者會看到 500 的錯誤，而不是 401。
+
+（下一步）第一行，請 JwtUtil 檢查 Token，拿到帳號名稱。
+
+（下一步）第二行，用上一章寫的名冊 loadUserByUsername，查出這個人的資料和身分。
+
+（下一步）接下來做一張紀錄，意思是：這個人已經通過認證。類別名稱很長，叫 UsernamePasswordAuthenticationToken。三個參數：這個人的資料、密碼、身分。密碼填 null，因為已經用通行證驗證過，不需要密碼了。
+
+（下一步）最後把紀錄交給警衛。SecurityContextHolder 是警衛放紀錄的地方。放進去之後，後面負責授權的關卡，還有 Controller 的 Authentication 參數，就知道現在是誰了。
 -->
 
 ---
@@ -268,131 +789,121 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 6
-## JwtUtil：生成與驗證 Token
+# 修改警衛的守則
 
 <!--
-依賴加好了，來實作核心工具類 JwtUtil。
+新的關卡寫好了，但是還沒有排進隊伍裡。要回到 SecurityConfig 修改守則。
 -->
 
 ---
 
-# application.properties：設定 jwt.secret
+# SecurityConfig 改四個地方
 
-`JwtUtil` 裡的 `@Value("${jwt.secret}")` 要從這裡讀值，記得先加這行：
+<CodeSteps>
 
-```properties
-jwt.secret=NDI2ZTQ3M2E0MjY1NTk3MDRlNTgzODJlNmU2MzM0MzQzMzM2MzY3Mzc3
+```java {2|5|9|10|11|all}
+@Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
+    http
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/register", "/auth/login").permitAll()
+            // 其他規則和上一章一樣
+            .anyRequest().authenticated()
+        )
+        .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+        .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+        .csrf(csrf -> csrf.disable());
+    return http.build();
+}
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>密鑰哪裡來？</b> 要是 <b>Base64 編碼過的隨機亂數</b>，長度至少 256-bit（32 bytes）。開發期間可以用線上工具或指令產生，例如：<code>openssl rand -base64 32</code>。
+- 方法的參數多一個 `JwtAuthFilter`，Spring 會把我們寫的關卡交進來
+- 登入的網址要公開
+- 不使用 Session：伺服器不替任何人保管東西
+- 把我們的關卡排進隊伍
+- 沒有通過認證的請求，回覆 401
+- 原本的 `.httpBasic(...)` 刪掉了：不再接受每次帶帳號密碼
+
+</CodeSteps>
+
+<!--
+回到 SecurityConfig。攪碎機的 @Bean 不用動，只改 securityFilterChain 這個方法。
+
+（下一步）方法的參數多一個 JwtAuthFilter。和上一章的寫法一樣，寫在參數，Spring 就會把我們寫的關卡交進來。
+
+（下一步）規則的第一條，除了註冊，再加上登入的網址 /auth/login。登入一定要公開，道理和註冊一樣。其他規則都和上一章相同。
+
+（下一步）sessionManagement 這一行，設定成 STATELESS，無狀態。意思是不使用 Session，伺服器不替任何人保管東西。
+
+（下一步）addFilterBefore，把我們的關卡排進隊伍。後面那個很長的類別名稱，是 Spring Security 原本就有的一個關卡。這一行的意思是：排在它的前面。請照抄。
+
+（下一步）exceptionHandling 這一行，設定沒有通過認證的請求要回覆 401。如果沒有寫這一行，沒帶通行證的人會得到 403，容易和「權限不夠」搞混。
+
+（下一步）最後，原本的 httpBasic 那一行刪掉了。從現在開始，不再接受每次帶帳號密碼的方式。
+-->
+
+---
+
+# 用 Postman 測試
+
+<v-clicks>
+
+1. `POST /auth/login`，Body 是 `{"username":"tom","password":"tom123"}` → 200，回傳 `token`
+2. 複製那一長串 Token（不含引號）
+3. 開一個新請求 `GET /students`，Authorization 頁籤選 **Bearer Token**，貼上 Token → **200**
+4. 不帶 Token 送 `GET /students` → **401**
+5. 帶 Token 送 `DELETE /students/1` → **403**（tom 是學生）
+6. 把 Token 隨便改掉中間幾個字再送 → **401**
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+🔍 把 Token 貼到 jwt.io 看看，右邊會顯示 Payload 的內容：<code>sub</code> 是 tom，還有發證和到期的時間。
 </div>
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>正式環境不要寫在 properties 裡！</b> 這裡放的只是開發用的假值，部署時要用環境變數覆蓋：<code>JWT_SECRET=真正的密鑰 java -jar app.jar</code>，並把設定改成 <code>jwt.secret=${JWT_SECRET}</code>。詳細安全實踐 Part 12 會再提一次。
-</div>
+</v-click>
 
 <!--
-這一頁補上前面沒講清楚的地方：JwtUtil 裡 @Value("${jwt.secret}") 要吃到值，一定要在 application.properties（或 application.yml）先設定 jwt.secret 這個 key，不然啟動就會噴錯，找不到這個 placeholder。
+重新啟動，用 Postman 測試。帳號用上一章註冊的 tom。
 
-密鑰內容不能隨便打字串，要是隨機產生、Base64 編碼過的位元組，長度至少 256-bit，因為 HS256 演算法要求密鑰長度足夠，太短會在 getSigningKey() 那行拋出 WeakKeyException。
+（下一步）第一步，POST /auth/login。Body 選 raw、JSON，填帳號和密碼。得到 200，回傳的 JSON 裡有 token。
 
-正式環境的做法：properties 裡只放假值當預設，實際上線時透過環境變數 JWT_SECRET 覆蓋，寫法是 jwt.secret=${JWT_SECRET}，Spring Boot 會自動用環境變數的值取代 properties 裡的預設值。這樣密鑰就不會被寫進 Git。
+（下一步）第二步，複製那一長串 Token。不要複製到前後的引號。
+
+（下一步）第三步，開一個新請求 GET /students。Authorization 頁籤選 Bearer Token，把 Token 貼上去。Postman 會自動幫我們加上 Bearer 和空格。得到 200。
+
+（下一步）第四步，Authorization 選 No Auth，不帶 Token，送 GET /students。得到 401。
+
+（下一步）第五步，帶著 Token 送 DELETE /students/1。得到 403。因為 tom 是學生。上一章寫的規則都還在運作。
+
+（下一步）第六步，把 Token 中間隨便改掉幾個字，再送一次。得到 401。鋼印對不上了。
+
+（下一步）最後可以把 Token 貼到 jwt.io 這個網站看看。右邊會顯示 Payload 的內容。這也再提醒一次：Token 裡的資料，任何人都看得到。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
----
 
-# JwtUtil（1/3）：類別宣告與密鑰
+# 整個流程走一次
 
-<div class="mb-2 text-sm text-gray-500">
-📁 建議放在 <code>security</code> package（跟 <code>JwtAuthFilter</code>、<code>SecurityConfig</code> 同層）
-</div>
-
-```java
-package com.example.demo.security;
-
-@Component
-public class JwtUtil {
-
-    // 密鑰從 application.properties 讀取，不寫死在程式碼裡
-    @Value("${jwt.secret}")
-    private String secret;
-
-    // 把 Base64 密鑰字串還原成簽章用的 SecretKey 物件
-    private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secret);
-        return Keys.hmacShaKeyFor(keyBytes);
-    }
-}
-```
+<Flow nodes="前端:Tom|AuthController:發證|JwtAuthFilter:驗證|StudentController:櫃台" steps="1>2:POST /auth/login（帳號＋密碼）|2>1:200，token|1>3:GET /students（Bearer token）|3>4:鋼印正確，這位是 tom|4>1:200，學生資料" />
 
 <!--
-先看類別骨架：@Component 讓 Spring 管理這個 Bean；secret 從設定檔注入；getSigningKey() 是共用方法，把 Base64 字串轉成簽章要用的 SecretKey，後面生成與驗證 Token 都會呼叫它。
--->
+把整個流程走一次。
 
----
-style: |
-  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
----
+（下一步）Tom 送出 POST /auth/login，帶著帳號和密碼。這是密碼唯一出現的一次。
 
-# JwtUtil（2/3）：生成 Token
+（下一步）AuthController 核對之後，回覆 200 和一張通行證。
 
-```java
-// 產生 Token：帳號 + 發行時間 + 過期時間，簽名後輸出字串
-public String generateToken(String username) {
-    return Jwts.builder()
-        .subject(username)           // 放帳號到 sub 欄位
-        .issuedAt(new Date())         // 記錄發行時間 iat
-        .expiration(new Date(
-            System.currentTimeMillis() + 86400000)) // 24 小時後過期
-        .signWith(getSigningKey())    // 用密鑰簽名，防止竄改
-        .compact();                   // 組成最終的 JWT 字串
-}
-```
+（下一步）之後 Tom 要查學生資料，送出 GET /students，Header 帶著通行證。
 
-<!--
-注意 jjwt 0.12.x 的新 API：.subject() 取代了舊版的 .setSubject()，.expiration() 取代了 .setExpiration()。
--->
+（下一步）請求先經過 JwtAuthFilter。它檢查鋼印，確認這位是 tom，然後放行。
 
----
-style: |
-  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
----
+（下一步）請求到達 StudentController，回覆學生資料。
 
-# JwtUtil（3/3）：驗證與解析 Token
-
-```java
-// 解析 Token，驗證簽名，取出 Payload 裡的所有 Claims
-// 簽名不對或已過期時，parseSignedClaims() 會拋出 JwtException
-public Claims extractAllClaims(String token) {
-    return Jwts.parser()
-        .verifyWith(getSigningKey())  // 用同一把密鑰驗證簽名
-        .build()
-        .parseSignedClaims(token)     // 解析並驗證，失敗就丟例外
-        .getPayload();                // 取出 Claims（Payload 內容）
-}
-
-// 從 Token 取出 sub 欄位，也就是使用者帳號
-public String extractUsername(String token) {
-    return extractAllClaims(token).getSubject();
-}
-
-// 驗證 Token：帳號要對得上，且尚未過期，兩者都成立才算有效
-public boolean validateToken(String token, String username) {
-    String tokenUsername = extractUsername(token);
-    boolean expired = extractAllClaims(token)
-        .getExpiration().before(new Date()); // 過期時間早於現在 = 已過期
-    return tokenUsername.equals(username) && !expired;
-}
-```
-
-<!--
-解析 Token 的 0.12.x 寫法：Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload()。
-
-如果 Token 簽名不對或已過期，parseSignedClaims() 會拋出 JwtException，我們在後面的 Filter 裡會捕捉這個例外。
+從第三步開始，都不需要密碼，伺服器也不用保管任何東西。
 -->
 
 ---
@@ -401,170 +912,73 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 7
-## JwtAuthFilter（OncePerRequestFilter）
+# 補充：使用 JWT 要注意的事
 
 <!--
-有了 JwtUtil，下一步是實作 Filter。這個 Filter 在每個 HTTP 請求進入 Controller 之前執行，負責從 Header 抽取並驗證 JWT。
+最後補充幾個觀念。這一段先聽過、有印象就可以。
 -->
 
 ---
 
-# JwtAuthFilter 在做什麼？
+# 補充：四個安全注意事項
 
-**目的：** 每個請求進來時，檢查有沒有帶合法的 JWT，有的話就幫 Spring Security「登入」這個使用者。
+<v-clicks>
 
-| 步驟 | 說明 |
-|------|------|
-| 1. 攔截請求 | 繼承 `OncePerRequestFilter`，每個請求保證只執行一次 |
-| 2. 抽取 Token | 從 `Authorization: Bearer <token>` Header 拿出 Token |
-| 3. 驗證 Token | 用 `JwtUtil` 檢查簽名、有沒有過期 |
-| 4. 設定登入狀態 | 驗證成功 → 寫入 `SecurityContextHolder`，後續程式碼才能用 `Authentication` 取得使用者 |
-| 5. 放行 | 呼叫 `filterChain.doFilter()`，繼續往下一個 Filter / Controller |
+- **密鑰要夠長，而且不能外流**：不寫死在程式裡，不上傳到 GitHub
+- **有效期限要短**：通行證收不回來，被偷走的話，至少很快就會過期
+- **Payload 不放機密**：任何人都看得到
+- **一定要用 HTTPS**：通行證在路上被看到，就等於被偷走
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>為什麼需要這個 Filter？</b> Session 認證時 Spring Security 靠 Cookie 裡的 Session ID 自動判斷登入狀態；換成 JWT 後沒有 Session，必須自己寫 Filter 去解析 Header 裡的 Token，手動告訴 Spring Security「這個人是誰」。
+</v-clicks>
+
+<!--
+使用 JWT 有四個注意事項。
+
+（下一步）第一，密鑰要夠長，而且不能外流。不寫死在程式裡，不上傳到 GitHub。
+
+（下一步）第二，有效期限要短。通行證發出去就收不回來。被偷走的話，至少很快就會過期。
+
+（下一步）第三，Payload 不放機密。任何人都看得到。
+
+（下一步）第四，一定要用 HTTPS，也就是加密的連線。通行證在路上被別人看到，就等於被偷走。誰拿著它，伺服器就認為誰是 Tom。
+-->
+
+---
+
+# 補充：期限很短，不就要一直重新登入？
+
+<v-clicks>
+
+- 實務上會發**兩張證**：
+- **Access Token**：平常用的通行證，期限很短（例如 15 分鐘）
+- **Refresh Token**：專門用來「換新的通行證」，期限很長（例如 7 天），而且伺服器會記在資料庫
+- 通行證過期時，前端拿 Refresh Token 換一張新的，使用者不用重新輸入密碼
+- 想讓某個人強制登出：把資料庫裡他的 Refresh Token 刪掉
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 這個機制叫做 <b>Refresh Token</b>。今天先知道有這個做法，之後做專題需要時再深入。
 </div>
 
-<!--
-這張投影片是全章最關鍵的心智模型：JwtAuthFilter 就是「手動版的登入判斷邏輯」。Session 時代 Spring Security 自動幫你做這件事；JWT 是無狀態的，沒人幫你做，所以要自己寫一個 Filter 插進過濾鏈，每個請求都跑一次，把 Token 換成 Spring Security 看得懂的 Authentication 物件。
-
-接下來三頁分別是：類別宣告 → 抽取 Token → 設定 Authentication，其實就是把上面這五步拆開來看程式碼。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
----
-
-# JwtAuthFilter（1/4）：類別宣告
-
-```java
-package com.example.demo.security;
-
-@Component
-@RequiredArgsConstructor
-// 繼承 OncePerRequestFilter：保證每個請求只跑一次這個 Filter
-public class JwtAuthFilter extends OncePerRequestFilter {
-
-    private final JwtUtil jwtUtil;               // 驗證 Token 用
-    private final UserDetailsService userDetailsService; // 依帳號查使用者資料
-
-    @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain)
-            throws ServletException, IOException {
-        // 這裡會做：抽取 Token → 驗證 → 設定 Authentication（見下兩頁）
-    }
-}
-```
-
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>Spring Boot 3.x / 4.x：</b> import 路徑是 <code>jakarta.servlet.*</code>，不是舊版的 <code>javax.servlet.*</code>。
-</div>
+</v-click>
 
 <!--
-OncePerRequestFilter 保證每個請求只執行一次，即使有 Forward 或 Include 也不會重複執行。
--->
+有效期限要短，那使用者不就要一直重新登入嗎？
 
----
-style: |
-  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
----
+（下一步）實務上會發兩張證。
 
-# JwtAuthFilter（2/4）：抽取 Token
+（下一步）第一張叫 Access Token，就是我們今天做的、平常用的通行證。期限很短，例如十五分鐘。
 
-```java
-        // 從 Header 拿 Authorization 欄位，格式：Bearer <token>
-        String authHeader = request.getHeader("Authorization");
-        String token = null;
-        String username = null;
+（下一步）第二張叫 Refresh Token。它不能用來呼叫一般的 API，專門用來換新的通行證。期限很長，例如七天。而且伺服器會把它記在資料庫裡。
 
-        if (authHeader != null
-                && authHeader.startsWith("Bearer ")) {
-            token = authHeader.substring(7);           // 去掉 "Bearer " 七個字元，取出純 Token
-            try {
-                username = jwtUtil.extractUsername(token); // 解析 Token 拿到帳號（sub）
-            } catch (JwtException e) {
-                // Token 過期、簽名不對、格式壞掉 → 當作「沒帶 Token」處理
-                username = null;    // 不要往外拋，否則會變成 500 而不是 401
-            }
-        }
-        // 沒帶 Header / 格式不對 / Token 無效 → username 維持 null
-        // → 後面跳過驗證，放行給 Spring Security 判斷 401/403
-```
+（下一步）通行證過期的時候，前端拿 Refresh Token 去換一張新的。使用者不用重新輸入密碼，甚至不會發現。
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>一定要 try-catch！</b> <code>parseSignedClaims()</code> 遇到過期或被竄改的 Token 會拋 <code>JwtException</code>。Filter 裡不接住的話，例外會一路衝出去變成 <b>500 Internal Server Error</b>，而不是正確的 <b>401 Unauthorized</b>。
-</div>
+（下一步）想讓某個人強制登出，就把資料庫裡他的 Refresh Token 刪掉。他手上的通行證最多再用十五分鐘，之後就換不到新的了。這樣就補上了「通行證收不回來」的缺點。
 
-<!--
-Authorization Header 的格式是「Bearer 空格 token」，用 substring(7) 跳過前七個字元取得純 Token。
-
-這裡的 try-catch 是實務上絕對不能省的一步。前面 JwtUtil 那頁講過 parseSignedClaims() 驗證失敗會丟 JwtException，接住的地方就在這裡。
-
-接住之後的處理很單純：把 username 設回 null，等於告訴後面的程式碼「這個請求沒有有效身份」，
-讓 Spring Security 的授權機制照常回 401，這才是正確的 HTTP 語意。
-Token 過期是使用者端的正常狀況，不該回 500 說伺服器壞掉。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
----
-
-# JwtAuthFilter（3/4）：檢查並載入使用者
-
-```java
-// username 存在，且目前 SecurityContext 還沒登入過，才需要處理
-if (username != null &&
-    SecurityContextHolder.getContext()
-        .getAuthentication() == null) {
-
-    // 依帳號查出使用者詳細資料（密碼、角色等）
-    UserDetails userDetails =
-        userDetailsService.loadUserByUsername(username);
-
-    // 再次驗證 Token 簽名與是否過期，確保沒被竄改
-    if (jwtUtil.validateToken(token, username)) {
-        // 下一頁：建立 Authentication 並寫入 SecurityContext
-    }
-}
-```
-
-<!--
-這裡先做兩層檢查：username 有值代表 Token 有解析出帳號；SecurityContext 還沒登入過，避免重複設定。通過才去查使用者資料，再用 validateToken 二次確認 Token 沒被竄改、沒過期。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
----
-
-# JwtAuthFilter（4/4）：建立 Authentication 並放行
-
-```java
-                // 建立 Spring Security 認得的 Authentication 物件
-                UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(
-                        userDetails, null,             // 密碼欄位設 null，因為已經用 Token 驗證過，不需要再核對密碼
-                        userDetails.getAuthorities());
-                authToken.setDetails(
-                    new WebAuthenticationDetailsSource()
-                        .buildDetails(request));       // 附加請求細節（如 IP）
-                // 寫入 SecurityContext，等同於「這個請求已登入」
-                SecurityContextHolder.getContext()
-                    .setAuthentication(authToken);
-        filterChain.doFilter(request, response); // 不管有沒有驗證成功，都要放行，交給下一個 Filter 或 Controller 處理
-    }
-}
-```
-
-<!--
-這段邏輯是 JWT Filter 的核心：如果 Token 有效，就建立 UsernamePasswordAuthenticationToken 物件，放進 SecurityContextHolder。
-
-重要：最後一定要呼叫 filterChain.doFilter()，讓請求繼續往下走！不管驗證成功與否都要放行，失敗的情況交給後面 Spring Security 的授權機制去擋（回 401/403）。
+（下一步）這個機制叫做 Refresh Token。今天先知道有這個做法，之後做專題需要的時候再深入。
 -->
 
 ---
@@ -572,916 +986,225 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# Part 8
-## SecurityFilterChain 設定
+# 動手練習
 
 <!--
-Filter 實作好了，現在要把它掛進 Spring Security 的過濾鏈。
+換大家動手。
 -->
 
 ---
 
-# 跟 ch44 的 SecurityConfig 差在哪？
+# 練習 1：有效時間改用設定檔
 
-**直接接手 ch44 練習二的專案改**，只動三個地方：
+現在的有效時間「一小時」寫死在程式裡。請改成從設定檔讀取：
 
-| 項目 | ch44 練習二（Session 版） | ch45（JWT 版） |
-|------|-------------------|----------------|
-| 登入方式 | `.httpBasic(...)` | ① **刪掉 httpBasic**，改用自己的 `/auth/login` |
-| Session | 預設 Stateful，靠 Session 記登入狀態 | ② 加 `.sessionCreationPolicy(STATELESS)` |
-| **JWT 加在哪** | — | ③ 加 `.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)` |
-| 路徑授權規則 | `/api/products/**`、`/api/admin/**`… | **完全不變**，只多開一條 `/auth/**` |
-| `UserDetailsService` | `CustomUserDetailsService`（查 DB） | **完全不變**，原封不動繼續用 |
-| `PasswordEncoder` | `BCryptPasswordEncoder` | **完全不變** |
+<v-clicks>
 
-<!--
-先給學生一個心理定位：ch45 不是重開一個專案，是把 ch44 練習二的成果拿來改三行。
+1. 在 `application.properties` 加一行 `jwt.expire-minutes=1`
+2. `JwtUtil` 用 `@Value` 讀出來，沒有設定的時候預設 60
+3. `generateToken()` 改用這個數字計算到期時間
+4. 測試：登入後馬上查詢 → 200；等超過一分鐘再查詢 → 401
 
-ch44 是 Session 模式：不寫 addFilterBefore，因為登入判斷完全交給 Spring Security 內建的 BasicAuthenticationFilter（Basic Auth）處理。
+</v-clicks>
 
-ch45 是 JWT 模式，關鍵差異就是 addFilterBefore：我們自己寫的 JwtAuthFilter 要插進過濾鏈，而且要插在 UsernamePasswordAuthenticationFilter 前面——這樣每個請求進來，會先讓 JwtAuthFilter 檢查 Header 有沒有合法 Token、設定好 SecurityContext，之後才輪到後面的授權判斷。
+<v-click>
 
-如果沒有這行 addFilterBefore，JwtAuthFilter 就不會被排進過濾鏈，Token 驗證完全不會發生。
-
-強調下面三列「完全不變」：授權規則、UserDetailsService、PasswordEncoder 都是 ch44 寫好的，一行都不用改，降低學生的心理負擔。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
----
-
-# SecurityConfig（1/4）：授權規則（沿用 ch44）
-
-`authorizeHttpRequests` 整組**沿用 ch44 練習二**，只多開一條 `/auth/**`：
-
-```java
-@Bean
-public SecurityFilterChain securityFilterChain(
-        HttpSecurity http, JwtAuthFilter jwtAuthFilter)  // ← 方法參數注入，不是 field
-        throws Exception {
-    http.authorizeHttpRequests(auth -> auth
-            .requestMatchers("/auth/**").permitAll()                   // ← ch45 新增：登入端點
-            .requestMatchers(HttpMethod.POST, "/api/register").permitAll()  // ch44 沿用
-            .requestMatchers(HttpMethod.GET,    "/api/products/**").permitAll()
-            .requestMatchers(HttpMethod.POST,   "/api/products/**").hasRole("ADMIN")
-            .requestMatchers(HttpMethod.PUT,    "/api/products/**").hasRole("ADMIN")
-            .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMIN")
-            .requestMatchers("/api/orders/my").authenticated()
-            .requestMatchers("/api/admin/**").hasRole("ADMIN")
-            .anyRequest().authenticated())
-        // ↓ sessionManagement / addFilterBefore / csrf 見下一頁
-```
-
-<!--
-這頁的重點是「差異」而不是「全新」：整段 authorizeHttpRequests 跟 ch44 練習二一字不差，
-只在最上面多加一條 /auth/** permitAll。
-
-/api/register 一定要留著，否則新用戶沒帳號、又不能註冊，根本拿不到 Token 去登入——
-這就是 ch44 練習二講過的雞生蛋問題，換成 JWT 之後一樣存在。
-
-授權規則展開就是這一頁的全部內容，剩下的 STATELESS / addFilterBefore / csrf 留到下一頁。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
----
-
-# SecurityConfig（2/4）：無狀態設定 + 掛 Filter
-
-接續上一頁的 `authorizeHttpRequests`，三個 ch45 新增項都在這裡：
-
-```java
-        .sessionManagement(session -> session                          // ← ch45 新增
-            .sessionCreationPolicy(SessionCreationPolicy.STATELESS))   //   強制無狀態
-        .addFilterBefore(jwtAuthFilter,                                // ← ch45 新增
-            UsernamePasswordAuthenticationFilter.class)
-        .csrf(csrf -> csrf.disable());        // ch44 沿用（.httpBasic 則要刪掉）
-    return http.build();
-}
-```
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>三個 ch45 新增項：</b> ① <code>STATELESS</code>（不建 Session）② <code>addFilterBefore</code>（把 <code>JwtAuthFilter</code> 插進過濾鏈）③ 把 ch44 的 <code>.httpBasic(...)</code> 刪掉（帳密只在 <code>/auth/login</code> 交換一次，不再每次請求都帶）。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 提示：預設值的寫法在第四十二章用過：<code>@Value("${名稱:預設值}")</code>。
 </div>
 
+</v-click>
+
 <!--
-三個 ch45 新增項：STATELESS（不建 Session）、addFilterBefore（把 JwtAuthFilter 插進過濾鏈）、
-以及把 ch44 的 .httpBasic(...) 刪掉（帳密只在 /auth/login 交換一次，不再每次請求都帶）。
+練習一。現在的有效時間一小時，是寫死在程式裡的。請改成從設定檔讀取。
 
-DSL 順序跟 ch44 一致：authorizeHttpRequests 先寫，csrf 收尾，中間插 ch45 新增的東西，
-這樣兩章的設定檔並排看差異一目了然。
+（下一步）第一，在 application.properties 加一行 jwt.expire-minutes 等於 1，代表一分鐘。
 
-addFilterBefore 是整個 ch45 跟 ch44 結構上最大的差異：我們自己寫的 JwtAuthFilter 要插進過濾鏈，
-而且要插在 UsernamePasswordAuthenticationFilter 前面——這樣每個請求進來，
-會先讓 JwtAuthFilter 檢查 Header 有沒有合法 Token、設定好 SecurityContext，之後才輪到後面的授權判斷。
-如果沒有這行，JwtAuthFilter 就不會被排進過濾鏈，Token 驗證完全不會發生。
+（下一步）第二，JwtUtil 用 @Value 讀出來。沒有這項設定的時候，預設是 60。
+
+（下一步）第三，generateToken 改用這個數字計算到期時間。
+
+（下一步）第四，測試。登入後馬上查詢，應該是 200。等超過一分鐘再查詢，應該是 401。
+
+（下一步）提示：預設值的寫法在第四十二章用過。錢字號大括號裡面，名稱後面加冒號，再寫預設值。
+
+請先暫停，自己試試看。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
----
 
-# SecurityConfig（3/4）：PasswordEncoder Bean（ch44 沿用）
+# 練習 1：參考答案
 
-```java
-    @Bean
-    public PasswordEncoder passwordEncoder() {   // 跟 ch44 一字不差
-        return new BCryptPasswordEncoder();
-    }
+```properties
+jwt.expire-minutes=1
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>為什麼 JWT 專案還需要 PasswordEncoder？</b><br>
-JWT 只解決「發完 Token 之後怎麼認人」，但 <code>/auth/login</code> 第一次驗帳密時，還是要靠 <code>DaoAuthenticationProvider</code> 用它去 <code>matches()</code> 比對 DB 裡的 BCrypt 密文。<b>註冊 API 存密碼時也是用同一個 Bean。</b>
+```java {1-2|6}
+@Value("${jwt.expire-minutes:60}")
+private long expireMinutes;
+
+public String generateToken(String username) {
+    Date now = new Date();
+    Date expireAt = new Date(now.getTime() + expireMinutes * 60 * 1000);
+    // 以下不變
+}
+```
+
+<v-clicks>
+
+- 過期的 Token，`getUsername()` 會丟出例外，被 `JwtAuthFilter` 的 `catch` 接住，當作沒帶證 → 401
+- 測試完把設定改回 `60`，不然之後一直要重新登入
+
+</v-clicks>
+
+<!--
+參考答案。
+
+（下一步）在 JwtUtil 加一個欄位 expireMinutes，用 @Value 讀設定，冒號後面是預設值 60。
+
+（下一步）計算到期時間的那一行，把原本的 60 乘 60 乘 1000，改成 expireMinutes 乘 60 乘 1000。分鐘換成毫秒。
+
+（下一步）一分鐘之後為什麼是 401？因為過期的 Token，getUsername 會丟出例外。例外被 JwtAuthFilter 的 catch 接住，當作這個人沒帶證。最後由後面的關卡回覆 401。
+
+（下一步）測試完記得把設定改回 60，不然之後測試會一直要重新登入。
+-->
+
+---
+
+# 練習 2：把身分也寫在通行證上
+
+現在每個請求都要查一次資料庫，才知道這個人的身分。請把身分寫進通行證，省掉這次查詢：
+
+<v-clicks>
+
+1. `generateToken()` 多一個參數 `role`，用 `.claim("role", role)` 寫進 Payload
+2. `JwtUtil` 加一個方法 `getRole(token)`，把它讀出來
+3. `JwtAuthFilter` 不再呼叫 `loadUserByUsername()`，改用通行證上的身分
+4. 測試：規則照常運作；到 jwt.io 可以看到 Payload 多了 `role`
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 提示：讀自訂欄位用 <code>.getPayload().get("role", String.class)</code>。身分要包成 <code>new SimpleGrantedAuthority("ROLE_" + role)</code>，再放進 <code>List.of(…)</code>。
 </div>
 
-<!--
-這個 Bean 從 ch44 一路帶過來，完全沒改。
+</v-click>
 
-要跟學生講清楚它在 JWT 架構裡的位置：JWT 不會取代密碼驗證，只是取代「Session 記住你」這件事。
-帳密比對還是照舊發生在 /auth/login 那一次，之後才換成 Token。
-ch44 練習二寫的註冊 API（passwordEncoder.encode）也是用這個 Bean，同樣不用改。
+<!--
+練習二，比較有挑戰。
+
+現在每個請求進來，JwtAuthFilter 都要查一次資料庫，才知道這個人的身分。但是故事裡的通行證，身分是直接寫在證上的。請把身分寫進通行證，省掉這次查詢。
+
+（下一步）第一，generateToken 多一個參數 role。在 builder 裡用 claim 把它寫進 Payload。claim 的意思是證上的一項資料。
+
+（下一步）第二，JwtUtil 加一個方法 getRole，把它讀出來。
+
+（下一步）第三，JwtAuthFilter 不再呼叫 loadUserByUsername，改用通行證上的身分。
+
+（下一步）第四，測試。規則應該照常運作。到 jwt.io 可以看到 Payload 多了 role。
+
+（下一步）提示有兩個。讀自訂欄位，用 getPayload 之後的 get，兩個參數：欄位名稱和型別。身分要包成 SimpleGrantedAuthority 物件，內容是 ROLE 底線加上身分，再放進 List.of 裡面。
+
+請先暫停，自己試試看。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
----
 
-# SecurityConfig（4/4）：AuthenticationManager Bean（ch45 新增）
-
-`AuthController` 要用它驗帳密，但這個介面**不會自動註冊**，得自己組：
+# 練習 2：參考答案
 
 ```java
-    @Bean
-    public AuthenticationManager authenticationManager(
-            UserDetailsService userDetailsService,   // ← ch44 的 CustomUserDetailsService
-            PasswordEncoder passwordEncoder) {       // ← 上一頁的 Bean
-        DaoAuthenticationProvider provider =
-            new DaoAuthenticationProvider(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder);
-        return new ProviderManager(provider);
-    }
+// JwtUtil：generateToken(String username, String role) 的 builder 多一行
+.claim("role", role)
+
+// JwtUtil：新方法
+public String getRole(String token) {
+    return Jwts.parser().verifyWith(getKey()).build()
+            .parseSignedClaims(token).getPayload().get("role", String.class);
+}
 ```
 
-<div class="mt-3 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>版本注意：</b> <code>new DaoAuthenticationProvider(userDetailsService)</code> 這個建構子是 <b>Spring Security 6.4+</b>（Spring Boot 3.4+）才有。若你用 Boot 3.0–3.3，改成無參數建構 + <code>provider.setUserDetailsService(userDetailsService)</code>。
+```java
+// JwtAuthFilter：try 裡面改成
+String username = jwtUtil.getUsername(token);
+String role = jwtUtil.getRole(token);
+List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+UsernamePasswordAuthenticationToken authentication =
+        new UsernamePasswordAuthenticationToken(username, null, authorities);
+SecurityContextHolder.getContext().setAuthentication(authentication);
+```
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <code>AccountService.login()</code> 發證的地方也要跟著改：<code>jwtUtil.generateToken(account.getUsername(), account.getRole())</code>。
 </div>
 
-<!--
-這是整章最常被漏掉的一個 Bean：AuthController 建構子要 AuthenticationManager，但這個介面在 Spring Boot 3.x/4.x 不會自動註冊，要自己組一個出來。
-
-這裡直接用 DaoAuthenticationProvider 明確組裝：注入 UserDetailsService（查使用者）跟 PasswordEncoder（比對密碼），包成 ProviderManager 回傳。之所以不用 AuthenticationConfiguration.getAuthenticationManager()，是因為它依賴容器自動偵測唯一一組 bean 來組裝，一旦有多個候選 bean 就容易組裝失敗。明確寫出 DaoAuthenticationProvider，行為固定、好除錯。
-
-版本坑要特別提醒：帶參數的建構子是 6.4 才加的，之前只有 no-arg + setter。學生如果用比較舊的 Boot 版本會編譯失敗，看到 "constructor not found" 就知道是這個原因。
-
-注意這兩個參數都是方法參數注入，容器裡有什麼就自動接什麼——下一頁講這個「什麼」是哪來的。
--->
-
----
-style: |
-  pre, code { font-size: 0.8em !important; line-height: 1.3 !important; }
----
-
-# SecurityConfig 完整檔一覽
-
-```java
-@Configuration
-@EnableWebSecurity
-public class SecurityConfig {
-
-    @Bean                                                    // ch44 沿用，一行沒改
-    public PasswordEncoder passwordEncoder() { ... }
-
-    @Bean                                                    // ch45 新增
-    public AuthenticationManager authenticationManager(
-            UserDetailsService uds, PasswordEncoder encoder) { ... }
-
-    @Bean                                                    // ch44 改造：+STATELESS +addFilterBefore −httpBasic
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http, JwtAuthFilter jwtAuthFilter) { ... }
-
-    // ❌ 沒有 userDetailsService() ——
-    //    ch44 的 CustomUserDetailsService 標了 @Service，Spring 自動註冊，
-    //    這裡再宣告一個就會撞型別（NoUniqueBeanDefinitionException）
-}
-```
+</v-click>
 
 <!--
-給學生一張「全貌圖」，前三頁是拆開講，這頁把三個 Bean 放回同一個 class 裡，
-並標註每個 Bean 的來歷：哪個是 ch44 原封不動、哪個是 ch45 新增、哪個是改造。
+參考答案。
 
-最後那段註解是全章最容易踩的雷，特別留在完整檔裡讓學生看到「這裡是空的、而且是刻意的」。
--->
+JwtUtil 的 generateToken 多一個參數 role，builder 裡多一行 claim。
 
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
+新方法 getRole，寫法和 getUsername 幾乎一樣，只有最後一段不同：用 get 讀出 role 這個欄位。
 
-# Part 9
-## Java record
+JwtAuthFilter 的 try 裡面，拿到帳號名稱之後，再拿身分。上一章用 roles() 的時候，Spring Security 會自動在前面加上 ROLE 底線。這裡我們自己組，所以要自己加。然後做紀錄的時候，第一個參數直接放帳號名稱。AccountService 在這個類別裡用不到了，可以把那個 @Autowired 刪掉。
 
-<!--
-在寫 AuthController 之前，先補充一下 record 這個 Java 語法糖，因為前面的 LoginRequest / LoginResponse 都會用到它。
+（下一步）別忘了 AccountService 的 login，發證的地方也要多傳一個身分。
+
+這樣改完，驗證一個請求完全不用查資料庫。但是也有代價：如果在資料庫把 tom 改成老師，他要重新登入、拿到新的通行證，才會生效。舊的通行證上寫的還是學生。
 -->
 
 ---
 
-# 什麼是 Java record？
+# 複習：通行證對照表
 
-**record** 是 Java 16 正式導入的語法糖，專門用來寫「只裝資料、不帶行為」的類別（DTO、Value Object）。
-
-```java
-public record LoginRequest(String username, String password) {}
-```
-
-一行就自動幫你產生：
-
-| 自動產生 | 效果 |
-|----------|------|
-| Constructor | `new LoginRequest("alice", "pass123")` |
-| Getter | `request.username()`、`request.password()`（不是 `getUsername()`） |
-| `equals()` / `hashCode()` | 依欄位值比較，不用手寫 |
-| `toString()` | 自動印出所有欄位 |
+<Pairs left="學校" right="程式" rows="card,蓋了鋼印的通行證=code,JWT（Token）|form,證上寫的資料=code,Payload：sub、exp|what,學校的鋼印=code,Signature，用密鑰算出來|clerk,A 櫃台核對帳密後發證=code,POST /auth/login → generateToken()|guard,每次進門檢查鋼印=code,JwtAuthFilter → getUsername()|no,塗改過、過期的證=no,401" />
 
 <!--
-record 是這幾年 Java 最實用的語法糖之一。它的重點是「不可變」：一旦建立就不能改欄位值，符合 DTO 應有的行為——資料從外面傳進來，經過驗證、轉換，不應該中途被誰偷改。
+我們用一張圖複習今天的內容。
 
-Getter 命名要注意：record 用的是 username()、password() 這種無 get 前綴的寫法，不是傳統 JavaBean 的 getUsername()。這點常讓第一次接觸的人愣一下。
+（下一步）蓋了鋼印的通行證，是 JWT，也叫 Token。
+
+（下一步）證上寫的資料，是 Payload，裡面有 sub 和 exp。
+
+（下一步）學校的鋼印，是 Signature，用密鑰算出來的。
+
+（下一步）A 櫃台核對帳密後發證，是 POST /auth/login，裡面呼叫 generateToken。
+
+（下一步）每次進門檢查鋼印，是 JwtAuthFilter，裡面呼叫 getUsername。
+
+（下一步）塗改過、過期的證，得到 401。
 -->
 
 ---
 
-# record 跟 Lombok @Data 差在哪？
+# 章節總結
 
-<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>跟 Lombok @Data 的差異：</b> record 是 Java 語言原生特性，不需要額外套件；但 record 的欄位是<b>不可變</b>（immutable，沒有 setter），@Data 產生的類別欄位可變。
-</div>
+<v-clicks>
 
-| 類型 | 適用嗎？ | 為什麼 |
-|------|:---:|--------|
-| **DTO**（如 ch37 的 `CreateStudentRequest`、`StudentResponse`） | ✅ | 本來就只是資料容器，record 天生就是幹這個 |
-| **VO**（如 ch37 的 `ScoreVO`） | ✅ | VO 本來就要求不可變（`final` 欄位、無 setter）—— record **天生就不可變**，比手寫 VO 更少程式碼 |
+- **JWT**：資料寫在證上、由伺服器簽章的通行證；伺服器不用保管任何東西
+- **三段**：Header、Payload、Signature。Payload 任何人都看得到，不放機密
+- **發證**：登入時核對密碼，用 `Jwts.builder()` 產生 Token
+- **驗證**：自己寫一個 Filter，從 `Authorization: Bearer …` 拿出 Token 檢查
+- **守則**：`STATELESS`、`addFilterBefore`、公開登入網址、拿掉 `httpBasic`
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>record 不是只能裝資料：</b> 它也能像一般類別一樣加自訂方法、加建構子驗證（compact constructor）。這就是為什麼連有業務邏輯的 VO 都能改寫成 record，下一頁實際比較 ch37 的程式碼。
-</div>
+</v-clicks>
 
-<!--
-這一頁回答兩個常見疑問：一是 record 跟 Lombok @Data 到底差在哪，二是 record 是不是只能用在單純的 DTO。
+<v-click>
 
-答案是 DTO、VO 都適用。DTO 本來就該不可變，record 剛好內建這個特性。VO 更妙——ch37 教的 VO 定義本來就要求 final 欄位、沒有 setter、建構時驗證，這跟 record 的預設行為根本一模一樣，用 record 寫 VO 反而比手寫更精簡，也更不容易漏寫 equals/hashCode。
+下一章：學校越來越大，一個教務處忙不過來，要拆成好幾個處室了。
 
-很多人誤會 record 只能是「純資料傳輸物件」，其實 record 內部可以加自訂方法，也能用 compact constructor 加驗證邏輯，下一頁直接拿 ch37 的三個類別做前後對照。
--->
-
----
-style: |
-  pre, code { font-size: 0.8em !important; line-height: 1.3 !important; }
----
-
-# ch37 範例改寫（1/3）：DTO 換成 record
-
-```java
-// Before（ch37 原本寫法）              →  After（record）
-public class CreateStudentRequest {      public record CreateStudentRequest(
-    private String name;                     String name,
-    private String password;                 String password,
-    private Integer score;                   Integer score
-    // Getter / Setter（省略）           ) {}
-}
-```
-
-```java
-// Before                                →  After（record）
-public class StudentResponse {           public record StudentResponse(
-    private Integer id;                      Integer id,
-    private String name;                     String name,
-    private Integer score;                   Integer score,
-    private String letterGrade;              String letterGrade
-    // Getter / Setter（省略）           ) {}
-}
-```
-
-<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 Service 裡建立方式從 <code>new StudentResponse(); resp.setId(...)</code> 改成一次到位：<code>new StudentResponse(po.getId(), po.getName(), value, grade)</code>；讀取從 <code>resp.getId()</code> 改成 <code>resp.id()</code>。
-</div>
+</v-click>
 
 <!--
-CreateStudentRequest 和 StudentResponse 都是純資料容器，本來就沒有業務邏輯，是 record 最標準的使用場景。
+最後整理今天的重點。
 
-改寫後最大的差異：Service 裡不再用「new 一個空物件 + 逐一 setter」這種寫法，而是建構子一次把所有欄位塞好；Controller 或 Service 讀取欄位也從 getXxx() 改成 xxx()。
--->
+（依序按下一步）JWT 是資料寫在證上、由伺服器簽章的通行證，伺服器不用保管任何東西。它有三段：Header、Payload、Signature。Payload 任何人都看得到，不放機密。發證是在登入時核對密碼，用 Jwts.builder() 產生 Token。驗證是自己寫一個 Filter，從 Authorization 的 Bearer 後面拿出 Token 檢查。守則要改四個地方：無狀態、把關卡排進去、公開登入網址、拿掉 httpBasic。
 
----
-style: |
-  pre, code { font-size: 0.78em !important; line-height: 1.3 !important; }
----
-
-# ch37 範例改寫（2/3）：ScoreVO 原本的寫法
-
-```java
-// Before（ch37 原本寫法：手寫不可變 + 驗證 + 業務方法）
-public class ScoreVO {
-    private final Integer value;
-    public ScoreVO(Integer value) {
-        if (value < 0 || value > 100)
-            throw new IllegalArgumentException("分數需在 0–100 之間");
-        this.value = value;
-    }
-    public Integer getValue() { return value; }
-    public String getLetterGrade() {
-        if (value >= 90) return "A"; if (value >= 80) return "B";
-        return value >= 70 ? "C" : "F";
-    }
-}
-```
-
-**手動做了三件事：** ① 宣告 `final` 欄位保證不可變 ② constructor 裡驗證分數範圍 ③ 手寫 `getValue()` getter。
-
-<!--
-先看 ch37 原本的手寫版本。三個重點：private final 欄位保證物件建立後不能再改值；constructor 裡做 0-100 範圍驗證；getValue() 是手寫的 getter。
-
-這三件事其實都是「不可變 + 驗證」這種 VO 該有的標準行為，但每一個 VO 都要重複寫一次建構子跟 getter，很囉唆。下一頁看 record 怎麼把這些簡化掉。
--->
-
----
-style: |
-  pre, code { font-size: 0.8em !important; line-height: 1.3 !important; }
----
-
-# ch37 範例改寫（3/3）：ScoreVO 換成 record
-
-```java
-// After（record：compact constructor 驗證 + 保留業務方法）
-public record ScoreVO(Integer value) {
-    public ScoreVO {                // compact constructor：驗證邏輯搬進來
-        if (value < 0 || value > 100)
-            throw new IllegalArgumentException("分數需在 0–100 之間");
-    }
-    public String getLetterGrade() {  // 自訂方法照樣能加
-        if (value >= 90) return "A"; if (value >= 80) return "B";
-        return value >= 70 ? "C" : "F";
-    }
-}
-```
-
-<div class="mt-2 p-3 bg-green-50 border-l-4 border-green-400 text-gray-700 text-sm text-left">
-✅ 少寫的部分：<code>private final</code> 欄位宣告、一般 constructor 賦值、<code>getValue()</code>（record 自動生成 <code>value()</code>）。<code>getLetterGrade()</code> 業務方法完全保留，直接搬過去就能用。
-</div>
-
-<!--
-ScoreVO 是今天最能體現「VO 用 record 更合適」的例子。record 版用 compact constructor（沒有參數列表的那種 public ScoreVO { ... }）把驗證邏輯放進去，value() 這個 getter 自動產生，完全不用手寫。
-
-唯一要注意：compact constructor 只能寫驗證或正規化邏輯，不能自己手動賦值（record 會在 compact constructor 執行完後自動把參數賦值給欄位）。
-
-getLetterGrade() 這種自訂業務方法，record 一樣支援，直接原封不動搬過去即可，這也證明 record 不是只能裝資料，VO 這種「不可變 + 帶業務邏輯」的用途完全適用。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# Part 10
-## AuthController 登入端點
-
-<!--
-record 補充完了，現在來實作 Controller！
--->
-
----
-
-# LoginRequest / LoginResponse DTOs
-
-```java
-public record LoginRequest(
-    String username,
-    String password
-) {}
-```
-
-```java
-public record LoginResponse(
-    String token,
-    String username,
-    long expiresIn
-) {}
-```
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>Java record：</b> Spring Boot 3.x / 4.x 原生支援。自動產生 constructor、getter、equals、hashCode，比 Lombok @Data 更簡潔。
-</div>
-
-<!--
-DTOs 使用 record 非常簡潔！不需要 Lombok 的 @Data，不需要手寫 getter，Java 原生就搞定了。
-
-LoginResponse 的 expiresIn 讓前端知道 Token 多久後過期，方便決定何時要更新 Token。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
----
-
-# AuthController：POST /auth/login
-
-```java
-@RestController
-@RequestMapping("/auth")
-@RequiredArgsConstructor
-public class AuthController {
-
-    private final AuthenticationManager authManager;
-    private final JwtUtil jwtUtil;
-
-    @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(
-            @RequestBody LoginRequest request) {
-        authManager.authenticate(
-            new UsernamePasswordAuthenticationToken(
-                request.username(), request.password()));
-
-        String token = jwtUtil.generateToken(request.username());
-        return ResponseEntity.ok(new LoginResponse(
-            token, request.username(), 86400000));
-    }
-}
-```
-
-<!--
-流程很清晰：authManager.authenticate() 負責驗證帳號密碼，如果驗證失敗會拋出 AuthenticationException（Spring Security 自動回傳 401）；驗證成功後呼叫 jwtUtil.generateToken() 生成 Token；最後包成 LoginResponse 回傳給前端。
-
-前端拿到 Token 後，之後每次請求都要在 Header 加上：Authorization: Bearer <token>。
--->
-
----
-
-# 用 Postman 測試（1/2）：登入拿 Token
-
-因為拿掉了 `.formLogin()` / `.httpBasic()`，**Postman 的 Authorization 頁籤不能選 Basic Auth 了**，要分兩步手動打。
-
-**第一步：登入拿 Token**
-
-```
-POST /auth/login
-Content-Type: application/json
-
-{ "username": "alice", "password": "pass123" }
-```
-
-回傳 `200 OK`，body 裡的 `token` 欄位就是要用的 JWT。
-
-<!--
-這裡強調跟 ch44 的操作差異：ch44 用 httpBasic，Postman 選 Basic Auth 帳密就搞定；ch45 完全沒開 httpBasic，帳密驗證只在 /auth/login 這個端點做一次性交換。
-
-實際操作：送 POST /auth/login，把回傳 body 裡的 token 字串複製起來，下一頁要用。
--->
-
----
-
-# 用 Postman 測試（2/2）：帶 Token 呼叫受保護 API
-
-**第二步：帶著 Token 呼叫受保護 API**
-
-在 Postman 的 **Headers** 加一行（或 Authorization 頁籤選 **Bearer Token** 貼上）：
-
-```
-Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOi...
-```
-
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>常見誤區：</b> 忘記拿掉 Basic Auth 設定，或 Header 打成 <code>Bearer&lt;token&gt;</code>（少一個空格）都會導致 <code>JwtAuthFilter</code> 解析不到 username，最後回 401/403。
-</div>
-
-<!--
-換到 Token 之後全靠 Bearer Token 這個 Header：每個要保護的請求都在 Header 加 Authorization: Bearer <token>，Postman 也可以直接在 Authorization 頁籤選 Bearer Token 類型貼上，效果一樣。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# Part 11
-## 完整登入流程
-
-<!--
-讓我們把整個 JWT 認證流程串起來。
--->
-
----
-
-# 完整登入與認證流程（1/2）：取得 Token
-
-**第一階段：取得 Token（登入）**
-
-| 步驟 | 動作 | 說明 |
-|------|------|------|
-| 1 | 前端 POST /auth/login | 帶上 username + password |
-| 2 | AuthController | 呼叫 AuthenticationManager 驗證 |
-| 3 | 驗證成功 | JwtUtil.generateToken() 生成 Token |
-| 4 | 回傳 200 OK | 回應 body 包含 JWT Token |
-
-<!--
-第一階段只做一次（登入），拿到 Token 之後前端要自己保存下來，之後每個受保護請求都要帶著它。
--->
-
----
-
-# 完整登入與認證流程（2/2）：使用 Token 存取資源
-
-**第二階段：使用 Token 存取資源**
-
-| 步驟 | 動作 | 說明 |
-|------|------|------|
-| 5 | 前端發請求 | Header 帶 `Authorization: Bearer <token>` |
-| 6 | JwtAuthFilter | 抽取並驗證 Token |
-| 7 | 驗證成功 | 設定 SecurityContextHolder |
-| 8 | Controller 執行 | 回傳受保護資源 |
-
-<!--
-把這兩張表貼在你的筆記本上！整個 JWT 流程就是這 8 步。
-
-第二階段每個受保護的請求都會執行。Filter 是無感的，使用者感覺不到，但每次請求 Spring Security 都在背後默默驗證 Token 的合法性。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# Part 12
-## 安全最佳實踐
-
-<!--
-JWT 用起來很爽，但有幾個安全陷阱要注意。
--->
-
----
-
-# JWT 安全最佳實踐
-
-| 實踐項目 | 說明 | ❌ 錯誤範例 |
-|----------|------|-----------|
-| **密鑰長度** | HS256 至少 256-bit（32 bytes）Base64 編碼 | 使用短字串 `"secret"` |
-| **Token 過期** | 短時效（15 分鐘~24 小時），搭配 Refresh Token | 永不過期 |
-| **HTTPS 傳輸** | 只在 HTTPS 環境傳輸 Token | 明文 HTTP 傳送 |
-| **不存敏感資料** | Payload 只放 ID、角色，不放密碼 | 把密碼放進 Claims |
-| **密鑰存環境變數** | 用 `${jwt.secret}` 從設定讀取 | 硬編碼在程式碼 |
-
-
-
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>永遠不要把密鑰提交到 Git！</b> 一旦洩漏，任何人都能偽造 Token。
-</div>
-
-<!--
-這非常重要！永遠不要把真正的密鑰提交到 Git。如果不小心推上 GitHub，即使後來刪除，Git 歷史裡還有記錄，必須立刻換掉密鑰。
-
-實務做法：在 application.properties 放一個假的預設值，然後在部署時透過環境變數覆蓋。
--->
-
----
-layout: default
----
-
-# 練習：加入 Refresh Token 機制
-### 任務說明
-
-延續本章 Part 6~10 教過的 `JwtUtil` / `JwtAuthFilter` / `SecurityConfig` / `AuthController`（也就是接手 ch44 練習二的專案改成 JWT 之後的成果），加入 Refresh Token 功能：
-
-1. 修改 `JwtUtil`，加入 `generateRefreshToken()` 方法（過期時間 7 天）
-2. 修改 `LoginResponse`，加入 `refreshToken` 欄位
-3. 建立 `RefreshToken` Entity，儲存 refreshToken 到資料庫（含 username、token、過期時間）
-4. 建立 `POST /auth/refresh` 端點：接收 refreshToken → 查資料庫驗證 → 生成新的 Access Token 回傳
-5. 建立 `POST /auth/logout` 端點：從資料庫刪除 Refresh Token，回傳 200 OK
-
-**思考題：** 為什麼 Refresh Token 要存資料庫，但 Access Token 不用？
-
-<!--
-這個進階練習模擬了真實應用的完整認證流程。Refresh Token 需要儲存在資料庫，因為我們需要能夠廢止它（資料庫刪除就等於廢止），這補足了 JWT 無法即時廢止的缺點。
--->
-
----
-layout: default
----
-
-# 練習：解題提示
-### 提示說明
-
-**思考題解答：**
-
-| | Access Token | Refresh Token |
-|---|---|---|
-| 時效 | 短（15分鐘~24小時） | 長（7天） |
-| 儲存 | 客戶端（無需資料庫） | 資料庫（需要廢止能力） |
-| 廢止 | 等待過期即可 | 刪除資料庫記錄即廢止 |
-
-**解題順序建議：** `RefreshToken` Entity → `JwtUtil.generateRefreshToken()` → `LoginResponse` 加欄位 → `AuthController` 的 `/auth/login` 順便存 Refresh Token → 新增 `/auth/refresh`、`/auth/logout`。
-
-<!--
-Refresh Token 存資料庫是因為它有「廢止」的需求——logout 時要能立刻讓它失效。Access Token 存在客戶端，因為它很短效，等過期就好，不需要主動廢止。
-
-這就是 JWT + Refresh Token 架構的核心設計思路。下面幾頁給完整解答程式碼。
--->
-
----
-style: |
-  pre, code { font-size: 0.8em !important; line-height: 1.3 !important; }
----
-
-# 練習：解答程式碼（1/8）— RefreshToken Entity
-
-```java
-@Entity
-@Table(name = "refresh_tokens")
-public class RefreshToken {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false)
-    private String username;
-
-    @Column(nullable = false, unique = true)
-    private String token;
-
-    @Column(nullable = false)
-    private Instant expiryDate;
-
-    // getter / setter 省略
-}
-```
-
-<!--
-跟 ch44 教的 Entity 套路完全一樣，token 欄位加 unique 約束避免碰撞。
-Repository 見下一頁。
--->
-
----
-style: |
-  pre, code { font-size: 0.8em !important; line-height: 1.3 !important; }
----
-
-# 練習：解答程式碼（2/8）— RefreshTokenRepository
-
-```java
-public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
-    Optional<RefreshToken> findByToken(String token);
-}
-```
-
-<!--
-findByToken 是 /auth/refresh、/auth/logout 都要用到的核心查詢，
-繼承 JpaRepository 就自動有基本 CRUD，這裡只加一個自訂查詢方法。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; line-height: 1.35 !important; }
----
-
-# 練習：解答程式碼（3/8）— JwtUtil 新增方法
-
-在 Part 6 的 `JwtUtil` 裡加一個方法，複製 `generateToken()` 只改過期時間：
-
-```java
-public String generateRefreshToken(String username) {
-    return Jwts.builder()
-        .subject(username)
-        .issuedAt(new Date())
-        .expiration(new Date(
-            System.currentTimeMillis() + 604_800_000L)) // 7 天
-        .signWith(getSigningKey())
-        .compact();
-}
-```
-
-`LoginResponse` 多加一個欄位：
-
-```java
-public record LoginResponse(
-    String token,
-    String refreshToken,
-    String username,
-    long expiresIn
-) {}
-```
-
-<!--
-generateRefreshToken 跟 generateToken 結構一模一樣，只有過期時間不同（7 天 vs 24 小時），
-再次體現 record 改欄位有多輕鬆——LoginResponse 加一個欄位，其他程式碼不用大改，
-呼叫端 new LoginResponse(...) 補一個參數即可。
--->
-
----
-style: |
-  pre, code { font-size: 0.76em !important; line-height: 1.25 !important; }
----
-
-# 練習：解答程式碼（4/8）— AuthController：類別骨架
-
-```java
-@RestController
-@RequestMapping("/auth")
-@RequiredArgsConstructor
-public class AuthController {
-
-    private final AuthenticationManager authManager;
-    private final JwtUtil jwtUtil;
-    private final RefreshTokenRepository refreshTokenRepository;   // ← 新增
-
-    // login 方法見下一頁
-}
-```
-
-<!--
-跟 Part 10 教的 AuthController 比，只多注入一個 RefreshTokenRepository。
-login 方法要改成同時簽發 Access Token 跟 Refresh Token，並把 Refresh Token 存進資料庫。
--->
-
----
-style: |
-  pre, code { font-size: 0.76em !important; line-height: 1.25 !important; }
----
-
-# 練習：解答程式碼（5/8）— AuthController：login 簽發雙 Token
-
-接續上一頁同一個 `AuthController` 類別：
-
-```java
-    @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
-        authManager.authenticate(
-            new UsernamePasswordAuthenticationToken(
-                request.username(), request.password()));
-
-        String accessToken = jwtUtil.generateToken(request.username());
-        String refreshToken = jwtUtil.generateRefreshToken(request.username());
-        // 存進資料庫、回傳 見下一頁
-```
-
-<!--
-帳密驗證通過後，同時生成 Access Token 跟 Refresh Token，接下來要把 Refresh Token 存進資料庫。
--->
-
----
-style: |
-  pre, code { font-size: 0.78em !important; line-height: 1.3 !important; }
----
-
-# 練習：解答程式碼（6/8）— AuthController：存 Refresh Token 並回傳
-
-接續上一頁同一個 `login` 方法：
-
-```java
-        RefreshToken entity = new RefreshToken();
-        entity.setUsername(request.username());
-        entity.setToken(refreshToken);
-        entity.setExpiryDate(Instant.now().plusSeconds(604_800)); // 7 天
-        refreshTokenRepository.save(entity);
-
-        return ResponseEntity.ok(new LoginResponse(
-            accessToken, refreshToken, request.username(), 86400000));
-    }
-    // /auth/refresh、/auth/logout 見下兩頁
-}
-```
-
-<!--
-login 方法在簽發 Access Token 之外，多做一件事：生成 Refresh Token 並存進資料庫，
-之後 /auth/refresh、/auth/logout 都要靠這筆紀錄運作。
--->
-
----
-style: |
-  pre, code { font-size: 0.8em !important; line-height: 1.3 !important; }
----
-
-# 練習：解答程式碼（7/8）— /auth/refresh
-
-接續同一個 `AuthController`：
-
-```java
-public record RefreshRequest(String refreshToken) {}
-
-@PostMapping("/refresh")
-public ResponseEntity<LoginResponse> refresh(@RequestBody RefreshRequest request) {
-    RefreshToken saved = refreshTokenRepository.findByToken(request.refreshToken())
-        .orElseThrow(() -> new RuntimeException("Refresh Token 無效"));
-
-    if (saved.getExpiryDate().isBefore(Instant.now())) {
-        refreshTokenRepository.delete(saved);           // 過期就順手清掉
-        throw new RuntimeException("Refresh Token 已過期，請重新登入");
-    }
-
-    String newAccessToken = jwtUtil.generateToken(saved.getUsername());
-    return ResponseEntity.ok(new LoginResponse(
-        newAccessToken, saved.getToken(), saved.getUsername(), 86400000));
-}
-// /auth/logout 見下一頁
-```
-
-<!--
-查資料庫驗證 Refresh Token 存在且沒過期，通過才簽發新的 Access Token；
-注意這裡不會重新生成 Refresh Token，同一個 Refresh Token 可以一直用到它自己的 7 天期限。
--->
-
----
-style: |
-  pre, code { font-size: 0.8em !important; line-height: 1.3 !important; }
----
-
-# 練習：解答程式碼（8/8）— /auth/logout
-
-接續同一個 `AuthController`：
-
-```java
-@PostMapping("/logout")
-public ResponseEntity<Void> logout(@RequestBody RefreshRequest request) {
-    refreshTokenRepository.findByToken(request.refreshToken())
-        .ifPresent(refreshTokenRepository::delete);      // 刪除 = 廢止
-    return ResponseEntity.ok().build();
-}
-```
-
-<div class="mt-2 p-2 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>測試流程：</b> ① <code>/auth/login</code> 拿 <code>token</code> + <code>refreshToken</code> ② 等 Access Token 過期（或直接測）③ <code>POST /auth/refresh</code> 帶舊 <code>refreshToken</code> 換新 <code>token</code> ④ <code>POST /auth/logout</code> 後再打 <code>/auth/refresh</code> 應失敗（已被刪除）。
-</div>
-
-<!--
-/auth/logout：直接從資料庫刪除這筆 Refresh Token 紀錄，之後任何人拿這個 Refresh Token
-來 /auth/refresh 都會查不到、丟 RuntimeException——這就是「廢止」的具體實作。
-
-實務上 RuntimeException 通常會包成自訂例外 + @ExceptionHandler 轉成 401，這裡先簡化處理，
-讓學生聚焦在 Refresh Token 的存取邏輯上。
--->
-
----
-
-# 思考題解答：為什麼 Refresh Token 存 DB，Access Token 不用？
-
-**核心差異：「要不要能主動廢止」，加上「查表的成本划不划算」。**
-
-| | Access Token | Refresh Token |
-|---|---|---|
-| 時效 | 短（15 分鐘~24 小時） | 長（7 天） |
-| 驗證方式 | 只驗簽章，不查表 | 查 DB 確認存在、沒過期 |
-| 廢止需求 | 沒有，等過期就好 | 有，logout / 換裝置要能立刻失效 |
-| 查表頻率 | 每個 API 請求都會用到 | 只有 `/auth/refresh`、`/auth/logout` 才用到 |
-
-<!--
-這頁把思考題從「記憶題」升級成「設計題」：不只是背答案，而是理解背後的取捨——
-查表有成本，只有在真的需要「主動廢止」時才值得付這個成本。
-下一頁講為什麼會有這個差異，以及業界怎麼進一步強化這個設計。
--->
-
----
-
-# 延伸：白名單 vs 黑名單
-
-| 項目 | Access Token | Refresh Token |
-|------|--------------|----------------|
-| 查表頻率 | 高（每個 API 請求都要驗） | 低（只在換發 / 登出時） |
-| 存放策略 | 不存，只驗簽章 | 存 DB，即**白名單**（查得到才算數） |
-| 若需強制廢止 | 搭配 Redis **黑名單**，TTL 設成跟剩餘效期一樣短 | 直接刪除 DB 紀錄即廢止 |
-| 為什麼這樣分工 | 頻率高，查表不划算 | 壽命長、外洩風險高，值得換一次查詢 |
-
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>補充：Refresh Token Rotation</b> —— 這裡的解法讓同一個 Refresh Token 能重複用到 7 天期限。業界主流（Auth0、Okta）會做 Rotation：每次 <code>/auth/refresh</code> 用掉舊 token 就刪除、換發新的存回 DB，舊 token 被重放即可偵測外洩。
-</div>
-
-<!--
-白名單 vs 黑名單這組概念很容易混：Refresh Token 存 DB 是白名單，
-黑名單則反過來用在原本不查表的 Access Token 上，只在需要緊急踢人時才啟用，兩者搭配使用。
-
-Rotation 是進階內容，點出來讓學生知道這章教的是簡化版，留一個延伸方向，不要求在這個練習裡實作。
--->
-
----
-
-# 本章重點回顧
-
-| 主題 | 核心要點 |
-|------|---------|
-| Session 問題 | 水平擴展時無法共享 Session 狀態 |
-| JWT 結構 | Header.Payload.Signature，Payload 是編碼非加密 |
-| JWT Claims | sub / iat / exp 三個最重要 |
-| jjwt 0.12.x | api / impl（runtime）/ jackson（runtime） |
-| generateToken | `Jwts.builder().subject().expiration().signWith().compact()` |
-| validateToken | `Jwts.parser().verifyWith().build().parseSignedClaims()` |
-| JwtAuthFilter | 繼承 `OncePerRequestFilter`，使用 `jakarta.servlet.*` |
-| SecurityFilterChain | `SessionCreationPolicy.STATELESS` + `addFilterBefore` |
-| 安全實踐 | 密鑰 256-bit、短時效、HTTPS、不存敏感資料 |
-
-<!--
-今天的金句總結：「Session 是讓伺服器記住你，JWT 是讓你自帶身份證。」無狀態架構讓你的應用可以無限水平擴展，這在雲端時代是基本要求。
+（最後一步）下一章，學校越來越大，一個教務處忙不過來，要拆成好幾個處室了。
 -->
 
 ---
@@ -1493,9 +1216,7 @@ layout: end
 有任何問題嗎？
 
 <!--
-今天的 JWT 認證課到這裡結束！
+今天的內容到這邊。
 
-課後建議：先跟著本章 Part 6~10 把基本 JWT 登入流程跑通，再挑戰練習的 Refresh Token 機制。
-
-如果在實作過程中遇到問題，先看一下錯誤訊息，通常 403 是認證問題、401 是 Token 無效、500 才是程式碼問題。
+有任何問題歡迎提出來。
 -->

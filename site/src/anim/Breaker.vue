@@ -7,21 +7,21 @@ import Art from './Art.vue'
 // Hang a "service suspended" sign (circuit breaker): closed -> open -> half-open.
 defineProps<{ terms?: boolean }>()
 const { local, live } = useFixedSteps(3)
-const captions = ['平常：學籍組打內線給社團組，都接得通', '社團組出狀況，電話一直沒人接。每一通都要等很久', '失敗太多次，掛上「暫停服務」的牌子：不再打電話，直接回覆備用答案', '過一段時間，試打幾通。接通了就拿下牌子；還是不通，就繼續掛著']
+const captions = ['平常：社團組打內線給學籍組，都接得通', '學籍組出狀況，電話一直沒人接。每一通都要等很久', '失敗太多次，掛上「暫停服務」的牌子：不再打電話，直接回覆備用答案', '過一段時間，試打幾通。接通了就拿下牌子；還是不通，就繼續掛著']
 const state = computed(() => (!live.value ? 0 : [0, 0, 1, 2][local.value]))
 </script>
 
 <template>
   <div class="anim-stage breaker">
     <div class="top">
-      <div class="office"><Art name="cabinet" size="38" /><b>學籍組</b></div>
+      <div class="office"><Art name="cabinet" size="38" /><b>社團組</b></div>
       <div class="wire" :class="'w' + (live ? local : 0)">
         <i v-if="!live || local === 0">☎ 接通 ✓</i>
         <i v-else-if="local === 1">☎ 沒人接 ✗ ✗ ✗</i>
         <i v-else-if="local === 2">🚫 暫停服務，直接回覆備用答案<em v-if="terms">fallback</em></i>
         <i v-else>☎ 試打幾通 …</i>
       </div>
-      <div class="office" :class="{ down: live && local >= 1 }"><Art name="cabinet" size="38" /><b>社團組</b></div>
+      <div class="office" :class="{ down: live && local >= 1 }"><Art name="cabinet" size="38" /><b>學籍組</b></div>
     </div>
     <div class="states">
       <div class="st" :class="{ on: state === 0 }"><b>正常<em v-if="terms">CLOSED</em></b><small>每一通都照常打</small></div>
