@@ -274,7 +274,7 @@ Using generated security password: 3d9b2c47-e1a0-4f28-9c01-0a1b2c3d4e5f
 
 （下一步）那要用什麼帳號登入？Spring Security 準備了一個臨時帳號。帳號固定是 user，密碼印在啟動的訊息裡。
 
-（下一步）在 IntelliJ 下方的啟動訊息裡找這一行：Using generated security password。後面那一長串就是密碼。每次啟動都會換一組。
+（下一步）在 Eclipse 的 Console 裡找這一行：Using generated security password。後面那一長串就是密碼。每次啟動都會換一組。
 -->
 
 ---

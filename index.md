@@ -260,6 +260,11 @@ style: |
       <div>Spring Boot 資料物件</div>
       <div class="chapter-subtitle">PO / DTO / VO / DAO</div>
     </Link>
+    <Link to="ch38" class="chapter-card">
+      <div class="chapter-num">Ch 38</div>
+      <div>Java 語法補充</div>
+      <div class="chapter-subtitle">enum / record / 泛型 / Stream / LocalDate</div>
+    </Link>
     <Link to="ch39" class="chapter-card">
       <div class="chapter-num">Ch 39</div>
       <div>實戰：JPA CRUD API</div>
@@ -429,6 +434,9 @@ src: ./36-mvc-architecture.md
 ---
 ---
 src: ./37-data-objects.md
+---
+---
+src: ./38-java-extras.md
 ---
 ---
 src: ./39-jpa-practice.md

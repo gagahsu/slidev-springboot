@@ -327,7 +327,7 @@ class: flex flex-col justify-center items-center text-center
 <v-click>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
-💡 四個都是<b>獨立的 Spring Boot 專案</b>，各自用 Spring Initializr 建立、各自用一個 IntelliJ 視窗打開、各自啟動。括號裡是每個專案使用的 Port，不能重複。
+💡 四個都是<b>獨立的 Spring Boot 專案</b>，各自用 Spring Initializr 建立、各自匯入 Eclipse、各自啟動。括號裡是每個專案使用的 Port，不能重複。
 </div>
 
 </v-click>
@@ -343,7 +343,7 @@ class: flex flex-col justify-center items-center text-center
 
 （下一步）gateway，大門服務台。
 
-（下一步）四個都是獨立的 Spring Boot 專案。各自用 Spring Initializr 建立，各自用一個 IntelliJ 視窗打開，各自啟動。括號裡的數字是每個專案使用的 Port。四個專案同時在同一台電腦上跑，所以 Port 不能重複。
+（下一步）四個都是獨立的 Spring Boot 專案。各自用 Spring Initializr 建立，各自匯入 Eclipse，各自啟動。它們可以放在同一個 Eclipse 視窗裡。括號裡的數字是每個專案使用的 Port。四個專案同時在同一台電腦上跑，所以 Port 不能重複。
 
 為了專心看 Spring Cloud，今天的服務都不接資料庫，資料直接寫在程式裡。
 -->
@@ -401,7 +401,7 @@ eureka.client.fetch-registry=false
 
 （下一步）Dependencies 只加一個，搜尋 Eureka Server。Initializr 會自動幫我們選好搭配的 Spring Cloud 版本。
 
-（下一步）下載、解壓縮、用 IntelliJ 打開之後，在 application.properties 寫四行。第一行是專案的名字。第二行 Port 用 8761，這是 Eureka 習慣用的號碼。
+（下一步）下載、解壓縮、匯入 Eclipse 之後，在 application.properties 寫四行。第一行是專案的名字。第二行 Port 用 8761，這是 Eureka 習慣用的號碼。
 
 （下一步）後面兩行的意思是：我自己就是通訊錄，不用去別的通訊錄登記，也不用抄別人的通訊錄。沒有寫這兩行的話，啟動後會一直出現連線失敗的訊息。
 -->

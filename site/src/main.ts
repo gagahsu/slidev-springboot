@@ -36,6 +36,7 @@ import PassCard from './anim/PassCard.vue'
 import Campus from './anim/Campus.vue'
 import Breaker from './anim/Breaker.vue'
 import LinkTables from './anim/LinkTables.vue'
+import Conveyor from './anim/Conveyor.vue'
 import TwoBooks from './anim/TwoBooks.vue'
 import SeatRace from './anim/SeatRace.vue'
 import AskOrOrder from './anim/AskOrOrder.vue'
@@ -100,6 +101,7 @@ createApp(App)
   .component('Campus', Campus)
   .component('Breaker', Breaker)
   .component('LinkTables', LinkTables)
+  .component('Conveyor', Conveyor)
   .component('TwoBooks', TwoBooks)
   .component('SeatRace', SeatRace)
   .component('AskOrOrder', AskOrOrder)

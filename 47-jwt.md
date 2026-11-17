@@ -735,7 +735,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
 （下一步）用 @Autowired 拿到兩個幫手：JwtUtil 和上一章的 AccountService。
 
-（下一步）關卡要做的事，寫在 doFilterInternal 這個方法裡。它的參數很長，請讓 IntelliJ 幫忙產生：在類別裡按 Ctrl 加 O，選這個方法。參數有三個：request 是請求，response 是回應，filterChain 是後面的關卡。
+（下一步）關卡要做的事，寫在 doFilterInternal 這個方法裡。它的參數很長，請讓 Eclipse 幫忙產生：在類別裡按右鍵，選 Source，再選 Override/Implement Methods，勾選這個方法。參數有三個：request 是請求，response 是回應，filterChain 是後面的關卡。
 
 （下一步）先從請求拿出 Authorization 這個 Header。如果有，而且是 Bearer 加空格開頭，就用 substring(7) 把前面七個字去掉。Bearer 是六個字，加上一個空格，一共七個。剩下的就是 Token。
 
