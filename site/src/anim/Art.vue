@@ -6,8 +6,8 @@ defineProps<{ name: string, size?: number | string }>()
 <template>
   <svg class="art" :class="`art-${name}`" viewBox="0 0 100 100" :style="size ? { width: `${size}px`, height: `${size}px` } : undefined" aria-hidden="true">
     <!-- people -->
-    <g v-if="name === 'you' || name === 'customer' || name === 'clerk' || name === 'staff' || name === 'teacher'">
-      <path d="M18 100 Q18 56 50 56 Q82 56 82 100Z" :fill="{ you: '#1cb0f6', customer: '#ff9600', clerk: '#58cc02', staff: '#ce82ff', teacher: '#ff86d0' }[name]" />
+    <g v-if="name === 'you' || name === 'customer' || name === 'clerk' || name === 'staff' || name === 'teacher' || name === 'guard'">
+      <path d="M18 100 Q18 56 50 56 Q82 56 82 100Z" :fill="{ you: '#1cb0f6', customer: '#ff9600', clerk: '#58cc02', staff: '#ce82ff', teacher: '#ff86d0', guard: '#3c5a78' }[name]" />
       <path v-if="name === 'clerk'" d="M34 62 H66 V100 H34Z" fill="#fff" opacity=".9" />
       <path v-if="name === 'staff'" d="M47 58 H53 V100 H47Z" fill="#fff" opacity=".85" />
       <circle cx="50" cy="34" r="20" fill="#ffd9b3" />
@@ -16,6 +16,7 @@ defineProps<{ name: string, size?: number | string }>()
       <path v-if="name === 'teacher'" d="M30 30 Q32 10 50 12 Q68 10 70 30 Q60 20 50 22 Q40 20 30 30Z" fill="#8a5a3c" />
       <g v-if="name === 'clerk'"><path d="M30 26 Q30 10 50 10 Q70 10 70 26Z" fill="#46a302" /><rect x="26" y="24" width="40" height="6" rx="3" fill="#46a302" /></g>
       <g v-if="name === 'staff'"><rect x="34" y="8" width="32" height="12" rx="4" fill="#a568cc" /><rect x="30" y="18" width="40" height="5" rx="2.5" fill="#a568cc" /></g>
+      <g v-if="name === 'guard'"><path d="M29 27 Q29 9 50 9 Q71 9 71 27Z" fill="#2b4257" /><rect x="25" y="24" width="50" height="6" rx="3" fill="#2b4257" /><circle cx="50" cy="18" r="4.5" fill="#ffc800" /><path d="M44 66 L50 62 L56 66 V74 Q50 80 44 74Z" fill="#ffc800" /></g>
       <g v-if="name === 'teacher'" fill="none" stroke="#2b2b2b" stroke-width="2"><circle cx="42" cy="35" r="6" /><circle cx="58" cy="35" r="6" /><path d="M48 35h4" /></g>
       <circle cx="42" cy="35" r="2.4" fill="#2b2b2b" /><circle cx="58" cy="35" r="2.4" fill="#2b2b2b" />
       <path d="M43 43 Q50 49 57 43" fill="none" stroke="#b5651d" stroke-width="2.4" stroke-linecap="round" />

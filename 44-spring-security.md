@@ -46,32 +46,34 @@ style: |
 </div>
 
 <!--
-歡迎來到 Spring Security 這個章節！
+大家好，歡迎來到第四十四章，也是新單元「安全與微服務」的第一章。
 
-我們今天要處理一個很現實的問題：我們的 API 現在任何人都能呼叫，
-這樣不行對吧？銀行 API 不能讓路人隨便查餘額，
-後台管理介面也不能讓一般用戶亂進去。
+到目前為止，我們的 school 專案功能越來越多，但是有一個很大的問題：任何人都可以呼叫任何一個 API。
 
-Spring Security 就是幫我們解決這件事的框架。
+今天要請一位警衛來站在校門口。這位警衛的名字叫做 Spring Security。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要搞懂的三件事
 
-- **認證 vs 授權** — Authentication / Authorization 核心概念
-- **加入 Spring Security 依賴** — build.gradle 設定
-- **預設行為** — Spring Security 開箱即用的保護機制
-- **SecurityFilterChain** — Spring Boot 3.x / 4.x 的設定方式
-- **路徑授權規則** — `requestMatchers` 與 `hasRole`
-- **InMemoryUserDetailsManager** — 快速測試帳號設定
-- **UserDetailsService** — 從資料庫載入使用者
-- **BCryptPasswordEncoder** — 密碼加密
-- **CSRF 保護** — 何時開、何時關
-- **Filter Chain 架構** — Spring Security 執行流程
-- **實作練習**
+<v-clicks>
+
+- **認證和授權差在哪裡？** 「你是誰」和「你能做什麼」
+- **怎麼設定規則？** 哪些網址公開、哪些要登入、哪些只有老師能用
+- **帳號和密碼放在哪裡？** 為什麼密碼不能照原樣存起來
+
+</v-clicks>
+
+<!--
+今天要搞懂三件事。
+
+（下一步）第一，認證和授權差在哪裡。這兩個詞很像，但是問的問題不一樣。一個問「你是誰」，一個問「你能做什麼」。
+
+（下一步）第二，怎麼設定規則。哪些網址是公開的，哪些要登入，哪些只有老師能用。
+
+（下一步）第三，帳號和密碼放在哪裡。還有一件很重要的事：為什麼密碼不能照原樣存起來。
+-->
 
 ---
 layout: section
@@ -79,42 +81,126 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-## 認證 vs 授權：兩個核心概念
+# 校門口的警衛
 
 <!--
-在開始寫任何程式碼之前，我們要先搞清楚兩個常常被混用的概念。
-很多同學一開始會把認證跟授權搞混，但其實這兩個是完全不同的事情。
+先看學校。
 -->
 
 ---
 
-# 認證（Authentication）vs 授權（Authorization）
+# 現在的教務處，誰都能進來
 
-想像一棟大樓的門禁系統：
+<v-clicks>
 
-| 概念 | 英文 | 問的問題 | 大樓比喻 |
-|------|------|----------|----------|
-| 認證 | Authentication | **你是誰？** | 刷門禁卡，確認你是員工 |
-| 授權 | Authorization | **你可以做什麼？** | 你只能進 3 樓，不能進機房 |
+- 校門沒有人看守，任何人都可以走進教務處
+- 路過的人說「幫我把 3 號同學的成績改成 100 分」，櫃台就照辦了
+- 也可以說「把 5 號同學的資料刪掉」
 
-<br>
+</v-clicks>
 
-**流程一定是：先認證，再授權。**
+<v-click>
 
-沒有通過認證（不知道你是誰），就根本沒資格談授權。
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>記憶口訣：</b> Authentication = 你是誰（身份），Authorization = 你能做啥（權限）
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 我們的 <code>school</code> 專案現在就是這樣。只要知道網址，任何人都能送出 <code>PUT /students/3</code> 或 <code>DELETE /students/5</code>。
 </div>
 
+</v-click>
+
 <!--
-我很喜歡用大樓門禁來解釋這兩個概念，因為大家都有進辦公大樓的經驗。
+想像一下，校門沒有人看守。
 
-你進大樓要刷卡，這個動作是「認證」——系統確認你是這棟大樓的合法使用者。
-但是刷完卡之後，你不一定每層樓都能進。
-比如說機房只有 IT 人員才能進，這就是「授權」。
+（下一步）任何人都可以走進教務處。
 
-Spring Security 同時處理這兩件事。
+（下一步）一個路過的人走到櫃台說：幫我把三號同學的成績改成一百分。櫃台就照辦了。
+
+（下一步）他也可以說：把五號同學的資料刪掉。櫃台一樣照辦。
+
+（下一步）聽起來很誇張，但是我們的 school 專案現在就是這樣。只要知道網址，任何人都能送出 PUT /students/3，或是 DELETE /students/5。程式不會問他是誰。
+-->
+
+---
+
+# 學校的做法：請一位警衛
+
+<GateGuard />
+
+<!--
+學校請了一位警衛，站在校門口。
+
+Tom 來到校門口，想進學校辦事。
+
+（下一步）第一關。警衛說：請出示學生證。Tom 拿出學生證，警衛確認他是 Tom。這一關問的是：你是誰。
+
+（下一步）第二關。警衛翻開名冊，查到 Tom 的身分是學生。這一關問的是：你這個身分可以做什麼。
+
+（下一步）結果是：學生可以到櫃台查成績，但是不能進成績室改成績。成績室只有老師可以進去。
+
+請注意順序。一定是先知道你是誰，才能決定你能做什麼。
+-->
+
+---
+
+# 對照到程式
+
+<GateGuard terms />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 兩關擋下來的時候，狀態碼不一樣。第一關沒過（不知道你是誰）是 <b>401</b>；第二關沒過（知道你是誰，但是你不能做這件事）是 <b>403</b>。
+</div>
+
+</v-click>
+
+<!--
+同一張圖，換成程式的名字。Tom 是使用者，學生證是他的帳號和密碼。警衛是 Spring Security。
+
+（下一步）第一關，確認你是誰，叫做認證，英文是 Authentication。
+
+（下一步）第二關，確認你能做什麼，叫做授權，英文是 Authorization。這兩個英文字長得很像，開頭都是 Auth。記法是：認證在前、授權在後，先認人、再給權限。
+
+（下一步）查成績是 GET /students，學生可以做，回覆 200。改成績是 PUT /students/1，學生不能做，回覆 403。
+
+（下一步）兩關擋下來的時候，狀態碼不一樣。第一關沒過，也就是不知道你是誰，是 401。這個狀態碼我們在第四十章用過。第二關沒過，知道你是誰，但是你不能做這件事，是 403。
+-->
+
+---
+
+# 整理：兩關各問一個問題
+
+<Pairs left="校門口" right="程式" rows="guard,警衛=code,Spring Security|card,第一關：你是誰？=code,認證 Authentication|book,第二關：你能做什麼？=code,授權 Authorization|what,沒帶學生證=no,401 Unauthorized|lock,有學生證，但是不能進成績室=no,403 Forbidden" />
+
+<!--
+我們把對應整理一次。
+
+（下一步）警衛，是 Spring Security。
+
+（下一步）第一關，你是誰，是認證。
+
+（下一步）第二關，你能做什麼，是授權。
+
+（下一步）沒帶學生證，是 401。
+
+（下一步）有學生證，但是不能進成績室，是 403。
+-->
+
+---
+
+# 想一想
+
+<Poll question="Tom 出示了學生證，警衛也確認是他本人。但是他想進成績室，被擋了下來。他是在哪一關被擋的？" options="認證（第一關）|授權（第二關）|兩關都沒過|他根本沒遇到警衛" answer="2" />
+
+<!--
+來想一題。
+
+Tom 出示了學生證，警衛也確認是他本人。但是他想進成績室，被擋了下來。他是在哪一關被擋的？
+
+（等大家作答）
+
+（下一步）答案是：授權，第二關。
+
+警衛已經知道他是 Tom，所以認證通過了。擋下他的原因是「學生不能進成績室」，這是授權的問題。狀態碼會是 403。
 -->
 
 ---
@@ -123,38 +209,107 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-## 加入 Spring Security 依賴
+# 請警衛上班：加入 Spring Security
 
 <!--
-概念清楚了，我們來動手做。
-第一步永遠都是加依賴。
+來把警衛請進我們的專案。
 -->
 
 ---
 
-# build.gradle 加入依賴
+# 加入依賴
 
-只要加一行依賴，Spring Security 就會自動生效：
+打開 `build.gradle`，在 `dependencies` 裡加一行：
 
 ```groovy
 implementation 'org.springframework.boot:spring-boot-starter-security'
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>不需要指定版本：</b> Spring Boot 的 BOM 會自動管理版本，Spring Boot 3.x 對應 Spring Security 6.x、Spring Boot 4.x 對應 Spring Security 7.x。
-</div>
+<v-clicks>
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>Spring Boot 3.x / 4.x 版本注意：</b> 不再使用 WebSecurityConfigurerAdapter，改用 SecurityFilterChain Bean + Lambda DSL 風格。
-</div>
+- 不用寫版本，Spring Boot 會幫我們選好搭配的版本
+- 加完之後，按 Gradle 的重新整理，讓它下載
+- 只要加了這一行，警衛就**已經開始上班**了
+
+</v-clicks>
 
 <!--
-Spring Boot 的自動配置非常強大。
-只要你把這個依賴加進去，它馬上就會生效，
-你的所有端點就都會被保護起來了。
+打開 build.gradle，在 dependencies 裡加一行。spring-boot-starter-security。
 
-WebSecurityConfigurerAdapter 在 Spring Security 6 已經被移除了。
-如果你以前學過 Spring Boot 2.x，寫法有些不一樣，這點要注意。
+（下一步）不用寫版本。Spring Boot 會幫我們選好搭配的版本。
+
+（下一步）加完之後，按 Gradle 的重新整理，讓它下載。
+
+（下一步）請注意：只要加了這一行，什麼程式都還沒寫，警衛就已經開始上班了。我們來看他預設會做什麼。
+-->
+
+---
+
+# 什麼都還沒設定，全部都鎖起來了
+
+重新啟動，用 Postman 送 `GET /students`：
+
+<v-clicks>
+
+- 得到 **401**。原本可以用的 API，現在全部都要登入
+- 警衛的預設守則：**沒有證件，一律不准進**
+- Spring Security 準備了一個臨時帳號：帳號是 `user`，密碼印在啟動的訊息裡
+
+</v-clicks>
+
+<v-click>
+
+```text
+Using generated security password: 3d9b2c47-e1a0-4f28-9c01-0a1b2c3d4e5f
+```
+
+</v-click>
+
+<!--
+重新啟動專案，用 Postman 送 GET /students。
+
+（下一步）得到 401。原本可以用的 API，現在全部都要登入才能用。
+
+（下一步）這是警衛的預設守則：沒有證件，一律不准進。先全部鎖起來，再由我們決定哪些要打開。這個順序比較安全。
+
+（下一步）那要用什麼帳號登入？Spring Security 準備了一個臨時帳號。帳號固定是 user，密碼印在啟動的訊息裡。
+
+（下一步）在 IntelliJ 下方的啟動訊息裡找這一行：Using generated security password。後面那一長串就是密碼。每次啟動都會換一組。
+-->
+
+---
+
+# 用 Postman 出示證件：Basic Auth
+
+<v-clicks>
+
+1. 在 Postman 點 **Authorization** 頁籤
+2. Auth Type 選 **Basic Auth**
+3. Username 填 `user`，Password 貼上剛才那一串密碼
+4. 再送一次 `GET /students` → **200**
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <b>Basic Auth</b>：每一次請求，都把帳號和密碼放在名叫 <code>Authorization</code> 的 Header 裡一起送出。就像每次進校門，都要拿出學生證給警衛看。
+</div>
+
+</v-click>
+
+<!--
+在 Postman 出示證件的方法。
+
+（下一步）第一步，在網址列下方，點 Authorization 這個頁籤。
+
+（下一步）第二步，Auth Type 選 Basic Auth。
+
+（下一步）第三步，Username 填 user，Password 貼上剛才那一串密碼。
+
+（下一步）第四步，再送一次 GET /students。這次得到 200，資料回來了。
+
+（下一步）這個方式叫做 Basic Auth。每一次請求，Postman 都會把帳號和密碼放在一個名叫 Authorization 的 Header 裡一起送出。就像每次進校門，都要拿出學生證給警衛看。它是最簡單的方式，今天先用它。下一章會學另一種方式。
 -->
 
 ---
@@ -163,105 +318,187 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 3
-## Spring Security 預設行為
+# 警衛的守則：SecurityConfig
 
 <!--
-依賴加進去之後，不寫任何設定，Spring Security 預設會做什麼？
-很多人第一次加這個依賴，然後啟動專案，發現畫面變成一個登入頁面，嚇了一跳。
+預設的守則是全部都鎖。接下來我們自己寫守則。
 -->
 
 ---
 
-# 開箱即用的預設保護
+# 守則寫在哪裡
 
-加入依賴後**不做任何設定**，Spring Security 自動提供：
+在 `config` 資料夾新增 `SecurityConfig`：
 
-| 預設行為 | 說明 |
-|----------|------|
-| 所有路徑都需要登入 | 任何 URL 都會被攔截，重導向到登入頁 |
-| 自動產生登入頁面 | `/login` 路由由 Spring Security 自動提供 |
-| 預設帳號 `user` | 每次啟動都會產生一個預設帳號 |
-| 隨機密碼印在 console | 每次啟動密碼不同，在啟動 log 中顯示 |
-| CSRF 保護預設開啟 | Form 提交需要帶 CSRF token |
+<CodeSteps>
 
-啟動 log 會看到：
+```java {1-3|5-6|7-10|11}
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
 
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+            .httpBasic(Customizer.withDefaults())
+            .csrf(csrf -> csrf.disable());
+        return http.build();
+    }
+}
 ```
-Using generated security password: 3d9b2c47-e1a0-4f28-9c01-abc123456
-```
+
+- `@Configuration` 是設定類別；`@EnableWebSecurity` 代表「這裡是警衛的守則」
+- 用 `@Bean` 交出一個 `SecurityFilterChain`，警衛會照它做事
+- 三行設定：路徑規則、接受 Basic Auth、關掉 CSRF（後面補充）
+- 最後一定要 `http.build()`，守則才會成立
+
+</CodeSteps>
 
 <!--
-這個預設行為其實設計得很貼心。
-如果你只是想快速測試，不需要設定任何東西，Spring Security 就幫你保護好了。
+在 config 資料夾新增一個類別，叫做 SecurityConfig。config 資料夾是第三十八章建立的。
 
-預設帳號是 user，密碼是每次啟動隨機產生的，會印在 console 裡面。
+（下一步）@Configuration 我們在第三十八章用過，代表這是一個設定類別。下面多了一個 @EnableWebSecurity，意思是：這裡是警衛的守則。
 
-當然在正式的開發中，我們會自己設定帳號密碼，以及更細緻的授權規則。
+（下一步）用 @Bean 交出一個物件，型別是 SecurityFilterChain。警衛會照這個物件做事。方法的參數 HttpSecurity 是 Spring 交給我們的工具，守則都透過它來寫。後面的 throws Exception 請照抄。
+
+（下一步）中間有三行設定。第一行 authorizeHttpRequests 是路徑規則，現在寫的是：任何請求都要登入。第二行 httpBasic，接受剛才用的 Basic Auth。第三行把 CSRF 關掉，它是什麼，本章最後會補充。現在先知道：不關掉的話，Postman 送 POST、PUT、DELETE 都會被擋。
+
+這裡有箭頭的寫法，例如 auth 箭頭 auth 點什麼。第四十一章看過類似的。意思是：Spring 把一個叫 auth 的設定工具交給我們，箭頭後面寫我們要對它做的設定。
+
+（下一步）最後一定要 http.build()，把守則組起來回傳。少了這一行，守則不會成立。
 -->
 
 ---
 
-# 用 Postman 測試預設保護（一）Basic Auth
+# 寫上真正的規則
 
-預設所有路徑都要登入，直接打 API 會拿到 **401 Unauthorized**。
+把 `authorizeHttpRequests` 那一行換成：
 
-**方法一：Basic Auth（推薦）**
+<CodeSteps>
 
-在 Postman 的 **Authorization** 頁籤選 **Basic Auth**：
+```java {2|3|4|5}
+.authorizeHttpRequests(auth -> auth
+    .requestMatchers(HttpMethod.GET, "/clubs/**").permitAll()
+    .requestMatchers(HttpMethod.GET, "/students/**").authenticated()
+    .requestMatchers("/students/**").hasRole("TEACHER")
+    .anyRequest().authenticated()
+)
+```
 
-| 欄位 | 值 |
-|------|-----|
-| Username | `user` |
-| Password | console 印出的隨機密碼 |
+- 查社團：公開，任何人都可以（校門口的社團海報）
+- 查學生：要登入，學生和老師都可以
+- 學生資料的其他動作（新增、修改、刪除）：只有老師
+- 其餘沒提到的：一律要登入
 
-Postman 會自動加上 `Authorization: Basic dXNlcjou...` header。
+</CodeSteps>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <code>/students/**</code> 的兩個星號代表「這個路徑，以及它底下的所有路徑」，所以 <code>/students</code> 和 <code>/students/3</code> 都算。
+</div>
+
+</v-click>
 
 <!--
-提醒學生：預設密碼每次啟動都不一樣，要去 console 撈最新的那一組。
-選 Basic Auth 後 Postman 會自動幫你把帳密做 Base64 編碼。
+把 authorizeHttpRequests 那一行，換成真正的規則。每一行都是 requestMatchers 加上一個結果。requestMatchers 的意思是：符合這個條件的請求。
+
+（下一步）第一條。方法是 GET、路徑是 /clubs 開頭的請求，permitAll，任何人都可以。就像校門口貼的社團海報，校外的人也能看。
+
+（下一步）第二條。GET /students 開頭的請求，authenticated，要登入。學生和老師都可以查。
+
+（下一步）第三條。這一條沒有寫方法，代表 /students 的所有方法。hasRole TEACHER，只有身分是老師的人可以。GET 已經在上一條處理掉了，所以這一條實際上管的是新增、修改和刪除。
+
+（下一步）最後一條。anyRequest，其餘沒提到的請求，一律要登入。這一條是保底，新加的 API 忘了寫規則，也不會變成公開。
+
+（下一步）路徑裡的兩個星號，代表這個路徑，以及它底下的所有路徑。所以 /students 和 /students/3 都算。
 -->
 
 ---
 
-# 用 Postman 測試預設保護（二）手動加 Header
+# 常用的四種結果
 
-**方法二：自己加 Authorization Header**
+<v-clicks>
 
-不用 Postman 的 Authorization 頁籤，直接在 **Headers** 加一行。
+- `permitAll()`：任何人都可以，不用登入
+- `authenticated()`：要登入，什麼身分都可以
+- `hasRole("TEACHER")`：要登入，而且身分必須是 `TEACHER`
+- `denyAll()`：任何人都不可以（暫時關閉某個功能）
 
-先把 `user:密碼` 做 Base64 編碼，填入：
+</v-clicks>
 
-```
-Authorization: Basic dXNlcjozZDliMmM0Ny1lMWEwLi4u
-```
+<v-click>
 
-> 兩種方法結果一樣 — Basic Auth 是 Postman 幫你算 Base64，方法二是自己算。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <b>身分</b>在 Spring Security 裡叫做 <b>Role</b>（角色）。名稱由我們自己取，習慣用全大寫的英文，例如 <code>STUDENT</code>、<code>TEACHER</code>。
+</div>
+
+</v-click>
 
 <!--
-方法二讓學生理解 Basic Auth 底層就是 Base64(帳號:密碼)，沒有加密，只是編碼。
-所以正式環境一定要走 HTTPS，不然帳密等於明文。
+requestMatchers 後面可以接的結果，常用的有四種。
+
+（下一步）permitAll，任何人都可以，不用登入。
+
+（下一步）authenticated，要登入，但是什麼身分都可以。
+
+（下一步）hasRole，要登入，而且身分必須是括號裡寫的那一個。
+
+（下一步）denyAll，任何人都不可以。想暫時關閉某個功能的時候可以用。
+
+（下一步）故事裡的「身分」，在 Spring Security 裡叫做 Role，中文是角色。名稱由我們自己取，習慣用全大寫的英文。今天用兩個：STUDENT 是學生，TEACHER 是老師。
 -->
 
 ---
 
-# Postman 遇到 CSRF 怎麼辦？
+# 規則的順序很重要
 
-預設 **CSRF 保護是開啟的**，用 Postman 送 `POST` / `PUT` / `DELETE` 會被擋，回傳 **403 Forbidden**。
+警衛拿到一個請求，會**從第一條開始往下對**，對到的第一條就算數，後面的不看了。
 
-原因：這些寫入請求需要帶 CSRF token，但 Postman 不像瀏覽器表單會自動帶。
+<v-clicks>
 
-**測試 API 時的處理方式：**
+- `GET /students/3`：第二條就對到了 → 要登入
+- `PUT /students/3`：第二條不符合（不是 GET），第三條對到 → 只有老師
 
-| 情境 | 做法 |
-|------|------|
-| 純後端 API 測試 | 在 `SecurityConfig` 關掉 CSRF：`.csrf(csrf -> csrf.disable())` |
-| 保留 CSRF | 先打一個 GET 拿 `XSRF-TOKEN` cookie，再把值放進 `X-XSRF-TOKEN` header |
+</v-clicks>
 
-> 這裡先知道「關掉 CSRF 就能測」即可，CSRF 是什麼、為什麼能關，**Part 9 有完整說明**。
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 如果把第三條搬到第二條前面，<code>GET /students/3</code> 會先對到「只有老師」，學生就查不到成績了。<b>範圍小的規則要寫在前面，範圍大的寫在後面。</b>
+</div>
+
+</v-click>
 
 <!--
-GET 請求不受 CSRF 影響，所以一開始測 GET 都正常，一送 POST 就 403，很多人會卡在這。
-這裡只給排錯做法，CSRF 原理留到 Part 9 專章講，不要在這裡展開。
+這些規則有一個很重要的特性：順序。
+
+警衛拿到一個請求，會從第一條開始往下對。對到的第一條就算數，後面的不看了。
+
+（下一步）例如 GET /students/3。第一條是社團，不符合。第二條，GET 加上 /students 開頭，對到了。結果是要登入。
+
+（下一步）PUT /students/3。第二條要求 GET，不符合。第三條，/students 開頭、任何方法，對到了。結果是只有老師。
+
+（下一步）如果把第三條搬到第二條前面會怎樣？GET /students/3 會先對到「只有老師」，學生就查不到成績了。所以請記得：範圍小的規則要寫在前面，範圍大的寫在後面。anyRequest 範圍最大，永遠放最後。
+-->
+
+---
+
+# 想一想
+
+<Poll question="照剛才的四條規則，一位已經登入的「學生」送出 DELETE /students/5，會得到什麼？" options="200，刪除成功|401，因為沒有登入|403，因為身分不是老師|404，找不到這個網址" answer="3" />
+
+<!--
+來想一題。
+
+照剛才的四條規則，一位已經登入的學生送出 DELETE /students/5，會得到什麼？
+
+（等大家作答）
+
+（下一步）答案是 403。
+
+DELETE /students/5 會對到第三條，只有老師可以。他已經登入，所以不是 401。他的身分是學生，不是老師，所以是 403。
 -->
 
 ---
@@ -270,477 +507,51 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 4
-## SecurityFilterChain：Spring Boot 3.x / 4.x 的設定方式
+# 密碼不能照抄
 
 <!--
-現在我們來看最核心的設定方式。
-Spring Boot 3.x / 4.x 用的是 SecurityFilterChain Bean + Lambda DSL。
-這是現代 Spring Security 的標準寫法，一定要學會。
+規則寫好了。接下來要有帳號。在建立帳號之前，要先談一件很重要的事：密碼要怎麼存。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.82em !important; }
----
 
-# SecurityFilterChain 基本結構（一）骨架
+# 如果名冊被偷了
 
-Spring Boot 3.x / 4.x 用 `SecurityFilterChain` Bean + Lambda DSL：
+警衛的名冊上，要記每個人的帳號和密碼。
 
-```java
-@Configuration
-@EnableWebSecurity
-public class SecurityConfig {
+<v-clicks>
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
-        http
-            .authorizeHttpRequests(auth -> auth ... )   // 路徑授權（下一頁）
-            .formLogin(Customizer.withDefaults())
-            .httpBasic(Customizer.withDefaults())
-            .csrf(csrf -> csrf.disable());
-        return http.build();   // ← 一定要 build 才會建立 Filter Chain
-    }
-}
-```
+- 如果名冊上寫著「tom：tom123」，名冊一旦被偷，**所有人的密碼都外流了**
+- 很多人在不同網站用同一組密碼，損失不只是這一個系統
+- 所以有一條鐵則：**密碼絕對不能照原樣存起來**
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ Spring Boot 3.x / 4.x 不再用 <code>WebSecurityConfigurerAdapter</code>，改成 <code>SecurityFilterChain</code> Bean。
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 做法：存之前，先把密碼丟進一台「攪碎機」。出來的是一串看不懂的亂碼，而且<b>沒有辦法從亂碼變回原本的密碼</b>。名冊上只記這串亂碼。
 </div>
 
-<!--
-先看骨架三大要點：
-一，@Configuration + @EnableWebSecurity，告訴 Spring 這是安全設定類。
-二，宣告 SecurityFilterChain 這個 Bean，用 Lambda DSL 串規則。
-三，最後 return http.build()，才會真的建立 Filter Chain。
-
-authorizeHttpRequests 的完整內容下一頁展開。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# SecurityFilterChain 基本結構（二）完整內容
-
-```java
-http
-    .authorizeHttpRequests(auth -> auth
-        // 公開路徑：任何人都能存取
-        .requestMatchers("/", "/login", "/register").permitAll()
-        .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
-        // 需要特定角色
-        .requestMatchers("/admin/**").hasRole("ADMIN")
-        .requestMatchers("/api/orders/**").hasAuthority("ORDER_WRITE")
-        // 其餘所有路徑：需要登入
-        .anyRequest().authenticated()
-    )
-    .formLogin(Customizer.withDefaults())   // 表單/session 登入
-    .httpBasic(Customizer.withDefaults())   // Postman Basic Auth 靠這個
-    .csrf(csrf -> csrf.disable());
-```
+</v-click>
 
 <!--
-把上一頁省略的 authorizeHttpRequests 展開。
-路徑授權規則後面 Part 5 會逐條解釋，這裡先看整體長相。
-最後三行的登入方式與 CSRF，再下一頁詳細說明。
+警衛的名冊上，要記每個人的帳號和密碼，這樣才能核對。
+
+（下一步）如果名冊上直接寫著「tom，密碼 tom123」，名冊一旦被偷，所有人的密碼都外流了。
+
+（下一步）而且很多人在不同的網站用同一組密碼。所以損失不只是這一個系統。
+
+（下一步）所以有一條鐵則：密碼絕對不能照原樣存起來。照原樣存，有一個名字，叫做存明碼。
+
+（下一步）那要怎麼辦？做法是：存之前，先把密碼丟進一台攪碎機。出來的是一串看不懂的亂碼，而且沒有辦法從亂碼變回原本的密碼。名冊上只記這串亂碼。就算名冊被偷，小偷拿到的也只是亂碼。
 -->
 
 ---
 
-# 登入方式與 CSRF 設定
+# 攪碎機：BCryptPasswordEncoder
 
-上一頁最後三行決定「怎麼登入」與「要不要 CSRF」：
-
-| 設定 | 作用 | 什麼時候用 |
-|------|------|-----------|
-| `.formLogin(...)` | 表單 / session 登入，未登入導向登入頁 | 傳統網站、瀏覽器頁面 |
-| `.httpBasic(...)` | 接受 `Authorization: Basic` header | Postman、curl 測 API |
-| `.csrf(csrf -> csrf.disable())` | 關掉 CSRF 保護 | 純 REST API（token 驗證） |
-
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>自訂 SecurityFilterChain 後，只有你明確寫的登入方式才生效。</b> 只寫 <code>formLogin</code>，用 Postman 送 Basic Auth 不會被認，反而拿到登入頁 HTML；要用 Basic Auth 測 API，一定要加 <code>.httpBasic(...)</code>。
-</div>
-
-<!--
-關鍵觀念：Spring Security 預設 formLogin 和 httpBasic 兩種都開，
-但一旦自訂 SecurityFilterChain，就變成「只有你寫的才有」。
-
-很多人只抄了 formLogin，然後用 Postman Basic Auth 測，
-結果拿到一個登入頁 HTML，卡很久 — 就是因為 httpBasic 沒開。
-
-csrf().disable() 這裡先知道「純 API 常關掉」即可，
-CSRF 是什麼、為什麼能關，Part 9 有完整說明。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# Part 5
-## 路徑授權規則
-
-<!--
-有了基本結構之後，我們來深入了解路徑授權的設定。
-哪些路徑公開，哪些要登入，哪些要特定角色。
--->
-
----
-
-# authorizeHttpRequests 授權規則
-
-| 方法 | 說明 | 範例 |
-|------|------|------|
-| `permitAll()` | 所有人都可以存取，不需登入 | 公開首頁、登入頁 |
-| `authenticated()` | 需要登入，任何角色都可以 | 一般會員頁面 |
-| `hasRole("ADMIN")` | 需要 `ROLE_ADMIN` 角色 | 後台管理 |
-| `hasAuthority("READ")` | 需要 `READ` 這個 authority | 細粒度權限控制 |
-| `denyAll()` | 所有人都拒絕 | 暫時關閉的功能 |
-
-**規則順序很重要！** 從上到下依序比對，第一個符合的規則生效。
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>hasRole vs hasAuthority：</b> hasRole("ADMIN") 會自動加上 ROLE_ 前綴去比對；hasAuthority("ROLE_ADMIN") 則完全比對字串。
-</div>
-
-<!--
-這張表格是你最常查的東西，建議記下來。
-
-特別強調一下規則的順序。
-Spring Security 是從上到下比對的，所以比較精確的規則要放在前面。
-比如 /admin/** 要放在 anyRequest 前面，不然就永遠輪不到它。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# 路徑授權設定範例
-
-```java
-http.authorizeHttpRequests(auth -> auth
-    // 公開路徑：任何人都能存取
-    .requestMatchers("/", "/login", "/register").permitAll()
-    .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
-
-    // 需要特定角色
-    .requestMatchers("/admin/**").hasRole("ADMIN")
-    .requestMatchers("/api/orders/**").hasAuthority("ORDER_WRITE")
-
-    // 其餘所有路徑：需要登入
-    .anyRequest().authenticated()
-);
-```
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>requestMatchers 支援 Ant 風格路徑：</b> <code>/admin/**</code> 代表 /admin 底下的所有路徑。
-</div>
-
-<!--
-來看一個實際的範例。
-
-首頁、登入頁、註冊頁當然要公開，不然用戶連登入都沒辦法。
-GET /products/** 也可以公開，讓未登入的用戶瀏覽商品。
-
-但是 /admin/** 就要限制成只有 ADMIN 角色才能進入。
-
-最後 anyRequest().authenticated() 是保底規則，
-其他沒有明確設定的路徑都需要登入。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# Part 6
-## InMemoryUserDetailsManager：快速設定測試帳號
-
-<!--
-路徑保護設定好了，那帳號密碼要怎麼設定？
-對於開發和測試階段，我們可以用 InMemoryUserDetailsManager，
-把帳號資料直接放在記憶體裡，不需要資料庫。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# 設定記憶體帳號（一）class 結構
-
-三個 `@Bean` 都定義在同一個 `SecurityConfig` 裡：
-
-```java
-@Configuration
-@EnableWebSecurity
-public class SecurityConfig {
-
-    @Bean  // ① 密碼編碼器（userDetailsService 會注入它）
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean  // ② 記憶體帳號（下一頁）
-    public UserDetailsService userDetailsService(PasswordEncoder encoder) { ... }
-
-    @Bean  // ③ 前面 Part 4 的 securityFilterChain(...)
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) { ... }
-}
-```
-
-<!--
-先看整體結構：三個 Bean 都在同一個 @Configuration class 裡。
-Spring 開機掃到 SecurityConfig，把三個 @Bean 都註冊進容器。
-下一頁看 userDetailsService 的完整內容。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# 設定記憶體帳號（二）UserDetailsService
-
-```java
-@Bean
-public UserDetailsService userDetailsService(PasswordEncoder encoder) {
-    UserDetails user = User.builder()
-        .username("alice")
-        .password(encoder.encode("password123"))
-        .roles("USER")
-        .build();
-    UserDetails admin = User.builder()
-        .username("bob")
-        .password(encoder.encode("admin456"))
-        .roles("USER", "ADMIN")
-        .build();
-    return new InMemoryUserDetailsManager(user, admin);
-}
-```
-
-<!--
-用 User.builder() 建立每個帳號，設定帳號、密碼、角色。
-PasswordEncoder 參數由容器自動注入（來自上一頁的 ① Bean）。
-密碼一定要 encode，明文儲存非常危險。
-
-InMemoryUserDetailsManager 適合開發初期或單元測試，
-記憶體帳號在重啟後就不見了，不適合正式環境。
-
-提醒：要用 Postman Basic Auth 測，securityFilterChain 裡要加 .httpBasic(Customizer.withDefaults())，
-只寫 formLogin 的話 Basic Auth header 不會被認，會回 401。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# Part 7
-## UserDetailsService：從資料庫載入使用者
-
-<!--
-真實的專案當然不可能把帳號放在記憶體裡。
-我們需要從資料庫查詢使用者資料。
-這時候就要實作 UserDetailsService 介面。
--->
-
----
-
-# UserDetails 介面核心方法
-
-| 方法 | 說明 |
-|------|------|
-| `getUsername()` | 回傳登入用的帳號名稱 |
-| `getPassword()` | 回傳（加密後的）密碼字串 |
-| `getAuthorities()` | 回傳這個用戶擁有的角色/權限集合 |
-| `isAccountNonExpired()` | 帳號是否未過期 |
-| `isAccountNonLocked()` | 帳號是否未被鎖定 |
-| `isEnabled()` | 帳號是否啟用 |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>實作方式：</b> 通常讓資料庫的 User Entity 直接實作 UserDetails，或另外建一個 Adapter 類別。
-</div>
-
-<!--
-UserDetails 介面定義了 Spring Security 需要知道的所有用戶資訊。
-
-最常用的是 getUsername、getPassword、getAuthorities 這三個。
-後面三個 boolean 方法讓你可以實作「帳號鎖定」、「帳號停用」等進階功能。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# User Entity（JPA）
-
-用 JPA 把使用者對應到資料表，`username` 設唯一：
-
-```java
-@Entity
-@Table(name = "users")
-public class User {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false, unique = true)
-    private String username;
-
-    @Column(nullable = false)
-    private String password;      // 存 BCrypt 密文，不是明文
-
-    @Column(nullable = false)
-    private String role;          // 例如 "USER"、"ADMIN"
-
-    private boolean enabled = true;
-
-    // getter / setter 省略
-}
-```
-
-<!--
-業界最常見規格：username 加 unique 約束，資料庫層就擋掉重複帳號。
-password 欄位存的是 BCrypt 密文，絕不存明文。
-role 這裡先用單一字串，多角色可以另拉一張關聯表，這裡從簡。
-enabled 對應 UserDetails.isEnabled()，可做帳號停用。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# UserRepository（Spring Data JPA）
-
-繼承 `JpaRepository`，用方法名衍生查詢，不用寫 SQL：
-
-```java
-public interface UserRepository extends JpaRepository<User, Long> {
-
-    Optional<User> findByUsername(String username);
-}
-```
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>回傳 <code>Optional</code>：</b> 查無使用者時是空的 Optional，Service 就能 <code>orElseThrow</code> 丟 <code>UsernameNotFoundException</code>。
-</div>
-
-<!--
-Spring Data JPA 的招牌：方法名 findByUsername 會自動生成 SELECT ... WHERE username = ?。
-回傳 Optional 是業界慣例，強迫呼叫端處理「查不到」的情況，避免 NPE。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# 實作自訂 UserDetailsService
-
-```java
-@Service
-public class CustomUserDetailsService implements UserDetailsService {
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Override
-    public UserDetails loadUserByUsername(String username)
-            throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
-            .orElseThrow(() ->
-                new UsernameNotFoundException(
-                    "找不到使用者：" + username));
-
-        return org.springframework.security.core.userdetails.User
-            .withUsername(user.getUsername())
-            .password(user.getPassword())
-            .roles(user.getRole())
-            .build();
-    }
-}
-```
-
-<!--
-這是從資料庫載入用戶的標準做法。
-
-實作 UserDetailsService 介面，只需要覆寫一個方法：loadUserByUsername。
-Spring Security 在用戶登入的時候會自動呼叫這個方法，傳入用戶輸入的帳號。
-
-我們用帳號去資料庫查詢，找不到就拋出 UsernameNotFoundException。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# 改用資料庫後，SecurityConfig 要跟著改
-
-`CustomUserDetailsService` 標了 `@Service`，本身已實作 `UserDetailsService` 介面，Spring 開機會自動偵測、註冊成 Bean。
-
-```java
-@Configuration
-@EnableWebSecurity
-public class SecurityConfig {
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {   // 保留，加密要用
-        return new BCryptPasswordEncoder();
-    }
-
-    // Part 6 的 userDetailsService() @Bean 要整段刪掉！
-    // 不刪的話，容器裡會有兩個 UserDetailsService候選：
-    // InMemoryUserDetailsManager 跟 CustomUserDetailsService，
-    // 造成 NoUniqueBeanDefinitionException，應用程式啟動失敗。
-
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
-        // ... 授權規則、httpBasic、csrf 不變
-        return http.build();
-    }
-}
-```
-
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>InMemoryUserDetailsManager 跟 CustomUserDetailsService 不能並存！</b> 兩個都是 <code>UserDetailsService</code> 型別的 Bean，容器裡只能留一個。改資料庫版時，記得把 Part 6 手動宣告的 <code>userDetailsService()</code> 方法整段刪掉。
-</div>
-
-<!--
-這一頁補上 Part 6 到 Part 7 之間漏掉的銜接：光是寫好 CustomUserDetailsService 類別還不夠，因為 Part 6 已經在 SecurityConfig 裡用 @Bean 宣告了另一個 UserDetailsService（InMemory 版）。
-
-@Service 讓 Spring 自動把 CustomUserDetailsService 註冊成 Bean，這時候容器裡如果還留著 Part 6 的 InMemory Bean，就會有兩個同型別的候選者，Spring 不知道要用哪個，直接啟動失敗，丟 NoUniqueBeanDefinitionException。
-
-解法很單純：刪掉 Part 6 那個手動宣告的 userDetailsService() @Bean method，只留 CustomUserDetailsService 這個 @Service。PasswordEncoder 因為型別不同（不是 UserDetailsService），不受影響，繼續留著給密碼加密跟比對用。
-
-這個銜接邏輯後面練習二的解答也會再示範一次。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# Part 8
-## BCryptPasswordEncoder：密碼加密
-
-<!--
-密碼絕對不能用明文儲存。這是基本的資安常識。
-Spring Security 內建了 BCryptPasswordEncoder，讓我們輕鬆處理密碼加密。
--->
-
----
-
-# 設定 BCryptPasswordEncoder
+在 `SecurityConfig` 裡加一個 `@Bean`：
 
 ```java
 @Bean
@@ -749,234 +560,322 @@ public PasswordEncoder passwordEncoder() {
 }
 ```
 
-| 特性 | 說明 |
-|------|------|
-| 單向加密 | 無法從密文還原明文 |
-| 自動加鹽 | 每次加密結果不同，防止彩虹表攻擊 |
-| 強度可調 | 預設 strength=10，越高越安全但越慢 |
+它有兩個方法：
 
-```java
-String encoded = passwordEncoder.encode("myPassword");
-boolean matches = passwordEncoder.matches("myPassword", encoded);
+```java {1|2}
+String encoded = passwordEncoder.encode("tom123");            // 攪碎
+boolean same = passwordEncoder.matches("tom123", encoded);    // 核對
 ```
 
-<!--
-BCrypt 是目前儲存密碼最推薦的演算法之一。
+<v-clicks>
 
-它有兩個重要特性：
-第一，單向加密，所以你無法從資料庫的密碼欄位反推用戶的原始密碼。
-第二，自動加鹽，就算兩個用戶密碼一樣，資料庫裡存的雜湊值也會不同，
-這樣就算資料庫被拖走，攻擊者也很難用彩虹表來破解。
--->
+- `encode()`：把密碼攪碎。結果像 `$2a$10$N9qo8uLOickgx2ZMRZoMye…`
+- `matches()`：拿使用者輸入的密碼，和名冊上的亂碼核對，回傳 `true` 或 `false`
 
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# Part 9
-## CSRF 保護：什麼時候開、什麼時候關？
+</v-clicks>
 
 <!--
-前面 Part 3 用 Postman 撞到 403、Part 4 寫了 csrf().disable()，
-但一直沒解釋 CSRF 到底是什麼。這一章補齊原理，並給開關的判斷準則。
--->
+Spring Security 準備好了攪碎機，叫做 BCryptPasswordEncoder。BCrypt 是這種攪碎方法的名字。
 
----
+在 SecurityConfig 裡加一個 @Bean，交出一個 BCryptPasswordEncoder。這樣整個專案都可以用 @Autowired 拿到它。
 
-# CSRF 是什麼？
+它有兩個方法。
 
-**CSRF＝Cross-Site Request Forgery（跨站請求偽造）**
+（下一步）encode，把密碼攪碎。
 
-攻擊者騙你的瀏覽器，用你**已登入的身分**，偷偷送出你沒打算送的請求。
+（下一步）matches，核對。
 
-**攻擊流程：**
+（下一步）encode 的結果像這樣，一串很長的亂碼，開頭是錢字號 2a。
 
-1. 你登入 `bank.com`，瀏覽器存了 session cookie
-2. 沒登出，又逛到惡意網站 `evil.com`
-3. `evil.com` 藏一個表單自動送 `POST bank.com/transfer?to=hacker`
-4. 瀏覽器送出時**自動帶上 `bank.com` 的 cookie** → 銀行以為是你本人 → 轉帳成功
-
-> 重點：攻擊者不用偷到你的密碼，只是**借用瀏覽器自動帶 cookie 的特性**。
-
-<!--
-先講清楚 CSRF 攻擊本身，下一頁再講防禦與為什麼 API 常關掉。
-關鍵：cookie 是瀏覽器「自動」帶的，只要 domain 對就帶，不管請求從哪個網站發出來。
+（下一步）matches 有兩個參數：前面是使用者輸入的密碼，後面是名冊上的亂碼。它會回傳 true 或 false。登入的時候，Spring Security 會自動幫我們呼叫它，不用自己寫。
 -->
 
 ---
 
-# CSRF 的防禦：CSRF token
+# 攪碎機的三個特性
 
-**防法：CSRF token**
+<v-clicks>
 
-伺服器發一個隨機 token 給合法頁面，寫入請求（`POST`/`PUT`/`DELETE`）必須帶這個 token。
+- **回不去**：只能從密碼變成亂碼，不能從亂碼變回密碼
+- **每次都不一樣**：同一個密碼攪兩次，得到兩串不同的亂碼
+- **還是能核對**：所以核對要用 `matches()`，不能自己用 `equals()` 比
 
-`evil.com` 拿不到你的 token → 偽造的請求被擋。
+</v-clicks>
 
-> 這也解釋了 Part 3 的現象：Postman 送 POST 沒帶 token → 被擋 → 403 Forbidden。
+<v-click>
 
-<!--
-CSRF token 就像在表單上加蓋你的個人印章，偽造者沒有你的印章就無法過關。
-Spring Security 預設開啟這個保護，所以 Postman 直接送 POST 會 403。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# 什麼時候開、什麼時候關？
-
-CSRF 攻擊的根源是「瀏覽器自動帶 cookie」。驗證方式決定要不要保留 CSRF：
-
-| 情境 | 驗證方式 | 建議設定 | 原因 |
-|------|----------|----------|------|
-| 傳統 Form 表單應用 | session + cookie | **開啟** CSRF | cookie 會自動帶，可被偽造 |
-| REST API（JWT / Stateless） | `Authorization: Bearer` | **關閉** CSRF | 無 session，無法被偽造 |
-| 前後端分離（Angular / React） | 多為 Token 認證 | **關閉** CSRF | token 靠 JS 手動帶，不自動 |
-
-```java
-http.csrf(csrf -> csrf.disable());        // REST API：關閉
-http.csrf(Customizer.withDefaults());     // Form 應用：開啟（預設即開啟）
-```
-
-<!--
-REST API 用 Bearer token，token 存在 JS 裡、要手動放進 Authorization header，
-瀏覽器不會自動帶，攻擊者的 evil.com 也拿不到 → 純 API 關掉 CSRF 是安全的。
-反過來，如果專案還是 session + cookie 登入，就不要亂關 CSRF。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# Part 10
-## Spring Security Filter Chain 架構
-
-<!--
-我們用了這麼多功能，但 Spring Security 底層到底是怎麼運作的？
-了解它的架構，遇到問題才知道從哪裡下手。
--->
-
----
-
-# Filter Chain 架構概覽
-
-Spring Security 的核心是一系列的 **Filter（過濾器）**，每個 HTTP 請求都會依序通過：
-
-| Filter | 負責的工作 |
-|--------|------------|
-| `SecurityContextPersistenceFilter` | 從 Session 載入 / 儲存 SecurityContext |
-| `UsernamePasswordAuthenticationFilter` | 處理 `/login` 的帳號密碼表單登入 |
-| `BasicAuthenticationFilter` | 處理 HTTP Basic 認證 |
-| `ExceptionTranslationFilter` | 攔截認證 / 授權例外，轉成 401 / 403 回應 |
-| `AuthorizationFilter` | 最後一關：比對 authorizeHttpRequests 規則 |
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>原理：</b> 請求通過所有 Filter 後，才會到達你的 Controller。遇到 401/403，先看是哪個 Filter 攔截的。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 「每次都不一樣」是故意的。這樣就算兩個人用同一個密碼，名冊上的亂碼也不同，小偷看不出誰和誰的密碼一樣。
 </div>
 
+</v-click>
+
 <!--
-Spring Security 的設計就是一條流水線。
+這台攪碎機有三個特性。
 
-每個 HTTP 請求進來，都要依序通過這些 Filter。
-每個 Filter 負責一件事，如果其中一個 Filter 決定攔截這個請求，
-後面的 Filter 就不會執行了。
+（下一步）第一，回不去。只能從密碼變成亂碼，不能從亂碼變回密碼。連我們自己、連系統管理員，都不知道使用者的密碼是什麼。
 
-了解這個架構很重要，因為當你遇到 401 或 403 錯誤，
-你知道要去找哪個 Filter 出了問題。
+（下一步）第二，每次都不一樣。同一個密碼攪兩次，會得到兩串不同的亂碼。
+
+（下一步）第三，雖然每次不一樣，還是能核對。所以核對一定要用 matches，不能自己把密碼再攪一次、用 equals 去比，那樣永遠不會相等。
+
+（下一步）「每次都不一樣」是故意設計的。這樣就算兩個人用同一個密碼，名冊上的亂碼也不同。小偷看不出誰和誰的密碼一樣。
 -->
 
 ---
 
-# SecurityContext：儲存當前登入用戶
+# 想一想
 
-認證成功後，用戶資訊存在 `SecurityContext` 裡，可以隨時取用：
+<Poll question="使用者忘記密碼，打電話問客服：「可以告訴我原本的密碼嗎？」正確的系統應該怎麼做？" options="從資料庫查出密碼告訴他|把亂碼還原成密碼告訴他|沒辦法告訴他，只能讓他重新設定一組|把亂碼直接唸給他" answer="3" />
 
-```java
-Authentication auth =
-    SecurityContextHolder.getContext().getAuthentication();
+<!--
+來想一題。
 
-String username = auth.getName();
-Collection<? extends GrantedAuthority> roles = auth.getAuthorities();
+使用者忘記密碼，打電話問客服：可以告訴我原本的密碼嗎？正確的系統應該怎麼做？
+
+（等大家作答）
+
+（下一步）答案是：沒辦法告訴他，只能讓他重新設定一組。
+
+資料庫裡只有亂碼，而且亂碼變不回密碼。所以正常的網站都是寄一封「重設密碼」的信，不會把舊密碼寄給你。如果有網站能把你的舊密碼寄給你，代表它存的是明碼，那個網站並不安全。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 5
+# 第一份名冊：寫在程式裡的帳號
+
+<!--
+有了攪碎機，可以來建立帳號了。先用最簡單的方式。
+-->
+
+---
+
+# 先建兩個測試帳號
+
+在 `SecurityConfig` 再加一個 `@Bean`：
+
+```java {2|3-7|8-12|13}
+@Bean
+public UserDetailsService userDetailsService(PasswordEncoder encoder) {
+    UserDetails tom = User.builder()
+            .username("tom")
+            .password(encoder.encode("tom123"))
+            .roles("STUDENT")
+            .build();
+    UserDetails amy = User.builder()
+            .username("amy")
+            .password(encoder.encode("amy123"))
+            .roles("TEACHER")
+            .build();
+    return new InMemoryUserDetailsManager(tom, amy);
+}
 ```
 
-| 類別 | 說明 |
-|------|------|
-| `SecurityContextHolder` | 靜態入口，持有當前執行緒的 SecurityContext |
-| `SecurityContext` | 容器，持有 Authentication 物件 |
-| `Authentication` | 包含 Principal（身份）、Credentials（憑證）、Authorities（權限） |
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <code>UserDetailsService</code> 就是警衛的<b>名冊</b>。<code>InMemoryUserDetailsManager</code> 是「放在記憶體裡的名冊」：帳號寫死在程式裡，適合練習，不適合正式使用。
+</div>
+
+</v-click>
 
 <!--
-認證成功之後，Spring Security 會把用戶資訊包裝成 Authentication 物件，
-存到 SecurityContextHolder 裡面。
+在 SecurityConfig 再加一個 @Bean。
 
-在 Controller 或 Service 裡面，你可以隨時用 SecurityContextHolder 取得當前登入的用戶。
-這很常用，比如取得當前用戶的 ID，然後查他自己的訂單。
+（下一步）這個方法交出的型別是 UserDetailsService。它就是警衛的名冊。方法的參數寫了 PasswordEncoder，Spring 會把剛才那台攪碎機交進來。
+
+（下一步）第一個帳號 tom。用 User.builder() 開始，一項一項填：帳號 tom、密碼 tom123，注意密碼有先經過 encode 攪碎。roles 是身分，STUDENT。最後 build() 完成。這裡的 User 是 Spring Security 提供的類別，import 的時候請選 org.springframework.security 開頭的。
+
+（下一步）第二個帳號 amy，是一位老師。身分是 TEACHER。
+
+（下一步）最後把兩個帳號放進 InMemoryUserDetailsManager 回傳。
+
+（下一步）InMemory 的意思是放在記憶體裡。帳號寫死在程式裡，適合練習，不適合正式使用。因為要新增一個帳號，就得改程式、重新啟動。
+
+有了自己的名冊之後，Spring Security 就不會再產生那個臨時的 user 帳號了。
 -->
 
 ---
-layout: default
----
 
-# 練習一：設定 Spring Security 保護 REST API
-### 任務說明
+# 用 Postman 測試
 
-你有一個電商後台，需要設定以下安全規則：
+重新啟動，在 Authorization 頁籤換不同的帳號試試看：
 
-1. `GET /api/products/**` — 公開，任何人可以存取
-2. `POST/PUT/DELETE /api/products/**` — 需要 `ADMIN` 角色
-3. `GET /api/orders/my` — 需要登入（任何角色）
-4. `/api/admin/**` — 需要 `ADMIN` 角色
-5. 其他所有路徑 — 需要登入
+<v-clicks>
 
-**測試帳號需求：**
-- `alice` / `pass123` → `USER` 角色
-- `bob` / `admin456` → `USER` + `ADMIN` 角色
+- 不帶帳號，`GET /clubs` → **200**（公開）
+- 不帶帳號，`GET /students` → **401**（第一關沒過）
+- `tom` / `tom123`，`GET /students` → **200**
+- `tom` / `tom123`，`DELETE /students/1` → **403**（第二關沒過）
+- `amy` / `amy123`，`DELETE /students/1` → **200**
 
-**要求：** 使用 SecurityFilterChain + Lambda DSL，關閉 CSRF。
+</v-clicks>
 
 <!--
-這個練習涵蓋了我們學到的所有基本設定。
+重新啟動，在 Postman 的 Authorization 頁籤換不同的帳號試試看。
 
-試著啟動之後，用 Postman 測試看看：
-不帶認證呼叫 GET /api/products/ 應該成功，
-呼叫 DELETE /api/products/1 應該回 401 或 403。
+（下一步）不帶帳號，Auth Type 選 No Auth。GET /clubs，得到 200。因為社團是公開的。
+
+（下一步）一樣不帶帳號，GET /students，得到 401。第一關沒過，警衛不知道你是誰。
+
+（下一步）換成 tom 的帳號密碼，GET /students，得到 200。
+
+（下一步）一樣用 tom，DELETE /students/1，得到 403。第二關沒過，學生不能刪除資料。
+
+（下一步）換成 amy 的帳號密碼，DELETE /students/1，得到 200。老師可以。
+
+四條規則都照我們寫的運作了。
 -->
 
 ---
-layout: default
+layout: section
+class: flex flex-col justify-center items-center text-center
 ---
 
-# 練習一：解題提示
-### 提示說明
-
-1. HTTP Method 可以在 `requestMatchers` 的第一個參數指定：`requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()`
-2. 多個 HTTP Method 的規則要分開寫，PUT 和 DELETE 各寫一行 `requestMatchers`
-3. `PasswordEncoder` Bean 要獨立定義，再注入到 `UserDetailsService`，避免循環依賴
-4. 規則順序很重要：`/api/products/**` 的 POST/PUT/DELETE 限制要寫在 `anyRequest()` 之前
+# Part 6
+# 把名冊放進檔案室：資料庫的帳號
 
 <!--
-最容易卡住的地方是 HTTP Method 的設定。
-requestMatchers 的第一個參數可以傳入 HttpMethod enum。
-
-另外密碼編碼器的循環依賴問題也是很多人會踩到的坑。
-PasswordEncoder 要定義成獨立的 Bean，不然 Spring 在初始化的時候可能會出問題。
-
-規則順序也是常見地雷：Spring Security 由上到下比對，
-精確規則沒寫在 anyRequest 前面就永遠輪不到它。
+帳號寫死在程式裡不實用。真正的系統，帳號是放在資料庫裡的。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.82em !important; }
+
+# 要新增的四個檔案
+
+<v-clicks>
+
+- `entity/Account`：帳號的 PO，對應 `account` 資料表
+- `repository/AccountRepository`：用帳號名稱查詢
+- `service/AccountService`：**資料庫版的名冊**，也負責註冊
+- `controller/AccountController`：註冊的 API
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 這四層的分工，和第三十七章的 <code>Student</code> 完全一樣。新的東西只有一個：<code>AccountService</code> 要告訴警衛「怎麼從資料庫查出一個帳號」。
+</div>
+
+</v-click>
+
+<!--
+要新增四個檔案，各放在自己的資料夾。
+
+（下一步）entity 裡的 Account，帳號的 PO，對應 account 資料表。
+
+（下一步）repository 裡的 AccountRepository，用帳號名稱查詢。
+
+（下一步）service 裡的 AccountService。它是資料庫版的名冊，也負責註冊。
+
+（下一步）controller 裡的 AccountController，提供註冊的 API。
+
+（下一步）這四層的分工，和第三十七章的 Student 完全一樣。新的東西只有一個：AccountService 要告訴警衛，怎麼從資料庫查出一個帳號。
+
+類別取名叫 Account，不叫 User，是因為 Spring Security 已經有一個類別叫 User 了，剛才才用過。取不同的名字，才不會搞混。
+-->
+
 ---
 
-# 練習一：解答程式碼 — SecurityConfig（1/2）
+# Account 和 AccountRepository
+
+```java {all|10|11}
+@Getter
+@Setter
+@Entity
+@Table(name = "account")
+public class Account {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+    private String username;
+    private String password;   // 存的是攪碎後的亂碼
+    private String role;       // "STUDENT" 或 "TEACHER"
+}
+```
 
 ```java
+public interface AccountRepository extends JpaRepository<Account, Integer> {
+    Account findByUsername(String username);
+}
+```
+
+<!--
+先看 Account。寫法和 Student 一樣：@Entity、@Table、主鍵，加上三個欄位。
+
+（下一步）password 欄位，存的是攪碎後的亂碼，不是原本的密碼。
+
+（下一步）role 欄位，存身分。內容是 STUDENT 或 TEACHER。
+
+下面是 AccountRepository。除了繼承來的方法，多寫了一個 findByUsername。這是第二十八章學過的方法名稱查詢：照規則取名字，助理就會自動產生「用 username 查詢」的 SQL。查不到的時候，回傳 null。
+
+因為設定檔有 ddl-auto=update，啟動的時候 account 資料表會自動建好。
+-->
+
+---
+
+# AccountService：資料庫版的名冊
+
+<CodeSteps>
+
+```java {1-2|7-8|9|10-12|13-17}
+@Service
+public class AccountService implements UserDetailsService {
+
+    @Autowired
+    private AccountRepository accountRepository;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        Account account = accountRepository.findByUsername(username);
+        if (account == null) {
+            throw new UsernameNotFoundException("找不到帳號：" + username);
+        }
+        return User.builder()
+                .username(account.getUsername())
+                .password(account.getPassword())
+                .roles(account.getRole())
+                .build();
+    }
+}
+```
+
+- `implements UserDetailsService`：宣告「我是一份名冊」
+- 名冊只需要一個方法：給一個帳號名稱，回傳這個人的資料
+- 請承辦人員到資料庫查
+- 查不到，丟出「找不到帳號」的例外
+- 查到了，把資料抄成警衛看得懂的格式（密碼已經是亂碼，不用再攪）
+
+</CodeSteps>
+
+<!--
+重點是 AccountService。
+
+（下一步）@Service，加上 implements UserDetailsService。implements 我們在第七章學過，意思是照著一份介面的規定來寫。這裡是宣告：我是一份名冊。
+
+（下一步）名冊的規定只有一個方法，loadUserByUsername。給一個帳號名稱，回傳這個人的資料。名稱和參數要完全照寫，上面加 @Override。
+
+（下一步）方法裡面，先請 AccountRepository 到資料庫查。
+
+（下一步）查不到的話，丟出 UsernameNotFoundException。警衛收到之後，會回覆 401。
+
+（下一步）查到了，把資料抄成警衛看得懂的格式。和剛才建測試帳號的寫法一樣，用 User.builder()。請注意密碼這一行：資料庫裡存的已經是亂碼，所以直接放進去，不用再 encode 一次。
+
+這個方法我們不會自己呼叫。有人登入的時候，警衛會自動來呼叫它，再用攪碎機的 matches 核對密碼。
+-->
+
+---
+
+# 只能留一份名冊
+
+回到 `SecurityConfig`，**把 Part 5 的 `userDetailsService()` 整個刪掉**：
+
+```java {all|9}
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -985,386 +884,485 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+    // userDetailsService() 整個 @Bean 刪掉
 
     @Bean
-    public UserDetailsService userDetailsService(PasswordEncoder encoder) {
-        UserDetails alice = User.builder()
-            .username("alice")
-            .password(encoder.encode("pass123"))
-            .roles("USER")
-            .build();
-        UserDetails bob = User.builder()
-            .username("bob")
-            .password(encoder.encode("admin456"))
-            .roles("USER", "ADMIN")
-            .build();
-        return new InMemoryUserDetailsManager(alice, bob);
-    }
-```
-
-<!--
-先看 PasswordEncoder 和 UserDetailsService 這兩個 Bean。
-PasswordEncoder 獨立定義，userDetailsService 用參數注入，避免循環依賴。
-alice 只有 USER 角色，bob 同時有 USER 和 ADMIN，對應題目的測試帳號需求。
-SecurityFilterChain 的部分在下一頁。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# 練習一：解答程式碼 — SecurityConfig（2/2）
-
-```java
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
-        http.authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/products/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/products/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMIN")
-                .requestMatchers("/api/orders/my").authenticated()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .anyRequest().authenticated()
-            )
-            .httpBasic(Customizer.withDefaults())
-            .csrf(csrf -> csrf.disable());
-        return http.build();
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        // 內容不變
     }
 }
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>驗證：</b> 不帶認證呼叫 <code>GET /api/products/1</code> 應該 200；呼叫 <code>DELETE /api/products/1</code> 應該 401（未登入）或 403（登入但非 ADMIN）。
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 如果兩份名冊同時存在，警衛不知道該用哪一份，結果是<b>所有人登入都得到 401</b>。啟動訊息裡會有一行警告：<code>Found 2 UserDetailsService beans</code>。
 </div>
 
+</v-click>
+
 <!--
-GET /api/products/** 公開，POST/PUT/DELETE 各自限定 ADMIN，
-且都寫在 anyRequest 之前，符合順序規則。
-httpBasic 開啟才能用 Postman Basic Auth 測試。
+回到 SecurityConfig。
+
+（下一步）把 Part 5 寫的 userDetailsService 整個 @Bean 刪掉。攪碎機和規則都保留。
+
+為什麼要刪？AccountService 上面有 @Service，它自己就是一顆 Bean，而且是一份名冊。Spring Security 會自動找到它來用。
+
+（下一步）如果沒有刪，兩份名冊同時存在，警衛不知道該用哪一份。結果是所有人登入都得到 401。這個錯誤不容易發現，因為程式可以正常啟動。線索在啟動訊息裡，會有一行警告：Found 2 UserDetailsService beans。所以請記得：名冊只能留一份。
 -->
 
 ---
-layout: default
----
 
-# 練習二：整合資料庫用戶認證
-### 任務說明
-
-把練習一的記憶體帳號換成資料庫帳號，**沿用 Part 7 的三件套**：
-
-1. **`User` Entity** — Part 7 已經寫好，直接用（`role` 欄位存 `"USER"` / `"ADMIN"`）
-2. **`UserRepository`** — Part 7 已經寫好，提供 `findByUsername`
-3. **`CustomUserDetailsService`** — Part 7 已經寫好，`@Service` 自動註冊成 Bean
-4. **`SecurityConfig`** — 從練習一改造：刪掉 `InMemoryUserDetailsManager` 的 `@Bean`，路徑規則多開一條 `/api/register`
-5. **`UserController`**（新寫）
-   - `POST /api/register`（公開，不需登入）— 建立新用戶，密碼要用 `BCryptPasswordEncoder` 加密後再存
-   - `GET /api/me` — 回傳當前登入用戶的帳號名稱
-
-**加分項目：** 在 `GET /api/me` 裡透過 `SecurityContextHolder` 取得當前用戶，不要用方法參數注入。
-
-<!--
-這個練習刻意不讓學生重寫 Entity 跟 Service —— Part 7 已經教過了，直接搬過來用。
-練習二真正要練的是「銜接」：把練習一的 InMemory 設定換掉，
-以及補上註冊 / 查詢自己身份的 API。
-
-命名全章一致：User / UserRepository / CustomUserDetailsService，
-下一章 ch45 做 JWT 時會原封不動繼續用同一組類別。
--->
-
----
-layout: default
----
-
-# 練習二：解題提示
-### 提示說明
-
-1. `User` 的 `role` 欄位存**不帶前綴**的字串（`"USER"` / `"ADMIN"`），搭配 `.roles(user.getRole())`，Spring 會自動補上 `ROLE_` 前綴 —— 這樣 `hasRole("ADMIN")` 才比對得到
-2. 練習一手動宣告的 `userDetailsService()` `@Bean` 要**整段刪掉**，否則跟 `CustomUserDetailsService` 撞型別，`NoUniqueBeanDefinitionException` 啟動失敗
-3. 啟用 HTTP Basic 認證：`http.httpBasic(Customizer.withDefaults())`；Postman 在 Authorization 頁籤選 Basic Auth 填帳密即可測
-4. 取得當前用戶：`SecurityContextHolder.getContext().getAuthentication().getName()`
-5. `POST /api/register` 要記得在 `authorizeHttpRequests` 裡 `permitAll()`，不然新用戶連註冊都要先登入，變成雞生蛋問題
-
-<div class="mt-3 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>只能二選一：</b> DB 存 <code>"USER"</code> 就用 <code>.roles()</code>；DB 存 <code>"ROLE_USER"</code> 就要改用 <code>.authorities()</code>。兩者混用會變成 <code>ROLE_ROLE_USER</code>，權限永遠比對不到。本章統一採用前者。
-</div>
-
-<!--
-三個容易踩的坑：
-
-第一是 roles 跟 authorities 的差異。本章統一：資料庫存 "USER"、"ADMIN" 這種短字串，
-程式用 .roles()，Spring 幫你加 ROLE_ 前綴。
-如果反過來資料庫存 ROLE_USER 又用 .roles()，就會疊成 ROLE_ROLE_USER，全部權限失效。
-
-第二是刪掉練習一的 InMemory Bean，這就是 Part 7 那頁講的銜接問題。
-
-第三是 /api/register 要記得 permitAll，這是最容易漏掉的地方——
-沒開的話新用戶要先登入才能註冊，邏輯上矛盾。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# 練習二：解答程式碼 — 資料層三件套（直接沿用 Part 7）
-
-這三個類別 **Part 7 已經寫過，一行都不用改**，複製過來即可：
+# 註冊：把新帳號寫進名冊
 
 ```java
-@Entity @Table(name = "users")
-public class User {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    @Column(nullable = false, unique = true) private String username;
-    @Column(nullable = false) private String password;   // BCrypt 密文
-    @Column(nullable = false) private String role;       // "USER" / "ADMIN"，不帶 ROLE_ 前綴
-    private boolean enabled = true;
-    // getter / setter 省略
-}
-
-public interface UserRepository extends JpaRepository<User, Long> {
-    Optional<User> findByUsername(String username);
+@Getter
+@Setter
+public class RegisterRequest {
+    private String username;
+    private String password;
 }
 ```
 
-<div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <code>CustomUserDetailsService</code> 也原封不動沿用 Part 7 的版本（下一頁再看一次重點）。
-</div>
+在 `AccountService` 加上攪碎機和 `register()`：
 
-<!--
-刻意不讓學生重寫一套 Member/MemberRepository —— Part 7 教過的東西就直接用，
-這樣從 Part 7 到練習二、再到下一章 ch45，類別名稱從頭到尾都是同一組，
-學生腦中只需要維護一份心智模型。
+```java {1-2|7|8}
+@Autowired
+private PasswordEncoder passwordEncoder;
 
-再強調一次 role 欄位：存 "USER" 而不是 "ROLE_USER"，因為下一頁用的是 .roles()。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# 練習二：解答程式碼 — CustomUserDetailsService（Part 7 原版）
-
-```java
-@Service   // ← 有這個註解，Spring 自動註冊成 UserDetailsService Bean
-public class CustomUserDetailsService implements UserDetailsService {
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Override
-    public UserDetails loadUserByUsername(String username)
-            throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
-            .orElseThrow(() ->
-                new UsernameNotFoundException("找不到使用者：" + username));
-
-        return org.springframework.security.core.userdetails.User
-            .withUsername(user.getUsername())
-            .password(user.getPassword())
-            .roles(user.getRole())   // DB 存 "USER"，Spring 自動補成 ROLE_USER
-            .build();
-    }
+public String register(RegisterRequest request) {
+    Account account = new Account();
+    account.setUsername(request.getUsername());
+    account.setPassword(passwordEncoder.encode(request.getPassword()));
+    account.setRole("STUDENT");
+    accountRepository.save(account);
+    return "註冊成功：" + account.getUsername();
 }
 ```
 
 <!--
-跟 Part 7 完全一樣，一行都沒改。
+名冊現在是空的，要有一個註冊的功能。
 
-再說一次 roles() 的規則：DB 存 "USER"，roles() 會自動補 ROLE_ 前綴變成 ROLE_USER，
-這樣練習一寫的 hasRole("ADMIN") 才比對得到。
-如果 DB 改存 "ROLE_ADMIN"，就要改用 authorities()，否則會疊成 ROLE_ROLE_ADMIN。
+先在 dto 資料夾新增 RegisterRequest。兩個欄位：帳號和密碼。它是第三十六章說的 Request DTO，前端送進來的資料。
 
-這個 @Service 本身就實作了 UserDetailsService，Spring 開機自動偵測、註冊成 Bean，
-不需要在 SecurityConfig 裡再手動宣告 userDetailsService()。
+接著在 AccountService 加東西。
+
+（下一步）用 @Autowired 拿到攪碎機。
+
+（下一步）register 方法裡最重要的一行：存進去之前，密碼一定要先 encode。這一行如果忘了，資料庫裡就是明碼，而且之後登入也會失敗，因為警衛是用 matches 核對的。
+
+（下一步）身分固定給 STUDENT。不能讓使用者自己決定身分，不然每個人都會說自己是老師。
+
+最後存進資料庫，回傳訊息。
 -->
 
 ---
-style: |
-  pre, code { font-size: 0.82em !important; }
----
 
-# 練習二：解答程式碼 — SecurityConfig（1/3）class 骨架
+# AccountController 和一條新規則
 
 ```java
-@Configuration
-@EnableWebSecurity
-public class SecurityConfig {
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {   // 跟練習一完全相同
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
-        http.authorizeHttpRequests(auth -> auth ... )   // 授權規則下一頁
-            .httpBasic(Customizer.withDefaults())
-            .csrf(csrf -> csrf.disable());
-        return http.build();
-    }
-}
-```
-
-<!--
-先看整體骨架：passwordEncoder 跟練習一完全相同可以直接沿用。
-authorizeHttpRequests 裡面的規則展開在下一頁。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# 練習二：解答程式碼 — SecurityConfig（2/3）授權規則
-
-`authorizeHttpRequests` 沿用**練習一同一組路徑規則**，只多加 `/api/register` 公開：
-
-```java
-http.authorizeHttpRequests(auth -> auth
-        .requestMatchers(HttpMethod.POST, "/api/register").permitAll()
-        .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
-        .requestMatchers(HttpMethod.POST, "/api/products/**").hasRole("ADMIN")
-        .requestMatchers(HttpMethod.PUT, "/api/products/**").hasRole("ADMIN")
-        .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMIN")
-        .requestMatchers("/api/orders/my").authenticated()
-        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-        // ↓ anyRequest / httpBasic / csrf 見下一頁
-```
-
-<!--
-authorizeHttpRequests 整組規則跟練習一一模一樣，只在最前面加一行
-/api/register 的 permitAll，讓學生一眼看出兩份設定的關聯，不會誤以為是兩套邏輯。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# 練習二：解答程式碼 — SecurityConfig（3/3）
-
-```java
-                .anyRequest().authenticated()
-            )
-            .httpBasic(Customizer.withDefaults())
-            .csrf(csrf -> csrf.disable());
-        return http.build();
-    }
-
-    // 不用再宣告 userDetailsService()！
-    // CustomUserDetailsService（@Service）已經是 UserDetailsService，
-    // Spring 會自動偵測並取代練習一的 InMemory 版本。
-}
-```
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>跟練習一唯一的差異：</b> <code>passwordEncoder()</code> 與路徑授權規則都相同，可以直接沿用；差別只有兩點——多一行 <code>/api/register</code> 的 <code>permitAll()</code>，以及練習一手動宣告的 <code>userDetailsService()</code>（InMemory）要整段刪掉，換成資料庫版的 <code>CustomUserDetailsService</code>，兩者不能並存。
-</div>
-
-<!--
-強調差異只有兩點，其餘都能整段複製練習一的 SecurityConfig，降低學生的認知負擔。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# 練習二：解答程式碼 — UserController（1/2）註冊
-
-```java
-public record RegisterRequest(String username, String password) {}
-
 @RestController
-public class UserController {
+public class AccountController {
 
     @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private AccountService accountService;
 
-    @PostMapping("/api/register")
-    public String register(@RequestBody RegisterRequest req) {
-        User user = new User();                                    // 我們自己的 Entity
-        user.setUsername(req.username());
-        user.setPassword(passwordEncoder.encode(req.password()));  // 加密後再存
-        user.setRole("USER");                                      // 不帶 ROLE_ 前綴
-        userRepository.save(user);
-        return "註冊成功：" + user.getUsername();
+    @PostMapping("/register")
+    public String register(@RequestBody RegisterRequest request) {
+        return accountService.register(request);
     }
 }
 ```
 
-<!--
-密碼一定要先過 passwordEncoder.encode()，不能把明文密碼直接存進資料庫。
-role 固定給 "USER"（不帶 ROLE_ 前綴，跟 CustomUserDetailsService 的 .roles() 對應），
-實務上通常不開放使用者自己指定角色，避免有人把自己升成 ADMIN。
-
-小提醒：這個檔案裡的 User 是我們自己的 Entity，
-不要不小心 import 成 org.springframework.security.core.userdetails.User。
-
-這個端點在上一頁的 SecurityConfig 已設為 permitAll，未登入也能呼叫。
--->
-
----
-style: |
-  pre, code { font-size: 0.82em !important; }
----
-
-# 練習二：解答程式碼 — UserController（2/2）查詢自己
-
-同一個 `UserController` 裡再加一個方法：
+在 `SecurityConfig` 的規則**最前面**加一條：
 
 ```java
-    @GetMapping("/api/me")
-    public String me() {
-        return SecurityContextHolder.getContext()
-            .getAuthentication().getName();
-    }
+.requestMatchers("/register").permitAll()
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>完整測試流程：</b> ① <code>POST /api/register</code> 註冊 alice ② Postman 選 Basic Auth 填 alice / 密碼 ③ <code>GET /api/me</code> 回傳 <code>alice</code>。
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 註冊一定要公開。如果註冊也要先登入，還沒有帳號的人就永遠進不來了。
 </div>
 
+</v-click>
+
 <!--
-注意這是接在上一頁同一個 UserController 裡面的方法，不是新的類別。
+AccountController 很單純。POST /register，用 @RequestBody 接收 RegisterRequest，交給 AccountService。
 
-用 SecurityContextHolder 拿目前登入用戶名稱，符合加分項目的要求（不用方法參數注入）。
-httpBasic 讓 Postman 能直接測 /api/me，帶 Basic Auth 帳密就能拿到當前登入者名稱。
+然後要回到 SecurityConfig，在規則的最前面加一條：/register，permitAll。
 
-這整套（User Entity + UserRepository + CustomUserDetailsService + SecurityConfig + UserController）
-下一章 ch45 做 JWT 時會直接接手繼續用，不會再換名字。
+（下一步）註冊一定要公開。如果註冊也要先登入，還沒有帳號的人就永遠進不來了。忘了加這一條，註冊會得到 401。
 -->
 
 ---
 
-# 本章重點總結
+# 試試看：註冊、登入、升成老師
 
-| 主題 | 關鍵觀念 |
-|------|----------|
-| 認證 vs 授權 | 先確認「你是誰」，再決定「你能做什麼」 |
-| 預設行為 | 加入依賴後，所有路徑自動需要登入 |
-| SecurityFilterChain | Spring Boot 3.x / 4.x 的標準設定方式，Lambda DSL |
-| 路徑授權 | permitAll / authenticated / hasRole / hasAuthority |
-| InMemoryUserDetailsManager | 開發測試用，帳號存在記憶體 |
-| UserDetailsService | 從資料庫載入用戶的標準介面 |
-| BCryptPasswordEncoder | 密碼一定要加密儲存，絕不明文 |
-| CSRF | Form 應用開啟，REST API 關閉 |
-| Filter Chain | 所有請求依序通過一系列 Filter |
-| SecurityContextHolder | 隨時取得當前登入用戶的靜態入口 |
+<v-clicks>
+
+1. `POST /register`，Body 是 `{"username":"tom","password":"tom123"}` → 註冊成功
+2. 到 MySQL Workbench 看 `account` 資料表：`password` 欄位是一串亂碼
+3. 用 `tom` / `tom123` 送 `GET /students` → **200**；送 `DELETE /students/1` → **403**
+4. 再註冊一個 `amy`，然後在 Workbench 執行下面的 SQL，把她改成老師
+5. 用 `amy` / `amy123` 送 `DELETE /students/1` → **200**
+
+</v-clicks>
+
+<v-click>
+
+```sql
+UPDATE account SET role = 'TEACHER' WHERE username = 'amy';
+```
+
+</v-click>
 
 <!--
-今天的三個最重要的事：
-第一，Spring Boot 3.x / 4.x 要用 SecurityFilterChain，不要用舊的 WebSecurityConfigurerAdapter。
-第二，密碼一定要用 BCrypt 加密，這是不可妥協的基本要求。
-第三，CSRF 的開關要根據應用類型來決定。
+重新啟動，照順序試試看。
+
+（下一步）第一步，POST /register。Authorization 選 No Auth。Body 選 raw、JSON，填帳號 tom、密碼 tom123。得到註冊成功。
+
+（下一步）第二步，到 MySQL Workbench 看 account 資料表。password 欄位不是 tom123，是一串錢字號開頭的亂碼。
+
+（下一步）第三步，用 tom 的帳號密碼送 GET /students，得到 200。送 DELETE /students/1，得到 403。和剛才記憶體帳號的結果一樣，只是帳號現在是從資料庫來的。
+
+（下一步）第四步，再註冊一個 amy。註冊出來的身分都是學生，所以要到 Workbench 執行一句 UPDATE，把她的 role 改成 TEACHER。
+
+（下一步）就是這一句 SQL。
+
+（下一步）第五步，用 amy 的帳號密碼送 DELETE /students/1，得到 200。
+
+真正的系統會有一個「管理員幫別人改身分」的功能。今天先直接改資料庫。
+-->
+
+---
+
+# 在程式裡知道「現在是誰」
+
+在 `AccountController` 加一個方法：
+
+```java {2|3}
+@GetMapping("/me")
+public String me(Authentication authentication) {
+    return "你是：" + authentication.getName();
+}
+```
+
+<v-clicks>
+
+- 參數寫 `Authentication authentication`，Spring 會把「通過第一關的這個人」交給我們
+- `getName()`：他的帳號名稱
+- 用途：查「我自己的」成績、記錄「是誰」刪了資料
+
+</v-clicks>
+
+<!--
+最後一個常用的功能。Controller 裡面，怎麼知道現在發請求的是誰？
+
+在 AccountController 加一個方法，GET /me。
+
+（下一步）在參數寫 Authentication authentication。和第四十章的 HttpSession 一樣，只要寫在參數，Spring 就會把東西交給我們。這裡交進來的是：通過第一關的這個人。import 請選 org.springframework.security.core 開頭的。
+
+（下一步）getName()，拿到他的帳號名稱。
+
+（下一步）這個功能很常用。例如查「我自己的」成績，或是在 Log 裡記錄是誰刪了資料。
+
+用 tom 的帳號送 GET /me，會得到「你是：tom」。這個網址沒有寫在規則裡，所以走最後一條 anyRequest，要登入才能用。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 7
+# 補充：CSRF 和警衛的內部構造
+
+<!--
+最後補充兩個觀念。這一段先聽過、有印象就可以。
+-->
+
+---
+
+# 補充：為什麼要關掉 CSRF
+
+<v-clicks>
+
+- **CSRF** 是一種攻擊：壞網站偷偷讓你的瀏覽器，對「你已經登入的網站」送出請求
+- 它利用的是第四十章學的特性：瀏覽器會**自動帶上 Cookie**
+- Spring Security 預設會防它：`POST`、`PUT`、`DELETE` 要多帶一組驗證碼，沒帶就是 403
+- 我們的 API 不靠 Cookie 認人（每次都自己帶帳號密碼），所以可以關掉
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 簡單的判斷：靠 <b>Cookie 和 Session</b> 登入的傳統網站，CSRF 保護要<b>開著</b>；每次請求自己帶證件的 <b>REST API</b>，可以<b>關掉</b>。
+</div>
+
+</v-click>
+
+<!--
+第一個補充。SecurityConfig 裡有一行把 CSRF 關掉，它是什麼？
+
+（下一步）CSRF 是一種攻擊。壞網站偷偷讓你的瀏覽器，對你已經登入的網站送出請求。例如你登入了銀行網站，又去逛一個壞網站。壞網站偷偷送出一個轉帳的請求到銀行。
+
+（下一步）它利用的是第四十章學的特性：瀏覽器會自動帶上 Cookie。所以銀行以為是你本人送的。
+
+（下一步）Spring Security 預設會防這種攻擊。做法是 POST、PUT、DELETE 這些會改資料的請求，要多帶一組驗證碼，沒帶就是 403。Postman 不會帶，所以會被擋。
+
+（下一步）我們的 API 不是靠 Cookie 認人的，每一次都要自己帶帳號密碼。壞網站沒辦法替你帶，所以可以把這個保護關掉。
+
+（下一步）簡單的判斷方式：靠 Cookie 和 Session 登入的傳統網站，CSRF 保護要開著。每次請求自己帶證件的 REST API，可以關掉。
+-->
+
+---
+
+# 補充：警衛其實是一排關卡
+
+<v-clicks>
+
+- 請求到達 Controller 之前，會先通過一排關卡，叫做 **Filter Chain**（過濾器鏈）
+- 有的關卡負責認證，有的負責授權，有的負責把錯誤變成 401、403
+- 所以被擋下的請求，**根本不會進到我們的 Controller**
+- 這也是 `SecurityFilterChain` 這個名字的由來
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 加了 Spring Security 之後，Swagger UI 也會被鎖住。想公開的話，在規則最前面加一條：<code>.requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()</code>
+</div>
+
+</v-click>
+
+<!--
+第二個補充。我們一直說「一位警衛」，其實他是一排關卡。
+
+（下一步）請求到達 Controller 之前，會先通過一排關卡。這一排關卡叫做 Filter Chain，中文是過濾器鏈。
+
+（下一步）每一關有自己的工作。有的負責認證，有的負責授權，有的負責把錯誤變成 401 或 403 的回應。
+
+（下一步）所以被擋下的請求，根本不會進到我們的 Controller。Controller 裡不用自己檢查有沒有登入。
+
+（下一步）這也是 SecurityFilterChain 這個名字的由來。我們寫的守則，其實是在設定這一排關卡。下一章會在這一排裡，加一個我們自己寫的關卡。
+
+（下一步）順便提醒：加了 Spring Security 之後，第三十八章的 Swagger UI 也會被鎖住。想公開的話，在規則最前面加這一條。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# 動手練習
+
+<!--
+換大家動手。
+-->
+
+---
+
+# 練習 1：多一個身分
+
+學校多了一位主任，身分是 `ADMIN`。請修改規則：
+
+<v-clicks>
+
+1. **刪除**學生資料（`DELETE /students/**`）：只有 `ADMIN` 可以
+2. 學生資料的新增、修改：維持只有 `TEACHER`
+3. 社團的新增、刪除（`POST`、`DELETE /clubs/**`）：只有 `TEACHER`
+4. 註冊一個帳號 `boss`，在資料庫把身分改成 `ADMIN`，測試看看
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 提示：<code>requestMatchers</code> 的第一個參數可以寫 <code>HttpMethod.DELETE</code>。想清楚新的規則要放在哪一條的<b>前面</b>。
+</div>
+
+</v-click>
+
+<!--
+練習一。學校多了一位主任，身分是 ADMIN。請修改規則。
+
+（下一步）第一，刪除學生資料，只有 ADMIN 可以。
+
+（下一步）第二，學生資料的新增和修改，維持只有 TEACHER。
+
+（下一步）第三，社團的新增和刪除，只有 TEACHER。
+
+（下一步）第四，註冊一個帳號 boss，在資料庫把身分改成 ADMIN，然後測試。老師刪除學生應該得到 403，主任刪除應該成功。
+
+（下一步）提示：requestMatchers 的第一個參數可以寫 HttpMethod.DELETE。另外請想清楚，新的規則要放在哪一條的前面。
+
+請先暫停，自己試試看。
+-->
+
+---
+
+# 練習 1：參考答案
+
+```java {4|6-7}
+.authorizeHttpRequests(auth -> auth
+    .requestMatchers("/register").permitAll()
+    .requestMatchers(HttpMethod.GET, "/clubs/**").permitAll()
+    .requestMatchers(HttpMethod.DELETE, "/students/**").hasRole("ADMIN")
+    .requestMatchers(HttpMethod.GET, "/students/**").authenticated()
+    .requestMatchers("/students/**").hasRole("TEACHER")
+    .requestMatchers("/clubs/**").hasRole("TEACHER")
+    .anyRequest().authenticated()
+)
+```
+
+<v-clicks>
+
+- `DELETE` 那一條要放在 `/students/**` 的前面，否則會先對到「只有老師」
+- 最後一條 `/clubs/**` 不用寫方法：`GET` 已經在前面被處理掉了
+
+</v-clicks>
+
+<!--
+參考答案。
+
+（下一步）DELETE /students 這一條，只有 ADMIN。它一定要放在「/students 所有方法，只有老師」那一條的前面。否則 DELETE 會先對到老師那一條，主任反而被擋，老師反而可以刪。
+
+（下一步）社團的規則，用和學生一樣的手法。前面已經有一條 GET /clubs 公開，所以後面這一條 /clubs 不用寫方法，剩下的 POST 和 DELETE 都會對到它。
+
+測試的時候，主任 boss 可以刪除學生，但是不能新增學生，因為新增只有 TEACHER 可以。一個帳號只有一個身分。
+-->
+
+---
+
+# 練習 2：改自己的密碼
+
+請新增一個 API，讓登入的人可以改**自己的**密碼：
+
+<v-clicks>
+
+1. `PUT /me/password`，Body 是 `{"newPassword":"abc12345"}`
+2. 用 `Authentication` 知道現在是誰，從資料庫找出他的 `Account`
+3. 新密碼**攪碎之後**再存回去
+4. 測試：改完之後，舊密碼應該得到 401，新密碼可以登入
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 提示：新增一個 DTO <code>ChangePasswordRequest</code>；在 <code>AccountService</code> 加一個方法 <code>changePassword(String username, String newPassword)</code>。
+</div>
+
+</v-click>
+
+<!--
+練習二。請新增一個 API，讓登入的人可以改自己的密碼。
+
+（下一步）第一，PUT /me/password。Body 是一個 JSON，裡面有 newPassword。
+
+（下一步）第二，用 Authentication 知道現在是誰，再從資料庫找出他的 Account。
+
+（下一步）第三，新密碼要攪碎之後再存回去。
+
+（下一步）第四，測試。改完之後，用舊密碼應該得到 401，用新密碼可以登入。
+
+（下一步）提示：新增一個 DTO，叫做 ChangePasswordRequest。在 AccountService 加一個方法 changePassword，兩個參數：帳號名稱和新密碼。
+
+請先暫停，自己試試看。
+-->
+
+---
+
+# 練習 2：參考答案
+
+```java
+// AccountService
+public String changePassword(String username, String newPassword) {
+    Account account = accountRepository.findByUsername(username);
+    account.setPassword(passwordEncoder.encode(newPassword));
+    accountRepository.save(account);
+    return "密碼已更新";
+}
+```
+
+```java
+// AccountController
+@PutMapping("/me/password")
+public String changePassword(@RequestBody ChangePasswordRequest request, Authentication authentication) {
+    return accountService.changePassword(authentication.getName(), request.getNewPassword());
+}
+```
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 帳號名稱是從 <code>Authentication</code> 拿的，不是從 Body 拿的。這樣每個人<b>只能改自己的</b>密碼，沒辦法改別人的。
+</div>
+
+</v-click>
+
+<!--
+參考答案。ChangePasswordRequest 只有一個欄位 newPassword，寫法和 RegisterRequest 一樣，這裡省略。
+
+AccountService 的 changePassword：用帳號名稱查出 Account，把新密碼 encode 之後放進去，再 save。save 遇到已經有 id 的資料，會做更新，這是第三十七章學過的。
+
+AccountController：PUT /me/password。參數有兩個，一個是 Body，一個是 Authentication。把現在這個人的帳號名稱，和新密碼，交給 Service。
+
+（下一步）這裡有一個重點。帳號名稱是從 Authentication 拿的，不是從 Body 拿的。這樣每個人只能改自己的密碼。如果讓前端在 Body 裡指定要改誰，那任何登入的人都能改別人的密碼了。
+-->
+
+---
+
+# 複習：校門口對照表
+
+<Pairs left="校門口" right="程式" rows="guard,警衛=code,Spring Security|card,第一關：你是誰=code,認證（沒過是 401）|lock,第二關：你能做什麼=code,授權（沒過是 403）|form,警衛的守則=code,SecurityFilterChain 的路徑規則|book,名冊=code,UserDetailsService|what,密碼攪碎機=code,BCryptPasswordEncoder" />
+
+<!--
+我們用一張圖複習今天的內容。
+
+（下一步）警衛，是 Spring Security。
+
+（下一步）第一關，你是誰，是認證。沒過是 401。
+
+（下一步）第二關，你能做什麼，是授權。沒過是 403。
+
+（下一步）警衛的守則，是 SecurityFilterChain 裡的路徑規則。
+
+（下一步）名冊，是 UserDetailsService。
+
+（下一步）密碼攪碎機，是 BCryptPasswordEncoder。
+-->
+
+---
+
+# 章節總結
+
+<v-clicks>
+
+- **認證**問「你是誰」，**授權**問「你能做什麼」；一定是先認證、再授權
+- 加入依賴之後，預設**全部都要登入**；我們再用規則一條一條打開
+- 規則**從上往下**對，對到第一條就算數；範圍小的寫前面
+- **密碼不存明碼**：存之前 `encode()`，核對用 `matches()`
+- 資料庫的帳號：寫一個 `UserDetailsService`，告訴警衛怎麼查出帳號；名冊只能留一份
+
+</v-clicks>
+
+<v-click>
+
+下一章：每一次請求都要帶帳號密碼，不太方便，也不太安全。有沒有別的證件可以用？
+
+</v-click>
+
+<!--
+最後整理今天的重點。
+
+（依序按下一步）認證問你是誰，授權問你能做什麼，一定是先認證、再授權。加入依賴之後，預設全部都要登入，我們再用規則一條一條打開。規則從上往下對，對到第一條就算數，範圍小的寫前面。密碼不存明碼，存之前 encode，核對用 matches。資料庫的帳號，要寫一個 UserDetailsService，告訴警衛怎麼查出帳號，而且名冊只能留一份。
+
+（最後一步）今天用的 Basic Auth，每一次請求都要帶帳號密碼。不太方便，也不太安全。下一章要看另一種證件。
 -->
 
 ---
@@ -1373,9 +1371,10 @@ layout: end
 
 # Q & A
 
-有任何問題歡迎提問！
+有任何問題嗎？
 
 <!--
-Spring Security 是個功能非常豐富的框架，今天我們學了最核心的基礎。
-掌握這些，就能保護你的 Spring Boot 應用程式！
+今天的內容到這邊。
+
+有任何問題歡迎提出來。
 -->

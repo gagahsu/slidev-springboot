@@ -31,6 +31,10 @@ import FormCheck from './anim/FormCheck.vue'
 import SessionTag from './anim/SessionTag.vue'
 import RateDelay from './anim/RateDelay.vue'
 import StickyNote from './anim/StickyNote.vue'
+import GateGuard from './anim/GateGuard.vue'
+import PassCard from './anim/PassCard.vue'
+import Campus from './anim/Campus.vue'
+import Breaker from './anim/Breaker.vue'
 import TwoBooks from './anim/TwoBooks.vue'
 import SeatRace from './anim/SeatRace.vue'
 import AskOrOrder from './anim/AskOrOrder.vue'
@@ -90,6 +94,10 @@ createApp(App)
   .component('SessionTag', SessionTag)
   .component('RateDelay', RateDelay)
   .component('StickyNote', StickyNote)
+  .component('GateGuard', GateGuard)
+  .component('PassCard', PassCard)
+  .component('Campus', Campus)
+  .component('Breaker', Breaker)
   .component('TwoBooks', TwoBooks)
   .component('SeatRace', SeatRace)
   .component('AskOrOrder', AskOrOrder)
