@@ -496,7 +496,7 @@ public class MyController {
 <v-click>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-🚀 <b>下一章：</b> 安裝 MySQL、Git 與 GitHub Desktop，為正式寫程式做好準備！
+🚀 <b>下一章：</b> 安裝 JDK、Eclipse、MySQL、Git 與 GitHub Desktop，為正式寫程式做好準備！
 </div>
 
 </v-click>
@@ -512,7 +512,7 @@ public class MyController {
 
 （下一步）第二個好處是 Starter，像套餐一樣，一次拿到一整組配好版本的工具。
 
-（下一步）下一章，我們要安裝 MySQL、Git 和 GitHub Desktop，為正式寫程式做好準備。
+（下一步）下一章，我們要安裝 JDK、Eclipse、MySQL、Git 和 GitHub Desktop，為正式寫程式做好準備。
 -->
 
 ---

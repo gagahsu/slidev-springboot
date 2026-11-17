@@ -83,7 +83,7 @@ style: |
     <Link to="ch02" class="chapter-card">
       <div class="chapter-num">Ch 2</div>
       <div>環境安裝</div>
-      <div class="chapter-subtitle">MySQL / Git / GitHub Desktop</div>
+      <div class="chapter-subtitle">JDK / Eclipse / MySQL / Git / GitHub Desktop</div>
     </Link>
     <Link to="ch03" class="chapter-card">
       <div class="chapter-num">Ch 3</div>

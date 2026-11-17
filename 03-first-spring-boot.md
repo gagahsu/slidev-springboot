@@ -47,34 +47,33 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第三章！
+大家好，歡迎來到第三章。
 
-上一章我們把 MySQL、Git 和 GitHub Desktop 都裝好了。今天我們要做一件更令人興奮的事——寫出我們第一個 Spring Boot 程式！
+上一章把工具都裝好了。今天要在 Eclipse 這張書桌上，建立第一個 Spring Boot 專案，寫一小段程式，讓瀏覽器顯示 Hello World。
 
-這一章會帶大家一步一步操作：用 Spring Initializr 建立專案、匯入 Eclipse，然後寫幾行程式碼，讓瀏覽器顯示 "Hello World"。
-
-整個過程大概只需要 15 分鐘，我們一起來試試看！
+就像小明第一次走進便利商店印作業。我們先不追究機器裡面怎麼運作，先把整個流程走一遍，看到結果。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要完成的三件事
 
-- **Spring Initializr 建立專案** — 用官方網站產生 Gradle + Spring Web 專案骨架，下載 zip
-- **將專案匯入 Eclipse** — 以 Existing Gradle Project 方式匯入並確認專案結構
-- **建立第一個 Controller** — 撰寫 MyController，加上 `@RestController` 與 `@RequestMapping`
-- **啟動並測試** — 執行程式，用瀏覽器存取 `localhost:8080/test` 看到 Hello World
+<v-clicks>
+
+- **建立專案**：用 Spring Initializr 拿到一個配好的專案
+- **搬上書桌**：把專案匯入 Eclipse
+- **寫一個櫃台、按下執行**：寫 `MyController`，在瀏覽器看到 Hello World
+
+</v-clicks>
 
 <!--
-今天的流程分四個步驟。
+今天要完成三件事。
 
-我們先用 Spring Initializr 這個官方網站產生專案骨架，就像先把房子的地基蓋好，只要填幾個設定，它就幫我們產生完整的資料夾結構。
+（下一步）第一，建立專案。用一個叫 Spring Initializr 的網站，拿到一個配好的專案。
 
-接著把專案匯入 Eclipse，開始寫程式，最後啟動並用瀏覽器驗證結果。
+（下一步）第二，把專案匯入 Eclipse，搬上書桌。
 
-大家可以邊看邊在自己的電腦上操作，有問題隨時舉手！
+（下一步）第三，寫一個櫃台，也就是 MyController。按下執行，在瀏覽器看到 Hello World。
 -->
 
 ---
@@ -83,118 +82,71 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-# Spring Initializr 建立專案
+# 小明第一次到便利商店
 
 <!--
-我們不是從空白資料夾開始，而是用 Spring 官方提供的 Spring Initializr 網站來幫我們產生專案骨架。
-
-你可以把 Spring Initializr 想像成是一個「Spring Boot 專案產生器」，只要填好幾個設定，它就幫你把所有基礎結構都準備好，我們只需要開始寫業務邏輯就行了。
--->
-
----
----
-
-# Spring Initializr — Step 1：填寫專案設定
-
-<div class="grid grid-cols-2 gap-6 mt-2">
-<div>
-
-開啟瀏覽器，前往 **https://start.spring.io**，依照下表填寫設定：
-
-| 欄位 | 選擇值 |
-| --- | --- |
-| Project | **Gradle - Groovy** |
-| Language | **Java** |
-| Spring Boot | **3.5.14**（避免 SNAPSHOT / RC） |
-| Group | `com.example` |
-| Artifact | `demo` |
-| Packaging | **Jar** |
-| Java | **17** |
-
-</div>
-<div>
-
-<img src="/screenshots/ch03-03-initializr-settings.png" style="max-height:400px; width:100%; object-fit:contain;" />
-
-</div>
-</div>
-
-<!--
-打開瀏覽器，前往 start.spring.io，這就是 Spring Initializr 的網站。
-
-我們選擇 Gradle 而不是 Maven，因為這個課程用 Gradle 作為建構工具。Gradle 比 Maven 更現代，設定檔也比較簡潔。
-
-Language 選 Java，Spring Boot 版本選 3.5.14，這是目前課程對應的穩定版本。有 SNAPSHOT 或 RC 字樣的都不要選，那些是測試版，可能有不穩定的問題。
-
-Group 和 Artifact 就是你專案的識別名稱，這裡先用預設的 com.example 和 demo 就好。
-
-Java 版本選 17，這是目前企業主流的 LTS 版本。
--->
-
----
----
-
-# Spring Initializr — Step 2：新增 Spring Web 依賴
-
-<div class="grid grid-cols-2 gap-6 mt-2">
-<div>
-
-點選右側的 **ADD DEPENDENCIES** 按鈕（或按 Ctrl+B），搜尋 **Spring Web**，選取後它會出現在已選依賴清單。
-
-| 依賴名稱 | 用途 |
-| --- | --- |
-| **Spring Web** | 提供 HTTP 處理能力，讓我們能撰寫 REST API |
-
-確認設定無誤後，點選 **GENERATE** 按鈕，瀏覽器會下載 `demo.zip`。
-
-</div>
-<div>
-
-<img src="/screenshots/ch03-04-initializr-web-dep.png" style="max-height:380px; width:100%; object-fit:contain;" />
-
-</div>
-</div>
-
-<!--
-接下來最重要的一步——選依賴。
-
-點 ADD DEPENDENCIES，搜尋 Spring Web 並點選它。Spring Web 就是讓我們的程式能夠接收 HTTP 請求的核心模組，少了它，我們就沒辦法寫出可以用瀏覽器存取的 API。
-
-選好之後，點 GENERATE，瀏覽器就會幫你下載一個 demo.zip。
-
-這個 ZIP 裡面就是 Spring Boot 專案的完整骨架，等一下我們要把它解壓縮並匯入 Eclipse。
+先看小明的故事。
 -->
 
 ---
 
-# Spring Initializr — Step 3：解壓縮專案
+# 第一次去便利商店印作業
 
-下載完成後，找到 `demo.zip`，**解壓縮**到一個好找的位置，例如：
+<v-clicks>
 
-```
-C:\Users\你的名字\Documents\demo
-```
+- 店員遞給小明一個**配好的工具箱**：需要的東西都在裡面，不用自己一樣一樣買
+- 小明把工具箱**搬上書桌**，打開來看看
+- 櫃台有一位**店員**，專門負責「印作業」這件事
+- 小明**按下列印鈕**，機器動起來，作業印出來了
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>建議路徑：</b> 避免含有中文或空格的路徑，這可能導致 Gradle 建構失敗。
-</div>
-
-解壓縮後，資料夾內應包含：
-
-| 項目 | 說明 |
-| --- | --- |
-| `build.gradle` | Gradle 建構設定檔 |
-| `src/` | 主要程式碼目錄 |
-| `gradlew` | Gradle Wrapper 執行腳本 |
+</v-clicks>
 
 <!--
-下載完 demo.zip 之後，在資源管理員找到這個檔案，右鍵解壓縮。
+小明第一次去便利商店印作業。
 
-建議放在路徑簡單、全英文的位置，比如 C:\Users\你的帳號\Documents\demo。
+（下一步）店員遞給他一個配好的工具箱。印作業需要的東西都在裡面，不用自己一樣一樣去買。
 
-為什麼要避免中文路徑呢？因為 Gradle 在建構的時候，有時候會不認識中文字元，導致建構失敗，這個問題很難排查，所以一開始就養成好習慣。
+（下一步）小明把工具箱搬上書桌，打開來看看裡面有什麼。
 
-解壓縮完之後，你應該會看到 build.gradle、src 資料夾，還有 gradlew 這幾個東西，這樣就對了。
+（下一步）櫃台有一位店員，專門負責「印作業」這件事。有人說要印作業，就由他處理。
+
+（下一步）小明按下列印鈕，機器動起來，作業印出來了。
+
+今天要做的四件事，剛好就是這四步。
+-->
+
+---
+
+# 對照到今天的步驟
+
+<Pairs left="便利商店" right="今天的步驟" rows="backpack,配好的工具箱=code,Spring Initializr 產生的專案|shop,搬上書桌=code,匯入 Eclipse|clerk,負責印作業的店員=code,MyController（負責 /test 這個網址）|printer,按下列印鈕=code,執行程式，打開 localhost:8080/test" />
+
+<!--
+對照到今天的步驟。
+
+（下一步）配好的工具箱，是 Spring Initializr 產生的專案。
+
+（下一步）搬上書桌，是匯入 Eclipse。
+
+（下一步）負責印作業的店員，是我們要寫的 MyController。它負責 /test 這個網址。
+
+（下一步）按下列印鈕，是執行程式，然後在瀏覽器打開 localhost:8080/test。
+-->
+
+---
+
+# 想一想
+
+<Poll question="Spring Initializr 最像便利商店裡的哪一樣東西？" options="櫃台店員|配好的工具箱|列印鈕|印出來的作業" answer="2" />
+
+<!--
+來想一題。Spring Initializr 最像便利商店裡的哪一樣東西？
+
+（等大家作答）
+
+（下一步）答案是配好的工具箱。
+
+它幫我們把一個 Spring Boot 專案需要的檔案和設定都準備好，打包成一個壓縮檔。我們不用從零開始一個一個建。
 -->
 
 ---
@@ -203,149 +155,129 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-# 將專案匯入 Eclipse
+# 拿到配好的工具箱
 
 <!--
-專案已經準備好了，現在要把它匯入 Eclipse。
-
-因為我們選的是 Gradle 專案，所以匯入的方式跟一般 Java 專案不太一樣，我們要用 Gradle 專用的匯入方式。
--->
-
----
----
-
-# 匯入專案 — Step 4a：開啟 Import
-
-<div class="grid grid-cols-2 gap-6 mt-2">
-<div>
-
-在 Eclipse 最上方選單列點選 **File**，往下找到 **Import…**，點擊開啟匯入精靈。
-
-| 操作 | 說明 |
-| --- | --- |
-| 選單位置 | File → **Import…** |
-| 快捷鍵 | 無，需透過選單 |
-
-</div>
-<div>
-
-<img src="/screenshots/ch03-05-eclipse-import.png" style="max-height:400px; width:100%; object-fit:contain;" />
-
-</div>
-</div>
-
-<!--
-開啟 Eclipse 之後，在最上方找到 File 選單，點進去往下滑，找到 Import 並點擊。
-
-這個 Import 功能是 Eclipse 通用的匯入入口，可以匯入各種不同類型的專案。
--->
-
----
----
-
-# 匯入專案 — Step 4b：選擇 Gradle 專案路徑
-
-<div class="grid grid-cols-2 gap-6 mt-2">
-<div>
-
-在 Import 精靈中展開 **Gradle** 資料夾，選 **Existing Gradle Project**，點 **Next**。
-
-接著點 **Browse…**，瀏覽到解壓縮後的 `demo` 資料夾，點 **Finish**。
-
-Eclipse 會自動下載依賴並建構（首次約 1–3 分鐘）。
-
-<div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-⚠️ <b>注意：</b>路徑不能含有中文或空格，否則 Gradle 建構會失敗。
-</div>
-
-</div>
-<div class="flex flex-col gap-3">
-
-<img src="/screenshots/ch03-06-gradle-wizard.png" style="max-height:190px; width:100%; object-fit:contain;" />
-<img src="/screenshots/ch03-07-gradle-browse.png" style="max-height:190px; width:100%; object-fit:contain;" />
-
-</div>
-</div>
-
-<!--
-Import 精靈打開之後，找到 Gradle 資料夾並展開，選 Existing Gradle Project，點 Next。
-
-下一步會要求你指定專案根目錄，點 Browse 用檔案瀏覽器找到剛才解壓縮的 demo 資料夾，選取後點 Finish。
-
-Eclipse 就會開始幫我們下載所有依賴的 JAR 檔，第一次比較久，因為要從網路抓 Spring Boot 的相關套件。
-
-⚠️ 如果出現「Could not resolve」錯誤，通常是網路問題或路徑有中文，確認一下路徑再試一次。
+第一步，用 Spring Initializr 建立專案。
 -->
 
 ---
 
-# 常見問題：Gradle 找不到 JDK 17
+# Spring Initializr 是什麼
 
-若 Refresh 後出現以下錯誤：
+<v-clicks>
 
-```
-Cannot find a Java installation matching: {languageVersion=17}
-Toolchain download repositories have not been configured.
-```
+- 一個 Spring Boot 專案需要很多檔案：設定檔、資料夾、啟動程式、建構工具……
+- **Spring Initializr**（`start.spring.io`）：勾一勾選項，就產生一個配好的專案，下載回來是一個 zip
+- 專案用 **Gradle** 管理：它會照設定檔，自動下載專案需要的套件
 
-代表 Gradle Toolchain 偵測不到系統上的 JDK 17。修復方式：開啟 `build.gradle`，找到 `java { toolchain { ... } }` 區塊，改為：
+</v-clicks>
 
-```groovy
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-}
-```
+<v-click>
 
-存檔後再執行 **Gradle → Refresh Gradle Project**。
-
-<div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>原因：</b> Spring Initializr 預設使用 Toolchain API，部分 JDK（如 OpenLogic）不在 Gradle 自動偵測範圍，改用 <code>sourceCompatibility</code> 可直接沿用 PATH 中的 JDK。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <b>套件</b>（在 Gradle 裡叫<b>依賴</b>，dependency）：別人寫好、可以直接拿來用的程式。例如今天要加的 Spring Web，就是一個讓我們能寫網站的套件。
 </div>
 
+</v-click>
+
 <!--
-如果有同學在 Refresh 之後看到這個錯誤訊息，不要慌張，這是一個很常見的 Gradle 設定問題。
+Spring Initializr 是什麼？
 
-Spring Initializr 產生的 build.gradle 預設使用 Toolchain API 來指定 JDK 版本，但這個功能需要 Gradle 能夠自動掃描到你系統上的 JDK。部分發行版的 JDK（例如 OpenLogic）不在 Gradle 的自動偵測清單裡，就會出現這個錯誤。
+（下一步）一個 Spring Boot 專案需要很多檔案。設定檔、資料夾、啟動程式、建構工具等等。自己一個一個建，很容易漏掉。
 
-解法很簡單：把 toolchain 那段拿掉，改用 sourceCompatibility 和 targetCompatibility，這兩個設定直接指定編譯版本，不需要 Gradle 去搜尋 JDK，用 PATH 裡的就行了。
+（下一步）Spring Initializr，網址是 start.spring.io。勾一勾選項，它就產生一個配好的專案，下載回來是一個 zip 壓縮檔。
 
-改完存檔，再 Refresh 一次就會正常了。
+（下一步）產生的專案用 Gradle 來管理。Gradle 是一個建構工具，它會照設定檔，自動下載專案需要的套件。
+
+（下一步）套件，在 Gradle 裡叫做依賴，英文是 dependency。它是別人寫好、可以直接拿來用的程式。今天要加的 Spring Web，就是一個讓我們能寫網站的套件。
 -->
 
 ---
----
 
-# 匯入專案 — Step 5：確認專案結構
+# 填寫專案設定
 
-<div class="grid grid-cols-2 gap-6 mt-2">
+<div class="grid grid-cols-2 gap-6">
 <div>
 
-匯入成功後，在 Eclipse 左側的 **Package Explorer** 應能看到以下結構：
+前往 `start.spring.io`：
 
-| 路徑 | 說明 |
-| --- | --- |
-| `src/main/java` | 主程式碼放置目錄 |
-| `src/main/resources` | 設定檔（application.properties）|
-| `src/test/java` | 測試程式碼目錄 |
-| `build.gradle` | Gradle 建構設定 |
+<v-clicks>
+
+- Project：**Gradle - Groovy**
+- Language：**Java**
+- Spring Boot：**保持預設**（4 開頭，不要選有 SNAPSHOT、RC、M 的）
+- Group：`com.example`，Artifact：`demo`
+- Packaging：**Jar**，Java：**17**
+
+</v-clicks>
 
 </div>
 <div>
 
-<img src="/screenshots/ch03-08-project-structure.png" style="max-height:380px; width:100%; object-fit:contain;" />
+<img src="/screenshots/ch03-03-initializr-settings.png" alt="Spring Initializr 設定" style="width:100%; max-height:360px; object-fit:contain; margin-top:8px;" />
 
 </div>
 </div>
 
 <!--
-匯入成功後，你會在左側的 Package Explorer 看到 demo 專案展開來的樣子。
+前往 start.spring.io，照著填。
 
-src/main/java 是我們之後寫程式碼的地方。src/main/resources 裡面有一個 application.properties，之後會用它來設定資料庫連線、伺服器 port 等等。
+（下一步）Project 選 Gradle - Groovy。
 
-你還會看到一個 DemoApplication.java，這就是整個 Spring Boot 程式的啟動入口，裡面有一個 main() 方法。
+（下一步）Language 選 Java。
 
-這個結構不是我們自己建的，是 Spring Initializr 幫我們產生的，這就是它的好處。
+（下一步）Spring Boot 的版本保持預設就好，它會是 4 開頭的最新正式版。名字後面有 SNAPSHOT、RC、M 的，是還在測試的版本，不要選。截圖上的版本號和你看到的不一樣沒關係。
+
+（下一步）Group 填 com.example，Artifact 填 demo。這兩個合起來，就是專案的名字和套件的名字。
+
+（下一步）Packaging 選 Jar，Java 選 17，和上一章裝的 JDK 一樣。
+-->
+
+---
+
+# 加上 Spring Web，下載
+
+<div class="grid grid-cols-2 gap-6">
+<div>
+
+<v-clicks>
+
+1. 點右邊的 **ADD DEPENDENCIES**
+2. 搜尋 **Spring Web**，點一下加進清單
+3. 按下方的 **GENERATE**，下載 `demo.zip`
+4. 解壓縮到 Workspace，例如 `C:\workspace\demo`
+
+</v-clicks>
+
+</div>
+<div>
+
+<img src="/screenshots/ch03-04-initializr-web-dep.png" alt="新增 Spring Web 依賴" style="width:100%; max-height:340px; object-fit:contain; margin-top:8px;" />
+
+</div>
+</div>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 路徑一樣<b>不要有中文或空格</b>，否則 Gradle 建構很容易失敗。
+</div>
+
+</v-click>
+
+<!--
+接下來加上需要的套件。
+
+（下一步）點右邊的 ADD DEPENDENCIES。
+
+（下一步）搜尋 Spring Web，點一下，它就會出現在已選的清單裡。今天只需要這一個。
+
+（下一步）按下方的 GENERATE，瀏覽器會下載 demo.zip。
+
+（下一步）把它解壓縮到上一章設定的 Workspace，例如 C 槽 workspace 底下的 demo 資料夾。
+
+（下一步）提醒一次，路徑不要有中文或空格。
 -->
 
 ---
@@ -354,83 +286,132 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 3
-# 建立第一個 Controller
+# 搬上書桌：匯入 Eclipse
 
 <!--
-準備工作都做好了，現在來寫程式！
-
-我們要建立一個叫做 MyController 的類別，它的工作是「接收瀏覽器送來的 HTTP 請求，然後回傳一段文字」。
-
-別擔心現在不懂 Controller 是什麼，我們後面的章節會詳細說明，今天先動手試試看，讓程式跑起來最重要。
+第二步，把專案搬上書桌。
 -->
 
 ---
----
 
-# 建立 Controller — Step 6：新增 Java 類別
+# 匯入專案
 
-<div class="grid grid-cols-2 gap-6 mt-2">
+<div class="grid grid-cols-2 gap-6">
 <div>
 
-在 Package Explorer 中，對 **com.example.demo** 套件點右鍵，選 **New → Class**。
+<v-clicks>
 
-| 欄位 | 填入值 |
-| --- | --- |
-| Package | `com.example.demo`（已自動填入） |
-| Name | `MyController` |
+1. Eclipse 選單 **File → Import…**
+2. 展開 **Gradle**，選 **Existing Gradle Project**，按 **Next**
+3. 按 **Browse…**，選剛才解壓縮的 `demo` 資料夾
+4. 按 **Finish**，等 Gradle 下載套件（第一次約 1～3 分鐘）
 
-確認後點 **Finish**，Eclipse 會自動建立並開啟這個類別。
+</v-clicks>
 
 </div>
 <div class="flex flex-col gap-3">
 
-<img src="/screenshots/ch03-09-new-class-1.png" style="max-height:185px; width:100%; object-fit:contain;" />
-<img src="/screenshots/ch03-09-new-class-2.png" style="max-height:185px; width:100%; object-fit:contain;" />
+<img src="/screenshots/ch03-06-gradle-wizard.png" alt="Gradle 匯入精靈" style="width:100%; max-height:170px; object-fit:contain; margin-top:8px;" />
+
+<img src="/screenshots/ch03-07-gradle-browse.png" alt="選擇專案資料夾" style="width:100%; max-height:170px; object-fit:contain; margin-top:8px;" />
 
 </div>
 </div>
 
 <!--
-在 Package Explorer 找到 com.example.demo 這個套件，就是 src/main/java 底下的那個，對它點右鍵，選 New → Class。
+匯入專案。
 
-Name 填 MyController，其他保持預設，點 Finish。
+（下一步）在 Eclipse 上方的選單，點 File，再點 Import。
 
-Eclipse 就會建立一個空白的 MyController.java 並自動開啟編輯器。
+（下一步）展開 Gradle 資料夾，選 Existing Gradle Project，已經存在的 Gradle 專案。按 Next。
 
-為什麼要放在 com.example.demo 底下呢？因為 Spring Boot 在啟動的時候，會掃描 DemoApplication.java 所在套件及其子套件，只有在這個範圍內的類別，Spring 才找得到。
+（下一步）按 Browse，選剛才解壓縮的 demo 資料夾。
+
+（下一步）按 Finish。Eclipse 會請 Gradle 開始下載專案需要的套件。第一次比較久，大約一到三分鐘，右下角會顯示進度。請等它跑完。
 -->
 
 ---
 
-# 建立 Controller — Step 7：撰寫程式碼
+# 工具箱裡有什麼
 
-將 `MyController.java` 的內容改寫如下：
+<div class="grid grid-cols-2 gap-6">
+<div>
 
-```java
-package com.example.demo;
+<v-clicks>
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+- `src/main/java`：**我們寫程式的地方**
+- `src/main/resources`：設定檔 `application.properties`
+- `src/test/java`：測試程式（第四十三章）
+- `build.gradle`：專案需要哪些套件
 
-@RestController
-public class MyController {
+</v-clicks>
 
-    @RequestMapping("/test")
-    public String test() {
-        System.out.println("Hi!");
-        return "Hello World";
-    }
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <code>src/main/java</code> 裡的 <code>com.example.demo</code> 已經有一個 <code>DemoApplication.java</code>：它是整個程式的<b>啟動點</b>。
+</div>
+
+</v-click>
+
+</div>
+<div>
+
+<img src="/screenshots/ch03-08-project-structure.png" alt="專案結構" style="width:100%; max-height:360px; object-fit:contain; margin-top:8px;" />
+
+</div>
+</div>
+
+<!--
+匯入成功之後，看一下左邊的 Package Explorer，工具箱裡有什麼。
+
+（下一步）src/main/java，我們寫程式的地方。
+
+（下一步）src/main/resources，放設定檔，例如 application.properties，第九章會用到。
+
+（下一步）src/test/java，放測試程式，第四十三章會用到。
+
+（下一步）build.gradle，記錄這個專案需要哪些套件。剛才勾的 Spring Web 就寫在這裡。
+
+（下一步）展開 src/main/java 裡的 com.example.demo，已經有一個 DemoApplication.java。它是整個程式的啟動點，等一下要從它開始執行。
+-->
+
+---
+
+# 補充：Gradle 找不到 JDK 17
+
+匯入時如果出現：
+
+```text
+Cannot find a Java installation matching: {languageVersion=17}
+```
+
+<v-clicks>
+
+- 先確認上一章安裝 JDK 時，有設定 **JAVA_HOME**；重開 Eclipse 再試一次
+- 還是不行：打開 `build.gradle`，把 `java { toolchain { … } }` 那一段換成下面這樣，存檔後對專案按右鍵 → **Gradle → Refresh Gradle Project**
+
+</v-clicks>
+
+<v-click>
+
+```groovy
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 ```
 
+</v-click>
+
 <!--
-這就是我們第一個 Controller 的完整程式碼，只有幾行，但已經是一個完整可運作的後端 API。
+補充一個常見的問題。匯入的時候，如果出現 Cannot find a Java installation matching languageVersion 17，意思是 Gradle 找不到 JDK 17。
 
-注意最上面兩個 Annotation：@RestController 告訴 Spring「這個類別是用來處理 HTTP 請求的控制器」；@RequestMapping("/test") 則告訴 Spring「當有人訪問 /test 這個路徑，就執行這個 test() 方法」。
+（下一步）先確認上一章安裝 JDK 的時候，有沒有設定 JAVA_HOME。設定之後要把 Eclipse 關掉重開，再匯入一次。
 
-test() 方法做了兩件事：先用 System.out.println 在 Console 印出 "Hi!"，再用 return 把 "Hello World" 這個字串回傳給瀏覽器。
+（下一步）還是不行的話，打開 build.gradle，找到 java 大括號 toolchain 那一段，換成下面的寫法。存檔之後，對專案按右鍵，選 Gradle，再選 Refresh Gradle Project。
 
-這段程式碼不需要背，等學完後面的章節，你就會自然記住了。現在只要把它打進去、讓程式跑起來就行。
+（下一步）這個寫法的意思是：直接用 Eclipse 正在用的 JDK，編譯成 Java 17 的程式，不要求 Gradle 自己去找。
 -->
 
 ---
@@ -439,137 +420,330 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 4
-# 啟動程式並測試
+# 寫一個櫃台：MyController
 
 <!--
-程式碼寫好了，最令人期待的時刻來了——啟動程式，用瀏覽器看結果！
--->
-
----
----
-
-# 啟動與測試 — Step 8：執行程式
-
-在 Package Explorer 對 **DemoApplication.java** 點右鍵，選 **Run As → Java Application**。
-
-| 欄位 | 說明 |
-| --- | --- |
-| 對象 | `DemoApplication.java`（啟動入口） |
-| 選單 | Run As → **Java Application** |
-
-<img src="/screenshots/ch03-10-run-as.png" style="max-height:320px; width:100%; object-fit:contain; margin-top:12px;" />
-
-<!--
-要啟動 Spring Boot 程式，找到 DemoApplication.java，對它點右鍵，選 Run As → Java Application。
-
-注意是對 DemoApplication.java 點右鍵，這是程式的啟動入口，不是對 MyController.java。
-
-點下去之後，Eclipse 下方的 Console 視窗就會開始跑東西，讓我們看看接下來出現什麼。
--->
-
----
----
-
-# 啟動與測試 — Step 9：確認啟動成功
-
-觀察 Console 視窗輸出，看到以下訊息代表啟動成功：
-
-| Console 訊息 | 代表意義 |
-| --- | --- |
-| `Started DemoApplication` | Spring Boot 啟動完成 |
-| `Tomcat started on port 8080` | 內建伺服器已開始監聽 |
-
-<img src="/screenshots/ch03-11-console-started.png" style="max-height:280px; width:100%; object-fit:contain; margin-top:12px;" />
-
-<!--
-等幾秒鐘之後，Console 視窗會印出一大串日誌，找到這兩行最重要：
-
-"Tomcat started on port 8080" 表示內建的 Tomcat 伺服器已經啟動，在 port 8080 等待請求。
-
-"Started DemoApplication in X.XXX seconds" 表示我們的 Spring Boot 程式已經完全啟動好了。
-
-Spring Boot 有一個很棒的特色，就是它內建了 Tomcat 這個網頁伺服器，所以我們不需要另外安裝伺服器，直接執行 Java 程式就可以提供 HTTP 服務。
-
-看到這兩行訊息就代表一切正常，我們可以進行下一步了。
--->
-
----
----
-
-# 啟動與測試 — Step 10：瀏覽器測試
-
-打開瀏覽器（Chrome、Edge 等均可），在網址列輸入：
-
-```
-http://localhost:8080/test
-```
-
-瀏覽器頁面會顯示 Hello World，Eclipse Console 同步出現 `Hi!`。
-
-<img src="/screenshots/ch03-12-browser-result.png" style="max-height:280px; width:100%; object-fit:contain; margin-top:12px;" />
-
-<!--
-現在最激動人心的時刻來了！
-
-打開瀏覽器，在網址列輸入 http://localhost:8080/test，按 Enter。
-
-如果一切順利，你就會在瀏覽器看到 "Hello World" 這幾個字。
-
-這表示什麼？表示你的電腦正在跑一個後端伺服器，而你的瀏覽器剛剛成功地跟它溝通，取得了回應！
-
-同時看一下 Eclipse 的 Console，你也會看到 "Hi!" 被印出來了，這是我們在 test() 方法裡寫的 System.out.println。
-
-恭喜大家！你們已經完成了人生中第一個 Spring Boot API！
--->
-
----
----
-
-# 啟動與測試 — Step 11：Console 也同步印出結果
-
-瀏覽器存取 `/test` 後，Eclipse Console 出現 `Hi!`，代表 `test()` 方法確實被 Spring 呼叫執行。
-
-| 輸出位置 | 內容 |
-| --- | --- |
-| 瀏覽器 | `Hello World` |
-| Eclipse Console | `Hi!` |
-
-<img src="/screenshots/ch03-13-console-result.png" style="max-height:280px; width:100%; object-fit:contain; margin-top:12px;" />
-
-<!--
-看完瀏覽器，再切回 Eclipse 的 Console 視窗看看。
-
-你會看到 Hi! 被印出來了，這是我們在 test() 方法裡寫的 System.out.println。
-
-這代表什麼？代表當瀏覽器對 /test 發出請求，Spring 真的找到了我們的 test() 方法，執行了它，然後把 Hello World 回傳給瀏覽器。這整個流程都通了！
+第三步，寫一個櫃台店員。
 -->
 
 ---
 
-# 補充：按下 Enter 之後發生什麼事
+# 新增一個類別
 
-<Flow nodes="瀏覽器:你打網址的地方|Spring Boot:幫你接電話的總機|test():MyController 裡的方法" steps="1>2:打開 localhost:8080/test|2>3:這個網址，交給 test() 處理|3>2:回傳 Hello World|2>1:畫面顯示 Hello World" />
+<div class="grid grid-cols-2 gap-6">
+<div>
+
+<v-clicks>
+
+1. 對 `com.example.demo` 按右鍵 → **New → Class**
+2. Name 填 **`MyController`**
+3. 按 **Finish**
+
+</v-clicks>
 
 <v-click>
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>兩個關鍵字：</b> <code>@RestController</code> 讓 Spring Boot 知道「這個類別負責接網址」；<code>@RequestMapping("/test")</code> 告訴它「/test 這個網址交給下面這個方法」。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <b>類別</b>（class）是 Java 放程式的基本單位。一個類別一個檔案，檔名和類別名稱相同，習慣用大寫開頭。
+</div>
+
+</v-click>
+
+</div>
+<div class="flex flex-col gap-3">
+
+<img src="/screenshots/ch03-09-new-class-1.png" alt="New Class 選單" style="width:100%; max-height:170px; object-fit:contain; margin-top:8px;" />
+
+<img src="/screenshots/ch03-09-new-class-2.png" alt="New Class 視窗" style="width:100%; max-height:170px; object-fit:contain; margin-top:8px;" />
+
+</div>
+</div>
+
+<!--
+新增一個類別。
+
+（下一步）在 Package Explorer 裡，對 com.example.demo 按右鍵，選 New，再選 Class。
+
+（下一步）Name 填 MyController。Package 已經自動填好了。
+
+（下一步）按 Finish，Eclipse 會建立這個檔案並打開它。
+
+（下一步）類別，英文是 class，是 Java 放程式的基本單位。一個類別一個檔案，檔名和類別名稱相同，習慣用大寫開頭。
+-->
+
+---
+
+# 寫上櫃台的工作
+
+<CodeSteps>
+
+```java {6|8|9-12}
+package com.example.demo;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class MyController {
+    @RequestMapping("/test")
+    public String test() {
+        System.out.println("Hi!");
+        return "Hello World";
+    }
+}
+```
+
+- `@RestController`：告訴 Spring Boot「這個類別是**櫃台**，負責接網址」
+- `@RequestMapping("/test")`：店員胸前的名牌，「**`/test` 這個網址由我處理**」
+- 方法的內容：在 Console 印出 `Hi!`，再把 `Hello World` 回給瀏覽器
+
+</CodeSteps>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 前面有 <code>@</code> 的叫做 <b>Annotation</b>（註解），像貼在程式上的標籤，告訴 Spring Boot 要怎麼對待它。<code>import</code> 那兩行不用自己打：打完 Annotation 後按 <code>Ctrl + Shift + O</code>，Eclipse 會自動補上。
 </div>
 
 </v-click>
 
 <!--
-最後我們用動畫看一下，剛剛在瀏覽器按下 Enter 之後，背後發生了什麼事。
+把 MyController 的內容改成這樣。
 
-（下一步）第一步，瀏覽器打開 localhost 8080 斜線 test，這個請求被送到我們的 Spring Boot 程式。
+（下一步）類別上面加 @RestController。意思是告訴 Spring Boot：這個類別是櫃台，負責接網址。
 
-（下一步）第二步，Spring Boot 看到網址是 /test，就去找誰負責這個網址。它找到 MyController 裡的 test 方法，就把工作交給它。
+（下一步）方法上面加 @RequestMapping，括號裡是 /test。這就像店員胸前的名牌：/test 這個網址由我處理。
 
-（下一步）第三步，test 方法印出 Hi，然後回傳 Hello World。
+（下一步）方法的內容有兩行。System.out.println 是在 Eclipse 的 Console 印出 Hi!，這是給我們自己看的。return 是把 Hello World 回給瀏覽器，這是給使用者看的。
 
-（下一步）第四步，Spring Boot 把 Hello World 送回瀏覽器，畫面上就出現了。
+（下一步）前面有小老鼠符號的，叫做 Annotation，中文也叫註解。它像貼在程式上的標籤，告訴 Spring Boot 要怎麼對待這段程式。上面 import 那兩行不用自己打：打完 Annotation 之後，按 Ctrl 加 Shift 加 O，Eclipse 會自動補上。這兩個 Annotation 第十四章還會詳細介紹。
+-->
 
-（下一步）這裡面有兩個關鍵字。@RestController 是讓 Spring Boot 知道「這個類別負責接網址」；@RequestMapping 斜線 test，是告訴它「這個網址交給下面這個方法」。這兩個之後的章節都會詳細介紹，今天先有印象就好。
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 5
+# 按下列印鈕
+
+<!--
+最後一步，執行。
+-->
+
+---
+
+# 執行程式
+
+<div class="grid grid-cols-2 gap-6">
+<div>
+
+<v-clicks>
+
+1. 對 **`DemoApplication.java`** 按右鍵
+2. 選 **Run As → Java Application**
+3. 看下方的 **Console**：出現 `Tomcat started on port 8080` 和 `Started DemoApplication` 就是啟動成功
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 <b>Tomcat</b> 是 Spring Boot 內建的網站伺服器，就是第一章說的「便利商店的機器」。8080 是它的門牌號碼。
+</div>
+
+</v-click>
+
+</div>
+<div class="flex flex-col gap-3">
+
+<img src="/screenshots/ch03-10-run-as.png" alt="Run As Java Application" style="width:100%; max-height:170px; object-fit:contain; margin-top:8px;" />
+
+<img src="/screenshots/ch03-11-console-started.png" alt="Console 啟動訊息" style="width:100%; max-height:150px; object-fit:contain; margin-top:8px;" />
+
+</div>
+</div>
+
+<!--
+執行程式。
+
+（下一步）對 DemoApplication.java 按右鍵。注意是 DemoApplication，不是 MyController。
+
+（下一步）選 Run As，再選 Java Application。
+
+（下一步）看下方的 Console 視窗，會跑出很多文字。最後出現 Tomcat started on port 8080，和 Started DemoApplication，就是啟動成功了。
+
+（下一步）Tomcat 是 Spring Boot 內建的網站伺服器，就是第一章說的便利商店的機器，插上電就能用。8080 是它的門牌號碼，也就是 Port。
+-->
+
+---
+
+# 打開瀏覽器
+
+<div class="grid grid-cols-2 gap-6">
+<div>
+
+在網址列輸入：
+
+```text
+http://localhost:8080/test
+```
+
+<v-clicks>
+
+- 瀏覽器顯示 **Hello World**
+- 回到 Eclipse，Console 多了一行 **Hi!**
+- `localhost`：「我自己這台電腦」
+
+</v-clicks>
+
+</div>
+<div class="flex flex-col gap-3">
+
+<img src="/screenshots/ch03-12-browser-result.png" alt="瀏覽器顯示 Hello World" style="width:100%; max-height:160px; object-fit:contain; margin-top:8px;" />
+
+<img src="/screenshots/ch03-13-console-result.png" alt="Console 顯示 Hi!" style="width:100%; max-height:160px; object-fit:contain; margin-top:8px;" />
+
+</div>
+</div>
+
+<!--
+打開瀏覽器，在網址列輸入 http 冒號斜線斜線 localhost 冒號 8080 斜線 test。
+
+（下一步）瀏覽器顯示 Hello World。這是 return 回來的。
+
+（下一步）回到 Eclipse，Console 多了一行 Hi!。這是 System.out.println 印的。代表 test 這個方法真的被執行了。
+
+（下一步）localhost 的意思是：我自己這台電腦。程式在自己的電腦上跑，所以用 localhost 找它。
+
+恭喜大家，完成了第一個 Spring Boot 程式。
+-->
+
+---
+
+# 按下 Enter 之後發生了什麼
+
+<Flow nodes="瀏覽器:你打網址的地方|Spring Boot:便利商店的機器|test():櫃台店員 MyController" steps="1>2:打開 localhost:8080/test|2>3:/test？名牌上寫的是你，交給你|3>2:回傳 Hello World（Console 印 Hi!）|2>1:畫面顯示 Hello World" />
+
+<!--
+回頭看一下，按下 Enter 之後發生了什麼。
+
+（下一步）瀏覽器送出請求，要 localhost 8080 的 /test。
+
+（下一步）Spring Boot 收到之後，看看哪一位店員的名牌上寫著 /test。找到 MyController 的 test 方法，交給它。
+
+（下一步）test 方法在 Console 印出 Hi!，然後回傳 Hello World。
+
+（下一步）Spring Boot 把 Hello World 送回瀏覽器，畫面顯示出來。
+
+我們只寫了一個類別、一個方法。接電話、找人、送回去，都是 Spring Boot 做的。
+-->
+
+---
+
+# 想一想
+
+<Poll question="如果把 @RequestMapping(&quot;/test&quot;) 改成 @RequestMapping(&quot;/hi&quot;)，重新啟動後打開 localhost:8080/test，會看到什麼？" options="Hello World|Hi!|錯誤頁面（找不到 /test）|空白頁面" answer="3" />
+
+<!--
+來想一題。如果把 RequestMapping 括號裡的 /test 改成 /hi，重新啟動之後，打開 localhost:8080/test，會看到什麼？
+
+（等大家作答）
+
+（下一步）答案是錯誤頁面，找不到 /test。
+
+店員的名牌換成了 /hi，已經沒有人負責 /test 了。這時候要打開的是 localhost:8080/hi。
+-->
+
+---
+
+# 練習：再多一位店員
+
+請在 `MyController` 裡再加一個方法：
+
+<v-clicks>
+
+1. 網址是 `/hello`
+2. 在 Console 印出 `有人打招呼`
+3. 回給瀏覽器 `你好，Spring Boot`
+4. 停止程式（Console 右上角的紅色方塊），再重新執行，打開 `localhost:8080/hello`
+
+</v-clicks>
+
+<v-click>
+
+```java
+@RequestMapping("/hello")
+public String hello() {
+    System.out.println("有人打招呼");
+    return "你好，Spring Boot";
+}
+```
+
+</v-click>
+
+<!--
+練習。請在 MyController 裡再加一個方法。
+
+（下一步）網址是 /hello。
+
+（下一步）在 Console 印出「有人打招呼」。
+
+（下一步）回給瀏覽器「你好，Spring Boot」。
+
+（下一步）改完程式要重新執行。先按 Console 右上角的紅色方塊停止程式，再對 DemoApplication 按 Run As。沒有先停止就再執行一次，會因為 8080 已經被佔用而失敗。
+
+請先暫停，自己試試看。
+
+（下一步）參考答案。和 test 方法的寫法一樣，名牌換成 /hello，方法名稱換成 hello，內容換掉就好。新的方法要寫在類別的大括號裡面。
+-->
+
+---
+
+# 複習：第一次到便利商店
+
+<Pairs left="便利商店" right="今天做的事" rows="backpack,配好的工具箱=code,start.spring.io：Gradle、Java 17、Spring Web|shop,搬上書桌=code,Eclipse：Import → Existing Gradle Project|clerk,掛名牌的店員=code,@RestController + @RequestMapping(&quot;/test&quot;)|printer,按下列印鈕=code,Run As → Java Application|ok,作業印出來了=browser,localhost:8080/test → Hello World" />
+
+<!--
+我們用一張圖複習今天的內容。
+
+（下一步）配好的工具箱，是 start.spring.io，選 Gradle、Java 17，加上 Spring Web。
+
+（下一步）搬上書桌，是 Eclipse 的 Import，選 Existing Gradle Project。
+
+（下一步）掛名牌的店員，是 @RestController 加上 @RequestMapping。
+
+（下一步）按下列印鈕，是 Run As，Java Application。
+
+（下一步）作業印出來了，是瀏覽器打開 localhost:8080/test，看到 Hello World。
+-->
+
+---
+
+# 章節總結
+
+<v-clicks>
+
+- **Spring Initializr**：勾選設定和套件，產生一個配好的專案
+- **Gradle**：照 `build.gradle` 自動下載套件；匯入時選 Existing Gradle Project
+- **`@RestController`**：這個類別是櫃台；**`@RequestMapping("/test")`**：這個網址由我處理
+- **執行**：對 `DemoApplication` 按 Run As → Java Application，Tomcat 在 8080 等待
+- 改了程式要**先停止再重新執行**
+
+</v-clicks>
+
+<v-click>
+
+下一章：Spring 是怎麼幫我們準備好這些東西的？從「控制反轉」開始。
+
+</v-click>
+
+<!--
+最後整理今天的重點。
+
+（依序按下一步）Spring Initializr 勾選設定和套件，產生一個配好的專案。Gradle 照 build.gradle 自動下載套件，匯入的時候選 Existing Gradle Project。@RestController 代表這個類別是櫃台，@RequestMapping 代表這個網址由我處理。執行的時候，對 DemoApplication 按 Run As，Java Application，Tomcat 會在 8080 等待。改了程式，要先停止再重新執行。
+
+（最後一步）今天我們只是走過一遍流程。下一章開始，要看 Spring 是怎麼幫我們準備好這些東西的，從控制反轉開始。
 -->
 
 ---
@@ -581,9 +755,7 @@ layout: end
 有任何問題嗎？
 
 <!--
-大家今天成功執行了第一個 Spring Boot 程式，非常棒！
+今天的內容到這邊。
 
-如果過程中有遇到問題，常見的有：Gradle 找不到 JDK、Import 選錯資料夾層級、Run As 沒有 Java Application 選項。
-
-有問題的同學可以截圖錯誤訊息，我們一起來看看怎麼解決。
+有任何問題歡迎提出來。
 -->

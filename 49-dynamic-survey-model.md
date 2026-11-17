@@ -837,7 +837,7 @@ public interface SurveyResponseRepository extends JpaRepository<SurveyResponse, 
 
 # 啟動看看
 
-`DynamicSurveyApplication` 按右鍵 → Run As → Spring Boot App，到 Workbench 重新整理：
+`DynamicSurveyApplication` 按右鍵 → Run As → Java Application，到 Workbench 重新整理：
 
 <v-clicks>
 
@@ -856,7 +856,7 @@ public interface SurveyResponseRepository extends JpaRepository<SurveyResponse, 
 </v-click>
 
 <!--
-到這裡可以啟動看看了。在 DynamicSurveyApplication 按右鍵，Run As，Spring Boot App。啟動之後到 Workbench，對 dynamic_survey 按重新整理。
+到這裡可以啟動看看了。在 DynamicSurveyApplication 按右鍵，Run As，Java Application。啟動之後到 Workbench，對 dynamic_survey 按重新整理。
 
 （下一步）會看到七張資料表。問卷、題目、選項。
 

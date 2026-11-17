@@ -48,32 +48,44 @@ style: |
 </div>
 
 <!--
-大家好，歡迎來到第二章！
+大家好，歡迎來到第二章。
 
-在開始寫程式之前，我們要先把三個重要的工具裝好：MySQL、Git 和 GitHub Desktop。
+上一章我們認識了 Spring Boot：它就像便利商店，讓小明不用自己買印表機，專心寫作業就好。
 
-MySQL 是我們的資料庫；Git 是版本控制工具；GitHub Desktop 則是 Git 的視覺化介面，讓我們不用打指令也能管理程式碼。
-
-這三個工具在實際開發工作中幾乎天天都會用到，所以今天我們就花點時間把它們都裝好。
+不過在開始寫程式之前，還是要先把文具準備好。今天要在電腦上裝好六樣工具。每一樣工具，我們都先用小明的故事說明它是做什麼的，再一步一步安裝。
 -->
 
 ---
-layout: default
----
 
-# Outline
+# 今天要準備的六樣工具
 
-- **MySQL 安裝** — 下載 MySQL Installer、設定 root 帳號、驗證連線
-- **Git 安裝** — 下載 Git for Windows、設定安裝選項、驗證版本
-- **GitHub 介紹 & 帳號註冊** — 什麼是 GitHub、免費註冊帳號、驗證信箱
-- **GitHub Desktop 安裝** — 下載安裝、登入 GitHub 帳號、設定 Git 身份
+<v-clicks>
+
+- **JDK**：讓電腦看得懂 Java
+- **Eclipse**：寫程式的書桌
+- **MySQL**：存放資料的檔案櫃
+- **Git**：替作業留下每一次的存檔點
+- **GitHub**：放在雲端的作業簿
+- **GitHub Desktop**：用按鈕操作 Git 的工具
+
+</v-clicks>
 
 <!--
-今天的安裝流程分三個部分。
+今天要準備六樣工具。
 
-每個部分我都會帶著大家一步一步操作，並且告訴大家哪些選項是重要的、哪些直接按預設就好。
+（下一步）JDK，讓電腦看得懂 Java。
 
-大家可以邊看邊在自己的電腦上操作，有問題隨時舉手！
+（下一步）Eclipse，寫程式的書桌。
+
+（下一步）MySQL，存放資料的檔案櫃。
+
+（下一步）Git，替作業留下每一次的存檔點。
+
+（下一步）GitHub，放在雲端的作業簿。
+
+（下一步）GitHub Desktop，用按鈕操作 Git 的工具。
+
+裝的東西比較多，但每一樣都只要裝一次。今天裝好，之後整門課都會用到。
 -->
 
 ---
@@ -82,197 +94,81 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 1
-# MySQL 安裝
+# 小明開學前準備文具
 
 <!--
-我們先來安裝 MySQL。
-
-MySQL 是目前最主流的關聯式資料庫之一，Spring Boot 專案後續連接資料庫，幾乎都會用到它。
+先用小明的故事，看這六樣工具各是什麼。
 -->
 
 ---
 
-# MySQL 安裝 — Step 1：下載 MySQL Installer
+# 開學前，小明要準備什麼
 
-前往 `dev.mysql.com/downloads/installer/` 下載，選擇下方 **565.9 MB** 的 Full Bundle 版本。
+<v-clicks>
 
-<img src="/screenshots/ch02-01-mysql-download.png" alt="MySQL 下載頁面" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
+- 一張**書桌**，在上面寫作業
+- 寫作業要用的**語言**：老師出的是英文作業，小明得先會英文
+- 一個**檔案櫃**，把寫好的資料收好
+- 每寫完一段就**存檔一次**，寫壞了可以回到上一版
+- 一本**雲端作業簿**：電腦壞了也不怕，還能和同學一起寫
+- 存檔太麻煩？用一個**有按鈕的小幫手**來做
 
-<div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 下載後點「No thanks, just start my download.」即可跳過 Oracle 帳號登入。
-</div>
+</v-clicks>
 
 <!--
-大家開啟瀏覽器，輸入網址 dev.mysql.com/downloads/installer/
+開學前，小明要準備哪些東西？
 
-你會看到兩個版本：
-- Web 版（約 2MB）：安裝時才下載元件，需要穩定網路
-- Full Bundle（565.9MB）：把所有東西都一次下載好
+（下一步）一張書桌，在上面寫作業。
 
-我建議選 Full Bundle，這樣安裝過程不需要一直等下載。
+（下一步）寫作業要用的語言。老師出的是英文作業，小明得先會英文，才看得懂題目、寫得出答案。
 
-按下 Download 之後，它會叫你登入 Oracle 帳號，但你可以直接點「No thanks, just start my download.」跳過登入，直接下載。
+（下一步）一個檔案櫃，把寫好的資料收好。
+
+（下一步）每寫完一段就存檔一次。寫壞了，可以回到上一版。
+
+（下一步）一本雲端作業簿。電腦壞了也不怕，資料還在。而且可以和同學一起寫。
+
+（下一步）每次存檔都要做好幾個步驟，有點麻煩。所以找一個有按鈕的小幫手，按一下就存好。
 -->
 
 ---
 
-# MySQL 安裝 — Step 2：選擇 Server only
+# 對照到程式的工具
 
-執行 `.exe` 安裝程式，Setup Type 選擇 **Server only**。
-
-<img src="/screenshots/ithome/img-03.png" alt="MySQL Setup Type" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
+<Pairs left="小明的文具" right="工具" rows="book,寫作業的語言=code,JDK：讓電腦看得懂 Java|shop,書桌=code,Eclipse：寫程式的地方|cabinet,檔案櫃=server,MySQL：資料庫|doc,每一段的存檔點=code,Git：版本控制|browser,雲端作業簿=browser,GitHub：放程式的雲端網站|ok,有按鈕的小幫手=code,GitHub Desktop：Git 的按鈕版" />
 
 <!--
-雙擊 exe 檔執行安裝程式，如果 Windows 詢問管理員權限，選「是」允許。
+對照到程式的工具。
 
-等安裝程式初始化之後，會看到 Setup Type 的選擇畫面。
+（下一步）寫作業的語言，是 JDK。我們用 Java 寫程式，電腦要先裝 JDK，才看得懂 Java。
 
-選「Server only」，然後按 Next — 我們會在下一個畫面手動加入 Workbench。
+（下一步）書桌，是 Eclipse。我們在這裡寫程式、執行程式。
+
+（下一步）檔案櫃，是 MySQL，一種資料庫。
+
+（下一步）每一段的存檔點，是 Git。正式的名字叫版本控制。
+
+（下一步）雲端作業簿，是 GitHub，一個放程式的網站。
+
+（下一步）有按鈕的小幫手，是 GitHub Desktop。
 -->
 
 ---
 
-# MySQL 安裝 — Step 3：加入 Workbench
+# 想一想
 
-在 **Select Products** 畫面，從左側把 **MySQL Workbench** 和 **MySQL Shell** 加到右側安裝清單。
-
-<img src="/screenshots/ithome/img-04.png" alt="MySQL Select Products" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
-
-<div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>要加的元件：</b> MySQL Server + MySQL Workbench + MySQL Shell，選好後按 Next。
-</div>
+<Poll question="小明寫程式寫到一半，改壞了，想回到昨天的樣子。要靠哪一樣工具？" options="MySQL|Git|Eclipse|JDK" answer="2" />
 
 <!--
-這個畫面讓我們自己選要安裝哪些東西。
+來想一題。
 
-左邊是可以安裝的元件，右邊是已選定要安裝的。
+小明寫程式寫到一半，改壞了，想回到昨天的樣子。要靠哪一樣工具？
 
-找到 MySQL Workbench 和 MySQL Shell，把它們加到右側清單。這樣安裝完就會有 Workbench 可以用。
+（等大家作答）
 
-選好之後按 Next，安裝程式會確認安裝清單。
--->
+（下一步）答案是 Git。
 
----
-
-# MySQL 安裝 — Step 4（續）：執行安裝
-
-確認安裝清單後按 **Execute**，等待所有元件安裝完成。
-
-<img src="/screenshots/ithome/img-05.png" alt="MySQL 安裝進度" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
-
-<!--
-按 Execute 之後，安裝程式會開始安裝 MySQL Server、Workbench、Shell。
-
-這個步驟通常很快，因為 Full Bundle 已經把安裝檔都下載好了。
-
-所有項目都顯示安裝完成後，按 Next 繼續設定 MySQL Server。
--->
-
----
-
-# MySQL 安裝 — Step 4：設定 MySQL Server
-
-進入 MySQL Server 設定精靈，保持預設值即可。
-
-| 設定項目 | 建議值 | 說明 |
-| --- | --- | --- |
-| Config Type | Development Computer | 開發環境用，記憶體佔用較低 |
-| Port | `3306` | MySQL 預設連接埠，保持不變 |
-| Authentication | Strong Password Encryption | 安全性較高，保持預設 |
-
-<img src="/screenshots/ithome/img-07.png" alt="MySQL Type and Networking" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
-
-<!--
-進入 MySQL Server 設定精靈，這裡有幾個重要的設定。
-
-Config Type 選「Development Computer」，這個選項讓 MySQL 在開發機上使用較少的記憶體，不會影響電腦效能。
-
-Port 保持 3306 不要改，這是 MySQL 的標準連接埠，之後在 Spring Boot 的設定檔中也會用到這個數字。
-
-⚠️ 注意：如果你的電腦之前裝過其他 MySQL，port 3306 可能已被占用。遇到這種情況再來問我。
--->
-
----
-
-# MySQL 安裝 — Step 5：設定 root 密碼
-
-**最重要的步驟**：設定 root 帳號密碼，請務必記住！
-
-| 欄位 | 說明 |
-| --- | --- |
-| MySQL Root Password | 設定管理員密碼（自訂，請記住！） |
-| Repeat Password | 再輸入一次確認 |
-
-<div class="mt-3 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>重要：</b> root 是 MySQL 的最高權限帳號。密碼請記在安全的地方，之後 Spring Boot 連接資料庫時會用到。
-</div>
-
-<img src="/screenshots/ithome/img-09.png" alt="MySQL root 密碼設定" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
-
-<!--
-這個步驟最重要！設定 root 帳號的密碼。
-
-root 是 MySQL 的最高權限帳號，可以對資料庫做任何操作。
-
-密碼建議設定一個好記又有點複雜的，例如 Root@1234 這種組合大小寫加數字的格式。
-
-⚠️ 強調一下：這個密碼請一定要記下來！後面我們在 Spring Boot 的 application.properties 裡面，連接資料庫時就需要填這個密碼。如果忘記了，重設過程很麻煩。
-
-設好之後按 Next。
--->
-
----
-
-# MySQL 安裝 — Step 6：Windows Service 設定
-
-保持預設設定，讓 MySQL 以 Windows Service 形式自動啟動。
-
-| 設定項目 | 建議值 | 說明 |
-| --- | --- | --- |
-| Windows Service Name | `MySQL80` | 服務名稱，保持預設 |
-| Start at System Startup | ✅ 勾選 | 電腦重開機後自動啟動 MySQL |
-| Run as Standard System Account | ✅ 選擇 | 安全性設定，保持預設 |
-
-<!--
-Windows Service 設定讓 MySQL 在電腦開機時自動啟動，這樣你每次打開電腦就可以直接使用資料庫，不需要手動啟動。
-
-服務名稱 MySQL80 是預設的，不需要改。
--->
-
----
-
-# MySQL 安裝 — Step 6（續）：完成安裝
-
-按 **Execute** 套用設定，完成後按 **Finish** 結束安裝精靈。
-
-<img src="/screenshots/ithome/img-10.png" alt="MySQL Windows Service" style="width:100%; max-height:320px; object-fit:contain; margin-top:8px;" />
-
-<!--
-按 Execute 套用所有設定，等所有步驟都變成打勾之後，按 Finish。
-
-到這裡 MySQL 就安裝完成了！
--->
-
----
-
-# MySQL 安裝 — Step 7：驗證安裝
-
-開啟 **MySQL Workbench** 確認可以連線。
-
-<img src="/screenshots/ithome/img-15.png" alt="MySQL Workbench 主畫面" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
-
-<div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>驗證方式：</b> 看到 Workbench 主畫面有「Local instance MySQL80」連線卡片，點擊輸入 root 密碼後能成功進入，代表安裝成功！
-</div>
-
-<!--
-安裝完成後，安裝精靈通常會自動開啟 MySQL Workbench。
-
-如果沒有自動開啟，從開始選單找到 MySQL Workbench 手動開啟。
-
-主畫面會看到一張「Local instance MySQL80」的連線卡片，點擊它，輸入剛才設定的 root 密碼，能成功進入就代表 MySQL 安裝完成！
-
-大家試試看，有沒有看到這個畫面？
+Git 會替每一次存檔留下一個存檔點。只要昨天有存過，就能回到昨天的版本。MySQL 存的是程式用的資料，不是程式本身。
 -->
 
 ---
@@ -281,112 +177,83 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 2
-# Git 安裝
+# JDK：讓電腦看得懂 Java
 
 <!--
-MySQL 裝好了，接下來安裝 Git。
-
-Git 是版本控制工具，可以記錄每次程式碼的修改，也讓多人協作開發成為可能。
-
-不管是個人專案還是團隊開發，Git 都是必備工具。
--->
-
----
-layout: two-cols
----
-
-# Git 安裝 — Step 1：下載 Git for Windows
-
-前往官網下載最新版 Git。
-
-| 項目 | 說明 |
-| --- | --- |
-| 下載網址 | `git-scm.com/downloads` |
-| 選擇平台 | 點選 **Windows**，自動下載最新版 |
-| 檔案大小 | 約 60 MB |
-
-::right::
-
-<img src="/screenshots/ch02-02-git-download-page.png" alt="Git 官網首頁" style="width:100%; height:100%; object-fit:contain;" />
-
-<!--
-開啟瀏覽器，進入 git-scm.com。
-
-看到右下角的「Download for Windows」按鈕，點擊進入下載頁面。
--->
-
----
-layout: two-cols
----
-
-# Git 安裝 — Step 1（續）：點擊下載連結
-
-進入下載頁面後，點選 **Click here to download** 開始下載。
-
-下載完成後執行 `.exe` 安裝程式。
-
-::right::
-
-<img src="/screenshots/ch02-03-git-download-link.png" alt="Git 下載連結頁面" style="width:100%; height:100%; object-fit:contain;" />
-
-<!--
-點選 Click here to download，瀏覽器就會自動開始下載最新版的 Git 安裝程式。
-
-檔案大約 60MB，下載速度應該很快。
--->
-
----
-layout: two-cols
----
-
-# Git 安裝 — Step 2：安裝精靈設定
-
-下載完成後，點兩下執行安裝檔，按幾個 **Next** 繼續。
-
-當出現 **Select Components** 視窗時，勾選左上角的 **Additional icons → On the Desktop**，安裝程式就會在桌面建立 Git Bash 捷徑，方便日後使用。
-
-其他選項保持預設，繼續按 **Next** 直到完成。
-
-::right::
-
-<img src="/screenshots/ch02-04-git-install.png" alt="Git 安裝精靈 Select Components" style="width:100%; height:100%; object-fit:contain;" />
-
-<!--
-下載完成後雙擊執行安裝程式，按幾個 Next 就會看到 Select Components 這個畫面。
-
-勾選 Additional icons 底下的 On the Desktop，這樣安裝完成後桌面就會有一個 Git Bash 的捷徑。
-
-其他選項保持預設，繼續按 Next 直到安裝完成。
+第一樣，JDK。
 -->
 
 ---
 
-# Git 安裝 — Step 3：完成安裝並驗證
+# JDK 是什麼
 
-安裝完成後，開啟 **Command Prompt** 或 **PowerShell** 輸入驗證指令。
+<v-clicks>
 
-```bash
-git --version
-```
+- 我們寫的 Java 程式，電腦**不能直接看懂**
+- **JDK**（Java Development Kit）：寫 Java 需要的整套工具，包含把程式翻成電腦看得懂的樣子、以及執行它
+- 這門課用 **Java 17**：它是長期支援版（LTS），會維護很多年，Spring Boot 4 也要求至少 17
 
-成功輸出版本號即代表安裝完成：
+</v-clicks>
 
-```
-git version 2.49.0.windows.1
-```
+<v-click>
 
-<div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>找不到 Command Prompt？</b> 按 <code>Win + R</code>，輸入 <code>cmd</code> 按 Enter 即可開啟。
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 JDK 有很多家公司在做，內容幾乎一樣。這門課用免費的 <b>Eclipse Temurin</b>，到 <code>adoptium.net</code> 下載。
 </div>
 
+</v-click>
+
 <!--
-安裝完成後，打開 Command Prompt 或 PowerShell，輸入 git --version。
+JDK 是什麼？
 
-如果看到輸出 git version 2.x.x，代表 Git 已成功安裝。
+（下一步）我們寫的 Java 程式，電腦不能直接看懂。就像英文作業，小明要先學會英文。
 
-如果出現「'git' is not recognized」的錯誤，表示安裝時 PATH 設定沒有生效。通常重新開啟 Command Prompt 或重開機就可以解決。
+（下一步）JDK，全名是 Java Development Kit，Java 開發工具包。它是寫 Java 需要的整套工具。其中最重要的兩件事：把我們寫的程式翻成電腦看得懂的樣子，以及執行它。
 
-大家來試試看！
+（下一步）這門課用 Java 17。它是長期支援版，英文縮寫 LTS，會維護很多年。我們用的 Spring Boot 4，也要求至少是 Java 17。
+
+（下一步）JDK 有很多家公司在做，內容幾乎一樣。這門課用免費的 Eclipse Temurin，到 adoptium.net 下載。注意它和等一下要裝的 Eclipse 書桌是兩樣東西，只是名字很像。
+-->
+
+---
+
+# 安裝 JDK 17
+
+<v-clicks>
+
+1. 前往 `adoptium.net`，點選上方的 **Temurin**，再點 **Other platforms and versions**
+2. 作業系統選 **Windows**、架構選 **x64**、版本選 **17 - LTS**，下載 **.msi**
+3. 執行安裝程式。在選擇功能的畫面，把 **Set JAVA_HOME variable** 改成「安裝在本機」
+4. 其他保持預設，一路按 **Next**，最後按 **Install**
+
+</v-clicks>
+
+<v-click>
+
+開啟命令提示字元（`Win + R`，輸入 `cmd`），輸入：
+
+```bash
+java -version
+```
+
+看到 `openjdk version "17.0.…"` 就是裝好了。
+
+</v-click>
+
+<!--
+安裝 JDK 17。這一段沒有截圖，請照著文字一步一步做。
+
+（下一步）第一步，前往 adoptium.net。首頁會推薦最新的版本，我們要的不是最新版，所以點上方的 Temurin，再點 Other platforms and versions，其他平台和版本。
+
+（下一步）第二步，作業系統選 Windows，架構選 x64，版本選 17 - LTS。下載副檔名是 msi 的安裝檔。
+
+（下一步）第三步，執行安裝程式。中間有一個選擇功能的畫面，其中有一項叫 Set JAVA_HOME variable，預設是不安裝的。請點它，改成「安裝在本機」。JAVA_HOME 是一個系統設定，告訴其他程式 JDK 裝在哪裡，第三章建立專案的時候會用到。
+
+（下一步）其他保持預設，一路按 Next，最後按 Install。
+
+（下一步）裝好之後確認一下。按 Win 加 R，輸入 cmd，開啟命令提示字元。輸入 java 空格 減號 version。
+
+看到 openjdk version 17 開頭，就是裝好了。如果說找不到 java 這個指令，請把命令提示字元關掉重開一次，新的設定才會生效。
 -->
 
 ---
@@ -395,95 +262,79 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 3
-# GitHub 介紹 & 帳號註冊
+# Eclipse：寫程式的書桌
 
 <!--
-Git 裝好了，接下來介紹 GitHub。
-
-GitHub 是全球最大的程式碼托管平台，幾乎所有開源專案都在這裡。
-
-我們需要一個 GitHub 帳號，之後才能用 GitHub Desktop 把程式碼同步上去。
+第二樣，Eclipse。
 -->
 
 ---
 
-# 什麼是 GitHub？
+# Eclipse 是什麼
 
-GitHub 是基於 Git 的**雲端程式碼托管平台**，讓開發者可以將程式碼存放在雲端、與他人協作。
+<v-clicks>
 
-| 比較 | Git | GitHub |
-| --- | --- | --- |
-| 本質 | 版本控制工具（軟體） | 程式碼托管平台（網站） |
-| 安裝位置 | 裝在本機電腦 | 雲端服務，無需安裝 |
-| 主要功能 | 記錄版本、管理分支 | 存放程式碼、協作開發、Issue 追蹤 |
-| 使用方式 | 指令列 / GitHub Desktop | 瀏覽器 |
+- 寫程式可以用記事本，但是很辛苦：打錯字沒人提醒，要執行還得自己打指令
+- **Eclipse** 是一種 **IDE**（整合開發環境）：寫程式、找錯誤、執行，都在同一個視窗裡
+- 就像一張整理好的書桌：文具都在手邊，寫錯了旁邊有人提醒
 
-<div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>用小明的作業來想：</b>Git 幫小明記住作業改過的每一個版本，想回到昨天的版本隨時可以；GitHub 是把作業放到網路上的地方，換電腦、給老師同學看都方便。
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 Eclipse 有很多種版本。請選 <b>Eclipse IDE for Enterprise Java and Web Developers</b>：它已經內建 Gradle 的支援，第三章匯入專案時會用到。
 </div>
 
-<!--
-很多同學會搞混 Git 和 GitHub，其實很簡單：
-
-Git 是安裝在你電腦上的工具，負責記錄版本、管理分支。
-
-GitHub 是網站，讓你把 Git 管理的程式碼放到雲端，方便備份和多人協作。
-
-我們課程同時用這兩個：Git 負責本機版本管理，GitHub 負責雲端備份。
--->
-
----
-layout: two-cols
----
-
-# 帳號註冊 — Step 1：填寫基本資料
-
-前往 `github.com`，點選右上角 **Sign up** 開始免費註冊。
-
-| 欄位 | 說明 | 建議 |
-| --- | --- | --- |
-| Username | 帳號名稱，公開顯示 | 用英文，選好記的名字 |
-| Email address | 登入用 Email | 用常用信箱，需驗證 |
-| Password | 帳號密碼 | 至少 8 字元，含英數 |
-
-<div class="mt-3 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>Username 很重要：</b>程式碼網址會包含你的 username，例如 <code>github.com/your-name</code>。
-</div>
-
-::right::
-
-<img src="/screenshots/ch02-05-github-signup.png" alt="GitHub 註冊頁面" style="width:100%; height:100%; object-fit:contain;" />
+</v-click>
 
 <!--
-打開瀏覽器，輸入 github.com，點右上角的 Sign up。
+Eclipse 是什麼？
 
-填入 Email、Password、Username。
+（下一步）寫程式其實可以用記事本。但是很辛苦：打錯字沒有人提醒，要執行程式還得自己打指令。
 
-Username 是你在 GitHub 上的公開身份，之後你的 repository 網址都會包含這個名稱，所以選一個好記、專業的名字。
+（下一步）Eclipse 是一種 IDE，中文叫整合開發環境。寫程式、找錯誤、執行，都在同一個視窗裡完成。
+
+（下一步）就像一張整理好的書桌。文具都在手邊，寫錯了旁邊有人提醒。打錯字的地方，Eclipse 會畫紅線。
+
+（下一步）Eclipse 有很多種版本。請選 Eclipse IDE for Enterprise Java and Web Developers。它已經內建 Gradle 的支援，第三章匯入專案的時候會用到。Gradle 是什麼，第三章再說。
 -->
 
 ---
 
-# 帳號註冊 — Step 2：驗證 & 完成
+# 安裝 Eclipse
 
-| 步驟 | 說明 |
-| --- | --- |
-| ① 人機驗證 | 完成 GitHub 的拼圖驗證（Verify your account） |
-| ② 選擇方案 | 選 **GitHub Free**，免費，個人開發夠用 |
-| ③ 信箱驗證 | 收 Email → 輸入 8 位數驗證碼，啟用帳號 |
+<v-clicks>
 
-<div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>方案選 Free 就好：</b>Public / Private repository 皆可免費建立，個人開發完全夠用，之後有需要再升級。
+1. 前往 `eclipse.org/downloads`，下載 **Eclipse Installer**
+2. 執行後，在清單裡選 **Eclipse IDE for Enterprise Java and Web Developers**
+3. **Java VM** 選剛才裝好的 JDK 17；安裝位置保持預設，按 **INSTALL**
+4. 裝好後按 **LAUNCH**，第一次開啟會問 **Workspace**（放專案的資料夾）
+
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ Workspace 的路徑<b>不要有中文或空格</b>，例如用 <code>C:\workspace</code>。路徑有中文，之後建構專案很容易失敗。
 </div>
 
+</v-click>
+
 <!--
-填完資料之後，GitHub 會發一封驗證信到你的 Email。
+安裝 Eclipse。這一段也沒有截圖，請照著文字做。
 
-去信箱找一封來自 GitHub 的信，裡面有 8 位數驗證碼，輸入到網頁上就好。
+（下一步）第一步，前往 eclipse.org/downloads，下載 Eclipse Installer，Eclipse 的安裝程式。
 
-方案選 Free，不需要付費。
+（下一步）第二步，執行之後會出現一份清單，選 Eclipse IDE for Enterprise Java and Web Developers。
 
-驗證完成，GitHub 帳號就建立好了！
+（下一步）第三步，Java VM 這一欄，選剛才裝好的 JDK 17。安裝位置保持預設，按 INSTALL。中間會問是否接受授權條款，按接受。
+
+（下一步）第四步，裝好之後按 LAUNCH 開啟。第一次開啟會問 Workspace，意思是放專案的資料夾。
+
+（下一步）Workspace 的路徑不要有中文或空格。例如直接用 C 槽底下的 workspace。路徑有中文的話，之後建構專案很容易失敗，而且錯誤訊息很難看懂。
+
+打開之後會看到一個歡迎畫面，關掉它，就是我們的書桌了。
 -->
 
 ---
@@ -492,113 +343,162 @@ class: flex flex-col justify-center items-center text-center
 ---
 
 # Part 4
-# GitHub Desktop 安裝
+# MySQL：存放資料的檔案櫃
 
 <!--
-最後一個工具：GitHub Desktop。
-
-GitHub Desktop 是 Git 的視覺化操作介面。你不需要記住 Git 的指令，就可以透過點擊按鈕完成 commit、push、pull 等操作。
-
-對初學者來說非常友善，我們課程後期也會用它來管理我們的 Spring Boot 專案。
--->
-
----
-layout: two-cols
----
-
-# GitHub Desktop 安裝 — Step 1：下載與安裝
-
-前往官網一鍵下載，安裝過程全自動，無需額外操作。
-
-| 項目 | 說明 |
-| --- | --- |
-| 下載網址 | `desktop.github.com` |
-| 選擇版本 | 點選 **Download for Windows (64-bit)** |
-| 安裝方式 | 雙擊 `.exe` 後**全自動安裝**，不需要精靈設定 |
-| 安裝時間 | 通常不到 1 分鐘 |
-
-::right::
-
-<img src="/screenshots/ch02-06-github-desktop-download.png" alt="GitHub Desktop 下載頁面" style="width:100%; height:100%; object-fit:contain;" />
-
-<!--
-開啟瀏覽器，輸入 desktop.github.com。
-
-點選 Download for Windows (64-bit) 下載安裝程式。
-
-下載完成後雙擊執行，GitHub Desktop 會全自動安裝，沒有安裝精靈，不需要選任何選項。
-
-安裝完成後會自動開啟 GitHub Desktop，進入首次設定流程。
+第三樣，MySQL。
 -->
 
 ---
 
-# GitHub Desktop 安裝 — Step 2：登入 GitHub 帳號
+# MySQL 是什麼
 
-安裝完成後，GitHub Desktop 自動開啟，點選 **Sign in to GitHub.com** 登入。
+<v-clicks>
 
-<img src="/screenshots/ch02-07-github-desktop-welcome.png" alt="GitHub Desktop 歡迎畫面" style="max-height:220px; object-fit:contain; margin-top:8px;" />
+- 程式關掉之後，記在程式裡的東西就不見了
+- 要長期保存的資料（學生名單、訂單、問卷），要放進**資料庫**
+- **MySQL** 是最常見的資料庫之一，免費；**MySQL Workbench** 是它的操作畫面
 
-<div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>還沒有 GitHub 帳號？</b> 先前往 <code>github.com</code> 免費註冊一個帳號再回來登入。
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 第二十二章開始會一直用到它。現在只要裝好、記住 <b>root 密碼</b>就可以。
 </div>
 
+</v-click>
+
 <!--
-安裝完成後會看到 GitHub Desktop 的歡迎畫面。
+MySQL 是什麼？
 
-點選「Sign in to GitHub.com」，系統會自動開啟你的瀏覽器，跳轉到 GitHub 的授權頁面。
+（下一步）程式關掉之後，記在程式裡的東西就不見了。就像寫在白板上的字，下課就被擦掉。
 
-在瀏覽器裡輸入你的 GitHub 帳號和密碼，確認授權之後，瀏覽器會提示回到 GitHub Desktop。
+（下一步）要長期保存的資料，例如學生名單、訂單、問卷，要放進資料庫。就像收進檔案櫃。
 
-如果你還沒有 GitHub 帳號，現在可以先去 github.com 免費申請一個，只需要 Email 就可以註冊。
+（下一步）MySQL 是最常見的資料庫之一，而且免費。MySQL Workbench 是它的操作畫面，讓我們可以打開檔案櫃看看裡面有什麼。
+
+（下一步）第二十二章開始會一直用到它。現在只要裝好，並且記住等一下設定的 root 密碼就可以了。
 -->
 
 ---
 
-# GitHub Desktop 安裝 — Step 3：設定 Git 身份
+# 安裝 MySQL（一）：下載
 
-登入後填入 Git 身份資訊，這會顯示在每次 commit 的紀錄中。
+前往 `dev.mysql.com/downloads/installer/`，下載下方 **Full Bundle** 的版本。
 
-| 欄位 | 說明 | 範例 |
-| --- | --- | --- |
-| Name | 顯示在 commit 紀錄的名字 | `王小明` 或 英文名 |
-| Email | 與 GitHub 帳號相同的 Email | `your@email.com` |
+<img src="/screenshots/ch02-01-mysql-download.png" alt="MySQL 下載頁面" style="width:100%; max-height:250px; object-fit:contain; margin-top:8px;" />
 
-按 **Finish** 完成設定。
+<v-click>
 
-<img src="/screenshots/ch02-08-github-desktop-configure.png" alt="GitHub Desktop Configure Git" style="width:70%; max-height:180px; object-fit:contain; margin-top:8px;" />
-
-<!--
-登入成功後，會進入 Configure Git 畫面。
-
-Name 是顯示在 commit 紀錄中的名字，可以用中文或英文，輸入你慣用的名字就好。
-
-Email 建議填和 GitHub 帳號相同的 Email，這樣 commit 紀錄才能正確對應到你的 GitHub 帳號。
-
-填好之後按 Finish，就完成了！
--->
-
----
-
-# GitHub Desktop 安裝 — Step 4：確認主畫面
-
-設定完成後進入 GitHub Desktop 主畫面，三個工具全部安裝完畢！
-
-<img src="/screenshots/ch02-09-github-desktop-main.png" alt="GitHub Desktop 主畫面" style="width:100%; max-height:260px; object-fit:contain; margin-top:8px;" />
-
-<div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>安裝完成確認清單：</b> ✅ MySQL Workbench 可連線　✅ <code>git --version</code> 有輸出　✅ GitHub Desktop 已登入帳號
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 下載前會請你登入 Oracle 帳號，點下方的「No thanks, just start my download.」就可以跳過。
 </div>
 
+</v-click>
+
 <!--
-看到 GitHub Desktop 的主畫面，左上角顯示你的 GitHub 帳號，代表安裝和登入都成功了！
+前往 dev.mysql.com/downloads/installer，下載下方比較大的那一個，Full Bundle 的版本。
 
-讓我們做一個快速確認：
-- MySQL：打開 Workbench 能看到 Local instance MySQL80 ✅
-- Git：在終端機輸入 git --version 有看到版本號 ✅  
-- GitHub Desktop：已登入帳號 ✅
+（下一步）按下載之後，會請你登入 Oracle 帳號。不用登入，點下方的「No thanks, just start my download.」就可以直接下載。
+-->
 
-三個都 OK 的同學恭喜！今天的任務完成了。
+---
+
+# 安裝 MySQL（二）：選擇要裝的元件
+
+<v-clicks>
+
+1. 執行下載的安裝程式，Setup Type 選 **Server only**
+2. 在 **Select Products** 畫面，從左邊把 **MySQL Workbench** 和 **MySQL Shell** 加到右邊
+3. 按 **Next**，再按 **Execute** 開始安裝
+
+</v-clicks>
+
+<img src="/screenshots/ithome/img-04.png" alt="MySQL Select Products" style="width:100%; max-height:230px; object-fit:contain; margin-top:8px;" />
+
+<!--
+執行下載的安裝程式。
+
+（下一步）Setup Type 選 Server only。
+
+（下一步）只裝 Server 不夠，我們還需要操作畫面。在 Select Products 這個畫面，就是下面這張圖，從左邊的清單找到 MySQL Workbench 和 MySQL Shell，加到右邊。右邊最後應該有三樣：Server、Workbench、Shell。
+
+（下一步）按 Next，再按 Execute，等它安裝完成。
+-->
+
+---
+
+# 安裝 MySQL（三）：設定伺服器
+
+接著會進入設定精靈，前面幾頁**保持預設**：
+
+<v-clicks>
+
+- Config Type：**Development Computer**（開發用，佔用記憶體比較少）
+- Port：**3306**（MySQL 的門牌號碼，不要改）
+- Authentication：保持預設
+
+</v-clicks>
+
+<img src="/screenshots/ithome/img-07.png" alt="MySQL Type and Networking" style="width:100%; max-height:220px; object-fit:contain; margin-top:8px;" />
+
+<!--
+安裝完成後，會進入設定精靈。前面幾頁都保持預設就好。
+
+（下一步）Config Type 是 Development Computer，開發用的電腦，佔用的記憶體比較少。
+
+（下一步）Port 是 3306。Port 可以想成門牌號碼，程式要找 MySQL，就去敲 3306 這扇門。請不要改，之後的設定都會用這個號碼。
+
+（下一步）Authentication 驗證方式，保持預設。
+-->
+
+---
+
+# 安裝 MySQL（四）：設定 root 密碼
+
+**最重要的一步**：替最高權限的帳號 `root` 設定密碼。
+
+<img src="/screenshots/ithome/img-09.png" alt="MySQL root 密碼設定" style="width:100%; max-height:220px; object-fit:contain; margin-top:8px;" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 這個密碼<b>一定要記下來</b>。之後 Spring Boot 連資料庫、用 Workbench 開資料庫都要用它。忘了的話，處理起來很麻煩。
+</div>
+
+</v-click>
+
+<!--
+接下來是最重要的一步：替 root 這個帳號設定密碼。root 是 MySQL 裡權限最高的帳號，什麼都能做。
+
+在 MySQL Root Password 輸入密碼，Repeat Password 再輸入一次。
+
+（下一步）這個密碼一定要記下來。之後 Spring Boot 連資料庫、用 Workbench 開資料庫，都要用它。忘了的話，要重設很麻煩。上課練習的話，可以用簡單好記的密碼，但是請不要和你其他重要帳號的密碼一樣。
+-->
+
+---
+
+# 安裝 MySQL（五）：完成並確認
+
+<v-clicks>
+
+1. Windows Service 的頁面保持預設：服務名稱 `MySQL80`、**開機自動啟動**
+2. 按 **Execute** 套用設定，最後按 **Finish**
+3. 開啟 **MySQL Workbench**，點 **Local instance MySQL80**，輸入 root 密碼
+
+</v-clicks>
+
+<img src="/screenshots/ithome/img-15.png" alt="MySQL Workbench 主畫面" style="width:100%; max-height:210px; object-fit:contain; margin-top:8px;" />
+
+<!--
+最後幾步。
+
+（下一步）Windows Service 的頁面保持預設。服務名稱是 MySQL80，勾選開機自動啟動。這樣每次開機，MySQL 就會自己開始運作，不用手動打開。
+
+（下一步）按 Execute 套用所有設定，全部打勾之後，按 Finish。
+
+（下一步）確認一下。開啟 MySQL Workbench，主畫面上有一張卡片叫 Local instance MySQL80。點它，輸入剛才的 root 密碼。能進去，就代表檔案櫃裝好了。
 -->
 
 ---
@@ -606,38 +506,382 @@ layout: section
 class: flex flex-col justify-center items-center text-center
 ---
 
-# 章節總結
+# Part 5
+# Git：作業的存檔點
 
 <!--
-好，讓我們來整理一下今天安裝的三個工具。
+第四樣，Git。
 -->
 
 ---
 
-# 總結
+# Git 是什麼
 
-今天我們完成了三個開發必備工具的安裝：
+<v-clicks>
 
-- **MySQL** — 關聯式資料庫，Spring Boot 後端儲存資料的地方；root 密碼請妥善保管
-- **Git** — 版本控制工具，追蹤程式碼的每一次修改；安裝時記得開啟 PATH 設定
-- **GitHub Desktop** — Git 的視覺化介面，讓版本控制操作更直覺；需登入 GitHub 帳號
+- 沒有 Git：`作業.docx`、`作業_改.docx`、`作業_最終版.docx`、`作業_真的最終版.docx`……
+- **Git** 替每一次修改留下一個**存檔點**，記下「改了什麼、誰改的、什麼時候」
+- 改壞了，可以回到任何一個存檔點；檔案永遠只有一份
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-🚀 <b>下一章：</b> 環境都備妥了！接下來我們將建立第一個 Spring Boot 專案，實際寫出第一支後端 API！
+</v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 這種工具叫做<b>版本控制</b>。幾乎所有公司寫程式都會用它。存檔點在 Git 裡叫做 <b>commit</b>。
+</div>
+
+</v-click>
+
+<!--
+Git 是什麼？
+
+（下一步）沒有 Git 的時候，我們怎麼保留舊版本？常常是這樣：作業點 docx，作業改，作業最終版，作業真的最終版。過一陣子，自己都分不清哪一個才是對的。
+
+（下一步）Git 會替每一次修改留下一個存檔點。記下改了什麼、誰改的、什麼時候改的。
+
+（下一步）改壞了，可以回到任何一個存檔點。而且資料夾裡的檔案永遠只有一份，不會多出一堆副本。
+
+（下一步）這種工具叫做版本控制。幾乎所有公司寫程式都會用它。存檔點在 Git 裡有一個正式的名字，叫做 commit。
+-->
+
+---
+
+# 安裝 Git
+
+<v-clicks>
+
+1. 前往 `git-scm.com/downloads`，點 **Windows**，再點 **Click here to download**
+2. 執行安裝程式，按幾次 **Next**
+3. 到 **Select Components** 時，勾選 **Additional icons → On the Desktop**
+4. 其他保持預設，按 **Next** 直到完成
+
+</v-clicks>
+
+<img src="/screenshots/ch02-04-git-install.png" alt="Git 安裝精靈 Select Components" style="width:100%; max-height:220px; object-fit:contain; margin-top:8px;" />
+
+<!--
+安裝 Git。
+
+（下一步）前往 git-scm.com/downloads，點 Windows，再點 Click here to download 開始下載。
+
+（下一步）執行安裝程式，按幾次 Next。
+
+（下一步）到 Select Components 這個畫面，就是下面這張圖，勾選左上角的 Additional icons 底下的 On the Desktop。這樣桌面會多一個 Git Bash 的圖示。
+
+（下一步）其他的選項很多，全部保持預設，一路按 Next 直到完成。
+-->
+
+---
+
+# 確認 Git 裝好了
+
+開啟命令提示字元，輸入：
+
+```bash
+git --version
+```
+
+<v-click>
+
+看到版本號就是裝好了：
+
+```text
+git version 2.49.0.windows.1
+```
+
+</v-click>
+
+<!--
+確認 Git 裝好了。和剛才確認 JDK 一樣，開啟命令提示字元，輸入 git 空格 減號減號 version。
+
+（下一步）看到版本號，就是裝好了。版本號和畫面上的不一樣沒關係，有數字出現就好。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 6
+# GitHub：雲端的作業簿
+
+<!--
+第五樣，GitHub。
+-->
+
+---
+
+# GitHub 是什麼
+
+<Pairs left="Git" right="GitHub" sign="vs" rows="code,一個軟體，裝在自己的電腦=browser,一個網站，在雲端|doc,替作業留存檔點=browser,把存檔點連同作業放到雲端|you,自己一個人用就可以=customer,可以分享、和別人一起改" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 只有 Git，電腦壞了存檔點也跟著不見。把作業放上 GitHub，換一台電腦也拿得回來。放程式的地方叫做 <b>repository</b>（儲存庫，常簡稱 repo）。
+</div>
+
+</v-click>
+
+<!--
+GitHub 是什麼？它和 Git 名字很像，但是兩樣東西。
+
+（下一步）Git 是一個軟體，裝在自己的電腦。GitHub 是一個網站，在雲端。
+
+（下一步）Git 替作業留存檔點。GitHub 把這些存檔點，連同作業一起放到雲端。
+
+（下一步）Git 自己一個人用就可以。GitHub 可以分享給別人，也可以和別人一起改。
+
+（下一步）只有 Git 的話，電腦壞了，存檔點也跟著不見。把作業放上 GitHub，換一台電腦也拿得回來。GitHub 上放程式的地方，叫做 repository，中文是儲存庫，常常簡稱 repo。
+-->
+
+---
+
+# 想一想
+
+<Poll question="下面哪一句話是對的？" options="Git 是網站，GitHub 是軟體|Git 記錄存檔點，GitHub 把它們放到雲端|有了 GitHub 就不用裝 Git|GitHub 是資料庫" answer="2" />
+
+<!--
+來想一題。下面哪一句話是對的？
+
+（等大家作答）
+
+（下一步）答案是：Git 記錄存檔點，GitHub 把它們放到雲端。
+
+第一個選項剛好相反。第三個也不對，存檔點是在自己電腦上用 Git 做的，GitHub 只是雲端的存放處。GitHub 也不是資料庫，存放資料的是 MySQL。
+-->
+
+---
+
+# 註冊 GitHub 帳號
+
+<div class="grid grid-cols-2 gap-6">
+<div>
+
+<v-clicks>
+
+1. 前往 `github.com`，點右上角 **Sign up**
+2. 填 Email、密碼、**Username**
+3. 完成拼圖驗證
+4. 到信箱收驗證碼，輸入後啟用帳號
+5. 方案選 **Free** 就夠用
+
+</v-clicks>
+
+</div>
+<div>
+
+<img src="/screenshots/ch02-05-github-signup.png" alt="GitHub 註冊頁面" style="width:100%; max-height:300px; object-fit:contain; margin-top:8px;" />
+
+</div>
+</div>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ Username 會出現在你所有程式的網址裡，例如 <code>github.com/你的名字</code>。請用英文，選一個正式一點的名字。
+</div>
+
+</v-click>
+
+<!--
+註冊 GitHub 帳號。
+
+（下一步）前往 github.com，點右上角的 Sign up。
+
+（下一步）填 Email、密碼，以及 Username，也就是帳號名稱。
+
+（下一步）完成拼圖驗證，證明你不是機器人。
+
+（下一步）到信箱收驗證信，把裡面的驗證碼輸入進去，帳號就啟用了。
+
+（下一步）最後選方案，選 Free 免費的就夠用。
+
+（下一步）提醒一下 Username。它會出現在你所有程式的網址裡。以後找工作的時候，可能會把 GitHub 給別人看，所以請用英文，選一個正式一點的名字。
+-->
+
+---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# Part 7
+# GitHub Desktop：按鈕版的 Git
+
+<!--
+最後一樣，GitHub Desktop。
+-->
+
+---
+
+# 為什麼要 GitHub Desktop
+
+<v-clicks>
+
+- Git 原本要在命令提示字元**打指令**操作，初學的時候很容易打錯
+- **GitHub Desktop** 把常用的動作做成按鈕：看改了什麼、建立存檔點、上傳到 GitHub
+- 背後做的事和打指令一模一樣，只是換成按鈕
+
+</v-clicks>
+
+<!--
+為什麼還要 GitHub Desktop？
+
+（下一步）Git 原本要在命令提示字元打指令操作。初學的時候，指令很容易打錯，也看不出現在的狀態。
+
+（下一步）GitHub Desktop 把常用的動作做成按鈕。看看改了什麼、建立存檔點、上傳到 GitHub，都是按一下就好。
+
+（下一步）背後做的事和打指令一模一樣，只是換成按鈕。這門課用它來操作 Git。
+-->
+
+---
+
+# 安裝與登入
+
+<div class="grid grid-cols-2 gap-6">
+<div>
+
+<v-clicks>
+
+1. 前往 `desktop.github.com`，下載 Windows 版
+2. 執行安裝檔，**全自動**安裝，不用按任何按鈕
+3. 自動開啟後，點 **Sign in to GitHub.com**，用剛才的帳號登入
+
+</v-clicks>
+
+</div>
+<div>
+
+<img src="/screenshots/ch02-07-github-desktop-welcome.png" alt="GitHub Desktop 歡迎畫面" style="width:100%; max-height:280px; object-fit:contain; margin-top:8px;" />
+
+</div>
 </div>
 
 <!--
-今天我們裝好了三個工具：MySQL 資料庫、Git 版本控制、GitHub Desktop 視覺化介面。
+安裝和登入。
 
-有幾件事要提醒大家：
+（下一步）前往 desktop.github.com，下載 Windows 版。
 
-MySQL 的 root 密碼一定要記住，之後設定 Spring Boot 連接資料庫時會用到。
+（下一步）執行安裝檔。它是全自動安裝的，不用按任何按鈕，通常不到一分鐘。
 
-Git 安裝時的 PATH 設定要記得選，這樣才能在終端機裡面直接用 git 指令。
+（下一步）裝好之後會自動開啟，出現這個歡迎畫面。點 Sign in to GitHub.com，瀏覽器會跳出來，用剛才註冊的帳號登入，再回到 GitHub Desktop。
+-->
 
-GitHub Desktop 要記得登入你的 GitHub 帳號，之後我們會用它把程式碼上傳到 GitHub。
+---
 
-下一章我們就要開始真正的開發了，大家期待嗎？
+# 設定 Git 的身分
+
+<v-clicks>
+
+- **Name**：每一個存檔點上顯示的名字
+- **Email**：請填**和 GitHub 帳號相同**的 Email
+- 按 **Finish** 完成
+
+</v-clicks>
+
+<img src="/screenshots/ch02-08-github-desktop-configure.png" alt="GitHub Desktop Configure Git" style="width:100%; max-height:200px; object-fit:contain; margin-top:8px;" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 每一個存檔點都會記下「誰做的」。Email 和 GitHub 相同，GitHub 才認得出那些存檔點是你的。
+</div>
+
+</v-click>
+
+<!--
+登入之後，要設定 Git 的身分。
+
+（下一步）Name，每一個存檔點上顯示的名字。
+
+（下一步）Email，請填和 GitHub 帳號相同的 Email。
+
+（下一步）按 Finish 完成。
+
+（下一步）為什麼要設定？因為每一個存檔點都會記下是誰做的。Email 和 GitHub 帳號相同，GitHub 才認得出這些存檔點是你的。
+-->
+
+---
+
+# 全部裝好了嗎
+
+<img src="/screenshots/ch02-09-github-desktop-main.png" alt="GitHub Desktop 主畫面" style="width:100%; max-height:180px; object-fit:contain; margin-top:8px;" />
+
+<v-clicks>
+
+- ✅ `java -version` 顯示 17
+- ✅ Eclipse 打得開，Workspace 路徑沒有中文
+- ✅ MySQL Workbench 用 root 密碼連得進去
+- ✅ `git --version` 有版本號
+- ✅ GitHub Desktop 已經登入
+
+</v-clicks>
+
+<!--
+看到 GitHub Desktop 的主畫面，六樣工具就全部裝好了。我們用一份清單確認一次。
+
+（下一步）java 減號 version 顯示 17。
+
+（下一步）Eclipse 打得開，Workspace 路徑沒有中文。
+
+（下一步）MySQL Workbench 用 root 密碼連得進去。
+
+（下一步）git 減號減號 version 有版本號。
+
+（下一步）GitHub Desktop 已經登入。
+
+有任何一項沒過，請回到那一部分重新看一次，或是在課堂上提出來。
+-->
+
+---
+
+# 複習：小明的文具
+
+<Pairs left="小明的文具" right="工具" rows="book,寫作業的語言=code,JDK 17（Eclipse Temurin）|shop,書桌=code,Eclipse（Enterprise Java 版）|cabinet,檔案櫃=server,MySQL + Workbench（記住 root 密碼）|doc,每一段的存檔點=code,Git（commit）|browser,雲端作業簿=browser,GitHub（repository）|ok,有按鈕的小幫手=code,GitHub Desktop" />
+
+<!--
+我們用一張圖複習今天的內容。
+
+（下一步）寫作業的語言，是 JDK 17，我們用 Eclipse Temurin。
+
+（下一步）書桌，是 Eclipse，選 Enterprise Java 的版本。
+
+（下一步）檔案櫃，是 MySQL 和 Workbench。記住 root 密碼。
+
+（下一步）每一段的存檔點，是 Git，存檔點叫 commit。
+
+（下一步）雲端作業簿，是 GitHub，放程式的地方叫 repository。
+
+（下一步）有按鈕的小幫手，是 GitHub Desktop。
+-->
+
+---
+
+# 章節總結
+
+<v-clicks>
+
+- **JDK 17**：讓電腦看得懂 Java；安裝時記得設定 `JAVA_HOME`
+- **Eclipse**：寫程式的 IDE；Workspace 路徑不要有中文或空格
+- **MySQL**：資料庫，Port 3306；root 密碼一定要記住
+- **Git**：版本控制，每個存檔點叫 commit；**GitHub**：把它們放到雲端
+- **GitHub Desktop**：Git 的按鈕版，Email 要和 GitHub 相同
+
+</v-clicks>
+
+<v-click>
+
+下一章：在書桌上建立第一個 Spring Boot 專案，讓瀏覽器顯示 Hello World。
+
+</v-click>
+
+<!--
+最後整理今天的重點。
+
+（依序按下一步）JDK 17 讓電腦看得懂 Java，安裝時記得設定 JAVA_HOME。Eclipse 是寫程式的 IDE，Workspace 路徑不要有中文或空格。MySQL 是資料庫，Port 是 3306，root 密碼一定要記住。Git 是版本控制，每個存檔點叫 commit；GitHub 把它們放到雲端。GitHub Desktop 是 Git 的按鈕版，Email 要和 GitHub 相同。
+
+（最後一步）下一章，我們就在這張書桌上建立第一個 Spring Boot 專案，讓瀏覽器顯示 Hello World。
 -->
 
 ---
@@ -649,9 +893,7 @@ layout: end
 有任何安裝問題嗎？
 
 <!--
-安裝過程中有沒有遇到什麼問題？
+今天的內容到這邊。
 
-常見的問題通常是：MySQL port 被占用、git 指令找不到、GitHub Desktop 登入失敗。
-
-有問題的同學可以截圖錯誤訊息，我們一起來看一下怎麼解決。
+安裝的過程中遇到任何問題，都歡迎提出來。
 -->
