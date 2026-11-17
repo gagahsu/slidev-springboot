@@ -28,6 +28,9 @@ import SqlSlip from './anim/SqlSlip.vue'
 import RowCards from './anim/RowCards.vue'
 import PaperTrail from './anim/PaperTrail.vue'
 import FormCheck from './anim/FormCheck.vue'
+import SessionTag from './anim/SessionTag.vue'
+import RateDelay from './anim/RateDelay.vue'
+import StickyNote from './anim/StickyNote.vue'
 import TwoBooks from './anim/TwoBooks.vue'
 import SeatRace from './anim/SeatRace.vue'
 import AskOrOrder from './anim/AskOrOrder.vue'
@@ -84,6 +87,9 @@ createApp(App)
   .component('RowCards', RowCards)
   .component('PaperTrail', PaperTrail)
   .component('FormCheck', FormCheck)
+  .component('SessionTag', SessionTag)
+  .component('RateDelay', RateDelay)
+  .component('StickyNote', StickyNote)
   .component('TwoBooks', TwoBooks)
   .component('SeatRace', SeatRace)
   .component('AskOrOrder', AskOrOrder)
