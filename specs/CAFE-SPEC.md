@@ -6,7 +6,7 @@
 > 目標：零程式經驗的學生上完基礎學程後，能**自己做出一個前後端串通的小網站**：Angular 畫面 → 呼叫 Spring Boot API → 讀寫 MySQL。
 > 進階學程的電商專題（`SHOP-SPEC.md`）是同一家店的線上商店，資料表會沿用並擴充本文件的 `categories`、`products`。
 
-狀態：**初稿，待確認**。文中標「待確認」的地方需要決定後才能開始寫教材。
+狀態：**初稿**。技術版本、範圍已確認（2026-11-18）；§11 還有一項待確認。
 
 ---
 
@@ -20,18 +20,16 @@
 
 只有一頁（One-page），沒有登入、沒有購物車、沒有金流。
 
-## 2. 技術版本（待確認）
+## 2. 技術版本（已確認）
 
 | 項目 | 版本 | 備註 |
 | ---- | ---- | ---- |
-| Java | 17（Eclipse Temurin） | Spring Boot 課 ch02 / ch03 教的是 JDK 17 |
-| Spring Boot | 4.0.x | Spring Boot 課的程式是在 4.0.9 編譯執行過的 |
+| Java | **21**（Eclipse Temurin） | Spring Boot 課 ch02 / ch03 目前教 JDK 17，要改成 21 |
+| Spring Boot | **4.x**（寫教材時用最新的 4.x 穩定版） | 目前 Spring Boot 課的程式在 4.0.9 編譯執行過 |
 | 建置工具 | Gradle - Groovy | 同 Spring Boot 課 ch03 |
-| MySQL | 8.0 | MySQL 課目前寫 8.0 |
-| Angular | **待確認** | Angular 課 ch05 的安裝指令是 `@angular/cli@19`；舊的 `SURVEY-SPEC.md` 寫 21 |
-| IDE | 後端 Eclipse、前端 VS Code | Java 課用的 IDE 待確認，最好跟 Spring Boot 課一致 |
-
-> 舊的 `SURVEY-SPEC.md` 寫 Java 21、Spring Boot 4.1.1、MySQL 8.4，跟課程實際教的不一致。新規格以課程實際教的版本為準，確認後各課統一。
+| MySQL | 8.x（待確認是否統一成 8.4） | MySQL 課目前寫 8.0 |
+| Angular | **21**（`@angular/cli@21`） | Angular 課 ch05 目前的安裝指令是 `@angular/cli@19`，要改成 21 |
+| IDE | 後端（Java、Spring Boot）**Eclipse**、前端（Angular）**VS Code** | Java 課也用 Eclipse |
 
 ## 3. 專案固定命名
 
@@ -170,9 +168,11 @@ reservations（獨立，不跟其他表關聯）
 
 登入與權限、購物車、訂單、金流、圖片上傳、分頁、Angular Material、Reactive Forms、Docker 部署、單元測試。
 
-## 11. 待確認
+## 11. 決定紀錄與待確認
 
-1. 技術版本（§2），特別是 Angular 版本，以及 Java 課使用的 IDE。
-2. 店名「轉角咖啡 Corner Café」與專案命名（`cafe-api` / `cafe-web` / `corner_cafe`）。
-3. 訂位就好，還是再加一個「聯絡我們」留言表單（會多一張表、一支 API）？
-4. 「店家查訂位」是加分題，還是列為必做？
+已確認（2026-11-18）：
+- 技術版本：Java 21、Spring Boot 4.x、Angular 21；後端用 Eclipse、前端用 VS Code（§2）。
+- 範圍：只做訂位，不做「聯絡我們」留言表單；「店家查訂位」是加分題。
+
+待確認：
+1. MySQL 版本要不要統一成 8.4（目前 MySQL 課寫 8.0）。

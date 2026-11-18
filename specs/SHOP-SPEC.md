@@ -6,7 +6,7 @@
 > 目標：上完基礎學程的學生，做出一個**可以實際下單、用綠界測試環境付款**的電商網站，含會員前台與管理後台，最後用 Docker 部署。
 > 情境延續基礎專題（`CAFE-SPEC.md`）：同一家「轉角咖啡」開線上商店，賣咖啡豆、濾掛包和器材。
 
-狀態：**初稿，待確認**。綠界相關內容依 2026-11 查閱的官方技術文件撰寫（來源見 §8.8），寫教材時要再核對一次。
+狀態：**初稿**。技術版本、運費、逾時、管理員帳號、章數、公開網址工具已確認（2026-11-18）。綠界相關內容依 2026-11 查閱的官方技術文件撰寫（來源見 §8.8），寫教材時要再核對一次。
 
 ---
 
@@ -20,7 +20,7 @@
 
 ## 2. 技術版本與命名
 
-技術版本同 `CAFE-SPEC.md` §2（待確認）。另外用到：Spring Security 7 + JWT（jjwt 0.13）、MyBatis、Flyway、Angular Material、Docker Compose。
+技術版本同 `CAFE-SPEC.md` §2：Java 21、Spring Boot 4.x、Angular 21，後端 Eclipse、前端 VS Code。另外用到：Spring Security 7 + JWT（jjwt 0.13）、MyBatis、Flyway、Angular Material、Docker Compose。
 
 | 項目 | 值 |
 | ---- | -- |
@@ -38,7 +38,18 @@
 | ---- | ---------- |
 | 訪客 | 瀏覽商品、把商品放進購物車（存在瀏覽器）；結帳前必須登入或註冊 |
 | 會員 `USER` | 訪客能做的全部，加上結帳、付款、查看與取消自己的訂單、修改會員資料 |
-| 管理員 `ADMIN` | 後台全部功能。**第一個註冊的帳號自動成為 ADMIN**，之後都是 USER（沿用問卷專題的規則，方便上課） |
+| 管理員 `ADMIN` | 後台全部功能。**管理員帳號預先建好**，由 Flyway 的 `V2__seed.sql` 新增（見下方）；前台註冊的帳號一律是 USER，沒有任何 API 可以把自己升級成 ADMIN |
+
+預設管理員帳號（只用於開發與上課）：
+
+| 欄位 | 值 |
+| ---- | -- |
+| `email` | `admin@cornercafe.test` |
+| 密碼 | `Admin1234`（seed 裡存的是 BCrypt 雜湊，不存明碼） |
+| `role` | `ADMIN` |
+
+- 教材要提醒：正式上線前一定要改密碼，或改用環境變數在啟動時建立管理員。
+- 範例資料另外建 2 個一般會員（`user1@cornercafe.test`、`user2@cornercafe.test`），方便示範訂單與權限。
 
 ## 4. 資料表（9 張）
 
@@ -217,7 +228,11 @@ Angular                    Spring Boot                          綠界（測試�
 
 `ReturnURL` 是**綠界的伺服器**呼叫的，學生電腦上的 `localhost:8080` 綠界連不到。兩種解法，教材都要教：
 
-1. **開發時**：用 ngrok 或 Cloudflare Tunnel 把本機 8080 暫時開一個公開的 https 網址，填進 `return-url` 設定。
+1. **開發時：Cloudflare Tunnel（已確定採用）**
+   - 安裝 `cloudflared`，執行 `cloudflared tunnel --url http://localhost:8080`，會拿到一個臨時的 `https://<隨機名稱>.trycloudflare.com` 網址，**不需要註冊帳號**。
+   - 把這個網址加上路徑，填進 `return-url`（例如用環境變數 `ECPAY_RETURN_URL`），重啟後端。
+   - 臨時網址**每次啟動都會變**，所以要教學生每次上課重新設定；這也是 `return-url` 放設定檔、不寫死的實際理由。
+   - 寫教材前要再確認 `cloudflared` 當下的安裝方式與指令（Windows / macOS）。
 2. **部署後**：Docker 部署到雲端主機（Docker ch08），用正式網域。
 
 沒有公開網址時，仍可用 §8.9 的模擬付款把整條流程做完。
@@ -310,12 +325,26 @@ Angular                    Spring Boot                          綠界（測試�
 | Spring Boot ch30–32 | 銷售報表用 MyBatis |
 | Spring Boot ch33–35 | 建立訂單的交易、扣庫存防超賣、SQL Injection |
 | Spring Boot ch40、42–47 | API 文件、測試（檢查碼單元測試）、Log、逾時取消排程、商品快取、Security + JWT |
-| Spring Boot ch49–53（**改寫**） | 電商專題：資料模型 → 會員與權限 → 商品與購物車 → 訂單與模擬付款 → 綠界金流 → 後台；章數與切分待定 |
+| Spring Boot ch49 起（**改寫，擴充成 7 章**） | 見下方「Spring Boot 專題章節」 |
 | Angular ch31–55 | Material 版面、表格、Select、Dialog、圓餅圖、RxJS、Signals 購物車、Sidenav 後台版型、Reactive Forms（結帳、商品規格 FormArray）、RWD、打包 |
 | Angular 新章 | HTTP 攔截器、路由守衛 |
 | Docker ch01–08 | 以 `db` / `api` / `web` 三個容器貫穿，ch07 Volume、ch08 部署 |
 
 Spring Boot ch48 Spring Cloud 不在進階學程內。
+
+### Spring Boot 專題章節（初稿，取代原本 ch49–53 的問卷專題）
+
+| 章 | 主題 | 內容 |
+| -- | ---- | ---- |
+| 1 | 專題總覽與資料模型 | 需求與畫面導覽、9 張表、Flyway（`V1__schema.sql`、`V2__seed.sql` 含預設管理員）、Entity 與 Repository |
+| 2 | 會員、權限與統一回應 | `AppResponse<T>`、`RspCode`、`BizException`、註冊登入、JWT、`/api/admin/**` 限 ADMIN |
+| 3 | 商品與後台商品管理 | 商品與規格查詢（分頁、搜尋、排序）、後台商品 CRUD、上下架、圖片上傳、分類快取 |
+| 4 | 購物車 | 購物車 API、登入後合併、庫存與數量檢查、運費試算 |
+| 5 | 訂單與模擬付款 | 建立訂單（交易、防超賣、金額重算、明細快照）、訂單狀態、取消、逾時排程、模擬付款 |
+| 6 | 綠界金流 | 檢查碼與單元測試、產生付款表單、接收付款通知、結果頁轉址、Cloudflare Tunnel、向綠界查詢 |
+| 7 | 後台訂單與報表 | 出貨、完成、取消、營運摘要、MyBatis 銷售報表 |
+
+原本的 ch53（Angular 前端，未改寫的舊內容）怎麼處理見 §13。
 
 ## 12. 驗收清單
 
@@ -329,11 +358,16 @@ Spring Boot ch48 Spring Cloud 不在進階學程內。
 - [ ] 後台能上傳商品圖片、新增多個規格、上下架；報表數字與訂單資料一致。
 - [ ] `docker compose up` 一次啟動三個服務，重開後資料與圖片都還在。
 
-## 13. 待確認
+## 13. 決定紀錄與待確認
 
-1. 技術版本（同 `CAFE-SPEC.md` §11）。
-2. 運費規則（滿 1,000 免運、否則 80 元）與逾時時間（30 分鐘）可以嗎？
-3. 第一個註冊的帳號自動成為 ADMIN（上課方便），還是改成用 `seed` 預先建好管理員帳號？
-4. Spring Boot ch49–53 要改寫成幾章？目前專題內容比問卷多（多了購物車、庫存、金流），估計需要 6～7 章。
-5. 綠界測試信用卡卡號：寫教材前要到官方測試資料頁確認。
-6. 學生用 ngrok 還是 Cloudflare Tunnel？（兩者都免費；ngrok 需要註冊帳號，Cloudflare Tunnel 的臨時網址不需要帳號）
+已確認（2026-11-18）：
+- 技術版本：Java 21、Spring Boot 4.x、Angular 21；後端 Eclipse、前端 VS Code。
+- 運費滿 1,000 免運、否則 80 元；未付款 30 分鐘自動取消。
+- 管理員帳號預先建好（§3），不採用「第一個註冊的帳號成為管理員」。
+- Spring Boot 專題擴充成 7 章（§11）。
+- 開發時的公開網址工具用 Cloudflare Tunnel（§8.6）。
+
+待確認：
+1. 綠界測試信用卡卡號：寫教材前要到官方測試資料頁確認。
+2. 電商的前端畫面放在哪裡：建議放進 Angular 課（接在 Material、Signals、Reactive Forms 之後），Spring Boot 課只講後端；原本 Spring Boot ch53 的 Angular 前端舊內容一起淘汰。
+3. MySQL 版本（同 `CAFE-SPEC.md` §11）。
