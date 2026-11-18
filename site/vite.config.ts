@@ -7,7 +7,7 @@ export default defineConfig({
   // relative base + hash routing: works on any static host / sub-path
   base: './',
   publicDir: '../public',
-  plugins: [deck({ contentDir: '..' }), vue(), UnoCSS()],
+  plugins: [deck({ coursesDir: '../courses' }), vue(), UnoCSS()],
   server: { port: 3040, fs: { allow: ['..'] } },
   build: { chunkSizeWarningLimit: 1500 },
 })

@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { legacyCourse } from './deck'
 import { on, send } from './sync'
 
 export type Tool = 'none' | 'pen' | 'marker' | 'arrow' | 'rect' | 'eraser' | 'laser'
@@ -23,8 +24,22 @@ export const SIZES = [3, 6, 10]
 
 const KEY = 'deck-drawings-v1'
 
+/** Drawings keyed by `<course>/chNN/<slide index>`. Keys from before there were several courses (`chNN/i`) move to the legacy course. */
 function load(): Record<string, Stroke[]> {
-  try { return JSON.parse(localStorage.getItem(KEY) || '{}') }
+  try {
+    const pages: Record<string, Stroke[]> = JSON.parse(localStorage.getItem(KEY) || '{}')
+    const old = Object.keys(pages).filter(k => /^ch\d+\/\d+$/.test(k))
+    if (old.length && legacyCourse) {
+      for (const k of old) {
+        const to = `${legacyCourse.id}/${k}`
+        pages[to] = [...(pages[to] ?? []), ...pages[k]]
+        delete pages[k]
+      }
+      try { localStorage.setItem(KEY, JSON.stringify(pages)) }
+      catch {}
+    }
+    return pages
+  }
   catch { return {} }
 }
 

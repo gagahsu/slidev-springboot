@@ -14,7 +14,7 @@ import { audienceCount } from '../lib/sync'
 import { useDeck } from '../lib/useDeck'
 
 const deck = useDeck('presenter')
-const { chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, next, prev } = deck
+const { courseId, course, chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, next, prev } = deck
 
 const sidebar = ref(false)
 const overview = ref(false)
@@ -74,7 +74,7 @@ const clockText = computed(() => `${two(now.value.getHours())}:${two(now.value.g
 // ---- audience window ----
 const blocked = ref(false)
 function openAudience() {
-  const url = `${location.pathname}${location.search}#/${chId.value}/${index.value + 1}`
+  const url = `${location.pathname}${location.search}#/${courseId.value}/${chId.value}/${index.value + 1}`
   const w = window.open(url, 'deck-audience', 'popup,width=1280,height=760')
   blocked.value = !w
 }
@@ -117,9 +117,9 @@ onBeforeUnmount(() => {
 <template>
   <div v-if="chapter" class="presenter" :class="`u-${unit.color}`">
     <header class="top">
-      <RouterLink class="pbtn" :to="`/${chId}/${index + 1}`" title="離開講師模式"><Icon name="x" /><span>離開</span></RouterLink>
+      <RouterLink class="pbtn" :to="`/${courseId}/${chId}/${index + 1}`" title="離開講師模式"><Icon name="x" /><span>離開</span></RouterLink>
       <div class="title">
-        <small>講師模式 · Ch {{ chapter.num }}</small>
+        <small>講師模式 · {{ course?.short }} · Ch {{ chapter.num }}</small>
         <strong>{{ chapter.title }}</strong>
       </div>
       <div class="status" :class="{ ok: audienceCount > 0 }" role="status">
@@ -208,7 +208,7 @@ onBeforeUnmount(() => {
 
     <RoomPanel v-if="roomPanel" @close="roomPanel = false" />
     <Sidebar v-if="sidebar" :current="chId" :index="index" @close="sidebar = false" @go="(ch, i) => go(i, ch)" />
-    <Overview v-if="overview" :slides="slides" :index="index" :title="`Ch ${chapter.num} · ${chapter.title}`" :chapter-id="chId" @close="overview = false" @go="go" />
+    <Overview v-if="overview" :slides="slides" :index="index" :title="`Ch ${chapter.num} · ${chapter.title}`" :course-id="courseId" :chapter-id="chId" @close="overview = false" @go="go" />
   </div>
 </template>
 

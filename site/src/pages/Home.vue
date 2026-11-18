@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, ref } from 'vue'
+import { computed, inject, ref, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import Icon from '../components/Icon.vue'
-import { chapterById, chapters } from '../lib/deck'
-import { progress } from '../lib/progress'
+import { currentCourse } from '../lib/course'
+import { chapterById, slideCount } from '../lib/deck'
+import { chapterPct, courseProgress } from '../lib/progress'
 import { normalizeCode } from '../lib/room'
-import { routeChapters } from '../lib/route'
-import { liveClass, settings } from '../lib/settings'
-import { units } from '../lib/units'
+import { isLite, routeChapters, setRoute } from '../lib/route'
+import { liveClass } from '../lib/settings'
+
+// Home page of one course (#/<course>): units and chapter cards. The router only lets known courses in.
+const course = computed(() => currentCourse.value!)
 
 const openSearch = inject<() => void>('openSearch')!
 const router = useRouter()
@@ -19,31 +22,31 @@ function join() {
 }
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 
-const groups = computed(() => units.map(u => ({ ...u, chapters: routeChapters.value.filter(c => c.num >= u.from && c.num <= u.to) })).filter(g => g.chapters.length))
-const routeSlides = computed(() => routeChapters.value.reduce((n, c) => n + c.count, 0))
+const lite = computed(() => isLite(course.value))
+const shown = computed(() => routeChapters(course.value))
+const groups = computed(() => course.value.units.map(u => ({ ...u, chapters: shown.value.filter(c => c.num >= u.from && c.num <= u.to) })).filter(g => g.chapters.length))
+const routeSlides = computed(() => slideCount(course.value, shown.value))
 
 const resume = computed(() => {
-  const last = progress.last
-  const ch = last && chapterById(last.ch)
+  const last = courseProgress(course.value.id).last
+  const ch = last && chapterById(course.value.id, last.ch)
   return ch ? { ch, i: Math.min(last!.i, ch.count - 1) } : null
 })
 
-const pct = (id: string, count: number) => {
-  const seen = progress.seen[id]
-  return seen === undefined ? 0 : Math.round((seen + 1) / count * 100)
-}
+const pct = (id: string, count: number) => chapterPct(course.value.id, id, count)
 
-onMounted(() => { document.title = 'Spring Boot Backend Masterclass' })
+watchEffect(() => { document.title = course.value.title })
 </script>
 
 <template>
   <div class="home">
     <header class="top">
-      <div class="brand">
-        <span class="logo" aria-hidden="true">S</span>
+      <RouterLink class="btn square back" to="/" aria-label="所有課程" title="所有課程"><Icon name="left" /></RouterLink>
+      <div class="brand" :class="`u-${course.color}`">
+        <span class="logo" aria-hidden="true">{{ course.logo }}</span>
         <div>
-          <h1>Spring Boot Backend Masterclass</h1>
-          <p>{{ routeChapters.length }} 章 · {{ routeSlides.toLocaleString() }} 張投影片</p>
+          <h1>{{ course.title }}</h1>
+          <p>{{ shown.length }} 章 · {{ routeSlides.toLocaleString() }} 張投影片</p>
         </div>
       </div>
       <form v-if="liveClass && joining" class="join" @submit.prevent="join">
@@ -52,12 +55,12 @@ onMounted(() => { document.title = 'Spring Boot Backend Masterclass' })
       </form>
       <button v-else-if="liveClass" class="btn" @click="joining = true"><Icon name="wifi" /><span>加入課堂</span></button>
       <button class="btn search" @click="openSearch()">
-        <Icon name="search" /><span>搜尋教材</span><kbd>{{ isMac ? '⌘' : 'Ctrl' }} K</kbd>
+        <Icon name="search" /><span>搜尋本課程</span><kbd>{{ isMac ? '⌘' : 'Ctrl' }} K</kbd>
       </button>
     </header>
 
     <main>
-      <RouterLink v-if="resume" class="resume" :to="`/${resume.ch.id}/${resume.i + 1}`">
+      <RouterLink v-if="resume" class="resume" :to="`/${course.id}/${resume.ch.id}/${resume.i + 1}`">
         <div>
           <small>繼續上次的進度</small>
           <strong>Ch {{ resume.ch.num }}　{{ resume.ch.title }}</strong>
@@ -66,13 +69,14 @@ onMounted(() => { document.title = 'Spring Boot Backend Masterclass' })
         <span class="btn primary"><Icon name="play" />繼續</span>
       </RouterLink>
 
-      <div class="route">
+      <p v-if="course.description && !course.lite" class="intro">{{ course.description }}</p>
+      <div v-if="course.lite" class="route">
         <div class="seg" role="radiogroup" aria-label="學習路線">
-          <button role="radio" :aria-checked="settings.route === 'full'" :class="{ on: settings.route === 'full' }" @click="settings.route = 'full'">完整課程</button>
-          <button role="radio" :aria-checked="settings.route === 'lite'" :class="{ on: settings.route === 'lite' }" @click="settings.route = 'lite'">精簡路線</button>
+          <button role="radio" :aria-checked="!lite" :class="{ on: !lite }" @click="setRoute(course, 'full')">完整課程</button>
+          <button role="radio" :aria-checked="lite" :class="{ on: lite }" @click="setRoute(course, 'lite')">精簡路線</button>
         </div>
-        <p v-if="settings.route === 'lite'">只留下完成「動態問卷系統」後端需要的章節，略過 {{ chapters.length - routeChapters.length }} 章（@PostConstruct、AOP、MyBatis、SQL Injection、測試與日誌、排程、Cache、Spring Cloud）。章節編號不變，「下一章」會自動跳過略過的章節。</p>
-        <p v-else>全部 {{ chapters.length }} 章。只想完成實戰專題的話，可以切換成精簡路線。</p>
+        <p v-if="lite">{{ course.lite.description }}共略過 {{ course.chapters.length - shown.length }} 章；章節編號不變，「下一章」會自動跳過略過的章節。</p>
+        <p v-else>全部 {{ course.chapters.length }} 章。{{ course.description }}想走快一點的話，可以切換成精簡路線。</p>
       </div>
 
       <section v-for="(g, gi) in groups" :key="g.title" class="unit" :class="`u-${g.color}`">
@@ -82,7 +86,7 @@ onMounted(() => { document.title = 'Spring Boot Backend Masterclass' })
           <p>{{ g.desc }}</p>
         </div>
         <div class="cards">
-          <RouterLink v-for="c in g.chapters" :key="c.id" class="card" :to="`/${c.id}/1`">
+          <RouterLink v-for="c in g.chapters" :key="c.id" class="card" :to="`/${course.id}/${c.id}/1`">
             <span class="num">{{ c.num }}</span>
             <span class="body">
               <strong>{{ c.title }}</strong>
@@ -107,6 +111,9 @@ onMounted(() => { document.title = 'Spring Boot Backend Masterclass' })
 .brand h1 { margin: 0; font-size: 20px; font-weight: 900; line-height: 1.2; color: #2b2b2b; }
 .brand p { margin: 2px 0 0; color: var(--c-muted); font-size: 13px; font-weight: 800; }
 .brand { margin-right: auto; }
+.brand .logo { background: var(--u); box-shadow: 0 4px 0 var(--u-dark); }
+.back { flex: none; margin-right: -4px; }
+.intro { margin: 24px 0 0; color: var(--c-ink-soft); font-size: 15px; font-weight: 700; line-height: 1.6; }
 .join { display: flex; gap: 8px; }
 .join input { width: 190px; height: 46px; padding: 0 14px; border: 2px solid var(--c-line); border-radius: 14px; font: 800 16px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
 .join input:focus { outline: 3px solid var(--c-blue); outline-offset: 1px; }

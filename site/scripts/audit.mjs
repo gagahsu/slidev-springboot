@@ -1,5 +1,6 @@
 // Visits every slide and reports the ones whose content had to be shrunk to fit, still overflows,
-// or logged an error. Usage: start `pnpm dev`, then `pnpm audit [baseUrl] [chNN ...]`.
+// or logged an error. Usage: start `pnpm dev`, then `pnpm run audit [baseUrl] [course ...] [chNN ...]`
+// (`pnpm audit` without `run` is pnpm's own security audit). No course given = every course.
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
@@ -8,6 +9,7 @@ const { chromium } = require('playwright')
 const args = process.argv.slice(2)
 const base = args.find(a => a.startsWith('http')) ?? 'http://127.0.0.1:3040/'
 const only = args.filter(a => /^ch\d+$/.test(a))
+const onlyCourses = args.filter(a => !a.startsWith('http') && !/^ch\d+$/.test(a))
 
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
@@ -17,20 +19,29 @@ page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') er
 page.on('pageerror', e => errors.push(`${where}: ${e.message}`))
 
 await page.goto(base)
-await page.waitForSelector('.card')
-const chapters = await page.$$eval('.card', els => els.map(a => a.getAttribute('href').match(/ch\d+/)[0]))
+await page.waitForSelector('.course-card')
+const courses = (await page.$$eval('.course-card', els => els.map(a => a.getAttribute('href').replace(/^#\//, ''))))
+  .filter(c => !onlyCourses.length || onlyCourses.includes(c))
+if (!courses.length) { console.error('沒有符合的課程。'); process.exit(1) }
+const chapters = []
+for (const course of courses) {
+  await page.goto(`${base}#/${course}`)
+  await page.waitForSelector('.card')
+  for (const ch of await page.$$eval('.card', els => els.map(a => a.getAttribute('href').match(/ch\d+/)[0])))
+    chapters.push({ course, ch })
+}
 const rows = []
 let total = 0
 
-for (const ch of chapters) {
+for (const { course, ch } of chapters) {
   if (only.length && !only.includes(ch)) continue
-  await page.goto(`${base}#/${ch}/1`)
+  await page.goto(`${base}#/${course}/${ch}/1`)
   await page.waitForSelector('.slide-inner')
   const count = Number((await page.textContent('.counter small')).replace(/\D/g, ''))
   for (let n = 1; n <= count; n++) {
-    where = `${ch}/${n}`
+    where = `${course}/${ch}/${n}`
     // jump by URL: arrow keys would play the slide's animation steps first
-    if (n > 1) await page.evaluate(h => { location.hash = h }, `#/${ch}/${n}`)
+    if (n > 1) await page.evaluate(h => { location.hash = h }, `#/${course}/${ch}/${n}`)
     await page.waitForFunction(n => location.hash.endsWith(`/${n}`), n)
     await page.waitForTimeout(60)
     const r = await page.evaluate(async () => {
@@ -51,8 +62,9 @@ for (const ch of chapters) {
 }
 await browser.close()
 
-const fmt = r => `${r.slide.padEnd(10)} fit=${r.fit.toFixed(2)} overY=${r.overY.toFixed(2)} overX=${r.overX.toFixed(2)}${r.broken ? ` brokenImg=${r.broken}` : ''}${r.error ? ' COMPILE-ERROR' : ''}`
+const fmt = r => `${r.slide.padEnd(22)} fit=${r.fit.toFixed(2)} overY=${r.overY.toFixed(2)} overX=${r.overX.toFixed(2)}${r.broken ? ` brokenImg=${r.broken}` : ''}${r.error ? ' COMPILE-ERROR' : ''}`
 const shrunk = rows.filter(r => r.fit < 0.999)
+console.log(`courses: ${courses.join(', ')}`)
 console.log(`slides checked: ${total}`)
 console.log(`shrunk to fit: ${shrunk.length} (below 0.8: ${shrunk.filter(r => r.fit < 0.8).length}, below 0.65: ${shrunk.filter(r => r.fit < 0.65).length})`)
 console.log(`still overflowing: ${rows.filter(r => r.overY > 1.01 || r.overX > 1.01).length}`)

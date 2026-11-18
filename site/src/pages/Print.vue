@@ -7,7 +7,8 @@ import { SLIDE_H, SLIDE_W, chapterById, loadChapter, type Slide } from '../lib/d
 // One chapter laid out as one slide per page, in its final state (all animation steps played).
 // Used by `pnpm -C site export` and by the browser's own Print → Save as PDF.
 const route = useRoute()
-const chapter = computed(() => chapterById(String(route.params.ch)))
+const courseId = computed(() => String(route.params.course))
+const chapter = computed(() => chapterById(courseId.value, String(route.params.ch)))
 const slides = shallowRef<Slide[]>([])
 const ready = ref(false)
 const plain = (layout: string) => layout === 'default' || layout === 'two-cols'
@@ -24,7 +25,7 @@ async function settle() {
 onMounted(async () => {
   if (!chapter.value) return
   document.title = `Ch${String(chapter.value.num).padStart(2, '0')} ${chapter.value.title}`
-  slides.value = await loadChapter(chapter.value.id)
+  slides.value = await loadChapter(courseId.value, chapter.value.id)
   await settle()
   ready.value = true
   ;(window as any).__printReady = true
@@ -36,7 +37,7 @@ const print = () => window.print()
 <template>
   <div v-if="chapter" class="print-root" :style="{ '--w': `${SLIDE_W}px`, '--h': `${SLIDE_H}px` }">
     <header class="print-bar">
-      <RouterLink class="btn" :to="`/${chapter.id}/1`">返回投影片</RouterLink>
+      <RouterLink class="btn" :to="`/${courseId}/${chapter.id}/1`">返回投影片</RouterLink>
       <strong>Ch {{ chapter.num }} · {{ chapter.title }}（{{ chapter.count }} 頁）</strong>
       <button class="btn primary" :disabled="!ready" @click="print">{{ ready ? '列印 / 另存 PDF' : '準備中…' }}</button>
     </header>

@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { chapterById } from '../lib/deck'
+import { currentCourse } from '../lib/course'
+import { chapterById, courseById, courses, loadSearch } from '../lib/deck'
 import Icon from './Icon.vue'
 
 const emit = defineEmits<{ close: [] }>()
 const router = useRouter()
 
-type Doc = { c: string, i: number, t: string, x: string, lt?: string, lx?: string }
+// inside a course only that course is searched; on the course picker every course is
+type Doc = { k: string, c: string, i: number, t: string, x: string, lt?: string, lx?: string }
+const scope = currentCourse.value
+const scopeCourses = scope ? [scope] : courses
+const many = scopeCourses.length > 1
+const hint = scope?.searchHint || courses.map(c => c.searchHint).filter(Boolean).join('、')
 const docs = ref<Doc[] | null>(null)
 const query = ref('')
 const active = ref(0)
@@ -17,8 +23,8 @@ const MAX = 40
 
 onMounted(async () => {
   input.value?.focus()
-  const mod = await import('virtual:deck-search')
-  docs.value = mod.default.map(d => ({ ...d, lt: d.t.toLowerCase(), lx: d.x.toLowerCase() }))
+  const all = await Promise.all(scopeCourses.map(async c => (await loadSearch(c.id)).map(d => ({ ...d, k: c.id }))))
+  docs.value = all.flat().map(d => ({ ...d, lt: d.t.toLowerCase(), lx: d.x.toLowerCase() }))
 })
 
 const terms = computed(() => query.value.toLowerCase().split(/\s+/).filter(Boolean))
@@ -64,7 +70,7 @@ watch(active, async () => {
 })
 
 function open(doc: Doc) {
-  router.push(`/${doc.c}/${doc.i + 1}`)
+  router.push(`/${doc.k}/${doc.c}/${doc.i + 1}`)
   emit('close')
 }
 function onKey(e: KeyboardEvent) {
@@ -82,7 +88,7 @@ function onKey(e: KeyboardEvent) {
     <div class="palette" role="dialog" aria-label="搜尋教材">
       <div class="field">
         <Icon name="search" />
-        <input ref="input" v-model="query" type="text" placeholder="搜尋全部章節，例如 @Autowired、交易、JWT" aria-label="搜尋關鍵字">
+        <input ref="input" v-model="query" type="text" :placeholder="`${scope ? `搜尋「${scope.short}」` : '搜尋全部課程'}${hint ? `，例如 ${hint}` : ''}`" aria-label="搜尋關鍵字">
         <kbd>Esc</kbd>
       </div>
       <div ref="list" class="results">
@@ -91,11 +97,11 @@ function onKey(e: KeyboardEvent) {
         <p v-else-if="!results.total" class="hint">找不到「{{ query }}」，換個關鍵字試試。</p>
         <template v-else>
           <button
-            v-for="(r, n) in results.items" :key="`${r.doc.c}-${r.doc.i}`"
+            v-for="(r, n) in results.items" :key="`${r.doc.k}-${r.doc.c}-${r.doc.i}`"
             class="result" :class="{ active: n === active }" @click="open(r.doc)" @mousemove="active = n"
           >
-            <span class="where">Ch {{ chapterById(r.doc.c)?.num }} · 第 {{ r.doc.i + 1 }} 頁</span>
-            <span class="title">{{ r.doc.t || chapterById(r.doc.c)?.title }}</span>
+            <span class="where"><template v-if="many">{{ courseById(r.doc.k)?.short }} · </template>Ch {{ chapterById(r.doc.k, r.doc.c)?.num }} · 第 {{ r.doc.i + 1 }} 頁</span>
+            <span class="title">{{ r.doc.t || chapterById(r.doc.k, r.doc.c)?.title }}</span>
             <span class="snip"><template v-for="(p, k) in r.parts" :key="k"><mark v-if="p.hit">{{ p.text }}</mark><template v-else>{{ p.text }}</template></template></span>
           </button>
           <p v-if="results.total > results.items.length" class="hint">共 {{ results.total }} 筆，僅顯示前 {{ results.items.length }} 筆。再多打幾個字可以縮小範圍。</p>

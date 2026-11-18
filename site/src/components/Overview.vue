@@ -4,7 +4,7 @@ import type { Slide } from '../lib/deck'
 import Icon from './Icon.vue'
 import SlideCanvas from './SlideCanvas.vue'
 
-const props = defineProps<{ slides: Slide[], index: number, title: string, chapterId?: string }>()
+const props = defineProps<{ slides: Slide[], index: number, title: string, courseId?: string, chapterId?: string }>()
 const emit = defineEmits<{ close: [], go: [i: number] }>()
 
 // thumbnails render lazily as they scroll into view
@@ -35,7 +35,7 @@ onBeforeUnmount(() => io?.disconnect())
     <header>
       <strong>{{ title }}</strong>
       <span>{{ slides.length }} 頁</span>
-      <a v-if="chapterId" class="btn" :href="`#/print/${chapterId}`" target="_blank" rel="noopener">匯出 PDF</a>
+      <a v-if="courseId && chapterId" class="btn" :href="`#/print/${courseId}/${chapterId}`" target="_blank" rel="noopener">匯出 PDF</a>
       <button class="btn square" aria-label="關閉總覽" @click="emit('close')"><Icon name="x" /></button>
     </header>
     <div ref="root" class="grid">

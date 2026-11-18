@@ -11,7 +11,7 @@ export type Msg =
   | { t: 'hello' }
   | { t: 'here' }
   | { t: 'bye' }
-  | { t: 'nav', ch: string, i: number, step?: number }
+  | { t: 'nav', course?: string, ch: string, i: number, step?: number }
   | { t: 'draw-upsert', key: string, stroke: any }
   | { t: 'draw-remove', key: string, id: string }
   | { t: 'draw-clear', key: string }

@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { joinRoom, room } from '../lib/room'
+import { chapterById, legacyCourse } from '../lib/deck'
 import { on } from '../lib/sync'
 
 // Landing page of the join links: connects to the room, then goes wherever the presenter is.
@@ -15,8 +16,10 @@ onMounted(async () => {
   document.title = '加入課堂'
   off = on('nav', (m, _e, origin) => {
     if (!origin.remote) return
-    room.presenterAt = { ch: m.ch, i: m.i, step: m.step ?? 0 }
-    router.replace(`${room.canControl ? '/presenter' : ''}/${m.ch}/${m.i + 1}`)
+    const course = m.course ?? legacyCourse?.id ?? ''
+    if (!chapterById(course, m.ch)) return
+    room.presenterAt = { course, ch: m.ch, i: m.i, step: m.step ?? 0 }
+    router.replace(`${room.canControl ? '/presenter' : ''}/${course}/${m.ch}/${m.i + 1}`)
   })
   timer = setTimeout(() => { slow.value = true }, 7000)
   await joinRoom(String(route.params.code), String(route.params.key ?? ''))

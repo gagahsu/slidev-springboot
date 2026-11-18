@@ -5,6 +5,7 @@ import MarkdownIt from 'markdown-it'
 import cjkFriendly from 'markdown-it-cjk-friendly'
 import { createHighlighter, type Highlighter } from 'shiki'
 import { compile } from '@vue/compiler-dom'
+import YAML from 'yaml'
 import { plain, slideTitle, splitSlides, type RawSlide } from './parse.ts'
 
 const LANGS = ['java', 'typescript', 'javascript', 'html', 'css', 'scss', 'properties', 'bash', 'json', 'groovy', 'xml', 'sql', 'yaml', 'powershell']
@@ -31,59 +32,94 @@ interface Chapter {
   code?: string
 }
 
+interface Course {
+  id: string
+  dir: string
+  configFile: string
+  configMtime: number
+  meta: Record<string, any>
+  chapters: Map<string, Chapter>
+}
+
+/** Words that already mean something in the site's URLs, so they cannot be course ids. */
+const RESERVED = new Set(['presenter', 'print', 'join'])
+const COLORS = new Set(['green', 'blue', 'purple', 'orange', 'pink', 'teal', 'yellow'])
+
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
-export default function deck(opts: { contentDir: string }): Plugin {
-  const contentDir = path.resolve(opts.contentDir)
+/**
+ * One course = one folder `courses/<id>/` holding `course.yaml` and chapter files `NN-topic.md`.
+ * Virtual modules: `virtual:deck` (all courses + chapter manifests), `virtual:deck-chapter:<course>/chNN`
+ * (compiled slides of one chapter, lazy) and `virtual:deck-search:<course>` (search index of one course).
+ */
+export default function deck(opts: { coursesDir: string }): Plugin {
+  const coursesDir = path.resolve(opts.coursesDir)
   let config: ResolvedConfig
   let highlighter: Highlighter
   let md: MarkdownIt
-  const chapters = new Map<string, Chapter>()
-  let cards: Record<string, { title: string, subtitle: string }> = {}
+  const courses = new Map<string, Course>()
 
   const V = 'virtual:deck'
-  const V_SEARCH = 'virtual:deck-search'
+  const V_SEARCH = 'virtual:deck-search:'
   const V_CH = 'virtual:deck-chapter:'
 
-  function readCards() {
-    cards = {}
-    const file = path.join(contentDir, 'index.md')
-    if (!fs.existsSync(file)) return
-    const src = fs.readFileSync(file, 'utf8')
-    const re = /<Link to="(ch\d+)"[^>]*>\s*<div class="chapter-num">[\s\S]*?<\/div>\s*<div>([\s\S]*?)<\/div>\s*<div class="chapter-subtitle">([\s\S]*?)<\/div>/g
-    for (const m of src.matchAll(re))
-      cards[m[1]] = { title: plain(m[2]), subtitle: plain(m[3]) }
+  function readConfig(course: Course) {
+    const mtime = fs.statSync(course.configFile).mtimeMs
+    if (mtime === course.configMtime) return
+    course.configMtime = mtime
+    let meta: any = {}
+    try { meta = YAML.parse(fs.readFileSync(course.configFile, 'utf8')) ?? {} }
+    catch (e: any) { this_warn(`${path.relative(coursesDir, course.configFile)}: ${e.message}`) }
+    course.meta = typeof meta === 'object' && !Array.isArray(meta) ? meta : {}
   }
 
-  function scan() {
-    readCards()
+  function scanCourse(course: Course) {
+    readConfig(course)
+    const titles: Record<string, any> = course.meta.chapters ?? {}
     const seen = new Set<string>()
-    for (const name of fs.readdirSync(contentDir).sort()) {
+    for (const name of fs.readdirSync(course.dir).sort()) {
       const m = name.match(/^(\d{2})-.+\.md$/)
       if (!m) continue
       const id = `ch${m[1]}`
       seen.add(id)
-      const file = path.join(contentDir, name)
+      const file = path.join(course.dir, name)
       const mtime = fs.statSync(file).mtimeMs
-      const prev = chapters.get(id)
-      if (prev && prev.mtime === mtime && prev.file === file) {
-        prev.title = cards[id]?.title || prev.title
-        prev.subtitle = cards[id]?.subtitle ?? ''
+      let ch = course.chapters.get(id)
+      if (!ch || ch.mtime !== mtime || ch.file !== file) {
+        const slides = splitSlides(fs.readFileSync(file, 'utf8'))
+        ch = { id, num: Number(m[1]), file, mtime, slides, title: '', subtitle: '' }
+        course.chapters.set(id, ch)
+      }
+      const card = titles[id] ?? {}
+      const first = ch.slides[0]?.frontmatter ?? {}
+      ch.title = plain(String(card.title ?? first.title ?? name))
+      ch.subtitle = plain(String(card.subtitle ?? first.subtitle ?? ''))
+    }
+    for (const id of [...course.chapters.keys()]) if (!seen.has(id)) course.chapters.delete(id)
+  }
+
+  function scan() {
+    const found = new Set<string>()
+    const names = fs.existsSync(coursesDir) ? fs.readdirSync(coursesDir).sort() : []
+    for (const id of names) {
+      const dir = path.join(coursesDir, id)
+      const configFile = path.join(dir, 'course.yaml')
+      if (!fs.existsSync(configFile)) continue
+      if (!/^[a-z][a-z0-9-]*$/.test(id) || RESERVED.has(id) || /^ch\d+$/.test(id)) {
+        this_warn(`courses/${id}: 課程資料夾名稱只能用小寫英文、數字和 -，且不能是 ${[...RESERVED].join(' / ')} 或 chNN，已略過`)
         continue
       }
-      const slides = splitSlides(fs.readFileSync(file, 'utf8'))
-      chapters.set(id, {
-        id,
-        num: Number(m[1]),
-        file,
-        mtime,
-        slides,
-        title: cards[id]?.title || String(slides[0]?.frontmatter.title ?? name),
-        subtitle: cards[id]?.subtitle ?? '',
-      })
+      found.add(id)
+      let course = courses.get(id)
+      if (!course) courses.set(id, course = { id, dir, configFile, configMtime: -1, meta: {}, chapters: new Map() })
+      scanCourse(course)
     }
-    for (const id of [...chapters.keys()]) if (!seen.has(id)) chapters.delete(id)
+    for (const id of [...courses.keys()]) if (!found.has(id)) courses.delete(id)
   }
+
+  const sortedCourses = () => [...courses.values()].sort((a, b) =>
+    (Number(a.meta.order) || 999) - (Number(b.meta.order) || 999) || a.id.localeCompare(b.id))
+  const sortedChapters = (c: Course) => [...c.chapters.values()].sort((a, b) => a.num - b.num)
 
   const layoutOf = (s: RawSlide, i: number) => String(s.frontmatter.layout ?? (i === 0 ? 'cover' : 'default'))
 
@@ -185,32 +221,71 @@ export default function deck(opts: { contentDir: string }): Plugin {
 
   let this_warn = (msg: string) => console.warn(`[deck] ${msg}`)
 
+  function courseInfo(c: Course) {
+    const m = c.meta
+    const str = (v: any, d = '') => (typeof v === 'string' ? v : d)
+    const color = COLORS.has(m.color) ? m.color : 'green'
+    const units = (Array.isArray(m.units) ? m.units : []).map((u: any) => ({
+      title: str(u?.title),
+      desc: str(u?.desc),
+      from: Number(u?.from) || 0,
+      to: Number(u?.to) || 999,
+      color: COLORS.has(u?.color) ? u.color : color,
+    }))
+    const lite = m.lite && typeof m.lite === 'object'
+      ? { description: str(m.lite.description), optional: (Array.isArray(m.lite.optional) ? m.lite.optional : []).map(Number).filter(Number.isFinite) }
+      : null
+    const title = str(m.title, c.id)
+    return {
+      id: c.id,
+      title,
+      short: str(m.short, title),
+      description: str(m.description),
+      logo: str(m.logo, title.slice(0, 1).toUpperCase()).slice(0, 2),
+      color,
+      legacy: m.legacy === true,
+      searchHint: str(m.searchHint),
+      pdfName: str(m.pdfName, c.id),
+      // a course without units shows all its chapters as one group
+      units: units.length ? units : [{ title: '全部章節', desc: '', from: 0, to: 999, color }],
+      lite,
+      chapters: sortedChapters(c).map(ch => ({
+        id: ch.id,
+        num: ch.num,
+        title: ch.title,
+        subtitle: ch.subtitle,
+        count: ch.slides.length,
+        outline: ch.slides.map((s, i) => ({ t: slideTitle(s), l: layoutOf(s, i) })),
+      })),
+    }
+  }
+
   function manifestCode(): string {
     scan()
-    const list = [...chapters.values()].sort((a, b) => a.num - b.num).map(ch => ({
-      id: ch.id,
-      num: ch.num,
-      title: ch.title,
-      subtitle: ch.subtitle,
-      count: ch.slides.length,
-      outline: ch.slides.map((s, i) => ({ t: slideTitle(s), l: layoutOf(s, i) })),
-    }))
+    const list = sortedCourses().map(courseInfo)
+    const legacy = list.filter(c => c.legacy)
+    if (legacy.length > 1) this_warn(`legacy: true 只能設在一門課，現在有 ${legacy.map(c => c.id).join(', ')}；舊網址會轉到 ${legacy[0].id}`)
+    legacy.slice(1).forEach(c => { c.legacy = false })
+    const loaders = list.flatMap(c => c.chapters.map(ch => `${c.id}/${ch.id}`))
     return [
-      `export const chapters = ${JSON.stringify(list)}`,
+      `export const courses = ${JSON.stringify(list)}`,
       `export const loaders = {`,
-      ...list.map(c => `  ${JSON.stringify(c.id)}: () => import(${JSON.stringify(V_CH + c.id)}),`),
+      ...loaders.map(k => `  ${JSON.stringify(k)}: () => import(${JSON.stringify(V_CH + k)}),`),
+      `}`,
+      `export const searchLoaders = {`,
+      ...list.map(c => `  ${JSON.stringify(c.id)}: () => import(${JSON.stringify(V_SEARCH + c.id)}),`),
       `}`,
     ].join('\n')
   }
 
-  function searchCode(): string {
-    scan()
+  function searchCode(course: Course | undefined): string {
     const docs: any[] = []
-    for (const ch of [...chapters.values()].sort((a, b) => a.num - b.num)) {
-      ch.slides.forEach((s, i) => {
-        const t = slideTitle(s)
-        docs.push({ c: ch.id, i, t, x: plain(s.content) })
-      })
+    if (course) {
+      for (const ch of sortedChapters(course)) {
+        ch.slides.forEach((s, i) => {
+          docs.push({ c: ch.id, i, t: slideTitle(s), x: plain(s.content) })
+        })
+      }
     }
     return `export default ${JSON.stringify(docs)}`
   }
@@ -225,22 +300,30 @@ export default function deck(opts: { contentDir: string }): Plugin {
       scan()
     },
     configureServer(server) {
-      server.watcher.add(path.join(contentDir, '*.md'))
+      server.watcher.add(coursesDir)
     },
     resolveId(id) {
-      if (id === V || id === V_SEARCH || id.startsWith(V_CH)) return `\0${id}`
+      if (id === V || id.startsWith(V_SEARCH) || id.startsWith(V_CH)) return `\0${id}`
     },
     load(id) {
       if (!id.startsWith('\0virtual:deck')) return
       const name = id.slice(1)
       if (name === V) {
-        for (const ch of chapters.values()) this.addWatchFile(ch.file)
-        return manifestCode()
+        const code = manifestCode()
+        for (const c of courses.values()) {
+          this.addWatchFile(c.configFile)
+          for (const ch of c.chapters.values()) this.addWatchFile(ch.file)
+        }
+        return code
       }
-      if (name === V_SEARCH) return searchCode()
+      if (name.startsWith(V_SEARCH)) {
+        scan()
+        return searchCode(courses.get(name.slice(V_SEARCH.length)))
+      }
       if (name.startsWith(V_CH)) {
         scan()
-        const ch = chapters.get(name.slice(V_CH.length))
+        const [courseId, chId] = name.slice(V_CH.length).split('/')
+        const ch = courses.get(courseId)?.chapters.get(chId)
         if (!ch) return 'export default []'
         this.addWatchFile(ch.file)
         if (!ch.code) ch.code = compileChapter(ch)
@@ -248,7 +331,8 @@ export default function deck(opts: { contentDir: string }): Plugin {
       }
     },
     handleHotUpdate({ file, server }) {
-      if (path.dirname(file) !== contentDir || !file.endsWith('.md')) return
+      const rel = path.relative(coursesDir, file)
+      if (rel.startsWith('..') || path.isAbsolute(rel) || !/\.(md|ya?ml)$/.test(file)) return
       for (const mod of server.moduleGraph.idToModuleMap.values()) {
         if (mod.id?.startsWith('\0virtual:deck')) server.moduleGraph.invalidateModule(mod)
       }

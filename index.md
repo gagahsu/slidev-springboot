@@ -345,162 +345,162 @@ style: |
 </div>
 
 ---
-src: ./01-springboot-intro.md
+src: ./courses/springboot/01-springboot-intro.md
 ---
 ---
-src: ./02-setup-env.md
+src: ./courses/springboot/02-setup-env.md
 ---
 ---
-src: ./03-first-spring-boot.md
+src: ./courses/springboot/03-first-spring-boot.md
 ---
 ---
-src: ./04-spring-ioc.md
+src: ./courses/springboot/04-spring-ioc.md
 ---
 ---
-src: ./05-ioc-di-bean.md
+src: ./courses/springboot/05-ioc-di-bean.md
 ---
 ---
-src: ./06-component-autowired.md
+src: ./courses/springboot/06-component-autowired.md
 ---
 ---
-src: ./07-qualifier.md
+src: ./courses/springboot/07-qualifier.md
 ---
 ---
-src: ./08-post-construct.md
+src: ./courses/springboot/08-post-construct.md
 ---
 ---
-src: ./09-value-properties.md
+src: ./courses/springboot/09-value-properties.md
 ---
 ---
-src: ./10-spring-aop-intro.md
+src: ./courses/springboot/10-spring-aop-intro.md
 ---
 ---
-src: ./11-aop-aspect.md
+src: ./courses/springboot/11-aop-aspect.md
 ---
 ---
-src: ./12-spring-mvc-intro.md
+src: ./courses/springboot/12-spring-mvc-intro.md
 ---
 ---
-src: ./13-http-protocol.md
+src: ./courses/springboot/13-http-protocol.md
 ---
 ---
-src: ./14-request-mapping.md
+src: ./courses/springboot/14-request-mapping.md
 ---
 ---
-src: ./15-json-format.md
+src: ./courses/springboot/15-json-format.md
 ---
 ---
-src: ./16-restcontroller-json.md
+src: ./courses/springboot/16-restcontroller-json.md
 ---
 ---
-src: ./17-get-post.md
+src: ./courses/springboot/17-get-post.md
 ---
 ---
-src: ./18-request-param-body.md
+src: ./courses/springboot/18-request-param-body.md
 ---
 ---
-src: ./19-request-header-pathvariable.md
+src: ./courses/springboot/19-request-header-pathvariable.md
 ---
 ---
-src: ./20-restful-api.md
+src: ./courses/springboot/20-restful-api.md
 ---
 ---
-src: ./21-restful-api-impl.md
+src: ./courses/springboot/21-restful-api-impl.md
 ---
 ---
-src: ./22-spring-jdbc-intro.md
+src: ./courses/springboot/22-spring-jdbc-intro.md
 ---
 ---
-src: ./23-db-connection.md
+src: ./courses/springboot/23-db-connection.md
 ---
 ---
-src: ./24-jdbc-update.md
+src: ./courses/springboot/24-jdbc-update.md
 ---
 ---
-src: ./25-jdbc-query.md
+src: ./courses/springboot/25-jdbc-query.md
 ---
 ---
-src: ./26-jpa-upper.md
+src: ./courses/springboot/26-jpa-upper.md
 ---
 ---
-src: ./27-jpa-lower.md
+src: ./courses/springboot/27-jpa-lower.md
 ---
 ---
-src: ./28-jpa-query.md
+src: ./courses/springboot/28-jpa-query.md
 ---
 ---
-src: ./29-jpa-relations.md
+src: ./courses/springboot/29-jpa-relations.md
 ---
 ---
-src: ./30-mybatis-upper.md
+src: ./courses/springboot/30-mybatis-upper.md
 ---
 ---
-src: ./31-mybatis-lower.md
+src: ./courses/springboot/31-mybatis-lower.md
 ---
 ---
-src: ./32-mybatis-xml.md
+src: ./courses/springboot/32-mybatis-xml.md
 ---
 ---
-src: ./33-transactional.md
+src: ./courses/springboot/33-transactional.md
 ---
 ---
-src: ./34-lock.md
+src: ./courses/springboot/34-lock.md
 ---
 ---
-src: ./35-sql-injection.md
+src: ./courses/springboot/35-sql-injection.md
 ---
 ---
-src: ./36-mvc-architecture.md
+src: ./courses/springboot/36-mvc-architecture.md
 ---
 ---
-src: ./37-data-objects.md
+src: ./courses/springboot/37-data-objects.md
 ---
 ---
-src: ./38-java-extras.md
+src: ./courses/springboot/38-java-extras.md
 ---
 ---
-src: ./39-jpa-practice.md
+src: ./courses/springboot/39-jpa-practice.md
 ---
 ---
-src: ./40-openapi.md
+src: ./courses/springboot/40-openapi.md
 ---
 ---
-src: ./41-validation.md
+src: ./courses/springboot/41-validation.md
 ---
 ---
-src: ./42-httpsession.md
+src: ./courses/springboot/42-httpsession.md
 ---
 ---
-src: ./43-unit-test-logging.md
+src: ./courses/springboot/43-unit-test-logging.md
 ---
 ---
-src: ./44-scheduling.md
+src: ./courses/springboot/44-scheduling.md
 ---
 ---
-src: ./45-cache.md
+src: ./courses/springboot/45-cache.md
 ---
 ---
-src: ./46-spring-security.md
+src: ./courses/springboot/46-spring-security.md
 ---
 ---
-src: ./47-jwt.md
+src: ./courses/springboot/47-jwt.md
 ---
 ---
-src: ./48-spring-cloud.md
+src: ./courses/springboot/48-spring-cloud.md
 ---
 ---
-src: ./49-dynamic-survey-model.md
+src: ./courses/springboot/49-dynamic-survey-model.md
 ---
 ---
-src: ./50-dynamic-survey-auth.md
+src: ./courses/springboot/50-dynamic-survey-auth.md
 ---
 ---
-src: ./51-dynamic-survey-admin.md
+src: ./courses/springboot/51-dynamic-survey-admin.md
 ---
 ---
-src: ./52-dynamic-survey-answer.md
+src: ./courses/springboot/52-dynamic-survey-answer.md
 ---
 ---
-src: ./53-dynamic-survey-frontend.md
+src: ./courses/springboot/53-dynamic-survey-frontend.md
 ---
 

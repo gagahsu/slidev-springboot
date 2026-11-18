@@ -21,7 +21,7 @@ export const room = reactive({
   /** audience only: follow the presenter's page turns */
   following: true,
   /** where the presenter is, for "catch up" after browsing freely */
-  presenterAt: null as null | { ch: string, i: number, step: number },
+  presenterAt: null as null | { course: string, ch: string, i: number, step: number },
   /** show the join QR on top of the slide (joinCode is the room it advertises) */
   showJoin: false,
   joinCode: '',

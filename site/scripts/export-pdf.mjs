@@ -1,8 +1,9 @@
 // Exports chapters to PDF (one slide per page, vector text, animations in their final state).
-//   pnpm -C site export              every chapter + one merged file
-//   pnpm -C site export ch04 ch13    only these chapters
-//   pnpm -C site export --no-merge   skip the merged file
-// Output: site/export/
+//   pnpm -C site export                          every course: every chapter + one merged file per course
+//   pnpm -C site export springboot               one course
+//   pnpm -C site export springboot ch04 ch13     only these chapters of that course
+//   pnpm -C site export --no-merge               skip the merged files
+// Output: site/export/<course>/ (merged file named after `pdfName` in course.yaml)
 import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
@@ -28,6 +29,7 @@ function loadChromium() {
 
 const args = process.argv.slice(2)
 const only = args.filter(a => /^ch\d+$/.test(a))
+const onlyCourses = args.filter(a => !a.startsWith('-') && !/^ch\d+$/.test(a))
 const merge = !args.includes('--no-merge')
 const safe = s => s.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim()
 
@@ -43,35 +45,47 @@ fs.mkdirSync(outDir, { recursive: true })
 
 try {
   await page.goto(base)
-  await page.waitForSelector('.card')
-  const chapters = await page.$$eval('.card', els => els.map(a => ({
-    id: a.getAttribute('href').match(/ch\d+/)[0],
-    title: a.querySelector('strong').textContent,
-  })))
-  const todo = chapters.filter(c => !only.length || only.includes(c.id))
-  if (!todo.length) { console.error('沒有符合的章節。'); process.exitCode = 1 }
+  await page.waitForSelector('.course-card')
+  const courses = (await page.$$eval('.course-card', els => els.map(a => a.getAttribute('href').replace(/^#\//, ''))))
+    .filter(c => !onlyCourses.length || onlyCourses.includes(c))
+  if (!courses.length) { console.error('沒有符合的課程。'); process.exitCode = 1 }
+  // `pdfName` from each course.yaml, published on the course cards
+  const pdfNames = Object.fromEntries(await page.$$eval('.course-card', els => els.map(a => [a.getAttribute('href').replace(/^#\//, ''), a.dataset.pdf])))
 
-  const files = []
-  for (const ch of todo) {
-    await page.goto('about:blank')
-    await page.goto(`${base}#/print/${ch.id}`)
-    await page.waitForFunction(() => window.__printReady === true, null, { timeout: 180000 })
-    const pages = await page.locator('.print-page').count()
-    const file = path.join(outDir, `${ch.id}-${safe(ch.title)}.pdf`)
-    await page.pdf({ path: file, width: '980px', height: '552px', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } })
-    files.push(file)
-    console.log(`${ch.id}  ${String(pages).padStart(3)} 頁  ${path.relative(root, file)}`)
-  }
+  for (const course of courses) {
+    await page.goto(`${base}#/${course}`)
+    await page.waitForSelector('.card')
+    const chapters = await page.$$eval('.card', els => els.map(a => ({
+      id: a.getAttribute('href').match(/ch\d+/)[0],
+      title: a.querySelector('strong').textContent,
+    })))
+    const todo = chapters.filter(c => !only.length || only.includes(c.id))
+    if (!todo.length) { console.error(`${course}：沒有符合的章節。`); process.exitCode = 1; continue }
+    const dir = path.join(outDir, course)
+    fs.mkdirSync(dir, { recursive: true })
 
-  if (merge && files.length > 1) {
-    const all = await PDFDocument.create()
-    for (const f of files) {
-      const doc = await PDFDocument.load(fs.readFileSync(f))
-      for (const p of await all.copyPages(doc, doc.getPageIndices())) all.addPage(p)
+    const files = []
+    for (const ch of todo) {
+      await page.goto('about:blank')
+      await page.goto(`${base}#/print/${course}/${ch.id}`)
+      await page.waitForFunction(() => window.__printReady === true, null, { timeout: 180000 })
+      const pages = await page.locator('.print-page').count()
+      const file = path.join(dir, `${ch.id}-${safe(ch.title)}.pdf`)
+      await page.pdf({ path: file, width: '980px', height: '552px', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } })
+      files.push(file)
+      console.log(`${course}/${ch.id}  ${String(pages).padStart(3)} 頁  ${path.relative(root, file)}`)
     }
-    const merged = path.join(outDir, only.length ? 'selected-chapters.pdf' : 'spring-boot-masterclass.pdf')
-    fs.writeFileSync(merged, await all.save())
-    console.log(`合併  ${String(all.getPageCount()).padStart(3)} 頁  ${path.relative(root, merged)}`)
+
+    if (merge && files.length > 1) {
+      const all = await PDFDocument.create()
+      for (const f of files) {
+        const doc = await PDFDocument.load(fs.readFileSync(f))
+        for (const p of await all.copyPages(doc, doc.getPageIndices())) all.addPage(p)
+      }
+      const merged = path.join(dir, only.length ? 'selected-chapters.pdf' : `${safe(pdfNames[course] || course)}.pdf`)
+      fs.writeFileSync(merged, await all.save())
+      console.log(`${course} 合併  ${String(all.getPageCount()).padStart(3)} 頁  ${path.relative(root, merged)}`)
+    }
   }
 }
 finally {

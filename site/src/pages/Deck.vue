@@ -17,7 +17,7 @@ import { useDeck } from '../lib/useDeck'
 const router = useRouter()
 const openSearch = inject<() => void>('openSearch')!
 const deck = useDeck('audience')
-const { chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, next, prev } = deck
+const { courseId, course, chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, next, prev } = deck
 
 /** a student device: in a room without the presenter key */
 const inClass = computed(() => room.status === 'on' && !room.canControl)
@@ -50,7 +50,7 @@ function toggleDrawing(force?: boolean) {
   draw.tool = drawing.value ? 'pen' : 'none'
 }
 function present() {
-  router.push(`/presenter/${chId.value}/${index.value + 1}`)
+  router.push(`/presenter/${courseId.value}/${chId.value}/${index.value + 1}`)
 }
 
 function toggleFullscreen() {
@@ -108,7 +108,7 @@ onBeforeUnmount(() => {
 <template>
   <div v-if="chapter" class="deck" :class="[`u-${unit.color}`, { immersive }]">
     <header class="bar top">
-      <RouterLink class="btn square" to="/" aria-label="回到課程目錄" title="回到課程目錄"><Icon name="x" /></RouterLink>
+      <RouterLink class="btn square" :to="`/${courseId}`" :aria-label="`回到課程目錄：${course?.short}`" :title="`回到課程目錄：${course?.short}`"><Icon name="x" /></RouterLink>
       <div class="progress" role="progressbar" :aria-valuenow="index + 1" aria-valuemin="1" :aria-valuemax="chapter.count" :aria-label="`第 ${index + 1} 頁，共 ${chapter.count} 頁`">
         <i :style="{ width: `${(index + 1) / chapter.count * 100}%` }" />
       </div>
@@ -165,7 +165,7 @@ onBeforeUnmount(() => {
     <div v-if="immersive" class="thin-progress"><i :style="{ width: `${(index + 1) / chapter.count * 100}%` }" /></div>
 
     <Sidebar v-if="sidebar" :current="chId" :index="index" @close="sidebar = false" @go="(ch, i) => go(i, ch)" />
-    <Overview v-if="overview" :slides="slides" :index="index" :title="`Ch ${chapter.num} · ${chapter.title}`" :chapter-id="chId" @close="overview = false" @go="go" />
+    <Overview v-if="overview" :slides="slides" :index="index" :title="`Ch ${chapter.num} · ${chapter.title}`" :course-id="courseId" :chapter-id="chId" @close="overview = false" @go="go" />
   </div>
 </template>
 

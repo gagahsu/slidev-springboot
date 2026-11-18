@@ -1,6 +1,6 @@
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { chapterById, loadChapter, type Slide } from './deck'
+import { chapterById, courseById, legacyCourse, loadChapter, type Slide } from './deck'
 import { routeChapterAt } from './route'
 import { clearPage, draw, redo, undo } from './draw'
 import { visit } from './progress'
@@ -15,8 +15,10 @@ export function useDeck(role: Role) {
   const route = useRoute()
   const router = useRouter()
 
+  const courseId = computed(() => String(route.params.course))
+  const course = computed(() => courseById(courseId.value))
   const chId = computed(() => String(route.params.ch))
-  const chapter = computed(() => chapterById(chId.value))
+  const chapter = computed(() => chapterById(courseId.value, chId.value))
   const slides = shallowRef<Slide[]>([])
   const loading = ref(true)
   const index = computed(() => {
@@ -25,25 +27,25 @@ export function useDeck(role: Role) {
     return Math.min(Math.max(0, Number.isFinite(n) ? n : 0), max)
   })
   const slide = computed(() => slides.value[index.value])
-  const unit = computed(() => unitOf(chapter.value?.num ?? 1))
-  const nextChapter = computed(() => routeChapterAt(1, chId.value))
-  const prevChapter = computed(() => routeChapterAt(-1, chId.value))
+  const unit = computed(() => unitOf(course.value, chapter.value?.num ?? 1))
+  const nextChapter = computed(() => routeChapterAt(courseId.value, 1, chId.value))
+  const prevChapter = computed(() => routeChapterAt(courseId.value, -1, chId.value))
   const atEnd = computed(() => index.value >= slides.value.length - 1)
   /** key under which this slide's drawings are stored and synced */
-  const drawKey = computed(() => `${chId.value}/${index.value}`)
+  const drawKey = computed(() => `${courseId.value}/${chId.value}/${index.value}`)
 
-  watch(chId, async (id) => {
-    if (!chapterById(id)) { router.replace('/'); return }
+  watch([courseId, chId], async ([cid, id]) => {
+    if (!chapterById(cid, id)) { router.replace(courseById(cid) ? `/${cid}` : '/'); return }
     loading.value = true
-    const loaded = await loadChapter(id)
-    if (id !== chId.value) return
+    const loaded = await loadChapter(cid, id)
+    if (id !== chId.value || cid !== courseId.value) return
     slides.value = loaded
     loading.value = false
   }, { immediate: true })
 
   watch([chId, index, chapter], () => {
     if (!chapter.value) return
-    visit(chId.value, index.value)
+    visit(courseId.value, chId.value, index.value)
     const tag = role === 'presenter' ? '講師 · ' : ''
     document.title = `${tag}Ch ${chapter.value.num} ${chapter.value.title} · ${index.value + 1}/${chapter.value.count}`
   }, { immediate: true })
@@ -53,18 +55,19 @@ export function useDeck(role: Role) {
   const stepTotal = ref(0)
   const stepShown = computed(() => Math.min(step.value, stepTotal.value))
 
-  function go(i: number, ch = chId.value, remote = false, toStep = 0) {
-    const sameSlide = ch === chId.value && i === index.value
+  function go(i: number, ch = chId.value, remote = false, toStep = 0, toCourse = courseId.value) {
+    // a page turn for another course only comes from the presenter: follow it
+    const sameSlide = toCourse === courseId.value && ch === chId.value && i === index.value
     if (sameSlide && toStep === step.value) return
     // a student who turns pages on their own stops following until they choose to catch up
     if (!remote && role === 'audience' && room.status === 'on' && !room.canControl) room.following = false
     if (!sameSlide) {
       stepTotal.value = 0
-      router.push(`${prefix}/${ch}/${i + 1}`)
+      router.push(`${prefix}/${toCourse}/${ch}/${i + 1}`)
     }
     step.value = toStep
     // the presenter always drives; an audience window only talks back while a presenter is open
-    if (!remote && (role === 'presenter' || linked.value)) send({ t: 'nav', ch, i, step: toStep })
+    if (!remote && (role === 'presenter' || linked.value)) send({ t: 'nav', course: toCourse, ch, i, step: toStep })
   }
   /** next step, or the next slide once the steps are used up */
   function next() {
@@ -113,16 +116,19 @@ export function useDeck(role: Role) {
     leave = join(role)
     // arriving from the join page: start on the presenter's animation step, not at step 0
     const at = room.presenterAt
-    if (at && at.ch === chId.value && at.i === index.value) step.value = at.step
+    if (at && at.course === courseId.value && at.ch === chId.value && at.i === index.value) step.value = at.step
     offNav = on('nav', (m, _e, origin) => {
+      // messages from before there were several courses carry no course
+      const c = m.course ?? legacyCourse?.id ?? courseId.value
+      if (!chapterById(c, m.ch)) return
       if (origin.remote) {
-        room.presenterAt = { ch: m.ch, i: m.i, step: m.step ?? 0 }
+        room.presenterAt = { course: c, ch: m.ch, i: m.i, step: m.step ?? 0 }
         if (!room.following && !room.canControl) return
       }
-      go(m.i, m.ch, true, m.step ?? 0)
+      go(m.i, m.ch, true, m.step ?? 0, c)
     })
     // a newly opened audience window is brought to the presenter's current slide
-    if (role === 'presenter') offHere = on('here', () => send({ t: 'nav', ch: chId.value, i: index.value, step: step.value }))
+    if (role === 'presenter') offHere = on('here', () => send({ t: 'nav', course: courseId.value, ch: chId.value, i: index.value, step: step.value }))
   })
   onBeforeUnmount(() => { leave?.(); offNav?.(); offHere?.() })
 
@@ -130,8 +136,8 @@ export function useDeck(role: Role) {
   function catchUp() {
     room.following = true
     const at = room.presenterAt
-    if (at) go(at.i, at.ch, true, at.step)
+    if (at) go(at.i, at.ch, true, at.step, at.course)
   }
 
-  return { catchUp, chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, go, next, prev, handleKey }
+  return { catchUp, courseId, course, chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, go, next, prev, handleKey }
 }

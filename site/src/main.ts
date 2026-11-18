@@ -1,5 +1,5 @@
 import { createApp } from 'vue'
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHashHistory, type RouteLocation } from 'vue-router'
 import '@unocss/reset/tailwind.css'
 import '@fontsource-variable/nunito'
 import './styles/theme.css'
@@ -8,6 +8,8 @@ import 'virtual:uno.css'
 import App from './App.vue'
 import './lib/classroom'
 import { restoreRoom } from './lib/room'
+import { currentCourseId } from './lib/course'
+import { courseById, legacyCourse } from './lib/deck'
 import Link from './components/Link.vue'
 import Mermaid from './components/Mermaid.vue'
 import Art from './anim/Art.vue'
@@ -49,16 +51,34 @@ import StepCode from './anim/StepCode.vue'
 import VClick from './anim/VClick.vue'
 import VClicks from './anim/VClicks.vue'
 
+const CH = ':ch(ch\\d+)'
+const N = ':n(\\d+)?'
+/** old single-course URLs (#/ch04/3) belong to the legacy course */
+const legacy = (to: string) => (r: RouteLocation) => legacyCourse
+  ? to.replace(':course', legacyCourse.id).replace(':ch', String(r.params.ch)).replace(':n', String(r.params.n || 1))
+  : '/'
+/** unknown course ids go back to the course picker */
+const needCourse = (r: RouteLocation) => (courseById(String(r.params.course)) ? true : '/')
+
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
-    { path: '/', component: () => import('./pages/Home.vue') },
-    { path: '/:ch(ch\\d+)/:n(\\d+)?', component: () => import('./pages/Deck.vue') },
-    { path: '/presenter/:ch(ch\\d+)/:n(\\d+)?', component: () => import('./pages/Presenter.vue') },
-    { path: '/print/:ch(ch\\d+)', component: () => import('./pages/Print.vue') },
+    { path: '/', component: () => import('./pages/Courses.vue') },
     { path: '/join/:code/:key?', component: () => import('./pages/Join.vue') },
+    // before there were several courses
+    { path: `/${CH}/${N}`, redirect: legacy('/:course/:ch/:n') },
+    { path: `/presenter/${CH}/${N}`, redirect: legacy('/presenter/:course/:ch/:n') },
+    { path: `/print/${CH}`, redirect: legacy('/print/:course/:ch') },
+    { path: `/presenter/:course/${CH}/${N}`, component: () => import('./pages/Presenter.vue'), beforeEnter: needCourse },
+    { path: `/print/:course/${CH}`, component: () => import('./pages/Print.vue'), beforeEnter: needCourse },
+    { path: '/:course', component: () => import('./pages/Home.vue'), beforeEnter: needCourse },
+    { path: `/:course/${CH}/${N}`, component: () => import('./pages/Deck.vue'), beforeEnter: needCourse },
     { path: '/:rest(.*)*', redirect: '/' },
   ],
+})
+router.beforeResolve((to) => {
+  const c = to.params.course
+  currentCourseId.value = typeof c === 'string' && courseById(c) ? c : ''
 })
 
 restoreRoom()
