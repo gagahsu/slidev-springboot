@@ -10,7 +10,9 @@ import { isLite, routeChapters, setRoute } from '../lib/route'
 import { liveClass } from '../lib/settings'
 
 // Home page of one course (#/<course>): units and chapter cards. The router only lets known courses in.
-const course = computed(() => currentCourse.value!)
+// keep the last valid course while the page is being left (the router clears currentCourse first)
+let lastCourse = currentCourse.value!
+const course = computed(() => (lastCourse = currentCourse.value ?? lastCourse))
 
 const openSearch = inject<() => void>('openSearch')!
 const router = useRouter()

@@ -2,7 +2,8 @@
 import { computed, inject, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Icon from '../components/Icon.vue'
-import { chapterById, courseById, courses, slideCount } from '../lib/deck'
+import { chapterById, courseById, courses, slideCount, tracks } from '../lib/deck'
+import { itemsPct, trackChapters, trackStages } from '../lib/track'
 import { courseProgress, progress } from '../lib/progress'
 import { normalizeCode } from '../lib/room'
 import { liveClass } from '../lib/settings'
@@ -33,6 +34,9 @@ function coursePct(id: string) {
   return Math.round(done / Math.max(1, slideCount(c)) * 100)
 }
 
+const trackPct = (t: (typeof tracks)[number]) => itemsPct(trackStages(t).flatMap(s => s.items))
+const trackSoon = (t: (typeof tracks)[number]) => trackStages(t).reduce((n, s) => n + s.items.filter(i => i.kind === 'soon').length, 0)
+
 onMounted(() => { document.title = '課程總覽' })
 </script>
 
@@ -42,7 +46,7 @@ onMounted(() => { document.title = '課程總覽' })
       <div class="brand">
         <div>
           <h1>課程總覽</h1>
-          <p>{{ courses.length }} 門課程 · 選一門課開始</p>
+          <p><template v-if="tracks.length">{{ tracks.length }} 條學程 · </template>{{ courses.length }} 門課程</p>
         </div>
       </div>
       <form v-if="liveClass && joining" class="join" @submit.prevent="join">
@@ -65,6 +69,25 @@ onMounted(() => { document.title = '課程總覽' })
         <span class="btn primary"><Icon name="play" />繼續</span>
       </RouterLink>
 
+      <template v-if="tracks.length">
+        <h2 class="section">學程<small>依順序跨課程上課，「下一章」會自動帶到學程裡的下一個章節</small></h2>
+        <div class="tracks">
+          <RouterLink v-for="t in tracks" :key="t.id" class="track-card" :class="`u-${t.color}`" :to="`/track/${t.id}`">
+            <span class="logo" aria-hidden="true">{{ t.logo }}</span>
+            <span class="body">
+              <strong>{{ t.title }}</strong>
+              <span class="desc">{{ t.description }}</span>
+              <span class="meta">{{ t.stages.length }} 個階段 · {{ trackChapters(t).length }} 章<template v-if="trackSoon(t)"> · {{ trackSoon(t) }} 項準備中</template></span>
+              <span class="foot">
+                <span class="bar" role="progressbar" :aria-valuenow="trackPct(t)" aria-valuemin="0" aria-valuemax="100" :aria-label="`${t.title} 進度`"><i :style="{ width: `${trackPct(t)}%` }" /></span>
+                <span class="pct">{{ trackPct(t) }}%</span>
+                <span class="btn primary go">查看學程</span>
+              </span>
+            </span>
+          </RouterLink>
+        </div>
+        <h2 class="section">所有課程<small>單獨查看某一門課的全部章節</small></h2>
+      </template>
       <div class="courses">
         <RouterLink v-for="c in courses" :key="c.id" class="course-card" :class="`u-${c.color}`" :to="`/${c.id}`" :data-pdf="c.pdfName">
           <span class="logo" aria-hidden="true">{{ c.logo }}</span>
@@ -104,6 +127,14 @@ main { max-width: 1080px; margin: 0 auto; padding: 24px 20px 80px; }
 .resume strong { font-size: 19px; font-weight: 900; color: #2b2b2b; }
 .resume span:not(.btn) { color: var(--c-ink-soft); font-size: 14px; font-weight: 700; }
 
+.section { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 6px 0 14px; font-size: 18px; font-weight: 900; color: #2b2b2b; }
+.section small { color: var(--c-muted); font-size: 13px; font-weight: 800; }
+.tracks { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr)); gap: 20px; margin-bottom: 34px; }
+.track-card { display: flex; gap: 18px; padding: 22px; border: 2px solid var(--u); border-radius: 22px; box-shadow: 0 5px 0 var(--u-dark); background: var(--u-soft); transition: transform .08s, box-shadow .08s; }
+.track-card:hover { transform: translateY(-2px); }
+.track-card:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--u-dark); }
+.track-card:focus-visible { outline: 3px solid var(--c-blue); outline-offset: 3px; }
+.track-card .logo { font-size: 30px; }
 .courses { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr)); gap: 20px; }
 .course-card { display: flex; gap: 18px; padding: 22px; border: 2px solid var(--c-line); border-radius: 22px; box-shadow: 0 5px 0 var(--c-line); background: var(--c-snow); transition: transform .08s, box-shadow .08s, border-color .12s; }
 .course-card:hover { border-color: var(--u); box-shadow: 0 5px 0 var(--u); transform: translateY(-2px); }
@@ -125,6 +156,6 @@ main { max-width: 1080px; margin: 0 auto; padding: 24px 20px 80px; }
   .search span, .search kbd { display: none; }
   .top { flex-wrap: wrap; }
   .join input { width: 150px; }
-  .course-card { flex-direction: column; }
+  .course-card, .track-card { flex-direction: column; }
 }
 </style>

@@ -8,13 +8,14 @@ import Sidebar from '../components/Sidebar.vue'
 import SlideCanvas from '../components/SlideCanvas.vue'
 import { questions } from '../lib/classroom'
 import { draw } from '../lib/draw'
+import { courseById } from '../lib/deck'
 import { leaveRoom, room } from '../lib/room'
 import { liveClass, settings } from '../lib/settings'
 import { audienceCount } from '../lib/sync'
 import { useDeck } from '../lib/useDeck'
 
 const deck = useDeck('presenter')
-const { courseId, course, chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, next, prev } = deck
+const { track, trackPos, courseId, course, chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, next, prev } = deck
 
 const sidebar = ref(false)
 const overview = ref(false)
@@ -74,7 +75,7 @@ const clockText = computed(() => `${two(now.value.getHours())}:${two(now.value.g
 // ---- audience window ----
 const blocked = ref(false)
 function openAudience() {
-  const url = `${location.pathname}${location.search}#/${courseId.value}/${chId.value}/${index.value + 1}`
+  const url = `${location.pathname}${location.search}#/${courseId.value}/${chId.value}/${index.value + 1}${track.value ? `?track=${track.value.id}` : ''}`
   const w = window.open(url, 'deck-audience', 'popup,width=1280,height=760')
   blocked.value = !w
 }
@@ -117,9 +118,9 @@ onBeforeUnmount(() => {
 <template>
   <div v-if="chapter" class="presenter" :class="`u-${unit.color}`">
     <header class="top">
-      <RouterLink class="pbtn" :to="`/${courseId}/${chId}/${index + 1}`" title="離開講師模式"><Icon name="x" /><span>離開</span></RouterLink>
+      <RouterLink class="pbtn" :to="{ path: `/${courseId}/${chId}/${index + 1}`, query: track ? { track: track.id } : {} }" title="離開講師模式"><Icon name="x" /><span>離開</span></RouterLink>
       <div class="title">
-        <small>講師模式 · {{ course?.short }} · Ch {{ chapter.num }}</small>
+        <small>講師模式 · <template v-if="track && trackPos">{{ track.short }} {{ trackPos.n }}/{{ trackPos.total }} · </template>{{ course?.short }} · Ch {{ chapter.num }}</small>
         <strong>{{ chapter.title }}</strong>
       </div>
       <div class="status" :class="{ ok: audienceCount > 0 }" role="status">
@@ -161,7 +162,7 @@ onBeforeUnmount(() => {
           <div class="frame small">
             <SlideCanvas v-if="nextSlide" :slide="nextSlide" />
             <div v-else class="placeholder">
-              <template v-if="nextChapter">本章結束<br>下一章：Ch {{ nextChapter.num }} {{ nextChapter.title }}</template>
+              <template v-if="nextChapter">本章結束<br>下一章：<template v-if="nextChapter.course !== courseId">{{ courseById(nextChapter.course)?.short }} </template>Ch {{ nextChapter.num }} {{ nextChapter.title }}</template>
               <template v-else>課程結束</template>
             </div>
           </div>

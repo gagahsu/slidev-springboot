@@ -1,0 +1,58 @@
+# 學程設定（格式說明見 basic.yaml）
+
+title: 進階學程
+short: 進階
+description: 給上完基礎學程的學生：補齊資料庫、Spring Boot、Angular 的細節，學會團隊協作與部署，完成含購物車與綠界金流的「轉角咖啡」線上商店前後台。
+logo: 進
+color: purple
+order: 2
+project: 轉角咖啡線上商店（specs/SHOP-SPEC.md）
+
+stages:
+  - title: 團隊協作：Git
+    desc: 指令操作、標籤、改寫歷史、Git Flow、Pull Request
+    items:
+      - { soon: "Git 一般版 ch01–12", course: git, note: "slidev-git 的一般版，尚未放進網站" }
+
+  - title: Java 進階
+    desc: 進階語法、例外設計、多執行緒、I/O
+    items:
+      - { soon: "Java 進階（各章 -adv 版、多執行緒、I/O、ZIP）", course: java, note: "slidev-java，尚未放進網站" }
+
+  - title: 資料庫進階
+    desc: 正規化、關聯設計、索引、VIEW、子查詢、Flyway
+    items:
+      - { course: mysql, chapters: [2, 3, "8-11"] }
+
+  - title: Spring Boot 進階
+    desc: AOP、JDBC、JPA 關聯、MyBatis、交易與鎖、Session、測試、排程、快取、Security 與 JWT
+    items:
+      - { course: springboot, chapters: [8, 10, 11, 24, 25, "29-35", 40, "42-47"] }
+
+  - title: Angular 進階
+    desc: Angular Material、RxJS、Signals、Reactive Forms、RWD、打包部署
+    items:
+      - { course: angular, chapters: ["31-57"] }
+      - { soon: "HTTP 攔截器與路由守衛", course: angular }
+
+  - title: 專題後端：線上商店
+    desc: 照 specs/SHOP-SPEC.md，Spring Boot 7 章
+    items:
+      - { soon: "專題 1：總覽與資料模型（Flyway）", course: springboot }
+      - { soon: "專題 2：會員、權限與統一回應", course: springboot }
+      - { soon: "專題 3：商品與後台商品管理", course: springboot }
+      - { soon: "專題 4：購物車", course: springboot }
+      - { soon: "專題 5：訂單與模擬付款", course: springboot }
+      - { soon: "專題 6：綠界金流", course: springboot }
+      - { soon: "專題 7：後台訂單與報表（MyBatis）", course: springboot }
+
+  - title: 專題前端：線上商店
+    desc: 前台購物流程與管理後台
+    items:
+      - { soon: "電商前台：商品、購物車、結帳、付款結果", course: angular }
+      - { soon: "電商後台：商品、訂單、報表", course: angular }
+
+  - title: 部署：Docker
+    desc: 映像檔、容器、Compose、Volume，把商店部署上線
+    items:
+      - { soon: "Docker ch01–08", course: docker, note: "slidev-docker，尚未放進網站" }

@@ -1,5 +1,5 @@
 import { markRaw, type Component } from 'vue'
-import { courses, loaders, searchLoaders, type ChapterInfo, type CourseInfo, type SearchDoc } from 'virtual:deck'
+import { courses, loaders, searchLoaders, tracks, type ChapterInfo, type CourseInfo, type SearchDoc, type TrackInfo } from 'virtual:deck'
 
 export interface Slide {
   index: number
@@ -14,8 +14,8 @@ export interface Slide {
   comp: Component
 }
 
-export { courses }
-export type { ChapterInfo, CourseInfo, SearchDoc }
+export { courses, tracks }
+export type { ChapterInfo, CourseInfo, SearchDoc, TrackInfo }
 
 export const SLIDE_W = 980
 export const SLIDE_H = 552

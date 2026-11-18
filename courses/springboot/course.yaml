@@ -27,14 +27,6 @@ units:
   - { title: 安全與微服務, desc: Spring Security、JWT、Spring Cloud, from: 46, to: 48, color: teal }
   - { title: 實戰專題, desc: 把整門課串起來的完整專案, from: 49, to: 99, color: yellow }
 
-# 精簡路線（可省略；省略時首頁不顯示路線切換）
-# optional 裡的章節在精簡路線上隱藏，「下一章」會跳過。
-# 這裡留下完成實戰專題（ch49–52）後端需要的章節；ch07 / ch24–25 / ch34 / ch40 保留，
-# 因為 Lombok、Map、ResponseEntity、@Configuration/@Bean 是在那裡第一次出現。
-lite:
-  description: 只留下完成「動態問卷系統」後端需要的章節，略過 @PostConstruct、AOP、MyBatis、SQL Injection、測試與日誌、排程、Cache、Spring Cloud。
-  optional: [8, 10, 11, 30, 31, 32, 35, 43, 44, 45, 48]
-
 # 章節卡片的標題與副標（可省略：沒寫的章節用該章第一頁 frontmatter 的 title）
 chapters:
   ch01: { title: "Spring Boot 介紹", subtitle: "Backend Framework Intro" }

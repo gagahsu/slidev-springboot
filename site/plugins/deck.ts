@@ -42,7 +42,7 @@ interface Course {
 }
 
 /** Words that already mean something in the site's URLs, so they cannot be course ids. */
-const RESERVED = new Set(['presenter', 'print', 'join'])
+const RESERVED = new Set(['presenter', 'print', 'join', 'track'])
 const COLORS = new Set(['green', 'blue', 'purple', 'orange', 'pink', 'teal', 'yellow'])
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -52,8 +52,9 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
  * Virtual modules: `virtual:deck` (all courses + chapter manifests), `virtual:deck-chapter:<course>/chNN`
  * (compiled slides of one chapter, lazy) and `virtual:deck-search:<course>` (search index of one course).
  */
-export default function deck(opts: { coursesDir: string }): Plugin {
+export default function deck(opts: { coursesDir: string, tracksDir: string }): Plugin {
   const coursesDir = path.resolve(opts.coursesDir)
+  const tracksDir = path.resolve(opts.tracksDir)
   let config: ResolvedConfig
   let highlighter: Highlighter
   let md: MarkdownIt
@@ -225,8 +226,11 @@ export default function deck(opts: { coursesDir: string }): Plugin {
   let this_warn = (msg: string) => console.warn(`[deck] ${msg}`)
 
   function isCourseFile(file: string) {
-    const rel = path.relative(coursesDir, file)
-    return !rel.startsWith('..') && !path.isAbsolute(rel) && /\.(md|ya?ml)$/.test(file)
+    if (!/\.(md|ya?ml)$/.test(file)) return false
+    return [coursesDir, tracksDir].some((dir) => {
+      const rel = path.relative(dir, file)
+      return !rel.startsWith('..') && !path.isAbsolute(rel)
+    })
   }
   function reload(server: ViteDevServer) {
     for (const mod of server.moduleGraph.idToModuleMap.values()) {
@@ -274,6 +278,53 @@ export default function deck(opts: { coursesDir: string }): Plugin {
     }
   }
 
+  /**
+   * Learning tracks (學程): `tracks/<id>.yaml`, each an ordered list of stages whose items point at
+   * chapters of the courses (`{ course, chapters: [1, "4-7"] }`) or at content still to come (`{ soon }`).
+   * Items are resolved against the courses in the browser, so a chapter that is not on the site yet shows as 準備中.
+   */
+  function tracksInfo(courseIds: Set<string>) {
+    const out: any[] = []
+    const names = fs.existsSync(tracksDir) ? fs.readdirSync(tracksDir).filter(n => /\.ya?ml$/.test(n)).sort() : []
+    const str = (v: any, d = '') => (typeof v === 'string' ? v : d)
+    for (const name of names) {
+      const id = name.replace(/\.ya?ml$/, '')
+      if (!/^[a-z][a-z0-9-]*$/.test(id)) { this_warn(`tracks/${name}: 學程檔名只能用小寫英文、數字和 -，已略過`); continue }
+      let t: any
+      try { t = YAML.parse(fs.readFileSync(path.join(tracksDir, name), 'utf8')) ?? {} }
+      catch (e: any) { this_warn(`tracks/${name}: ${e.message}`); continue }
+      const stages = (Array.isArray(t.stages) ? t.stages : []).map((st: any) => ({
+        title: str(st?.title),
+        desc: str(st?.desc),
+        items: (Array.isArray(st?.items) ? st.items : []).flatMap((it: any) => {
+          if (it && typeof it.soon === 'string') return [{ soon: it.soon, course: str(it.course), note: str(it.note) }]
+          if (!it || typeof it.course !== 'string') { this_warn(`tracks/${name}: 無法辨識的項目 ${JSON.stringify(it)}`); return [] }
+          if (!courseIds.has(it.course)) this_warn(`tracks/${name}: 找不到課程 ${it.course}，相關章節會顯示「準備中」`)
+          const nums: number[] = []
+          for (const c of Array.isArray(it.chapters) ? it.chapters : [it.chapters]) {
+            const m = String(c).match(/^\s*(\d+)\s*(?:-\s*(\d+))?\s*$/)
+            if (!m) { this_warn(`tracks/${name}: 章節寫法看不懂「${c}」（用數字或 "4-7"）`); continue }
+            const from = Number(m[1]), to = Number(m[2] ?? m[1])
+            for (let n = from; n <= to; n++) nums.push(n)
+          }
+          return nums.map(n => ({ course: it.course, ch: `ch${String(n).padStart(2, '0')}` }))
+        }),
+      }))
+      out.push({
+        id,
+        title: str(t.title, id),
+        short: str(t.short, str(t.title, id)),
+        description: str(t.description),
+        logo: str(t.logo, str(t.title, id).slice(0, 1)).slice(0, 2),
+        color: COLORS.has(t.color) ? t.color : 'green',
+        order: Number(t.order) || 999,
+        project: str(t.project),
+        stages,
+      })
+    }
+    return out.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
+  }
+
   function manifestCode(): string {
     scan()
     const list = sortedCourses().map(courseInfo)
@@ -283,6 +334,7 @@ export default function deck(opts: { coursesDir: string }): Plugin {
     const loaders = list.flatMap(c => c.chapters.map(ch => `${c.id}/${ch.id}`))
     return [
       `export const courses = ${JSON.stringify(list)}`,
+      `export const tracks = ${JSON.stringify(tracksInfo(new Set(list.map(c => c.id))))}`,
       `export const loaders = {`,
       ...loaders.map(k => `  ${JSON.stringify(k)}: () => import(${JSON.stringify(V_CH + k)}),`),
       `}`,
@@ -315,6 +367,7 @@ export default function deck(opts: { coursesDir: string }): Plugin {
     },
     configureServer(server) {
       server.watcher.add(coursesDir)
+      server.watcher.add(tracksDir)
       // new or deleted chapters / courses: Vite only reports changes to files it already knows
       const onAddRemove = (file: string) => { if (isCourseFile(file)) reload(server) }
       server.watcher.on('add', onAddRemove)

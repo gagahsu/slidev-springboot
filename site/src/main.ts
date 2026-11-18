@@ -10,6 +10,7 @@ import './lib/classroom'
 import { restoreRoom } from './lib/room'
 import { currentCourseId } from './lib/course'
 import { courseById, legacyCourse } from './lib/deck'
+import { trackById } from './lib/track'
 import Link from './components/Link.vue'
 import Mermaid from './components/Mermaid.vue'
 import Art from './anim/Art.vue'
@@ -65,6 +66,7 @@ const router = createRouter({
   routes: [
     { path: '/', component: () => import('./pages/Courses.vue') },
     { path: '/join/:code/:key?', component: () => import('./pages/Join.vue') },
+    { path: '/track/:id', component: () => import('./pages/Track.vue'), beforeEnter: r => (trackById(r.params.id) ? true : '/') },
     // before there were several courses
     { path: `/${CH}/${N}`, redirect: legacy('/:course/:ch/:n') },
     { path: `/presenter/${CH}/${N}`, redirect: legacy('/presenter/:course/:ch/:n') },

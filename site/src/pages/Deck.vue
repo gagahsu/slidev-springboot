@@ -17,7 +17,7 @@ import { useDeck } from '../lib/useDeck'
 const router = useRouter()
 const openSearch = inject<() => void>('openSearch')!
 const deck = useDeck('audience')
-const { courseId, course, chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, next, prev } = deck
+const { track, trackPos, courseId, course, chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, next, prev } = deck
 
 /** a student device: in a room without the presenter key */
 const inClass = computed(() => room.status === 'on' && !room.canControl)
@@ -50,7 +50,7 @@ function toggleDrawing(force?: boolean) {
   draw.tool = drawing.value ? 'pen' : 'none'
 }
 function present() {
-  router.push(`/presenter/${courseId.value}/${chId.value}/${index.value + 1}`)
+  router.push({ path: `/presenter/${courseId.value}/${chId.value}/${index.value + 1}`, query: track.value ? { track: track.value.id } : {} })
 }
 
 function toggleFullscreen() {
@@ -108,7 +108,7 @@ onBeforeUnmount(() => {
 <template>
   <div v-if="chapter" class="deck" :class="[`u-${unit.color}`, { immersive }]">
     <header class="bar top">
-      <RouterLink class="btn square" :to="`/${courseId}`" :aria-label="`回到課程目錄：${course?.short}`" :title="`回到課程目錄：${course?.short}`"><Icon name="x" /></RouterLink>
+      <RouterLink class="btn square" :to="track ? `/track/${track.id}` : `/${courseId}`" :aria-label="track ? `回到${track.title}` : `回到課程目錄：${course?.short}`" :title="track ? `回到${track.title}` : `回到課程目錄：${course?.short}`"><Icon name="x" /></RouterLink>
       <div class="progress" role="progressbar" :aria-valuenow="index + 1" aria-valuemin="1" :aria-valuemax="chapter.count" :aria-label="`第 ${index + 1} 頁，共 ${chapter.count} 頁`">
         <i :style="{ width: `${(index + 1) / chapter.count * 100}%` }" />
       </div>
@@ -136,7 +136,7 @@ onBeforeUnmount(() => {
         <button v-else class="btn" title="向老師提問" @click="asking = true"><Icon name="chat" /><span>提問</span></button>
       </div>
       <div class="where">
-        <small>Ch {{ chapter.num }} · {{ chapter.title }}<template v-if="linked"> · 已連線講師視窗</template></small>
+        <small><RouterLink v-if="track && trackPos" class="track-chip" :to="`/track/${track.id}`" :title="`第 ${trackPos.stage} 階段：${trackPos.stageTitle}`">{{ track.short }} {{ trackPos.n }}/{{ trackPos.total }}</RouterLink>{{ track ? `${course?.short} · ` : '' }}Ch {{ chapter.num }} · {{ chapter.title }}<template v-if="linked"> · 已連線講師視窗</template></small>
         <strong>{{ slide?.title }}</strong>
       </div>
       <div class="nav">
@@ -207,6 +207,7 @@ onBeforeUnmount(() => {
 .where small { color: var(--u-dark); font-size: 12px; font-weight: 900; letter-spacing: .04em; }
 .where strong { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 800; color: var(--c-ink); }
 .where small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.track-chip { display: inline-block; margin-right: 6px; padding: 0 7px; border-radius: 999px; background: var(--u); color: #fff; font-size: 11px; letter-spacing: 0; }
 
 .btn.on { border-color: #84d8ff; box-shadow: 0 3px 0 #84d8ff; background: var(--c-blue-soft); color: var(--c-blue-dark); }
 .draw-dock { position: fixed; left: 0; right: 0; bottom: calc(var(--bar-bottom) + 10px); z-index: 20; display: flex; justify-content: center; padding: 0 12px; pointer-events: none; }

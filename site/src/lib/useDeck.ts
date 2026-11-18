@@ -2,6 +2,7 @@ import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vu
 import { useRoute, useRouter } from 'vue-router'
 import { chapterById, courseById, legacyCourse, loadChapter, type Slide } from './deck'
 import { routeChapterAt } from './route'
+import { trackById, trackIndexOf, trackNeighbor, trackChapters } from './track'
 import { clearPage, draw, redo, undo } from './draw'
 import { visit } from './progress'
 import { room } from './room'
@@ -28,8 +29,30 @@ export function useDeck(role: Role) {
   })
   const slide = computed(() => slides.value[index.value])
   const unit = computed(() => unitOf(course.value, chapter.value?.num ?? 1))
-  const nextChapter = computed(() => routeChapterAt(courseId.value, 1, chId.value))
-  const prevChapter = computed(() => routeChapterAt(courseId.value, -1, chId.value))
+  /** the learning track this chapter was opened from (`?track=basic`), when the chapter is part of it */
+  const track = computed(() => {
+    const t = trackById(route.query.track)
+    return t && trackIndexOf(t, courseId.value, chId.value) >= 0 ? t : undefined
+  })
+  /** position on the track: n-th chapter of total, and the stage */
+  const trackPos = computed(() => {
+    const t = track.value
+    if (!t) return undefined
+    const list = trackChapters(t)
+    const at = trackIndexOf(t, courseId.value, chId.value)
+    return { n: at + 1, total: list.length, stage: list[at].stage + 1, stageTitle: t.stages[list[at].stage].title }
+  })
+  /** next / previous chapter: along the track when there is one (may be in another course), else within the course */
+  function neighbor(offset: number) {
+    if (track.value) {
+      const n = trackNeighbor(track.value, courseId.value, chId.value, offset)
+      return n && { ...n.ch, course: n.course.id }
+    }
+    const c = routeChapterAt(courseId.value, offset, chId.value)
+    return c && { ...c, course: courseId.value }
+  }
+  const nextChapter = computed(() => neighbor(1))
+  const prevChapter = computed(() => neighbor(-1))
   const atEnd = computed(() => index.value >= slides.value.length - 1)
   /** key under which this slide's drawings are stored and synced */
   const drawKey = computed(() => `${courseId.value}/${chId.value}/${index.value}`)
@@ -63,7 +86,10 @@ export function useDeck(role: Role) {
     if (!remote && role === 'audience' && room.status === 'on' && !room.canControl) room.following = false
     if (!sameSlide) {
       stepTotal.value = 0
-      router.push(`${prefix}/${toCourse}/${ch}/${i + 1}`)
+      // stay on the track while the destination is part of it
+      const t = track.value
+      const query = t && trackIndexOf(t, toCourse, ch) >= 0 ? { track: t.id } : {}
+      router.push({ path: `${prefix}/${toCourse}/${ch}/${i + 1}`, query })
     }
     step.value = toStep
     // the presenter always drives; an audience window only talks back while a presenter is open
@@ -73,13 +99,13 @@ export function useDeck(role: Role) {
   function next() {
     if (step.value < stepTotal.value) go(index.value, chId.value, false, step.value + 1)
     else if (!atEnd.value) go(index.value + 1)
-    else if (nextChapter.value) go(0, nextChapter.value.id)
+    else if (nextChapter.value) go(0, nextChapter.value.id, false, 0, nextChapter.value.course)
   }
   /** previous step, or the previous slide in its final state */
   function prev() {
     if (stepShown.value > 0) go(index.value, chId.value, false, stepShown.value - 1)
     else if (index.value > 0) go(index.value - 1, chId.value, false, LAST_STEP)
-    else if (prevChapter.value) go(prevChapter.value.count - 1, prevChapter.value.id, false, LAST_STEP)
+    else if (prevChapter.value) go(prevChapter.value.count - 1, prevChapter.value.id, false, LAST_STEP, prevChapter.value.course)
   }
 
   /** Handles navigation and drawing shortcuts. Returns true when the key was used. */
@@ -139,5 +165,5 @@ export function useDeck(role: Role) {
     if (at) go(at.i, at.ch, true, at.step, at.course)
   }
 
-  return { catchUp, courseId, course, chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, go, next, prev, handleKey }
+  return { catchUp, track, trackPos, courseId, course, chId, chapter, slides, loading, index, slide, unit, nextChapter, prevChapter, atEnd, drawKey, step, stepTotal, stepShown, go, next, prev, handleKey }
 }

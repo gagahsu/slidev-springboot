@@ -41,6 +41,8 @@ courses/
   angular/               ← copied from gagahsu/slidev-angular (chapters only: its practice-*.md decks,
     course.yaml             code/, course-demo/ and lecture PDFs were left in that repo)
     01-frontend-intro.md … 57-final-review.md
+tracks/basic.yaml        ← learning tracks (學程): ordered stages of chapters across courses
+tracks/advanced.yaml
 specs/CAFE-SPEC.md       ← DRAFT: basic-track project (Corner Café one-page site); shared by all courses
 specs/SHOP-SPEC.md       ← DRAFT: advanced-track project (Corner Café online shop + ECPay sandbox); replaces SURVEY-SPEC.md
 public/screenshots/…     ← Spring Boot images (`/screenshots/...` in the Markdown)
@@ -86,7 +88,7 @@ The site home `#/` is a course picker; each course lives under its own URL prefi
 | print / PDF | `#/print/springboot/ch04` |
 | join a classroom room | `#/join/CODE` (`/SECRET` for the phone remote) — no course in the URL |
 
-Old single-course URLs (`#/ch04/3`, `#/presenter/ch04/3`, `#/print/ch04`) redirect to the course marked `legacy: true` (Spring Boot). Unknown courses or chapters go back to the picker / course home. Course ids must be lowercase letters, digits and `-`, and cannot be `presenter`, `print`, `join` or `chNN`.
+Old single-course URLs (`#/ch04/3`, `#/presenter/ch04/3`, `#/print/ch04`) redirect to the course marked `legacy: true` (Spring Boot). Unknown courses or chapters go back to the picker / course home. Course ids must be lowercase letters, digits and `-`, and cannot be `presenter`, `print`, `join`, `track` or `chNN`.
 
 `courses/<id>/course.yaml` fields (all optional except `title`; the Spring Boot file is the reference):
 - `title`, `short` (short name for the sidebar, search results, presenter bar), `description`, `logo` (1–2 characters on the course card), `color` (`green` / `blue` / `purple` / `orange` / `pink` / `teal` / `yellow`), `order` (picker order)
@@ -100,6 +102,26 @@ Per course vs site-wide:
 - per course: progress and 「繼續上次的進度」 (`deck-progress-v2`: `{ last: {course, ch, i}, courses: { <id>: { last, seen } } }`), lite route choice (`settings.routes[<id>]`), drawings (keys `<course>/chNN/<slide index>`), search index, PDF export, slide keys (`<course>/chNN-<index>`, so poll ids are per course)
 - site-wide: the 「課堂互動」 switch (`settings.interactive`), presenter note size, the classroom room. A room is not tied to a course: `nav` messages carry `course`, so students follow the presenter into another course.
 - Browsers that used the single-course site keep their data: `deck-progress-v1`, the old `route` setting and drawing keys `chNN/i` are moved to the legacy course on first load.
+
+### Learning tracks (學程)
+
+The picker shows the tracks above the courses. A track (`tracks/<id>.yaml`, page `#/track/<id>`) is an ordered list of stages; each stage lists chapters from any course, in teaching order. Today: `basic` (基礎學程, ends with the Corner Café one-page site) and `advanced` (進階學程, ends with the online shop).
+
+```yaml
+title: 基礎學程          # also short, description, logo, color, order, project
+stages:
+  - title: 資料庫：MySQL
+    desc: 建表、查詢…
+    items:
+      - { course: mysql, chapters: [1, "4-7"] }          # chapters of a course, in this order
+      - { soon: "前後端串接", course: springboot, note: "…" }  # content not written yet → 準備中
+```
+
+- A chapter opened from a track page carries `?track=<id>`. While the chapter is part of that track, 「下一章／上一章」 follow the track (across courses, skipping chapters not in the track), the deck shows a chip like `基礎 14/63`, the close button returns to the track page, and presenter mode / the audience window keep the query. Navigating to a chapter outside the track drops it.
+- `soon` items, and chapters or courses that are not on the site yet, show as 準備中 and are skipped by navigation; they become links automatically once the chapter exists.
+- Track progress is computed from each course's own progress (no separate record); 「繼續學程」 opens the first unfinished chapter.
+- Code: `plugins/deck.ts` (`tracksInfo`, exported as `tracks` from `virtual:deck`), `src/lib/track.ts`, `src/pages/Track.vue`, track handling in `src/lib/useDeck.ts`.
+- The Spring Boot 「精簡路線」 was removed (it was built around the retired survey project); the tracks replace it. The lite-route code stays for other courses.
 
 **Adding a course** (no code changes):
 1. Create `courses/<id>/` (e.g. `courses/mysql/`).
@@ -130,7 +152,8 @@ Per course vs site-wide:
   - Chapters rewritten so far: ch01, ch04–ch11 (unit 1, all on the 小明 printing story), ch12–ch21 (unit 2, bubble-tea shop; code uses `Drink` / `Order`, `DrinkController` / `OrderController`); ch22–ch35 (unit 3, school registrar's office: 檔案室 = database, 承辦人員 = Dao / Spring JDBC, 組長 = Service, 櫃台 = Controller, 資深助理 = JPA, 申請單 = SQL; code uses `Student` with `className` / `score` from ch28, `Classroom`, `Penalty`, `Course`); ch36–ch41 (unit 4, same school office: 人的分工 = three layers, 三張紙 = PO / DTO / VO, 辦事指南 = OpenAPI, 櫃台退件 = Validation; from ch39 the code lives in a NEW project `school` with packages `controller` / `service` / `repository` / `entity` / `dto` / `vo`, `Student` has `idNumber` / `name` / `score`, DTOs `CreateStudentRequest` / `StudentResponse`, `ScoreVO`, practice entity `Club`); ch42–ch45 (unit 5, still the `school` project: 號碼牌＋置物櫃 = Session, 演練清單 / 替身 = unit test / Mock, 值班日誌 = Log, 工友的時間表 = `@Scheduled` in a `scheduler` package, 便利貼 = Cache with `#p0` keys; schedulers call `StudentService`, never the repository); ch46–ch48 (unit 6: 校門口警衛 = Spring Security with `Account` / `AccountService implements UserDetailsService` / roles `STUDENT` `TEACHER`, 蓋鋼印的通行證 = JWT with `security/JwtUtil` + `JwtAuthFilter` and `AuthController`, 拆成處室 = microservices in four NEW projects `eureka-server` / `student-service` / `club-service` / `gateway`; the Java code of these three chapters was compiled and run against Spring Boot 4.0.9, jjwt 0.13.0, Spring Cloud 2025.1.4); two chapters were ADDED later and everything after them renumbered: ch29 (JPA relations: `ReportCard` 1—N `SubjectScore`, N—N `Award`; `@JsonIgnore` to stop the JSON loop) and ch38 (Java extras tried in a `Playground` main: enum, record, generics `Reply<T>`, Stream, `orElseThrow`, custom exception, `LocalDate`). The IDE used throughout the course is Eclipse. The survey project (unit 7) is split into ch49 (overview, entities, repositories), ch50 (`AppResponse<T>` record + `RspCode` enum, `BizException` + `GlobalExceptionHandler`, `AuthService implements UserDetailsService`, JWT, `SecurityConfig` with `/api/admin/**` = ADMIN, `/error` permitted, CORS for localhost:4200), ch51 (admin `SurveyService` / `AdminSurveyController`, session drafts, stats) and ch52 (public answering flow, `SurveyController`, history), plus ch53 frontend. API paths and JSON shapes must stay identical to what the ch53 Angular code calls. Backend rules added in the rewrite: first registered user is ADMIN, others USER; answered surveys cannot be edited or deleted; entities use `@Getter`/`@Setter`. The whole backend was compiled and exercised with curl (Spring Boot 4.0.9, H2 in MySQL mode). ch02 (小明開學前準備文具: JDK 17 Temurin = 語言, Eclipse = 書桌, MySQL = 檔案櫃, Git = 存檔點, GitHub = 雲端作業簿, GitHub Desktop = 按鈕版; install screenshots kept) and ch03 (第一次到便利商店: Initializr = 配好的工具箱, Eclipse import = 搬上書桌, `MyController` = 掛名牌的店員, run = 按下列印鈕; Spring Boot 4 default, Java 17) were rewritten last. Slidev does not know the custom tags, so those chapters degrade there.
 - `site/src/pages/Print.vue` (`#/print/<course>/chNN`) + `site/scripts/export-pdf.mjs` — PDF export: one slide per 980x552 page in its final animation state, vector text. The script starts its own Vite server and uses Playwright from the repo root's `playwright-chromium` (or a global `playwright`).
 - `site/src/lib/units.ts` — `unitOf(course, num)`; the units themselves are `units:` in each `course.yaml`.
-- `site/src/lib/route.ts` — the 「精簡路線」 (lite route), per course: chapters in `lite.optional` of `course.yaml` are hidden on the course home and sidebar (the sidebar keeps the chapter being viewed, marked 選修) and skipped by next/previous chapter. For Spring Boot these are ch08, ch10–11, ch30–32, ch35, ch43–45, ch48, which the survey project backend does not need. The choice (`settings.routes[<course>]`, toggled on the course home) is stored in localStorage. Chapters on the lite route must not depend on optional chapters: when a slide refers to one, keep it self-contained.
+- `site/src/lib/route.ts` — the 「精簡路線」 (lite route), per course: chapters in `lite.optional` of `course.yaml` are hidden on the course home and sidebar (the sidebar keeps the chapter being viewed, marked 選修) and skipped by next/previous chapter. No course uses it at the moment (Spring Boot's was replaced by the learning tracks). The choice (`settings.routes[<course>]`, toggled on the course home) is stored in localStorage.
+- Chapters in a track must not depend on chapters outside it: when a slide refers to one, keep it self-contained. Known gap: Spring Boot ch39 says `ResponseEntity` was taught in ch34, which is not in the basic track.
 - Supported Markdown syntax: `---` separators, per-slide frontmatter (`layout`, `class`), trailing `<!-- -->` speaker notes, `<Link to="chNN">`, `::right::`, ```` ```mermaid ````, utility classes in `class="..."`, hand-written HTML (`<table style=…>` is left as is; only Markdown tables get the `.table-wrap` wrapper). Hand-written `<code>` gets `v-pre`, so Angular/Vue template syntax like `<code>{{ x }}</code>` shows literally; `{{ }}` anywhere else in HTML is evaluated by Vue, so keep it in backticks or code blocks. A fence may follow a list marker (`2. ```css`).
 
 ## Chapter rewrite for beginners (unit 1 ch01–11 including ch02/ch03, unit 2 ch12–21, unit 3 ch22–35 (ch29 being added), unit 4 ch36–41 (ch38 being added), unit 5 ch42–45 and unit 6 ch46–48 and the project backend ch49–52 done; ch53 (Angular frontend) is the original content moved unchanged)

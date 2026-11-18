@@ -18,6 +18,20 @@ declare module 'virtual:deck' {
     chapters: ChapterInfo[]
   }
   export interface SearchDoc { c: string, i: number, t: string, x: string }
+  /** an item of a learning track: a chapter of a course, or content still to come (`soon`) */
+  export type TrackItemRaw = { course: string, ch: string } | { soon: string, course: string, note: string }
+  export interface TrackInfo {
+    id: string
+    title: string
+    short: string
+    description: string
+    logo: string
+    color: string
+    order: number
+    project: string
+    stages: { title: string, desc: string, items: TrackItemRaw[] }[]
+  }
+  export const tracks: TrackInfo[]
   export const courses: CourseInfo[]
   /** key: `<course>/chNN` */
   export const loaders: Record<string, () => Promise<{ default: any[] }>>

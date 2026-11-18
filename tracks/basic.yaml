@@ -1,0 +1,54 @@
+# 學程設定。檔名（basic）就是學程代碼：#/track/basic
+# 一條學程分成幾個階段（stages），每個階段依序列出要上的內容（items）：
+#   - { course: mysql, chapters: [1, "4-7"] }     某門課的章節，依列出的順序；"4-7" 表示 4 到 7
+#   - { soon: "前後端串接", course: springboot, note: "…" }   還沒寫好的新章，顯示「準備中」
+#   - { soon: "Git 入門", course: git, note: "…" }           還沒放進網站的課，也用 soon
+# 列出的章節如果在網站上找不到（課程或章節還沒上架），也會自動顯示「準備中」。
+
+title: 基礎學程
+short: 基礎
+description: 給零程式經驗的學生：從開發工具、網頁畫面、Java、資料庫，到 Spring Boot 與 Angular，最後做出前後端串通的「轉角咖啡」一頁式網站。
+logo: 基
+color: green
+order: 1
+project: 轉角咖啡一頁式網站（specs/CAFE-SPEC.md）
+
+stages:
+  - title: 開發環境與版本控制
+    desc: 認識前後端、安裝開發工具、用 GitHub Desktop 保存作品
+    items:
+      - { course: angular, chapters: [1, 2, 4] }
+      - { course: springboot, chapters: [2] }
+      - { soon: "Git 入門：存檔、放上 GitHub、分支、衝突、Pull Request", course: git, note: "slidev-git 的入門版 b01–b08（GitHub Desktop），尚未放進網站" }
+
+  - title: 網頁畫面：HTML 與 CSS
+    desc: 刻出一頁式網站的靜態版面
+    items:
+      - { course: angular, chapters: [6, "8-11"] }
+
+  - title: Java 程式基礎
+    desc: 變數、流程控制、物件導向、集合與 Stream
+    items:
+      - { soon: "Java 基礎（ch01–21、26、27 的核心內容）", course: java, note: "slidev-java，依 course-basic-advanced-plan.md 的基礎版，尚未放進網站" }
+
+  - title: 資料庫：MySQL
+    desc: 建表、查詢、新增修改刪除、JOIN
+    items:
+      - { course: mysql, chapters: [1, "4-7"] }
+
+  - title: 後端：Spring Boot
+    desc: IoC、REST API、連上資料庫（JPA）、三層架構與欄位檢查
+    items:
+      # 注意：ch39 用到 ResponseEntity，講稿說是 ch34 教過的，但 ch34（鎖）不在基礎學程；要改 ch39 讓它自己說明 ResponseEntity
+      - { course: springboot, chapters: [1, 3, "4-7", 9, "12-21", 22, 23, "26-28", "36-38", 39, 41] }
+
+  - title: 前端：Angular
+    desc: TypeScript、元件、繫結、路由、@if / @for、呼叫 API
+    items:
+      - { course: angular, chapters: [3, 5, 7, "12-30"] }
+
+  - title: 專題：轉角咖啡一頁式網站
+    desc: 把前後端兜起來，完成菜單與訂位
+    items:
+      - { soon: "前後端串接：CORS、同時啟動兩端、看懂瀏覽器的網路請求", course: springboot }
+      - { soon: "專題整合：轉角咖啡一頁式網站", note: "照 specs/CAFE-SPEC.md 實作並逐項驗收" }
