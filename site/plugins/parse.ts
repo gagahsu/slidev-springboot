@@ -6,7 +6,8 @@ export interface RawSlide {
   note: string
 }
 
-const FENCE = /^\s*(`{3,}|~{3,})(.*)$/
+// a fence may start right after a list marker: "2. ```css"
+const FENCE = /^\s*(?:(?:[-*+]|\d+[.)])\s+)?(`{3,}|~{3,})(.*)$/
 
 /** Split a Slidev-style markdown file into slides (`---` separators, optional per-slide frontmatter, trailing comment = speaker note). */
 export function splitSlides(src: string): RawSlide[] {

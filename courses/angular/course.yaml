@@ -1,0 +1,84 @@
+# 課程設定。資料夾名稱（angular）就是課程代碼：#/angular/ch04/3
+# 章節檔案：NN-主題.md，內容來自 gagahsu/slidev-angular。投影片用到的圖片在 public/images/（路徑 /images/...）。
+# 原 repo 的兩份練習教材（practice-*.md）、code/、course-demo/、政府Api教學/ 與講義 PDF 沒有搬過來。
+
+title: Angular 前端開發
+short: Angular
+description: 從 HTML、CSS、TypeScript 到 Angular 元件、路由、串接 API、Angular Material、RxJS 與 Signals，最後打包部署上線。
+logo: A
+color: pink
+order: 3
+searchHint: "@if、路由、Mat-table"
+pdfName: angular
+
+# 單元依 ch57 總複習的「九大階段」課程地圖分組
+units:
+  - { title: 開發環境與工具, desc: 建得起環境、開得了專案, from: 1, to: 7, color: green }
+  - { title: HTML 與 CSS, desc: 刻得出靜態畫面, from: 8, to: 11, color: blue }
+  - { title: TypeScript 語法, desc: 寫得出程式邏輯, from: 12, to: 17, color: purple }
+  - { title: Angular 核心觀念, desc: 元件、繫結、路由、資料傳遞, from: 18, to: 24, color: orange }
+  - { title: 模板語法與資料處理, desc: 控制流程、串 API、整理資料, from: 25, to: 30, color: pink }
+  - { title: Angular Material, desc: 用元件庫組出專業 UI, from: 31, to: 42, color: teal }
+  - { title: 非同步、RxJS 與狀態管理, desc: RxJS、訂閱、Loading、Signals, from: 43, to: 47, color: yellow }
+  - { title: 版面與表單, desc: 後台版型、動態表單、RWD, from: 48, to: 53, color: green }
+  - { title: 打包與部署, desc: 打包上線，作品見天日, from: 54, to: 55, color: blue }
+  - { title: 綜合練習與總複習, desc: 員工管理系統實作、全課程總複習, from: 56, to: 57, color: purple }
+
+chapters:
+  ch01: { title: "前端開發介紹", subtitle: "Frontend Intro" }
+  ch02: { title: "Coding 習慣", subtitle: "Best Practices" }
+  ch03: { title: "Angular 介紹", subtitle: "Angular Essentials" }
+  ch04: { title: "終端機指令", subtitle: "Terminal / CMD" }
+  ch05: { title: "安裝 Angular", subtitle: "Setup & New Project" }
+  ch06: { title: "安裝 VS Code", subtitle: "Install VS Code" }
+  ch07: { title: "開啟 Angular 專案", subtitle: "Open Project & Components" }
+  ch08: { title: "HTML 基礎語法", subtitle: "HTML Essentials" }
+  ch09: { title: "CSS 基礎語法", subtitle: "CSS Essentials" }
+  ch10: { title: "CSS 樣式編輯", subtitle: "Flex & Tailwind" }
+  ch11: { title: "CSS 進階工具", subtitle: "Background & Position" }
+  ch12: { title: "JavaScript 與 TypeScript 介紹", subtitle: "JS & TypeScript" }
+  ch13: { title: "數據類型", subtitle: "TypeScript Types" }
+  ch14: { title: "變數使用", subtitle: "Variables & Binding" }
+  ch15: { title: "方法", subtitle: "Methods & Functions" }
+  ch16: { title: "TypeScript 練習（一）", subtitle: "Practice — Control & Arrays" }
+  ch17: { title: "TypeScript 練習（二）", subtitle: "Date, Restructure & Methods" }
+  ch18: { title: "資料轉換與呈現", subtitle: "Data Design & Presentation" }
+  ch19: { title: "生命週期", subtitle: "Component Lifecycle" }
+  ch20: { title: "新增組件", subtitle: "Components" }
+  ch21: { title: "繫結", subtitle: "Data Binding" }
+  ch22: { title: "路由", subtitle: "Angular Routing" }
+  ch23: { title: "資料傳遞", subtitle: "Data Passing" }
+  ch24: { title: "網頁儲存", subtitle: "Web Storage" }
+  ch25: { title: "陣列顯示", subtitle: "Array Display" }
+  ch26: { title: "@if 條件顯示", subtitle: "Conditional Rendering" }
+  ch27: { title: "@switch 條件切換", subtitle: "Switch Case" }
+  ch28: { title: "串接 API", subtitle: "HTTP & API" }
+  ch29: { title: "Interface", subtitle: "TypeScript Interface" }
+  ch30: { title: "資料排序", subtitle: "Data Sorting" }
+  ch31: { title: "安裝 Angular Material", subtitle: "Angular Material Setup" }
+  ch32: { title: "Mat-table", subtitle: "Material Table" }
+  ch33: { title: "Mat-icon", subtitle: "Material Icons" }
+  ch34: { title: "日期選擇器", subtitle: "Date Picker" }
+  ch35: { title: "DatePipe", subtitle: "Date Formatting" }
+  ch36: { title: "JsonPipe", subtitle: "JSON Display in HTML" }
+  ch37: { title: "即時搜尋", subtitle: "Live Search" }
+  ch38: { title: "ngClass", subtitle: "Dynamic CSS Binding" }
+  ch39: { title: "Tabs", subtitle: "Angular Material Tabs" }
+  ch40: { title: "Select", subtitle: "Mat-select" }
+  ch41: { title: "圓餅圖", subtitle: "Pie Chart / Chart.js" }
+  ch42: { title: "Dialog", subtitle: "MatDialog" }
+  ch43: { title: "同步與非同步", subtitle: "Sync & Async" }
+  ch44: { title: "RXJS", subtitle: "Reactive Extensions" }
+  ch45: { title: "訂閱", subtitle: "RxJS Subscription" }
+  ch46: { title: "Loading", subtitle: "Loading Spinner" }
+  ch47: { title: "Signals", subtitle: "Angular Signals" }
+  ch48: { title: "Sidenav", subtitle: "Mat-sidenav" }
+  ch49: { title: "Toolbar", subtitle: "Mat-toolbar" }
+  ch50: { title: "Radio & Checkbox", subtitle: "Mat-radio / Checkbox" }
+  ch51: { title: "Reactive Forms", subtitle: "Dynamic Form Control" }
+  ch52: { title: "Validators", subtitle: "Form Validation" }
+  ch53: { title: "RWD", subtitle: "Responsive Web Design" }
+  ch54: { title: "Angular 包板", subtitle: "ng build" }
+  ch55: { title: "Angular 部署", subtitle: "Firebase Hosting" }
+  ch56: { title: "綜合練習 Ch32–39", subtitle: "員工管理系統實作" }
+  ch57: { title: "全課程總複習 Ch1–55", subtitle: "九站速記・快問快答・易錯 Top 10" }

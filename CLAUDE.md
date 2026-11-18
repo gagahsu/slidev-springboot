@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This repository holds **teaching slides for one or more courses**, rendered by a self-built Vue/Vite site (`site/`). There are two courses: the Spring Boot Backend Masterclass (53 chapters, `courses/springboot/`) and MySQL (11 chapters, `courses/mysql/`); more can be added as sibling folders. It is **not** a Spring Boot Java application — the content is about Spring Boot, but the repository itself is a Node.js project. The original Slidev setup in the repo root still works for the Spring Boot course.
+This repository holds **teaching slides for one or more courses**, rendered by a self-built Vue/Vite site (`site/`). There are three courses: the Spring Boot Backend Masterclass (53 chapters, `courses/springboot/`), MySQL (11 chapters, `courses/mysql/`) and Angular (57 chapters, `courses/angular/`); more can be added as sibling folders. It is **not** a Spring Boot Java application — the content is about Spring Boot, but the repository itself is a Node.js project. The original Slidev setup in the repo root still works for the Spring Boot course.
 
 ## Commands
 
@@ -38,7 +38,11 @@ courses/
     01-db-design-principles.md … 11-flyway.md
     sql/schema.sql, sql/seed.sql   ← the 動態問卷系統 database used by the ch04–ch10 exercises
     SURVEY-SPEC.md       ← survey project spec shared across courses (keep in sync with the other repos)
-public/screenshots/…     ← images shared by every course (`/screenshots/...` in the Markdown)
+  angular/               ← copied from gagahsu/slidev-angular (chapters only: its practice-*.md decks,
+    course.yaml             code/, course-demo/ and lecture PDFs were left in that repo)
+    01-frontend-intro.md … 57-final-review.md
+public/screenshots/…     ← Spring Boot images (`/screenshots/...` in the Markdown)
+public/images/<NN-topic>/… ← Angular images (`/images/...`)
 index.md                 ← Slidev entry for the Spring Boot course only
 ```
 
@@ -125,7 +129,7 @@ Per course vs site-wide:
 - `site/src/pages/Print.vue` (`#/print/<course>/chNN`) + `site/scripts/export-pdf.mjs` — PDF export: one slide per 980x552 page in its final animation state, vector text. The script starts its own Vite server and uses Playwright from the repo root's `playwright-chromium` (or a global `playwright`).
 - `site/src/lib/units.ts` — `unitOf(course, num)`; the units themselves are `units:` in each `course.yaml`.
 - `site/src/lib/route.ts` — the 「精簡路線」 (lite route), per course: chapters in `lite.optional` of `course.yaml` are hidden on the course home and sidebar (the sidebar keeps the chapter being viewed, marked 選修) and skipped by next/previous chapter. For Spring Boot these are ch08, ch10–11, ch30–32, ch35, ch43–45, ch48, which the survey project backend does not need. The choice (`settings.routes[<course>]`, toggled on the course home) is stored in localStorage. Chapters on the lite route must not depend on optional chapters: when a slide refers to one, keep it self-contained.
-- Supported Markdown syntax: `---` separators, per-slide frontmatter (`layout`, `class`), trailing `<!-- -->` speaker notes, `<Link to="chNN">`, `::right::`, ```` ```mermaid ````, utility classes in `class="..."`.
+- Supported Markdown syntax: `---` separators, per-slide frontmatter (`layout`, `class`), trailing `<!-- -->` speaker notes, `<Link to="chNN">`, `::right::`, ```` ```mermaid ````, utility classes in `class="..."`, hand-written HTML (`<table style=…>` is left as is; only Markdown tables get the `.table-wrap` wrapper). Hand-written `<code>` gets `v-pre`, so Angular/Vue template syntax like `<code>{{ x }}</code>` shows literally; `{{ }}` anywhere else in HTML is evaluated by Vue, so keep it in backticks or code blocks. A fence may follow a list marker (`2. ```css`).
 
 ## Chapter rewrite for beginners (unit 1 ch01–11 including ch02/ch03, unit 2 ch12–21, unit 3 ch22–35 (ch29 being added), unit 4 ch36–41 (ch38 being added), unit 5 ch42–45 and unit 6 ch46–48 and the project backend ch49–52 done; ch53 (Angular frontend) is the original content moved unchanged)
 

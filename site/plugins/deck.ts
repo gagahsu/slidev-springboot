@@ -127,6 +127,9 @@ export default function deck(opts: { coursesDir: string }): Plugin {
     // cjk-friendly: `**粗體（註）**的` style emphasis next to full-width punctuation renders as bold
     md = new MarkdownIt({ html: true, linkify: true, breaks: false }).use(cjkFriendly)
     md.renderer.rules.code_inline = (tokens, idx) => `<code v-pre>${esc(tokens[idx].content)}</code>`
+    // Markdown tables scroll/round nicely inside a wrapper (hand-written <table> HTML is left alone)
+    md.renderer.rules.table_open = () => '<div class="table-wrap"><table>\n'
+    md.renderer.rules.table_close = () => '</table></div>\n'
     md.renderer.rules.code_block = (tokens, idx) => `<div class="code-block"><pre v-pre><code>${esc(tokens[idx].content)}</code></pre></div>\n`
     md.renderer.rules.fence = (tokens, idx) => {
       const token = tokens[idx]
@@ -170,8 +173,8 @@ export default function deck(opts: { coursesDir: string }): Plugin {
     html = html.replace(/style="[^"]*"/g, m => m.replace(/#[0-9a-fA-F]{6}\b/g, c => PALETTE[c.toLowerCase()] ?? c))
     // public assets respect the deploy base
     html = html.replace(/(\s(?:src|href))="\/(?!\/)/g, `$1="${config.base}`)
-    // tables scroll/round nicely inside a wrapper
-    html = html.replace(/<table>/g, '<div class="table-wrap"><table>').replace(/<\/table>/g, '</table></div>')
+    // hand-written <code> in HTML blocks shows Angular / Vue template syntax such as {{ x }} literally
+    html = html.replace(/<code(?=[\s>])(?![^>]*\bv-pre\b)/g, '<code v-pre')
     return html
   }
 
