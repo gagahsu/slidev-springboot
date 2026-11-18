@@ -94,7 +94,7 @@ Per course vs site-wide:
 1. Create `courses/<id>/` (e.g. `courses/mysql/`).
 2. Add `course.yaml` with at least `title`; copy `courses/springboot/course.yaml` and edit `units`, `lite`, `chapters` as needed (omit `legacy`).
 3. Put the chapters in the folder as `01-topic.md`, `02-topic.md` … (Slidev-style Markdown: `---` separators, first slide is the cover). Images go in `public/` and are referenced as `/screenshots/...`.
-4. Run `pnpm site:dev`: the course appears on `#/` (the dev server picks up new folders; restart it if a brand-new course does not show). Check it with `pnpm -C site run audit <id>`, then `pnpm site:build`.
+4. Run `pnpm site:dev`: the course appears on `#/` (a running dev server picks up new course folders and chapter files by itself; restart it only after using a utility class in `class="…"` that no chapter used before, see `site/uno.config.ts`). Check it with `pnpm -C site run audit <id>`, then `pnpm site:build`.
 5. Custom animation components are shared by all courses (`site/src/anim/`, registered in `main.ts` and `KNOWN_COMPONENTS`).
 
 ### Site internals

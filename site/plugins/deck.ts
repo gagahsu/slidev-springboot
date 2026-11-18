@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import type { Plugin, ResolvedConfig } from 'vite'
+import type { Plugin, ResolvedConfig, ViteDevServer } from 'vite'
 import MarkdownIt from 'markdown-it'
 import cjkFriendly from 'markdown-it-cjk-friendly'
 import { createHighlighter, type Highlighter } from 'shiki'
@@ -221,6 +221,17 @@ export default function deck(opts: { coursesDir: string }): Plugin {
 
   let this_warn = (msg: string) => console.warn(`[deck] ${msg}`)
 
+  function isCourseFile(file: string) {
+    const rel = path.relative(coursesDir, file)
+    return !rel.startsWith('..') && !path.isAbsolute(rel) && /\.(md|ya?ml)$/.test(file)
+  }
+  function reload(server: ViteDevServer) {
+    for (const mod of server.moduleGraph.idToModuleMap.values()) {
+      if (mod.id?.startsWith('\0virtual:deck')) server.moduleGraph.invalidateModule(mod)
+    }
+    server.ws.send({ type: 'full-reload' })
+  }
+
   function courseInfo(c: Course) {
     const m = c.meta
     const str = (v: any, d = '') => (typeof v === 'string' ? v : d)
@@ -301,6 +312,10 @@ export default function deck(opts: { coursesDir: string }): Plugin {
     },
     configureServer(server) {
       server.watcher.add(coursesDir)
+      // new or deleted chapters / courses: Vite only reports changes to files it already knows
+      const onAddRemove = (file: string) => { if (isCourseFile(file)) reload(server) }
+      server.watcher.on('add', onAddRemove)
+      server.watcher.on('unlink', onAddRemove)
     },
     resolveId(id) {
       if (id === V || id.startsWith(V_SEARCH) || id.startsWith(V_CH)) return `\0${id}`
@@ -331,12 +346,8 @@ export default function deck(opts: { coursesDir: string }): Plugin {
       }
     },
     handleHotUpdate({ file, server }) {
-      const rel = path.relative(coursesDir, file)
-      if (rel.startsWith('..') || path.isAbsolute(rel) || !/\.(md|ya?ml)$/.test(file)) return
-      for (const mod of server.moduleGraph.idToModuleMap.values()) {
-        if (mod.id?.startsWith('\0virtual:deck')) server.moduleGraph.invalidateModule(mod)
-      }
-      server.ws.send({ type: 'full-reload' })
+      if (!isCourseFile(file)) return
+      reload(server)
       return []
     },
   }
