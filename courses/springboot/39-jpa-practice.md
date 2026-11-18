@@ -651,6 +651,34 @@ public class StudentController {
 
 ---
 
+# 回覆也要說清楚：ResponseEntity
+
+<Pairs left="櫃台的回覆" right="程式" rows="ok,查到了：把成績單交給同學=code,200 OK：ResponseEntity.ok(成績單)|no,查無此人：回一句「沒有這位同學」=code,404 Not Found：ResponseEntity.notFound().build()|doc,回覆單：先蓋結果章，再附上內容=code,ResponseEntity&lt;StudentResponse&gt;：狀態碼 ＋ 內容" />
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 直接回傳 <code>StudentResponse</code> 時，狀態碼一律是 200。換成 <code>ResponseEntity</code>，就能<b>自己決定狀態碼</b>。角括號裡寫的是「內容」的型別；<code>build()</code> 的意思是「不附內容，到此為止」。想指定其他狀態碼，可以寫 <code>ResponseEntity.status(400).body("訊息")</code>。
+</div>
+
+</v-click>
+
+<!--
+接下來要寫「查單一一位」。先想一個問題：如果同學給的編號根本不存在，櫃台要怎麼回覆？
+
+到目前為止，我們的方法都直接回傳成績單。這樣寫，不管有沒有查到，狀態碼都是 200，也就是「成功」。前端拿到一個空的結果，卻以為一切正常，這就不對了。
+
+（下一步）櫃台查到了，就把成績單交給同學。在程式裡，這是狀態碼 200，寫成 ResponseEntity.ok，括號裡放成績單。
+
+（下一步）查無此人，櫃台會直接說「沒有這位同學」。在程式裡，這是第十三章學過的 404，Not Found，寫成 ResponseEntity.notFound().build()。
+
+（下一步）所以櫃台的回覆，其實是一張回覆單：上面先蓋一個結果章，成功或找不到，再附上內容。ResponseEntity 就是這張回覆單，它同時裝著狀態碼和內容。
+
+（下一步）整理一下。直接回傳 StudentResponse，狀態碼一律是 200；換成 ResponseEntity，就能自己決定狀態碼。角括號裡寫的是內容的型別，例如 StudentResponse。build() 的意思是不附內容、到此為止，所以 404 用 build() 結尾。如果想回其他狀態碼，例如 400 加上一段訊息，可以寫 ResponseEntity.status(400).body，括號裡放訊息。
+-->
+
+---
+
 # 查單一一位、修改、刪除
 
 ```java {1-8|10-16|18-21}
@@ -680,7 +708,7 @@ public void deleteStudent(@PathVariable("id") Integer id) {
 <!--
 在同一個類別裡，再加三個方法。
 
-上面是查單一一位。回傳型別用的是第三十四章學過的 ResponseEntity，它可以讓我們自己決定狀態碼。如果組長回傳 null，代表沒有這位同學，我們回覆 404。notFound().build() 的意思是：狀態碼 404，沒有內容。有找到的話，回覆 200 加上成績單。
+上面是查單一一位。回傳型別用的就是上一頁的 ResponseEntity，回覆單裡裝的是成績單。如果組長回傳 null，代表沒有這位同學，我們回覆 404。notFound().build() 的意思是：狀態碼 404，沒有內容。有找到的話，回覆 200 加上成績單。
 
 （下一步）中間是修改。PUT /students/ 加上編號。編號從網址拿，新的內容從 Body 拿。一樣，找不到就回覆 404。
 
