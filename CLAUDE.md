@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This repository holds **teaching slides for one or more courses**, rendered by a self-built Vue/Vite site (`site/`). Today there is one course, the Spring Boot Backend Masterclass (53 chapters, `courses/springboot/`); more (e.g. MySQL) will be added as sibling folders. It is **not** a Spring Boot Java application — the content is about Spring Boot, but the repository itself is a Node.js project. The original Slidev setup in the repo root still works for the Spring Boot course.
+This repository holds **teaching slides for one or more courses**, rendered by a self-built Vue/Vite site (`site/`). There are two courses: the Spring Boot Backend Masterclass (53 chapters, `courses/springboot/`) and MySQL (11 chapters, `courses/mysql/`); more can be added as sibling folders. It is **not** a Spring Boot Java application — the content is about Spring Boot, but the repository itself is a Node.js project. The original Slidev setup in the repo root still works for the Spring Boot course.
 
 ## Commands
 
@@ -33,6 +33,11 @@ courses/
   springboot/            ← one folder per course; the folder name is the course id used in URLs
     course.yaml          ← course settings (see "Courses" below)
     01-springboot-intro.md … 53-dynamic-survey-frontend.md
+  mysql/                 ← copied from gagahsu/slidev-mysql (files there are named chNN-topic.md)
+    course.yaml
+    01-db-design-principles.md … 11-flyway.md
+    sql/schema.sql, sql/seed.sql   ← the 動態問卷系統 database used by the ch04–ch10 exercises
+    SURVEY-SPEC.md       ← survey project spec shared across courses (keep in sync with the other repos)
 public/screenshots/…     ← images shared by every course (`/screenshots/...` in the Markdown)
 index.md                 ← Slidev entry for the Spring Boot course only
 ```

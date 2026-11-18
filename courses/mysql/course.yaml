@@ -1,0 +1,31 @@
+# 課程設定。資料夾名稱（mysql）就是課程代碼：#/mysql/ch04/3
+# 章節檔案：NN-主題.md。內容來自 gagahsu/slidev-mysql（原檔名 chNN-主題.md）。
+# sql/schema.sql、sql/seed.sql 是 ch04 之後練習題用的「動態問卷系統」資料庫；SURVEY-SPEC.md 是跨課程共用的規格。
+
+title: MySQL 資料庫設計與 SQL
+short: MySQL
+description: 從資料表設計、正規化、DDL / DQL / DML，到 JOIN、索引、VIEW、子查詢與 Flyway，練習題全部用「動態問卷系統」的資料庫。
+logo: M
+color: blue
+order: 2
+searchHint: "JOIN、GROUP BY、索引"
+pdfName: mysql
+
+units:
+  - { title: 資料庫設計, desc: 設計原則、正規化、資料表關聯, from: 1, to: 3, color: green }
+  - { title: SQL 基本語法, desc: DDL 建表、DQL 查詢、DML 新增修改刪除, from: 4, to: 6, color: blue }
+  - { title: 進階查詢與效能, desc: JOIN、索引與執行計畫、VIEW、子查詢, from: 7, to: 10, color: purple }
+  - { title: 資料庫版本控制, desc: 用 Flyway 管理資料庫結構的變更, from: 11, to: 11, color: orange }
+
+chapters:
+  ch01: { title: "資料庫設計原則", subtitle: "PRIMARY KEY / FOREIGN KEY / 命名慣例" }
+  ch02: { title: "資料庫正規化", subtitle: "1NF / 2NF / 3NF / Denormalization" }
+  ch03: { title: "資料表關聯設計", subtitle: "一對一 / 一對多 / 多對多" }
+  ch04: { title: "DDL 資料定義語言", subtitle: "CREATE / ALTER / DROP / TRUNCATE" }
+  ch05: { title: "DQL 資料查詢語言", subtitle: "SELECT / WHERE / GROUP BY / HAVING" }
+  ch06: { title: "DML 資料操作語言", subtitle: "INSERT / UPDATE / DELETE / Transaction" }
+  ch07: { title: "JOIN 合併查詢", subtitle: "INNER / LEFT / RIGHT" }
+  ch08: { title: "Index 索引與執行計畫", subtitle: "B-Tree / 複合索引 / EXPLAIN" }
+  ch09: { title: "VIEW 視圖", subtitle: "CREATE VIEW / 管理 / 安全性" }
+  ch10: { title: "子查詢與進階查詢", subtitle: "IN / LIKE / EXISTS / Correlated Subquery" }
+  ch11: { title: "Flyway 資料庫版本控制", subtitle: "Migration / 命名規則 / flyway_schema_history" }
