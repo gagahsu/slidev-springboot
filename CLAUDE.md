@@ -41,6 +41,8 @@ courses/
   angular/               ← copied from gagahsu/slidev-angular (chapters only: its practice-*.md decks,
     course.yaml             code/, course-demo/ and lecture PDFs were left in that repo)
     01-frontend-intro.md … 57-final-review.md
+specs/CAFE-SPEC.md       ← DRAFT: basic-track project (Corner Café one-page site); shared by all courses
+specs/SHOP-SPEC.md       ← DRAFT: advanced-track project (Corner Café online shop + ECPay sandbox); replaces SURVEY-SPEC.md
 public/screenshots/…     ← Spring Boot images (`/screenshots/...` in the Markdown)
 public/images/<NN-topic>/… ← Angular images (`/images/...`)
 index.md                 ← Slidev entry for the Spring Boot course only
