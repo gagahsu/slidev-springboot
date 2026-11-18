@@ -310,7 +310,7 @@ Angular                    Spring Boot                          綠界（測試�
 | `api` | `cafe-shop-api`（多階段建置的 Dockerfile），綠界金鑰與 JWT 密鑰用環境變數；上傳圖片存在 Volume `uploads` |
 | `web` | `cafe-shop-web` 打包後用 Nginx 提供，`/api` 反向代理到 `api` |
 
-部署到雲端主機後，`ReturnURL` 改成正式網域，就不需要 ngrok。
+部署到雲端主機後，`ReturnURL` 改成正式網域，就不需要 Cloudflare Tunnel。
 
 ## 11. 各課切入點（初稿）
 
