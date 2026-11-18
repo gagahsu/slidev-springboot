@@ -25,7 +25,7 @@
 | 項目 | 版本 | 備註 |
 | ---- | ---- | ---- |
 | Java | **21**（Eclipse Temurin） | Spring Boot 課 ch02 / ch03 目前教 JDK 17，要改成 21 |
-| Spring Boot | **4.x**（寫教材時用最新的 4.x 穩定版） | 目前 Spring Boot 課的程式在 4.0.9 編譯執行過 |
+| Spring Boot | **4.1.2**（2026-10 發布，Maven Central） | 目前 Spring Boot 課的程式在 4.0.9 編譯執行過，要改用 4.1.2 驗證 |
 | 建置工具 | Gradle - Groovy | 同 Spring Boot 課 ch03 |
 | MySQL | **9.7 LTS**（寫規格時最新為 9.7.4，2026-10-20 發布） | MySQL 課目前寫 8.0，要改成 9.7 |
 | Angular | **21**（`@angular/cli@21`） | Angular 課 ch05 目前的安裝指令是 `@angular/cli@19`，要改成 21 |
@@ -171,6 +171,6 @@ reservations（獨立，不跟其他表關聯）
 ## 11. 決定紀錄與待確認
 
 已確認（2026-11-18）：
-- 技術版本：Java 21、Spring Boot 4.x、Angular 21；後端用 Eclipse、前端用 VS Code（§2）。
+- 技術版本：Java 21、Spring Boot 4.1.2、Angular 21；後端用 Eclipse、前端用 VS Code（§2）。
 - 範圍：只做訂位，不做「聯絡我們」留言表單；「店家查訂位」是加分題。
 - MySQL 用 9.7 LTS（9.7.4）。

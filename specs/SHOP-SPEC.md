@@ -20,7 +20,7 @@
 
 ## 2. 技術版本與命名
 
-技術版本同 `CAFE-SPEC.md` §2：Java 21、Spring Boot 4.x、Angular 21、MySQL 9.7 LTS，後端 Eclipse、前端 VS Code。另外用到：Spring Security 7 + JWT（jjwt 0.13）、MyBatis、Flyway、Angular Material、Docker Compose。
+技術版本同 `CAFE-SPEC.md` §2：Java 21、Spring Boot 4.1.2、Angular 21、MySQL 9.7 LTS，後端 Eclipse、前端 VS Code。另外用到：Spring Security 7 + JWT（jjwt 0.13）、MyBatis、Flyway、Angular Material、Docker Compose。
 
 | 項目 | 值 |
 | ---- | -- |
@@ -362,7 +362,7 @@ Spring Boot ch48 Spring Cloud 不在進階學程內。
 ## 13. 決定紀錄與待確認
 
 已確認（2026-11-18）：
-- 技術版本：Java 21、Spring Boot 4.x、Angular 21、MySQL 9.7 LTS（9.7.4）；後端 Eclipse、前端 VS Code。
+- 技術版本：Java 21、Spring Boot 4.1.2、Angular 21、MySQL 9.7 LTS（9.7.4）；後端 Eclipse、前端 VS Code。
 - 運費滿 1,000 免運、否則 80 元；未付款 30 分鐘自動取消。
 - 管理員帳號預先建好（§3），不採用「第一個註冊的帳號成為管理員」。
 - Spring Boot 專題擴充成 7 章（§11）。
