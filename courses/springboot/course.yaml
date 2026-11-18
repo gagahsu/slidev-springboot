@@ -1,0 +1,92 @@
+# 課程設定。資料夾名稱（springboot）就是課程代碼，也是網址的一部分：#/springboot/ch04/3
+# 章節檔案：同一個資料夾裡的 NN-主題.md（NN 兩位數），章節代碼是 chNN。
+
+title: Spring Boot Backend Masterclass
+# 側欄、搜尋結果等空間較小的地方用的短名
+short: Spring Boot
+description: 從 Spring 核心、MVC、資料庫一路到安全與微服務，最後完成「動態問卷系統」後端。
+# 課程卡片上的字（1–2 個字元）與主色：green / blue / purple / orange / pink / teal / yellow
+logo: S
+color: green
+# 選擇課程頁的排序（小的在前）
+order: 1
+# 舊網址 #/ch04/3（還沒有多門課程時的網址）轉到這門課。全站只能有一門課設成 true。
+legacy: true
+# 搜尋框的範例關鍵字
+searchHint: "@Autowired、交易、JWT"
+# `pnpm -C site export springboot` 合併 PDF 的檔名
+pdfName: spring-boot-masterclass
+
+# 單元分組：from / to 是章節編號（含頭尾）
+units:
+  - { title: Spring 核心, desc: Spring Boot 入門、IoC、DI、Bean 與 AOP, from: 1, to: 11, color: green }
+  - { title: Spring MVC 與 RESTful API, desc: HTTP、JSON、請求參數與 API 設計, from: 12, to: 21, color: blue }
+  - { title: 資料庫存取, desc: Spring JDBC、JPA、MyBatis、交易與鎖, from: 22, to: 35, color: purple }
+  - { title: 架構與實務, desc: MVC 分層、資料物件、API 文件與驗證, from: 36, to: 41, color: orange }
+  - { title: 進階功能, desc: Session、測試與日誌、排程、快取, from: 42, to: 45, color: pink }
+  - { title: 安全與微服務, desc: Spring Security、JWT、Spring Cloud, from: 46, to: 48, color: teal }
+  - { title: 實戰專題, desc: 把整門課串起來的完整專案, from: 49, to: 99, color: yellow }
+
+# 精簡路線（可省略；省略時首頁不顯示路線切換）
+# optional 裡的章節在精簡路線上隱藏，「下一章」會跳過。
+# 這裡留下完成實戰專題（ch49–52）後端需要的章節；ch07 / ch24–25 / ch34 / ch40 保留，
+# 因為 Lombok、Map、ResponseEntity、@Configuration/@Bean 是在那裡第一次出現。
+lite:
+  description: 只留下完成「動態問卷系統」後端需要的章節，略過 @PostConstruct、AOP、MyBatis、SQL Injection、測試與日誌、排程、Cache、Spring Cloud。
+  optional: [8, 10, 11, 30, 31, 32, 35, 43, 44, 45, 48]
+
+# 章節卡片的標題與副標（可省略：沒寫的章節用該章第一頁 frontmatter 的 title）
+chapters:
+  ch01: { title: "Spring Boot 介紹", subtitle: "Backend Framework Intro" }
+  ch02: { title: "環境安裝", subtitle: "JDK / Eclipse / MySQL / Git / GitHub Desktop" }
+  ch03: { title: "第一個 Spring Boot 程式", subtitle: "Eclipse / Spring Initializr / Gradle" }
+  ch04: { title: "Spring IoC 簡介", subtitle: "控制反轉 / Spring 容器" }
+  ch05: { title: "IoC、DI、Bean 介紹", subtitle: "依賴注入 / Bean 定義" }
+  ch06: { title: "Bean 的創建和注入", subtitle: "@Component / @Autowired" }
+  ch07: { title: "指定注入的 Bean", subtitle: "@Qualifier" }
+  ch08: { title: "Bean 的初始化", subtitle: "@PostConstruct" }
+  ch09: { title: "讀取 Spring Boot 設定檔", subtitle: "@Value / application.properties" }
+  ch10: { title: "Spring AOP 簡介", subtitle: "切面導向程式設計" }
+  ch11: { title: "Spring AOP 的用法", subtitle: "@Aspect / @Before / @Around" }
+  ch12: { title: "Spring MVC 簡介", subtitle: "前後端溝通 / MVC 概念" }
+  ch13: { title: "Http 協議介紹", subtitle: "Request / Response / Status Code" }
+  ch14: { title: "Url 路徑對應", subtitle: "@RequestMapping" }
+  ch15: { title: "結構化的呈現數據", subtitle: "JSON 格式介紹" }
+  ch16: { title: "返回值改成 JSON 格式", subtitle: "@RestController 序列化" }
+  ch17: { title: "常見的 Http Method", subtitle: "GET 和 POST" }
+  ch18: { title: "取得請求參數（上）", subtitle: "@RequestParam / @RequestBody" }
+  ch19: { title: "取得請求參數（下）", subtitle: "@RequestHeader / @PathVariable" }
+  ch20: { title: "RESTful API 介紹", subtitle: "API 設計風格" }
+  ch21: { title: "實作 RESTful API", subtitle: "@GetMapping / @PostMapping" }
+  ch22: { title: "Spring JDBC 簡介", subtitle: "資料庫操作 / CRUD" }
+  ch23: { title: "資料庫連線設定", subtitle: "application.properties / Eclipse DSE" }
+  ch24: { title: "Spring JDBC 的用法（上）", subtitle: "INSERT / UPDATE / DELETE" }
+  ch25: { title: "Spring JDBC 的用法（下）", subtitle: "SELECT / RowMapper" }
+  ch26: { title: "Spring Data JPA（上）", subtitle: "@Entity / save / deleteById" }
+  ch27: { title: "Spring Data JPA（下）", subtitle: "findAll / findById / 自訂查詢" }
+  ch28: { title: "Spring Data JPA — @Query 與 JPQL", subtitle: "@Query / nativeQuery / @Modifying / 分頁" }
+  ch29: { title: "Spring Data JPA — 資料表關聯", subtitle: "@ManyToOne / @OneToMany / @ManyToMany" }
+  ch30: { title: "MyBatis（上）", subtitle: "@Mapper / @Insert / @Update / @Delete" }
+  ch31: { title: "MyBatis（中）", subtitle: "@Select / 自動映射" }
+  ch32: { title: "MyBatis（下）", subtitle: "XML Mapper / 動態 SQL" }
+  ch33: { title: "@Transactional 事務管理", subtitle: "ACID / rollbackFor / noRollbackFor" }
+  ch34: { title: "樂觀鎖 & 悲觀鎖", subtitle: "@Version / @Lock / LockModeType" }
+  ch35: { title: "SQL Injection 防範", subtitle: "參數化查詢 / PreparedStatement" }
+  ch36: { title: "MVC 架構模式", subtitle: "Controller-Service-Dao 三層架構" }
+  ch37: { title: "Spring Boot 資料物件", subtitle: "PO / DTO / VO / DAO" }
+  ch38: { title: "Java 語法補充", subtitle: "enum / record / 泛型 / Stream / LocalDate" }
+  ch39: { title: "實戰：JPA CRUD API", subtitle: "Entity / Repository / Service / Controller" }
+  ch40: { title: "OpenAPI 與 Swagger UI", subtitle: "springdoc / @Operation / @Schema" }
+  ch41: { title: "Spring Boot Validation", subtitle: "Bean Validation / @Valid / @Validated" }
+  ch42: { title: "HttpSession 管理", subtitle: "Session / JSESSIONID / invalidate" }
+  ch43: { title: "單元測試與日誌", subtitle: "JUnit 5 / Mockito / SLF4J / Logback" }
+  ch44: { title: "Spring Boot 排程", subtitle: "@Scheduled / @EnableScheduling / Cron" }
+  ch45: { title: "Spring Boot Cache", subtitle: "@Cacheable / @CacheEvict / @CachePut" }
+  ch46: { title: "Spring Security", subtitle: "SecurityFilterChain / BCrypt / CSRF" }
+  ch47: { title: "JWT 認證", subtitle: "jjwt / OncePerRequestFilter / Stateless" }
+  ch48: { title: "Spring Cloud 微服務", subtitle: "Eureka / Gateway / OpenFeign / Config" }
+  ch49: { title: "實戰專題（一）：專案總覽與資料模型", subtitle: "Entity 關聯 / @Query / 專案結構" }
+  ch50: { title: "實戰專題（二）：統一回應與登入", subtitle: "AppResponse / BizException / JWT / CORS" }
+  ch51: { title: "實戰專題（三）：後台問卷管理", subtitle: "巢狀 DTO / Session 暫存 / 統計" }
+  ch52: { title: "實戰專題（四）：前台作答流程", subtitle: "三步驟作答 / 重複檢查 / 個人紀錄" }
+  ch53: { title: "實戰專題（五）：前端 Angular", subtitle: "Angular / Material / Chart.js" }
