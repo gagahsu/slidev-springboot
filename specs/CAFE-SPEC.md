@@ -6,7 +6,7 @@
 > 目標：零程式經驗的學生上完基礎學程後，能**自己做出一個前後端串通的小網站**：Angular 畫面 → 呼叫 Spring Boot API → 讀寫 MySQL。
 > 進階學程的電商專題（`SHOP-SPEC.md`）是同一家店的線上商店，資料表會沿用並擴充本文件的 `categories`、`products`。
 
-狀態：**初稿**。技術版本、範圍已確認（2026-11-18）；§11 還有一項待確認。
+狀態：**初稿**。技術版本、範圍已確認（2026-11-18），目前沒有待確認項目。
 
 ---
 
@@ -27,7 +27,7 @@
 | Java | **21**（Eclipse Temurin） | Spring Boot 課 ch02 / ch03 目前教 JDK 17，要改成 21 |
 | Spring Boot | **4.x**（寫教材時用最新的 4.x 穩定版） | 目前 Spring Boot 課的程式在 4.0.9 編譯執行過 |
 | 建置工具 | Gradle - Groovy | 同 Spring Boot 課 ch03 |
-| MySQL | 8.x（待確認是否統一成 8.4） | MySQL 課目前寫 8.0 |
+| MySQL | **9.7 LTS**（寫規格時最新為 9.7.4，2026-10-20 發布） | MySQL 課目前寫 8.0，要改成 9.7 |
 | Angular | **21**（`@angular/cli@21`） | Angular 課 ch05 目前的安裝指令是 `@angular/cli@19`，要改成 21 |
 | IDE | 後端（Java、Spring Boot）**Eclipse**、前端（Angular）**VS Code** | Java 課也用 Eclipse |
 
@@ -173,6 +173,4 @@ reservations（獨立，不跟其他表關聯）
 已確認（2026-11-18）：
 - 技術版本：Java 21、Spring Boot 4.x、Angular 21；後端用 Eclipse、前端用 VS Code（§2）。
 - 範圍：只做訂位，不做「聯絡我們」留言表單；「店家查訂位」是加分題。
-
-待確認：
-1. MySQL 版本要不要統一成 8.4（目前 MySQL 課寫 8.0）。
+- MySQL 用 9.7 LTS（9.7.4）。

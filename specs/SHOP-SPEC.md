@@ -6,7 +6,7 @@
 > 目標：上完基礎學程的學生，做出一個**可以實際下單、用綠界測試環境付款**的電商網站，含會員前台與管理後台，最後用 Docker 部署。
 > 情境延續基礎專題（`CAFE-SPEC.md`）：同一家「轉角咖啡」開線上商店，賣咖啡豆、濾掛包和器材。
 
-狀態：**初稿**。技術版本、運費、逾時、管理員帳號、章數、公開網址工具已確認（2026-11-18）。綠界相關內容依 2026-11 查閱的官方技術文件撰寫（來源見 §8.8），寫教材時要再核對一次。
+狀態：**初稿**。技術版本、運費、逾時、管理員帳號、章數、公開網址工具、前端放 Angular 課都已確認（2026-11-18）。綠界相關內容依 2026-11 查閱的官方技術文件撰寫（來源見 §8.8），寫教材時要再核對一次。
 
 ---
 
@@ -20,7 +20,7 @@
 
 ## 2. 技術版本與命名
 
-技術版本同 `CAFE-SPEC.md` §2：Java 21、Spring Boot 4.x、Angular 21，後端 Eclipse、前端 VS Code。另外用到：Spring Security 7 + JWT（jjwt 0.13）、MyBatis、Flyway、Angular Material、Docker Compose。
+技術版本同 `CAFE-SPEC.md` §2：Java 21、Spring Boot 4.x、Angular 21、MySQL 9.7 LTS，後端 Eclipse、前端 VS Code。另外用到：Spring Security 7 + JWT（jjwt 0.13）、MyBatis、Flyway、Angular Material、Docker Compose。
 
 | 項目 | 值 |
 | ---- | -- |
@@ -306,7 +306,7 @@ Angular                    Spring Boot                          綠界（測試�
 
 | 服務 | 說明 |
 | ---- | ---- |
-| `db` | MySQL，資料存在 Volume `db-data` |
+| `db` | MySQL 9.7（官方映像檔，標籤寫教材時確認，預期為 `mysql:9.7`），資料存在 Volume `db-data` |
 | `api` | `cafe-shop-api`（多階段建置的 Dockerfile），綠界金鑰與 JWT 密鑰用環境變數；上傳圖片存在 Volume `uploads` |
 | `web` | `cafe-shop-web` 打包後用 Nginx 提供，`/api` 反向代理到 `api` |
 
@@ -328,6 +328,7 @@ Angular                    Spring Boot                          綠界（測試�
 | Spring Boot ch49 起（**改寫，擴充成 7 章**） | 見下方「Spring Boot 專題章節」 |
 | Angular ch31–55 | Material 版面、表格、Select、Dialog、圓餅圖、RxJS、Signals 購物車、Sidenav 後台版型、Reactive Forms（結帳、商品規格 FormArray）、RWD、打包 |
 | Angular 新章 | HTTP 攔截器、路由守衛 |
+| **Angular 專題章（新增）** | 電商前台與後台的全部畫面（§7），接在 Material、Signals、Reactive Forms 之後；章數與切分待寫 Angular 部分時再定 |
 | Docker ch01–08 | 以 `db` / `api` / `web` 三個容器貫穿，ch07 Volume、ch08 部署 |
 
 Spring Boot ch48 Spring Cloud 不在進階學程內。
@@ -344,7 +345,7 @@ Spring Boot ch48 Spring Cloud 不在進階學程內。
 | 6 | 綠界金流 | 檢查碼與單元測試、產生付款表單、接收付款通知、結果頁轉址、Cloudflare Tunnel、向綠界查詢 |
 | 7 | 後台訂單與報表 | 出貨、完成、取消、營運摘要、MyBatis 銷售報表 |
 
-原本的 ch53（Angular 前端，未改寫的舊內容）怎麼處理見 §13。
+**前端不在 Spring Boot 課**：電商畫面全部放在 Angular 課；Spring Boot 課只講後端，前端用 API 測試工具或瀏覽器開發者工具驗證。原本 Spring Boot ch53（問卷的 Angular 前端舊內容）隨問卷專題一起淘汰。
 
 ## 12. 驗收清單
 
@@ -361,13 +362,13 @@ Spring Boot ch48 Spring Cloud 不在進階學程內。
 ## 13. 決定紀錄與待確認
 
 已確認（2026-11-18）：
-- 技術版本：Java 21、Spring Boot 4.x、Angular 21；後端 Eclipse、前端 VS Code。
+- 技術版本：Java 21、Spring Boot 4.x、Angular 21、MySQL 9.7 LTS（9.7.4）；後端 Eclipse、前端 VS Code。
 - 運費滿 1,000 免運、否則 80 元；未付款 30 分鐘自動取消。
 - 管理員帳號預先建好（§3），不採用「第一個註冊的帳號成為管理員」。
 - Spring Boot 專題擴充成 7 章（§11）。
 - 開發時的公開網址工具用 Cloudflare Tunnel（§8.6）。
+- 電商前端畫面全部放在 Angular 課；Spring Boot 課只講後端，原本 ch53 的 Angular 前端舊內容淘汰（§11）。
 
-待確認：
-1. 綠界測試信用卡卡號：寫教材前要到官方測試資料頁確認。
-2. 電商的前端畫面放在哪裡：建議放進 Angular 課（接在 Material、Signals、Reactive Forms 之後），Spring Boot 課只講後端；原本 Spring Boot ch53 的 Angular 前端舊內容一起淘汰。
-3. MySQL 版本（同 `CAFE-SPEC.md` §11）。
+寫教材前要查證（不需要另外決定）：
+1. 綠界測試信用卡卡號：到官方測試資料頁確認。
+2. `cloudflared` 當下的安裝方式與指令、MySQL 9.7 的 Docker 映像檔標籤。
