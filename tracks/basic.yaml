@@ -19,7 +19,7 @@ stages:
     items:
       - { course: angular, chapters: [1, 2, 4] }
       - { course: springboot, chapters: [2] }
-      - { soon: "Git 入門：存檔、放上 GitHub、分支、衝突、Pull Request", course: git, note: "slidev-git 的入門版 b01–b08（GitHub Desktop），尚未放進網站" }
+      - { course: git, chapters: ["1-8"] }
 
   - title: 網頁畫面：HTML 與 CSS
     desc: 刻出一頁式網站的靜態版面
@@ -29,7 +29,8 @@ stages:
   - title: Java 程式基礎
     desc: 變數、流程控制、物件導向、集合與 Stream
     items:
-      - { soon: "Java 基礎（ch01–21、26、27 的核心內容）", course: java, note: "slidev-java，依 course-basic-advanced-plan.md 的基礎版，尚未放進網站" }
+      # 依 slidev-java 的 course-basic-advanced-plan.md：多執行緒、I/O、壓縮（ch23–25）列為進階自學
+      - { course: java, chapters: ["1-22", "26-28"] }
 
   - title: 資料庫：MySQL
     desc: 建表、查詢、新增修改刪除、JOIN

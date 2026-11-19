@@ -77,7 +77,8 @@ watch(() => props.slide, refit)
 <template>
   <div ref="box" class="slide-canvas" :style="{ aspectRatio: `${SLIDE_W} / ${SLIDE_H}` }">
     <div class="slide" :class="classes" :style="{ transform: `scale(${scale})` }">
-      <div ref="inner" class="slide-inner" :class="slide.class" :style="{ zoom: fit }" @load.capture="refit">
+      <div ref="inner" class="slide-inner" :class="slide.class" :data-css="slide.cssId || undefined" :style="{ zoom: fit }" @load.capture="refit">
+        <component :is="'style'" v-if="slide.css">{{ slide.css }}</component>
         <component :is="slide.comp" :key="slide.key" />
       </div>
       <CoverBackdrop v-if="backdrop" />

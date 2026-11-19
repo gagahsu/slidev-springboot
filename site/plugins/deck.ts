@@ -10,7 +10,7 @@ import { plain, slideTitle, splitSlides, type RawSlide } from './parse.ts'
 
 const LANGS = ['java', 'typescript', 'javascript', 'html', 'css', 'scss', 'properties', 'bash', 'json', 'groovy', 'xml', 'sql', 'yaml', 'powershell']
 const CODE_THEME = 'github-light'
-const KNOWN_COMPONENTS = new Set(['Link', 'Mermaid', 'v-clicks', 'v-click', 'StepCode', 'CodeSteps', 'Flow', 'IocDemo', 'HttpExchange', 'Poll', 'Art', 'LifeIoc', 'Pairs', 'DrinkShop', 'PickPrinter', 'StoreOpening', 'NoticeBoard', 'Counter', 'AspectTimeline', 'ShopLayout', 'UrlParts', 'Dispatch', 'CupLabel', 'AskOrOrder', 'FileRoom', 'SqlSlip', 'RowCards', 'TwoBooks', 'SeatRace', 'PaperTrail', 'FormCheck', 'SessionTag', 'RateDelay', 'StickyNote', 'GateGuard', 'PassCard', 'Campus', 'Breaker', 'LinkTables', 'Conveyor'])
+const KNOWN_COMPONENTS = new Set(['Link', 'Mermaid', 'v-clicks', 'v-click', 'StepCode', 'CodeSteps', 'Flow', 'IocDemo', 'HttpExchange', 'Poll', 'Art', 'LifeIoc', 'Pairs', 'DrinkShop', 'PickPrinter', 'StoreOpening', 'NoticeBoard', 'Counter', 'AspectTimeline', 'ShopLayout', 'UrlParts', 'Dispatch', 'CupLabel', 'AskOrOrder', 'FileRoom', 'SqlSlip', 'RowCards', 'TwoBooks', 'SeatRace', 'PaperTrail', 'FormCheck', 'SessionTag', 'RateDelay', 'StickyNote', 'GateGuard', 'PassCard', 'Campus', 'Breaker', 'LinkTables', 'Conveyor', 'Shot', 'CliBox', 'HistoryCheck'])
 
 /** Old Slidev palette (hard-coded in inline styles) → theme tokens. */
 const PALETTE: Record<string, string> = {
@@ -44,6 +44,31 @@ interface Course {
 /** Words that already mean something in the site's URLs, so they cannot be course ids. */
 const RESERVED = new Set(['presenter', 'print', 'join', 'track'])
 const COLORS = new Set(['green', 'blue', 'purple', 'orange', 'pink', 'teal', 'yellow'])
+
+/** Prefix every selector with `scope` (a slide's own element), recursing into @media / @supports. */
+function scopeCss(css: string, scope: string): string {
+  css = css.replace(/\/\*[\s\S]*?\*\//g, '')
+  let out = ''
+  let i = 0
+  while (i < css.length) {
+    const open = css.indexOf('{', i)
+    if (open < 0) break
+    const head = css.slice(i, open).trim()
+    let depth = 1
+    let j = open + 1
+    while (j < css.length && depth) {
+      if (css[j] === '{') depth++
+      else if (css[j] === '}') depth--
+      j++
+    }
+    const body = css.slice(open + 1, j - 1)
+    if (/^@(media|supports)/.test(head)) out += `${head}{${scopeCss(body, scope)}}`
+    else if (head.startsWith('@')) out += `${head}{${body}}`
+    else out += `${head.split(',').map(sel => `${scope} ${sel.trim()}`).join(', ')}{${body}}`
+    i = j
+  }
+  return out
+}
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -188,6 +213,11 @@ export default function deck(opts: { coursesDir: string, tracksDir: string }): P
       const layout = layoutOf(s, i)
       if (layout === 'section') section++
       let html = renderHtml(s, layout)
+      // per-slide <style> blocks (Slidev allows them; they only apply to that slide)
+      let css = ''
+      html = html.replace(/<style[^>]*>([\s\S]*?)<\/style>/g, (_m, body: string) => { css += body; return '' })
+      const cssId = css ? `${path.basename(path.dirname(ch.file))}-${ch.id}-${i}` : ''
+      if (css) css = scopeCss(css, `.slide-inner[data-css="${cssId}"]`)
       const errors: string[] = []
       let result = compile(html, { mode: 'module', hoistStatic: true, onError: e => errors.push(e.message), onWarn: () => {} })
       const unknown = (result.ast.components ?? []).filter(c => !KNOWN_COMPONENTS.has(c))
@@ -212,6 +242,7 @@ export default function deck(opts: { coursesDir: string, tracksDir: string }): P
         title: slideTitle(s),
         note: s.note,
         section: layout === 'section' ? section : 0,
+        ...(css ? { css, cssId } : {}),
       })
     })
     return [

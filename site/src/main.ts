@@ -51,6 +51,10 @@ import Poll from './anim/Poll.vue'
 import StepCode from './anim/StepCode.vue'
 import VClick from './anim/VClick.vue'
 import VClicks from './anim/VClicks.vue'
+// Git course (copied from slidev-git)
+import Shot from './anim/Shot.vue'
+import CliBox from './anim/CliBox.vue'
+import HistoryCheck from './anim/HistoryCheck.vue'
 
 const CH = ':ch(ch\\d+)'
 const N = ':n(\\d+)?'
@@ -128,4 +132,7 @@ createApp(App)
   .component('SeatRace', SeatRace)
   .component('AskOrOrder', AskOrOrder)
   .component('AspectTimeline', AspectTimeline)
+  .component('Shot', Shot)
+  .component('CliBox', CliBox)
+  .component('HistoryCheck', HistoryCheck)
   .mount('#app')

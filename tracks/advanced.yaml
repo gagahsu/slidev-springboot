@@ -12,12 +12,14 @@ stages:
   - title: 團隊協作：Git
     desc: 指令操作、標籤、改寫歷史、Git Flow、Pull Request
     items:
-      - { soon: "Git 一般版 ch01–12", course: git, note: "slidev-git 的一般版，尚未放進網站" }
+      - { course: git, chapters: ["9-20"] }
 
   - title: Java 進階
     desc: 進階語法、例外設計、多執行緒、I/O
     items:
-      - { soon: "Java 進階（各章 -adv 版、多執行緒、I/O、ZIP）", course: java, note: "slidev-java，尚未放進網站" }
+      - { course: java-adv, chapters: ["4-8", "10-22"] }
+      - { course: java, chapters: ["23-25"] }
+      - { course: java-adv, chapters: ["23-27"] }
 
   - title: 資料庫進階
     desc: 正規化、關聯設計、索引、VIEW、子查詢、Flyway
@@ -55,4 +57,4 @@ stages:
   - title: 部署：Docker
     desc: 映像檔、容器、Compose、Volume，把商店部署上線
     items:
-      - { soon: "Docker ch01–08", course: docker, note: "slidev-docker，尚未放進網站" }
+      - { course: docker, chapters: ["1-8"] }

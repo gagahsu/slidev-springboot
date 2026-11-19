@@ -1,0 +1,26 @@
+# 課程設定。內容來自 gagahsu/slidev-docker。安裝截圖在 public/docker/（原本在 public/ 根目錄，路徑已改成 /docker/...）。
+
+title: Docker 容器化與部署
+short: Docker
+description: 映像檔、容器、Dockerfile、Compose、網路與 Volume，最後把應用程式部署上線。
+logo: D
+color: teal
+order: 7
+searchHint: "Dockerfile、compose、volume"
+pdfName: docker
+
+units:
+  - { title: 基礎, desc: Docker 簡介、映像檔、容器操作, from: 1, to: 3, color: green }
+  - { title: 打包與組合, desc: Dockerfile、Docker Compose, from: 4, to: 5, color: blue }
+  - { title: 網路與資料, desc: 網路設定、Volume 資料持久化, from: 6, to: 7, color: purple }
+  - { title: 部署, desc: 部署實戰, from: 8, to: 8, color: orange }
+
+chapters:
+  ch01: { title: "Docker 簡介", subtitle: "容器 vs VM / Engine / 架構" }
+  ch02: { title: "映像檔管理", subtitle: "pull / push / build / tag / Hub" }
+  ch03: { title: "容器操作", subtitle: "run / exec / start / stop / logs" }
+  ch04: { title: "Dockerfile", subtitle: "語法 / 最佳實踐 / 多階段建構" }
+  ch05: { title: "Docker Compose", subtitle: "services / networks / volumes" }
+  ch06: { title: "網路設定", subtitle: "bridge / host / overlay / DNS" }
+  ch07: { title: "Volume 資料持久化", subtitle: "named volumes / bind mounts / tmpfs" }
+  ch08: { title: "部署實戰", subtitle: "production / health check / limits" }

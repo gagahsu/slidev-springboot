@@ -1,0 +1,40 @@
+# 課程設定。內容來自 gagahsu/slidev-git：
+#   ch01–08 = 入門版 b01–b08（GitHub Desktop，截圖在 public/beginner/）
+#   ch09–20 = 一般版 ch01–12（章號加 8；內文的「Ch N」「第 N 章」與章節連結已一併換算）
+
+title: Git 版本控制
+short: Git
+description: 入門版用 GitHub Desktop 學會存檔、放上 GitHub、分支、解衝突與 Pull Request；進階版用指令操作，學標籤、改寫歷史、Git Flow 與底層原理。
+logo: G
+color: orange
+order: 4
+searchHint: "commit、branch、rebase"
+pdfName: git
+
+units:
+  - { title: 入門：GitHub Desktop, desc: 存檔點、放上 GitHub、分支、解衝突、Pull Request, from: 1, to: 8, color: green }
+  - { title: 指令基礎, desc: 版本控制觀念、init / add / commit、遠端協作、GitHub Desktop, from: 9, to: 12, color: blue }
+  - { title: 分支、標籤與救援, desc: branch / merge、tag、常見狀況題、修改歷史紀錄, from: 13, to: 16, color: purple }
+  - { title: 團隊流程與進階, desc: Git Flow、底層原理、進階操作、進階 GitHub, from: 17, to: 20, color: orange }
+
+chapters:
+  ch01: { title: "Git 與 GitHub 是什麼", subtitle: "存檔點 / 三大區域 / 安裝設定" }
+  ch02: { title: "本機存檔", subtitle: "New repository / Commit / History" }
+  ch03: { title: "放上 GitHub", subtitle: "Publish / Push / Pull / Clone" }
+  ch04: { title: "開分支", subtitle: "New branch / Merge" }
+  ch05: { title: "解衝突 ⭐", subtitle: "衝突標記 / VS Code" }
+  ch06: { title: "Pull Request", subtitle: "協作者 / Review / Merge" }
+  ch07: { title: "兩人一組協作", subtitle: "完整流程 + 一次衝突" }
+  ch08: { title: "後悔藥 + 小抄", subtitle: "Discard / Undo / Revert" }
+  ch09: { title: "Git 版本控制簡介", subtitle: "版本控制概念 / Git 架構 / 安裝設定" }
+  ch10: { title: "開始使用 Git", subtitle: "init / add / commit / status / log" }
+  ch11: { title: "遠端共同協作", subtitle: "GitHub / push / pull / PR" }
+  ch12: { title: "GitHub Desktop", subtitle: "介紹 / 下載安裝 / 基本使用" }
+  ch13: { title: "使用分支", subtitle: "branch / merge / conflict" }
+  ch14: { title: "標籤", subtitle: "git tag / lightweight / annotated" }
+  ch15: { title: "其它常見狀況題", subtitle: "stash / cherry-pick / filter-repo" }
+  ch16: { title: "修改歷史紀錄", subtitle: "rebase -i / reset / revert" }
+  ch17: { title: "使用 Git Flow", subtitle: "feature / release / hotfix" }
+  ch18: { title: "Git 底層原理", subtitle: "物件模型 / HEAD / 分支指標" }
+  ch19: { title: "進階操作技巧", subtitle: "rebase / hotfix / commitlint" }
+  ch20: { title: "進階 GitHub 操作", subtitle: "fork sync / force push / Pages" }

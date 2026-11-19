@@ -11,6 +11,9 @@ export interface Slide {
   note: string
   /** n-th section divider in the chapter (0 = not a section slide) */
   section: number
+  /** CSS from the slide's own <style> blocks, already scoped to `.slide-inner[data-css=cssId]` */
+  css?: string
+  cssId?: string
   comp: Component
 }
 
