@@ -6,7 +6,7 @@
 > 目標：上完基礎學程的學生，做出一個**可以實際下單、用綠界測試環境付款**的電商網站，含會員前台與管理後台，最後用 Docker 部署。
 > 情境延續基礎專題（`CAFE-SPEC.md`）：同一家「轉角咖啡」開線上商店，賣咖啡豆、濾掛包和器材。
 
-狀態：**初稿**。技術版本、運費、逾時、管理員帳號、章數、公開網址工具、前端放 Angular 課都已確認（2026-11-18）。綠界相關內容依 2026-11 查閱的官方技術文件撰寫（來源見 §8.8），寫教材時要再核對一次。
+狀態：**初稿**（後端已依本規格實作並驗證，見 §13）。技術版本、運費、逾時、管理員帳號、章數、公開網址工具、前端放 Angular 課都已確認（2026-11-18）。綠界相關內容依 2026-11 查閱的官方技術文件撰寫（來源見 §8.8），寫教材時要再核對一次。
 
 ---
 
@@ -30,7 +30,8 @@
 | 資料庫 | `cafe_shop`（`utf8mb4`），結構用 **Flyway** 管理（`V1__schema.sql`、`V2__seed.sql`…） |
 | 後端 Port / 前端 Port | 8080 / 4200 |
 | 後端分層 | `controller` `service` `repository`（JPA）`mapper`（MyBatis，報表用）`entity` `dto` `vo` `security` `config` `exception` `payment` `scheduler` |
-| 統一回應 | `AppResponse<T>`（`code`、`message`、`data`），狀態碼列舉 `RspCode`（沿用目前 Spring Boot ch50 的寫法） |
+| 統一回應 | `AppResponse<T>`（`code`、`message`、`data`），狀態碼列舉 `RspCode`；`code` 同時是 HTTP 狀態碼 |
+| 參考解答 | `projects/cafe-shop-api`（2026-11-19 以 Spring Boot 4.1.2、MySQL 9.7 實際執行驗證） |
 
 ## 3. 角色
 
@@ -153,7 +154,7 @@ PENDING_PAYMENT ──────────────▶ PAID ────�
 | 付款頁（測試） | `https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5` |
 | 查詢訂單（測試） | `https://payment-stage.ecpay.com.tw/Cashier/QueryTradeInfo/V5` |
 | 測試特店資料 | 綠界官方文件公開的測試帳號，例如檢查碼範例使用的 `MerchantID 3002607`；`HashKey`、`HashIV` 以官方文件當下公布的為準 |
-| 測試信用卡 | 以綠界官方「測試資料」頁面公布的卡號為準（**待查證後寫進教材，不憑印象**） |
+| 測試信用卡 | `4311-9522-2222-2222`（或 `4311-9511-1111-1111`），安全碼任意 3 碼，有效期限填晚於今天的月年，3D 驗證簡訊碼固定 `1234`（官方「測試介接資訊」<https://developers.ecpay.com.tw/2856/>，2026-11-19 查閱） |
 
 - `merchant-id`、`hash-key`、`hash-iv`、付款頁網址、`return-url`、`order-result-url` 放在 `application-dev.yml` / 環境變數，**不寫死在程式**；正式環境的金鑰絕不 commit 進 Git。
 - 測試環境不會向銀行授權，不會產生費用。
@@ -298,7 +299,7 @@ Angular                    Spring Boot                          綠界（測試�
 | GET | `/api/admin/users` | ADMIN | 會員列表 |
 | GET | `/api/admin/reports/sales` | ADMIN | 報表：`from`、`to`；回傳每日營業額、分類銷售額、商品排行（**用 MyBatis XML 寫**） |
 
-- 上傳的圖片存在後端的 `uploads/` 資料夾，以 `/uploads/**` 提供；Docker 部署時這個資料夾掛 Volume（Docker ch07）。
+- 上傳的圖片存在後端的 `uploads/` 資料夾，以 `/uploads/**` 提供（範例資料的 `product-1.jpg`～`product-8.jpg` 內附在專案的 `src/main/resources/sample-uploads/`，同一個網址找得到）；Docker 部署時這個資料夾掛 Volume（Docker ch07）。
 - 安全：JWT、`/api/admin/**` 需 `ADMIN`；兩個綠界網址 `permitAll`；CORS 允許 `http://localhost:4200`。
 
 ## 10. 部署（Docker）
@@ -371,5 +372,11 @@ Spring Boot ch48 Spring Cloud 不在進階學程內。
 - 電商前端畫面全部放在 Angular 課；Spring Boot 課只講後端，原本 ch53 的 Angular 前端舊內容淘汰（§11）。
 
 寫教材前要查證（不需要另外決定）：
-1. 綠界測試信用卡卡號：到官方測試資料頁確認。
+1. ~~綠界測試信用卡卡號~~：已查證（§8.1）。
 2. `cloudflared` 當下的安裝方式與指令、MySQL 9.7 的 Docker 映像檔標籤。
+
+實作驗證（2026-11-19，`projects/cafe-shop-api`）：
+- 檢查碼單元測試用官方範例，算出 `6C51C9E6…B5685B840`，與官方一致。
+- 產生的付款表單送到綠界測試環境付款頁，頁面正常顯示訂單編號與金額（沒有檢查碼錯誤）；`QueryTradeInfo/V5` 實際查詢成功，回應的檢查碼驗證通過。
+- 用 curl 驗證：註冊登入、403/401、購物車上限與庫存、合併、下單扣庫存與快照、兩人搶最後一件只有一人成功、竄改通知被拒、模擬通知不改狀態、重送通知不重複處理、OrderResultURL 302、狀態機、逾時取消回補庫存、模擬付款、後台商品與規格增刪改、SKU 重複 409、上下架、圖片上傳、報表與營運摘要。
+- 未自動化：在綠界付款頁實際刷測試卡（付款頁有防機器人機制，需在瀏覽器手動操作）。
