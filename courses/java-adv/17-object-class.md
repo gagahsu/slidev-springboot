@@ -514,9 +514,9 @@ o2.pet.name = "小白";
 System.out.println(o1.pet.name);
 ```
 
-A. 輸出 `旺財`，因為 `clone()` 會自動進行深層複製
-B. 輸出 `小白`，因為 `super.clone()` 預設是淺層複製，`o1.pet` 與 `o2.pet` 指向同一個物件
-C. 編譯錯誤，因為 `Owner` 沒有實作 `finalize()`
+A. 輸出 `旺財`，因為 `clone()` 會自動進行深層複製<br>
+B. 輸出 `小白`，因為 `super.clone()` 預設是淺層複製，`o1.pet` 與 `o2.pet` 指向同一個物件<br>
+C. 編譯錯誤，因為 `Owner` 沒有實作 `finalize()`<br>
 D. 程式會拋出例外，因為 `Cloneable` 介面必須定義 `clone()` 的實作細節
 
 <!--

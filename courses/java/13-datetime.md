@@ -587,9 +587,9 @@ System.out.println(ldt.format(fmt));
 
 執行後，這段程式碼最可能發生什麼結果？
 
-A. 正確印出 `2024年05月13日 09時05分`
-B. 印出的「月」會變成「分鐘的數值」，「分」會變成「月份的數值」，因為 `MM` 和 `mm` 用反了
-C. 編譯錯誤，因為 `DateTimeFormatter` 不支援中文字
+A. 正確印出 `2024年05月13日 09時05分`<br>
+B. 印出的「月」會變成「分鐘的數值」，「分」會變成「月份的數值」，因為 `MM` 和 `mm` 用反了<br>
+C. 編譯錯誤，因為 `DateTimeFormatter` 不支援中文字<br>
 D. 拋出 `NullPointerException`，因為 `LocalDateTime.of()` 缺少秒數參數
 
 <!--

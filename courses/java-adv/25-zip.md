@@ -235,12 +235,9 @@ layout: default
 
 關於這個需求該選用哪個類別，以及 `java.util.zip` 套件的基本概念，下列描述何者**正確**？
 
-A. 應該選用 `ZipFile`，因為它支援隨機存取，效能比較好
-
-B. 應該選用 `ZipInputStream`，因為它可以處理任何 `InputStream`（包括網路串流），採循序讀取
-
-C. ZIP 檔案裡的資料夾不需要對應任何 `ZipEntry`，只有檔案才會有 `ZipEntry`
-
+A. 應該選用 `ZipFile`，因為它支援隨機存取，效能比較好<br>
+B. 應該選用 `ZipInputStream`，因為它可以處理任何 `InputStream`（包括網路串流），採循序讀取<br>
+C. ZIP 檔案裡的資料夾不需要對應任何 `ZipEntry`，只有檔案才會有 `ZipEntry`<br>
 D. `Deflater` 和 `Inflater` 是我們在一般應用程式中最常直接呼叫的類別，用來手動控制壓縮等級
 
 <!--

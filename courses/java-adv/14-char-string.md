@@ -260,9 +260,9 @@ System.out.println(a == c);
 System.out.println(c == d);
 ```
 
-A. `true true true`
-B. `true false true`
-C. `false true false`
+A. `true true true`<br>
+B. `true false true`<br>
+C. `false true false`<br>
 D. `true false false`
 
 <!--

@@ -151,9 +151,9 @@ int area = width * height;
 
 關於這段程式碼中各個部分的名稱，下列哪一個說法是**正確**的？
 
-A. `width * height` 是一條 statement（敘述）
-B. `*` 是 operand（運算元）
-C. `width` 和 `height` 是 operand（運算元）
+A. `width * height` 是一條 statement（敘述）<br>
+B. `*` 是 operand（運算元）<br>
+C. `width` 和 `height` 是 operand（運算元）<br>
 D. `int area = width * height;` 是一個 expression（運算式）
 
 <!--
@@ -1029,9 +1029,9 @@ layout: default
 
 關於 Java 的 `import` 與套件，下列哪一個說法是**正確**的？
 
-A. `Scanner` 屬於 `java.lang` 套件，所以不需要 `import` 就能使用
-B. `System`、`String`、`Math` 都屬於 `java.lang` 套件，編譯器會自動匯入，不需手動 `import`
-C. 使用 `import java.util.*;` 是業界最推薦的寫法，因為一次匯入最方便
+A. `Scanner` 屬於 `java.lang` 套件，所以不需要 `import` 就能使用<br>
+B. `System`、`String`、`Math` 都屬於 `java.lang` 套件，編譯器會自動匯入，不需手動 `import`<br>
+C. 使用 `import java.util.*;` 是業界最推薦的寫法，因為一次匯入最方便<br>
 D. 一個程式只要寫了 `import java.util.Scanner;`，就可以不用 `import` 也能使用 `java.io` 套件裡的類別
 
 <!--
@@ -1120,9 +1120,9 @@ double result = a
 System.out.println(result);
 ```
 
-A. 編譯錯誤，因為一行不能寫多個敘述
-B. 編譯錯誤，因為運算式不能跨行
-C. `0`
+A. 編譯錯誤，因為一行不能寫多個敘述<br>
+B. 編譯錯誤，因為運算式不能跨行<br>
+C. `0`<br>
 D. `0.0`
 
 <!--

@@ -985,9 +985,9 @@ public class Main {
 }
 ```
 
-A. `Animal sound` 與 `Animal move`
-B. `Dog sound` 與 `Dog move`
-C. `Animal sound` 與 `Dog move`
+A. `Animal sound` 與 `Animal move`<br>
+B. `Dog sound` 與 `Dog move`<br>
+C. `Animal sound` 與 `Dog move`<br>
 D. `Dog sound` 與 `Animal move`
 
 <!--

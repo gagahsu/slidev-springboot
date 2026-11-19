@@ -1078,9 +1078,9 @@ layout: default
 
 下列設計方式，哪一個**最合適**？
 
-A. 設計 `abstract class Animal`（含 `name`、`age`、`eat()`），`Dog`、`Cat extends Animal`；另外設計 `interface Soundable`（含 `makeSound()`），讓 `Dog`、`Cat`、`Robot` 都 `implements Soundable`
-B. 設計 `abstract class Animal`，讓 `Dog`、`Cat`、`Robot` 都 `extends Animal`，並在 `Animal` 中宣告 `abstract void makeSound();`
-C. 設計 `interface Animal`（含 `name`、`age`、`eat()`、`makeSound()`），讓 `Dog`、`Cat`、`Robot` 都 `implements Animal`
+A. 設計 `abstract class Animal`（含 `name`、`age`、`eat()`），`Dog`、`Cat extends Animal`；另外設計 `interface Soundable`（含 `makeSound()`），讓 `Dog`、`Cat`、`Robot` 都 `implements Soundable`<br>
+B. 設計 `abstract class Animal`，讓 `Dog`、`Cat`、`Robot` 都 `extends Animal`，並在 `Animal` 中宣告 `abstract void makeSound();`<br>
+C. 設計 `interface Animal`（含 `name`、`age`、`eat()`、`makeSound()`），讓 `Dog`、`Cat`、`Robot` 都 `implements Animal`<br>
 D. 分別在 `Dog`、`Cat`、`Robot` 中各自定義 `makeSound()`，不使用抽象類別或介面
 
 <!--

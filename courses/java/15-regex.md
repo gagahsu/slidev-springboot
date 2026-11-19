@@ -1158,7 +1158,7 @@ for (String email : tests) {
 ```
 
 <div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>動態問卷連結：</b>前台作答頁面的 Email 欄位就需要這個驗證！同一個 email 不能重複填寫同一張問卷，驗證格式是第一道防線。
+💡 <b>專題連結：</b>「轉角咖啡」的訂位表單有選填的 Email 欄位，有填就要通過這個格式驗證：前端先擋一次，後端再檢查一次。
 </div>
 
 <!--

@@ -288,12 +288,9 @@ public class B {
 
 關於這兩種寫法，下列哪個描述是**正確**的？
 
-A. 寫法一是 Lazy 初始化，因為 `instance` 一開始是非 `null` 的物件
-
-B. 寫法二是 Eager 初始化，因為它在類別載入時就建立物件
-
-C. 寫法一是 Eager 初始化：類別載入時就會建立 `instance`；寫法二是 Lazy 初始化：第一次呼叫 `getInstance()` 時才建立
-
+A. 寫法一是 Lazy 初始化，因為 `instance` 一開始是非 `null` 的物件<br>
+B. 寫法二是 Eager 初始化，因為它在類別載入時就建立物件<br>
+C. 寫法一是 Eager 初始化：類別載入時就會建立 `instance`；寫法二是 Lazy 初始化：第一次呼叫 `getInstance()` 時才建立<br>
 D. 兩種寫法在效果上完全相同，沒有任何差異
 
 <!--

@@ -272,12 +272,9 @@ layout: default
 
 關於 `Thread` 的狀態與 Program / Process / Thread 三者的關係，下列描述何者**正確**？
 
-A. 一個 `Process` 內最多只能有一個 `Thread`，這也是「行程」跟「執行緒」唯一的差別
-
-B. 呼叫 `new Thread(task)` 之後、尚未呼叫 `start()` 之前，這個執行緒的狀態是 `NEW`
-
-C. 執行緒呼叫 `sleep()` 進入等待後，狀態會變成 `BLOCKED`
-
+A. 一個 `Process` 內最多只能有一個 `Thread`，這也是「行程」跟「執行緒」唯一的差別<br>
+B. 呼叫 `new Thread(task)` 之後、尚未呼叫 `start()` 之前，這個執行緒的狀態是 `NEW`<br>
+C. 執行緒呼叫 `sleep()` 進入等待後，狀態會變成 `BLOCKED`<br>
 D. `Thread` 物件一旦進入 `TERMINATED` 狀態，呼叫 `start()` 可以讓它重新開始執行
 
 <!--
@@ -845,12 +842,9 @@ System.out.println("main 結束");
 
 關於這段程式碼，下列描述何者**正確**？
 
-A. `setDaemon(true)` 必須在 `worker.start()` 之後呼叫才會生效
-
-B. 因為 `worker` 被設為 Daemon 執行緒，"main 結束" 一定會在 "worker 完成" 之前印出來
-
-C. 這段程式碼可能會在印出 "main 結束" 後就直接結束，"worker 完成" 不一定會被印出來
-
+A. `setDaemon(true)` 必須在 `worker.start()` 之後呼叫才會生效<br>
+B. 因為 `worker` 被設為 Daemon 執行緒，"main 結束" 一定會在 "worker 完成" 之前印出來<br>
+C. 這段程式碼可能會在印出 "main 結束" 後就直接結束，"worker 完成" 不一定會被印出來<br>
 D. `Thread.sleep(2000)` 會釋放 `worker` 持有的所有鎖，讓 main 執行緒先執行
 
 <!--
