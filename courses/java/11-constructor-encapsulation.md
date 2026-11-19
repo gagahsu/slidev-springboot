@@ -350,7 +350,7 @@ layout: default
 ---
 
 # 練習 1：設計 Book 類別的建構子
-### 解題提示
+### 解題提示（1/2）：三個建構子
 
 ```java
 class Book {
@@ -378,7 +378,17 @@ class Book {
 }
 ```
 
-呼叫範例：
+<!--
+【帶讀解法】
+這題的鏈式關係是：`Book()` → `this("未命名", "未命名")` → 跳到 `Book(String, String)` → `this(title, author, 0)` → 跳到 `Book(String, String, int)`，最後在這個建構子裡才真正執行 `this.title = title` 等設定動作。
+-->
+
+---
+layout: default
+---
+
+# 練習 1：設計 Book 類別的建構子
+### 解題提示（2/2）：呼叫範例
 
 ```java
 Book b1 = new Book("Java 入門", "小明", 500);
@@ -391,12 +401,10 @@ b3.displayInfo(); // 未命名 / 未命名 / 0
 ```
 
 <!--
-【帶讀解法】
-這題的鏈式關係是：`Book()` → `this("未命名", "未命名")` → 跳到 `Book(String, String)` → `this(title, author, 0)` → 跳到 `Book(String, String, int)`，最後在這個建構子裡才真正執行 `this.title = title` 等設定動作。
+三種呼叫方式，分別走進三個建構子。b2 少給價格，所以是 0；b3 什麼都沒給，書名和作者都是「未命名」。
 
 這正是 `this()` 範例提到的「先跳到最末端，再逐層執行」的概念——只是這裡每個建構子的「額外動作」很少，主要是為了示範鏈式委託，避免在三個建構子裡重複寫三次欄位設定的程式碼。
 -->
-
 ---
 layout: section
 class: flex flex-col justify-center items-center text-center

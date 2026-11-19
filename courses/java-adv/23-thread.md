@@ -544,8 +544,8 @@ layout: default
 layout: default
 ---
 
-# 練習 2：種方式建立執行緒
-### 解題提示
+# 練習 2：三種方式建立執行緒
+### 解題提示（1/2）：繼承 Thread、實作 Runnable
 
 **① 繼承 Thread：**
 
@@ -571,6 +571,18 @@ class MessagePrinter implements Runnable {
 }
 ```
 
+<!--
+【帶讀解法】
+先看前兩種寫法。任務內容都寫在 run() 裡，差別只在於要包成 `Thread` 子類別，還是 `Runnable` 物件。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：三種方式建立執行緒
+### 解題提示（2/2）：Lambda 與啟動方式
+
 **③ Lambda：**
 
 ```java
@@ -589,10 +601,10 @@ new Thread(task).start();
 ```
 
 <!--
-【帶讀解法】
-三種寫法最後都要呼叫 `start()` 才會真正開新執行緒；差別只在於「任務內容」要包成 `Thread` 子類別、`Runnable` 物件、還是 Lambda。實際執行時，三個執行緒的輸出可能會交錯出現，這是正常的並行現象。如果 `MessagePrinter` 之後要 `extends` 別的類別，方式②、③完全不受影響，但方式①因為已經繼承了 `Thread`，就無法再繼承其他類別了——這正是「優先用 Runnable/Lambda」的原因。
--->
+第三種是 Lambda，最精簡。三種寫法最後都要呼叫 `start()` 才會真正開新執行緒。實際執行時，三個執行緒的輸出可能會交錯出現，這是正常的並行現象。
 
+如果 `MessagePrinter` 之後要 `extends` 別的類別，方式②、③完全不受影響，但方式①因為已經繼承了 `Thread`，就無法再繼承其他類別了——這正是「優先用 Runnable/Lambda」的原因。
+-->
 ---
 layout: section
 class: flex flex-col justify-center items-center text-center

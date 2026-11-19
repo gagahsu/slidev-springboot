@@ -640,7 +640,7 @@ layout: default
 ---
 
 # 練習 4：水果籃物件陣列
-### 解題提示
+### 解題提示（1/2）：建立物件陣列
 
 ```java
 class Fruit {
@@ -667,7 +667,22 @@ public class Main {
         fruits[2] = new Fruit();
         fruits[2].name = "橘子";
         fruits[2].price = 25;
+```
 
+<!--
+【帶讀解法】
+這題完全遵循 8-4 教過的三步驟。這一頁是前兩步：先 `new Fruit[3]` 準備好停車格（陣列），再逐一 `new Fruit()` 放入真正的物件並設定欄位。
+-->
+
+---
+layout: default
+---
+
+# 練習 4：水果籃物件陣列
+### 解題提示（2/2）：走訪並加總
+
+```java
+        // 接續上一頁的 main
         int total = 0;
         for (Fruit f : fruits) {
             f.displayInfo();
@@ -679,12 +694,10 @@ public class Main {
 ```
 
 <!--
-【帶讀解法】
-這題完全遵循 8-4 教過的三步驟：先 `new Fruit[3]` 準備好停車格（陣列），再逐一 `new Fruit()` 放入真正的物件並設定欄位，最後用 for-each 遍歷。
+第三步，用 for-each 遍歷陣列，一個一個呼叫 displayInfo。
 
 加分的部分是 `total += f.price`——這是把「遍歷陣列」和「累加計算」結合在一起，之後在處理訂單、購物車這類情境時，這種「遍歷 + 累加」的寫法會非常常見。
 -->
-
 ---
 layout: section
 class: flex flex-col justify-center items-center text-center
@@ -1436,7 +1449,7 @@ layout: default
 layout: default
 ---
 
-# 練習 10 (綜合)：解題提示
+# 練習 10 (綜合)：解題提示（1/2）
 
 ### 提示說明
 
@@ -1459,6 +1472,19 @@ layout: default
            return (double) total / scores.length;
        }
    ```
+
+<!--
+這題把整章的概念串成一條線。這一頁先看前兩步：先用 `this`（8-6）設定建構子的欄位，再用陣列遍歷（8-4）累加成績算平均。
+-->
+
+---
+layout: default
+---
+
+# 練習 10 (綜合)：解題提示（2/2）
+
+### 提示說明（續）
+
 3. `displayInfo()` 印出姓名與平均：
    ```java
        void displayInfo() {
@@ -1475,11 +1501,10 @@ layout: default
    ```
 
 <!--
-這題把整章的概念串成一條線：先用 `this`（8-6）設定建構子的欄位，再用陣列遍歷（8-4）累加成績算平均，最後用物件陣列（8-4）+ for-each 走訪每位學生並顯示資訊。
+接著是後兩步：displayInfo 印出姓名和平均，最後用物件陣列（8-4）加上 for-each 走訪每位學生並顯示資訊。
 
 提示第 4 點也示範了「直接把陣列字面值當引數傳入建構子」的寫法（`new int[]{80, 90, 70}`），這跟一般陣列宣告的差別，以及它在記憶體裡是怎麼被 Student 物件的 `scores` 欄位參照的，都是我們這一章學過的重點，可以藉這題再複習一次。
 -->
-
 ---
 
 # 總結
