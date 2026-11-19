@@ -1,0 +1,9 @@
+<footer id="info" class="footer">
+  <h2>營業資訊</h2>
+  <ul>
+    <li>📍 {{ info.address }}</li>
+    <li>☎️ {{ info.phone }}</li>
+    <li>🕙 {{ info.hours }}（{{ info.closed }}）</li>
+  </ul>
+  <a [href]="'https://maps.google.com/?q=' + info.address" target="_blank" rel="noopener">在地圖上查看</a>
+</footer>

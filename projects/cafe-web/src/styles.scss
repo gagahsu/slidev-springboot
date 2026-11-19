@@ -1,0 +1,43 @@
+/* 全站共用的樣式 */
+:root {
+  --coffee: #6f4e37;
+  --coffee-dark: #4a3324;
+  --cream: #fbf6ef;
+  --line: #e7dccd;
+  --text: #2f2a26;
+  --muted: #8a7f75;
+  --error: #c0392b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  color: var(--text);
+  background: #fff;
+  line-height: 1.6;
+}
+
+h1, h2, h3 {
+  margin: 0;
+}
+
+.section {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 64px 20px;
+}
+
+.section-title {
+  font-size: 28px;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}

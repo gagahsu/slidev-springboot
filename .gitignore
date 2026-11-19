@@ -51,3 +51,12 @@ net/
 # Pages assembly (see .github/workflows/deploy.yml)
 dist-slidev/
 _site/
+
+# Course project builds (projects/)
+projects/**/node_modules/
+projects/**/dist/
+projects/**/build/
+projects/**/.gradle/
+projects/**/.angular/
+projects/**/bin/
+projects/**/uploads/

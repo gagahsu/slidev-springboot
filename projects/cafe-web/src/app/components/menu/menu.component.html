@@ -1,0 +1,32 @@
+<section id="menu" class="section">
+  <h2 class="section-title">菜單</h2>
+
+  @if (loading) {
+    <p class="hint">載入中…</p>
+  } @else if (error) {
+    <p class="hint error">{{ error }}</p>
+  } @else {
+    <div class="tabs">
+      @for (c of categories; track c.id) {
+        <button [class.active]="c.id === selectedId" (click)="select(c.id)">{{ c.name }}</button>
+      }
+    </div>
+
+    <div class="cards">
+      @for (p of shown; track p.id) {
+        <article class="card">
+          @if (p.imageUrl) {
+            <img [src]="p.imageUrl" [alt]="p.name" />
+          }
+          <div class="body">
+            <h3>{{ p.name }}</h3>
+            @if (p.description) {
+              <p>{{ p.description }}</p>
+            }
+            <span class="price">NT$ {{ p.price }}</span>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</section>

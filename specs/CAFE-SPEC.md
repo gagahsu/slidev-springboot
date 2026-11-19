@@ -98,7 +98,7 @@ reservations（獨立，不跟其他表關聯）
 
 ```jsonc
 // ProductDto
-{ "id": 2, "categoryId": 1, "name": "拿鐵", "description": "濃縮咖啡加上綿密奶泡", "price": 120, "imageUrl": "/assets/menu/latte.jpg" }
+{ "id": 2, "categoryId": 1, "name": "拿鐵", "description": "濃縮咖啡加上綿密奶泡", "price": 120, "imageUrl": "/menu/latte.svg" }
 
 // POST /api/reservations 的請求內容
 { "name": "王小明", "phone": "0912345678", "email": "", "reserveDate": "2026-12-05", "reserveTime": "18:30", "people": 4, "note": "靠窗" }
@@ -115,7 +115,7 @@ reservations（獨立，不跟其他表關聯）
 
 - 日期 `yyyy-MM-dd`、時間 `HH:mm`。
 - **CORS**：後端允許 `http://localhost:4200`（這是基礎版最容易卡住的地方，教材要有一章專門處理，見 §8）。
-- 品項圖片放在前端 `src/assets/menu/`（或 `public/menu/`，視 Angular 版本），資料庫只存路徑；基礎版**不做圖片上傳**。
+- 品項圖片放在前端 `public/menu/`（Angular 21 的靜態檔資料夾，網址是 `/menu/latte.svg`），資料庫只存路徑；基礎版**不做圖片上傳**。
 
 ## 7. 前端畫面（一頁）
 

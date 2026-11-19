@@ -1,0 +1,27 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  input {
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font: inherit;
+  }
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th, td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.hint {
+  color: var(--muted);
+}
+.error {
+  color: var(--error);
+}

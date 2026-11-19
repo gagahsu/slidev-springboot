@@ -1,0 +1,31 @@
+<section class="section">
+  <h2 class="section-title">訂位清單</h2>
+
+  <div class="bar">
+    <input type="date" name="date" [(ngModel)]="date" (change)="load()" />
+    <span>共 {{ reservations.length }} 組、{{ totalPeople }} 位</span>
+  </div>
+
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  } @else if (reservations.length === 0) {
+    <p class="hint">這一天還沒有訂位。</p>
+  } @else {
+    <table>
+      <thead>
+        <tr><th>時段</th><th>姓名</th><th>手機</th><th>人數</th><th>備註</th></tr>
+      </thead>
+      <tbody>
+        @for (r of reservations; track r.id) {
+          <tr>
+            <td>{{ r.reserveTime }}</td>
+            <td>{{ r.name }}</td>
+            <td>{{ r.phone }}</td>
+            <td>{{ r.people }}</td>
+            <td>{{ r.note ?? '' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>
