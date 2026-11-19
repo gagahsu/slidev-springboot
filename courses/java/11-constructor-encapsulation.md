@@ -642,7 +642,7 @@ layout: default
 ---
 
 # 練習 2：設計符合封裝的 Product 類別
-### 解題提示
+### 解題提示（1/2）
 
 ```java
 public class Product {
@@ -667,6 +667,20 @@ public class Product {
 }
 ```
 
+<!--
+【帶讀解法】
+這題的重點在 `setStock`：`if (stock >= 0)` 這個驗證讓 `setStock(-5)` 完全沒有效果，欄位 `stock` 維持原本的預設值 `0`。接著 `setStock(10)` 通過驗證，`stock` 才真正變成 `10`。
+
+另外提醒一下 `isDiscontinued()` 的命名——如果寫成 `getDiscontinued()`，雖然編譯不會出錯，但不符合 JavaBean 慣例，框架（例如 Spring、Jackson）在自動讀寫這個欄位時可能會找不到對應的方法。這就是封裝＋JavaBean 慣例搭配起來的實際效果：資料安全，命名也統一。
+-->
+
+---
+layout: default
+---
+
+# 練習 2：設計符合封裝的 Product 類別
+### 解題提示（2/2）
+
 呼叫範例：
 
 ```java
@@ -677,12 +691,8 @@ System.out.println(p.getStock()); // 10
 ```
 
 <!--
-【帶讀解法】
-這題的重點在 `setStock`：`if (stock >= 0)` 這個驗證讓 `setStock(-5)` 完全沒有效果，欄位 `stock` 維持原本的預設值 `0`。接著 `setStock(10)` 通過驗證，`stock` 才真正變成 `10`。
-
-另外提醒一下 `isDiscontinued()` 的命名——如果寫成 `getDiscontinued()`，雖然編譯不會出錯，但不符合 JavaBean 慣例，框架（例如 Spring、Jackson）在自動讀寫這個欄位時可能會找不到對應的方法。這就是封裝＋JavaBean 慣例搭配起來的實際效果：資料安全，命名也統一。
+實際呼叫看看：setStock(-5) 沒有通過驗證，所以庫存維持 0；setStock(10) 通過驗證，最後印出 10。
 -->
-
 ---
 layout: default
 ---

@@ -465,7 +465,7 @@ layout: default
 ---
 
 # 練習 3：完整 Pet 類別
-### 解題提示
+### 解題提示（1/2）
 
 ```java
 class Pet {
@@ -482,7 +482,23 @@ class Pet {
         System.out.println(name + "（" + type + "）的飢餓值：" + hunger);
     }
 }
+```
 
+<!--
+【帶讀解法】
+這題的結構跟 8-3 的 `Car` 一模一樣：欄位負責記錄狀態（`hunger`），方法負責改變狀態（`feed`）和顯示狀態（`displayInfo`）。
+
+`feed` 裡多了一個 `if (hunger < 0) hunger = 0;`，這是很常見的「防呆」寫法——確保數值不會跑到不合理的範圍。之後寫到分數、庫存、血量這類「不能是負數」的欄位時，都可以用同樣的邏輯處理。
+-->
+
+---
+layout: default
+---
+
+# 練習 3：完整 Pet 類別
+### 解題提示（2/2）
+
+```java
 public class Main {
     public static void main(String[] args) {
         Pet p1 = new Pet();
@@ -497,12 +513,8 @@ public class Main {
 ```
 
 <!--
-【帶讀解法】
-這題的結構跟 8-3 的 `Car` 一模一樣：欄位負責記錄狀態（`hunger`），方法負責改變狀態（`feed`）和顯示狀態（`displayInfo`）。
-
-`feed` 裡多了一個 `if (hunger < 0) hunger = 0;`，這是很常見的「防呆」寫法——確保數值不會跑到不合理的範圍。之後寫到分數、庫存、血量這類「不能是負數」的欄位時，都可以用同樣的邏輯處理。
+接著在 main 裡建立一隻寵物、設定欄位，餵食 30 之後印出來，飢餓值從 50 變成 20。
 -->
-
 ---
 layout: section
 class: flex flex-col justify-center items-center text-center
@@ -1083,7 +1095,7 @@ layout: default
 ---
 
 # 練習 6：Pass by Value 與多載驗證
-### 解題提示
+### 解題提示（1/2）
 
 ```java
 class Account {
@@ -1109,6 +1121,20 @@ class Account {
 }
 ```
 
+<!--
+【帶讀解法】
+重點在 `tryReset`：`acc = new Account("空帳戶", 0)` 只是把方法內部的參數 `acc` 改指向一個新物件，`main` 裡的 `a` 仍然指向原本的帳戶——這正是 8-6 講的「重新賦值不影響外部」。
+
+兩個 `addBonus` 則示範了多載：Java 依參數數量（1 個還是 2 個）自動選擇對應的版本，跟 8-6 的 `multiply` 範例是同一個道理。
+-->
+
+---
+layout: default
+---
+
+# 練習 6：Pass by Value 與多載驗證
+### 解題提示（2/2）
+
 呼叫範例：
 
 ```java
@@ -1120,12 +1146,8 @@ System.out.println(a.balance); // 仍是 1150
 ```
 
 <!--
-【帶讀解法】
-重點在 `tryReset`：`acc = new Account("空帳戶", 0)` 只是把方法內部的參數 `acc` 改指向一個新物件，`main` 裡的 `a` 仍然指向原本的帳戶——這正是 8-6 講的「重新賦值不影響外部」。
-
-兩個 `addBonus` 則示範了多載：Java 依參數數量（1 個還是 2 個）自動選擇對應的版本，跟 8-6 的 `multiply` 範例是同一個道理。
+實際呼叫看看：兩次 addBonus 分別走進不同的多載版本；tryReset 之後，a 的餘額仍然是 1150，因為方法裡只是讓參數 acc 改指向新的物件。
 -->
-
 ---
 layout: section
 class: flex flex-col justify-center items-center text-center

@@ -1109,7 +1109,7 @@ class Employee {
 layout: default
 ---
 
-# 練習 5 (綜合)：解題提示
+# 練習 5 (綜合)：解題提示（1/2）
 
 1. **覆寫 toString()**
 
@@ -1135,7 +1135,23 @@ public boolean equals(Object o) {
     }
     return false;
 }
+```
 
+<!--
+【逐步解說】
+第一步補上 `toString()`，讓物件可以印出有意義的內容。第二步用 `Objects.hash(name, age, country)` 計算雜湊碼，並讓 `equals()` 比較同樣這三個欄位——這就是我們今天反覆強調的「欄位要一致」原則。
+
+⚠️ 易錯點提醒：
+如果只覆寫 `equals()` 卻忘記覆寫 `hashCode()`，兩個內容相同的物件在 `equals()` 比較時是 `true`，但放進 `HashSet` 後卻可能找不到彼此，這正是這兩個方法必須「成對」覆寫的原因。
+-->
+
+---
+layout: default
+---
+
+# 練習 5 (綜合)：解題提示（2/2）
+
+```java
 @Override
 public int hashCode() {
     return Objects.hash(name, age, country);
@@ -1145,11 +1161,7 @@ public int hashCode() {
 3. **驗證結果**：屬性相同的兩個物件，`equals()` 應為 `true`，`hashCode()` 也應相同
 
 <!--
-【逐步解說】
-第一步補上 `toString()`，讓物件可以印出有意義的內容。第二步用 `Objects.hash(name, age, country)` 計算雜湊碼，並讓 `equals()` 比較同樣這三個欄位——這就是我們今天反覆強調的「欄位要一致」原則。
-
-⚠️ 易錯點提醒：
-如果只覆寫 `equals()` 卻忘記覆寫 `hashCode()`，兩個內容相同的物件在 `equals()` 比較時是 `true`，但放進 `HashSet` 後卻可能找不到彼此，這正是這兩個方法必須「成對」覆寫的原因。
+最後補上 hashCode，用 Objects.hash 計算，欄位跟 equals 比較的三個欄位一致。驗證時，屬性相同的兩個物件，equals 應為 true，hashCode 也相同。
 -->
 ---
 

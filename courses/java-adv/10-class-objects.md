@@ -180,7 +180,7 @@ Base Case 就像樂高積木拆到只剩一塊的時候——不能再拆了，�
 
 ---
 
-# Factorial 階乘範例
+# Factorial 階乘範例（1/2）
 
 ```java
 static int factorial(int n) {
@@ -190,6 +190,22 @@ static int factorial(int n) {
 
 System.out.println(factorial(5)); // 120
 ```
+
+<!--
+這個範例的目標是：用最經典的階乘問題，把 Base Case 和 Recursive Case 對應到實際程式碼。
+
+帶大家看關鍵行：`if (n <= 1) return 1;` 就是 Base Case——當 n 小到 1 或以下，直接回傳 1，不再往下遞迴。`return n * factorial(n - 1);` 則是 Recursive Case——把問題縮小成 factorial(n-1)，自己乘上縮小後的結果。
+
+下一頁會把 factorial(5) 的展開過程畫出來。
+
+執行結果：`factorial(5)` 會輸出 120。
+-->
+
+---
+layout: default
+---
+
+# Factorial 階乘範例（2/2）
 
 呼叫堆疊展開示意：
 
@@ -203,15 +219,8 @@ graph TD
 ```
 
 <!--
-這個範例的目標是：用最經典的階乘問題，把 Base Case 和 Recursive Case 對應到實際程式碼。
-
-帶大家看關鍵行：`if (n <= 1) return 1;` 就是 Base Case——當 n 小到 1 或以下，直接回傳 1，不再往下遞迴。`return n * factorial(n - 1);` 則是 Recursive Case——把問題縮小成 factorial(n-1)，自己乘上縮小後的結果。
-
-下方的圖把 factorial(5) 一路展開到 factorial(1) 的過程畫出來，可以看到每一層都在「等待」下一層的結果。
-
-執行結果：`factorial(5)` 會輸出 120。
+這張圖把 factorial(5) 一路展開到 factorial(1) 的過程畫出來，可以看到每一層都在「等待」下一層的結果，最後從 Base Case 回傳 1，再一層一層乘回去，得到 120。
 -->
-
 ---
 
 # 遞迴呼叫堆疊展開

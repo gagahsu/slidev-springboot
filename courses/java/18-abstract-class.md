@@ -915,7 +915,7 @@ layout: default
 ---
 
 # 練習 4：Account 抽象類別的建構方法與 Upcasting
-### 解題提示
+### 解題提示（1/2）
 
 1. `Account` 的建構方法接收 `owner`，存入 `protected` 屬性，並印出 `"開戶完成"`
 2. `SavingsAccount` 建構方法第一行 `super(owner)`
@@ -930,6 +930,24 @@ abstract class Account {
     }
     abstract void showType();
 }
+```
+
+<!--
+【帶讀解法】
+重點有兩個：第一，`new SavingsAccount("古古")` 執行時，會先呼叫 `Account` 的建構方法（印出「開戶完成」），再執行 `SavingsAccount` 自己的建構方法；第二，`Account acc = ...` 是 Upcasting——雖然 `Account` 不能直接 `new`，但完全可以當作變數的宣告型態。
+
+💼 業界實務：
+這種「父類別管共用初始化、子類別補上細節」的設計，在企業系統的帳戶、訂單等模組裡很常見，例如所有帳戶開戶都要做的「建檔、發送通知」邏輯放在父類別，各帳戶類型自己的規則放在子類別。
+-->
+
+---
+layout: default
+---
+
+# 練習 4：Account 抽象類別的建構方法與 Upcasting
+### 解題提示（2/2）
+
+```java
 class SavingsAccount extends Account {
     SavingsAccount(String owner) {
         super(owner);
@@ -947,11 +965,7 @@ acc.showType(); // 古古 的帳戶類型：活存
 ```
 
 <!--
-【帶讀解法】
-重點有兩個：第一，`new SavingsAccount("古古")` 執行時，會先呼叫 `Account` 的建構方法（印出「開戶完成」），再執行 `SavingsAccount` 自己的建構方法；第二，`Account acc = ...` 是 Upcasting——雖然 `Account` 不能直接 `new`，但完全可以當作變數的宣告型態。
-
-💼 業界實務：
-這種「父類別管共用初始化、子類別補上細節」的設計，在企業系統的帳戶、訂單等模組裡很常見，例如所有帳戶開戶都要做的「建檔、發送通知」邏輯放在父類別，各帳戶類型自己的規則放在子類別。
+子類別 SavingsAccount：建構方法第一行 super(owner)，再實作抽象方法 showType。下面用父類別型態 Account 宣告變數，這就是 Upcasting。
 -->
 ---
 layout: section

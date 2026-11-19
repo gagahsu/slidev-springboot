@@ -837,7 +837,7 @@ layout: default
 layout: default
 ---
 
-# 練習 6 (綜合)：進階綜合練習 — 解題提示
+# 練習 6 (綜合)：進階綜合練習 — 解題提示（1/2）
 
 ```java
 // 1. TreeMap 自動依鍵排序
@@ -851,7 +851,23 @@ System.out.println(books); // {B001=紅樓夢, B002=哈利波特, B003=三體}
 LinkedList<String> queue = new LinkedList<>();
 queue.addLast("小明"); queue.addLast("小華"); queue.addLast("小美");
 System.out.println("下一位：" + queue.removeFirst()); // 小明
+```
 
+<!--
+【帶讀解法】
+這題把今天四個主題依序串起來：TreeMap 不需要額外排序，put 進去自動就是排好的；LinkedList 的 `removeFirst` 就是「叫號」；Set 的 `addAll`／`retainAll` 分別找出聯集跟交集；`List.of` 建立的分類清單一旦 `add` 就會拋出例外。
+
+【最後叮嚀】
+這四個主題分別解決了「自動排序」「兩端佇列」「集合比對」「資料保護」四種不同的實務需求。下次遇到類似情境，記得回來翻翻這份投影片。
+-->
+
+---
+layout: default
+---
+
+# 練習 6 (綜合)：進階綜合練習 — 解題提示（2/2）
+
+```java
 // 3. Set 聯集與交集
 Set<String> literatureFans = new HashSet<>(List.of("小明","小華"));
 Set<String> sciFiFans = new HashSet<>(List.of("小華","小美"));
@@ -871,13 +887,8 @@ try {
 ```
 
 <!--
-【帶讀解法】
-這題把今天四個主題依序串起來：TreeMap 不需要額外排序，put 進去自動就是排好的；LinkedList 的 `removeFirst` 就是「叫號」；Set 的 `addAll`／`retainAll` 分別找出聯集跟交集；`List.of` 建立的分類清單一旦 `add` 就會拋出例外。
-
-【最後叮嚀】
-這四個主題分別解決了「自動排序」「兩端佇列」「集合比對」「資料保護」四種不同的實務需求。下次遇到類似情境，記得回來翻翻這份投影片。
+後兩個主題：Set 的 addAll 找出聯集、retainAll 找出交集；List.of 建立的分類清單一旦 add 就會拋出 UnsupportedOperationException。
 -->
-
 ---
 layout: section
 class: flex flex-col justify-center items-center text-center

@@ -430,7 +430,7 @@ layout: default
 ---
 
 # 練習 1：設計 Employee 繼承體系
-### 解題提示
+### 解題提示（1/2）
 
 1. `Employee` 的 `protected` 屬性讓 `Manager` 能直接存取，建構方法印出 `"Employee 建構"`
 2. `Manager extends Employee`，建構方法第一行 `super(name, baseSalary)`，再印出 `"Manager 建構"`
@@ -449,6 +449,24 @@ class Employee {
         System.out.println(name + " 的底薪是 " + baseSalary);
     }
 }
+```
+
+<!--
+【帶讀解法】
+重點有兩個：第一，`Manager` 的建構方法第一行必須是 `super(name, baseSalary)`，把共用的初始化邏輯交給父類別處理；第二，`new Manager(...)` 執行時，會先印出 `"Employee 建構"`，再印出 `"Manager 建構"`，驗證了「父先子後」的順序。
+
+💼 業界實務：
+這種「共同屬性放父類別、特殊邏輯子類別 override」的設計，是企業系統裡 `Employee`／`Manager`／`Director` 這類人事結構最常見的寫法。
+-->
+
+---
+layout: default
+---
+
+# 練習 1：設計 Employee 繼承體系
+### 解題提示（2/2）
+
+```java
 class Manager extends Employee {
     private int bonus;
     public Manager(String name, int baseSalary, int bonus) {
@@ -464,11 +482,7 @@ class Manager extends Employee {
 ```
 
 <!--
-【帶讀解法】
-重點有兩個：第一，`Manager` 的建構方法第一行必須是 `super(name, baseSalary)`，把共用的初始化邏輯交給父類別處理；第二，`new Manager(...)` 執行時，會先印出 `"Employee 建構"`，再印出 `"Manager 建構"`，驗證了「父先子後」的順序。
-
-💼 業界實務：
-這種「共同屬性放父類別、特殊邏輯子類別 override」的設計，是企業系統裡 `Employee`／`Manager`／`Director` 這類人事結構最常見的寫法。
+子類別 Manager：建構方法第一行先呼叫 super，把姓名和底薪交給父類別，再設定自己的 bonus。showSalary 覆寫成印出底薪加獎金。
 -->
 ---
 layout: section
