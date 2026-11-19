@@ -79,3 +79,10 @@ chapters:
   ch48: { title: "Spring Cloud 微服務", subtitle: "Eureka / Gateway / OpenFeign / Config" }
   ch49: { title: "前後端串接", subtitle: "CORS / 同時啟動 / 開發者工具查錯" }
   ch50: { title: "專題：轉角咖啡後端", subtitle: "菜單 API / 訂位 API / 統一錯誤格式" }
+  ch51: { title: "專題（一）：線上商店總覽與資料模型", subtitle: "8 張表 / Flyway / Entity 關聯" }
+  ch52: { title: "專題（二）：會員、權限與統一回應", subtitle: "AppResponse / BizException / JWT / ADMIN" }
+  ch53: { title: "專題（三）：商品與後台商品管理", subtitle: "分頁搜尋 / 規格 / 上下架 / 上傳圖片" }
+  ch54: { title: "專題（四）：購物車", subtitle: "同規格相加 / 登入後合併 / 運費" }
+  ch55: { title: "專題（五）：訂單與模擬付款", subtitle: "交易 / 防超賣 / 快照 / 逾時取消" }
+  ch56: { title: "專題（六）：綠界金流", subtitle: "CheckMacValue / ReturnURL / Cloudflare Tunnel" }
+  ch57: { title: "專題（七）：後台訂單與報表", subtitle: "出貨 / 狀態規則 / MyBatis 報表" }

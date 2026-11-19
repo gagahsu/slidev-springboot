@@ -40,13 +40,7 @@ stages:
   - title: 專題後端：線上商店
     desc: 照 specs/SHOP-SPEC.md，Spring Boot 7 章
     items:
-      - { soon: "專題 1：總覽與資料模型（Flyway）", course: springboot }
-      - { soon: "專題 2：會員、權限與統一回應", course: springboot }
-      - { soon: "專題 3：商品與後台商品管理", course: springboot }
-      - { soon: "專題 4：購物車", course: springboot }
-      - { soon: "專題 5：訂單與模擬付款", course: springboot }
-      - { soon: "專題 6：綠界金流", course: springboot }
-      - { soon: "專題 7：後台訂單與報表（MyBatis）", course: springboot }
+      - { course: springboot, chapters: ["51-57"] }
 
   - title: 專題前端：線上商店
     desc: 前台購物流程與管理後台

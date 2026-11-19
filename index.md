@@ -327,6 +327,41 @@ style: |
       <div>專題：轉角咖啡後端</div>
       <div class="chapter-subtitle">菜單 API / 訂位 API / 統一錯誤格式</div>
     </Link>
+    <Link to="ch51" class="chapter-card">
+      <div class="chapter-num">Ch 51</div>
+      <div>專題（一）：線上商店總覽與資料模型</div>
+      <div class="chapter-subtitle">8 張表 / Flyway / Entity 關聯</div>
+    </Link>
+    <Link to="ch52" class="chapter-card">
+      <div class="chapter-num">Ch 52</div>
+      <div>專題（二）：會員、權限與統一回應</div>
+      <div class="chapter-subtitle">AppResponse / BizException / JWT / ADMIN</div>
+    </Link>
+    <Link to="ch53" class="chapter-card">
+      <div class="chapter-num">Ch 53</div>
+      <div>專題（三）：商品與後台商品管理</div>
+      <div class="chapter-subtitle">分頁搜尋 / 規格 / 上下架 / 上傳圖片</div>
+    </Link>
+    <Link to="ch54" class="chapter-card">
+      <div class="chapter-num">Ch 54</div>
+      <div>專題（四）：購物車</div>
+      <div class="chapter-subtitle">同規格相加 / 登入後合併 / 運費</div>
+    </Link>
+    <Link to="ch55" class="chapter-card">
+      <div class="chapter-num">Ch 55</div>
+      <div>專題（五）：訂單與模擬付款</div>
+      <div class="chapter-subtitle">交易 / 防超賣 / 快照 / 逾時取消</div>
+    </Link>
+    <Link to="ch56" class="chapter-card">
+      <div class="chapter-num">Ch 56</div>
+      <div>專題（六）：綠界金流</div>
+      <div class="chapter-subtitle">CheckMacValue / ReturnURL / Cloudflare Tunnel</div>
+    </Link>
+    <Link to="ch57" class="chapter-card">
+      <div class="chapter-num">Ch 57</div>
+      <div>專題（七）：後台訂單與報表</div>
+      <div class="chapter-subtitle">出貨 / 狀態規則 / MyBatis 報表</div>
+    </Link>
 
   </div>
 </div>
@@ -480,5 +515,26 @@ src: ./courses/springboot/49-frontend-backend.md
 ---
 ---
 src: ./courses/springboot/50-cafe-backend.md
+---
+---
+src: ./courses/springboot/51-shop-overview.md
+---
+---
+src: ./courses/springboot/52-shop-auth.md
+---
+---
+src: ./courses/springboot/53-shop-products.md
+---
+---
+src: ./courses/springboot/54-shop-cart.md
+---
+---
+src: ./courses/springboot/55-shop-orders.md
+---
+---
+src: ./courses/springboot/56-shop-ecpay.md
+---
+---
+src: ./courses/springboot/57-shop-admin.md
 ---
 

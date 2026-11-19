@@ -327,7 +327,7 @@ Angular                    Spring Boot                          綠界（測試�
 | Spring Boot ch30–32 | 銷售報表用 MyBatis |
 | Spring Boot ch33–35 | 建立訂單的交易、扣庫存防超賣、SQL Injection |
 | Spring Boot ch40、42–47 | API 文件、測試（檢查碼單元測試）、Log、逾時取消排程、商品快取、Security + JWT |
-| Spring Boot ch49 起（**改寫，擴充成 7 章**） | 見下方「Spring Boot 專題章節」 |
+| Spring Boot ch51–57（**7 章**；ch49–50 是基礎學程的前後端串接與轉角咖啡） | 見下方「Spring Boot 專題章節」 |
 | Angular ch31–55 | Material 版面、表格、Select、Dialog、圓餅圖、RxJS、Signals 購物車、Sidenav 後台版型、Reactive Forms（結帳、商品規格 FormArray）、RWD、打包 |
 | Angular 新章 | HTTP 攔截器、路由守衛 |
 | **Angular 專題章（新增）** | 電商前台與後台的全部畫面（§7），接在 Material、Signals、Reactive Forms 之後；章數與切分待寫 Angular 部分時再定 |
@@ -335,17 +335,17 @@ Angular                    Spring Boot                          綠界（測試�
 
 Spring Boot ch48 Spring Cloud 不在進階學程內。
 
-### Spring Boot 專題章節（初稿，取代原本 ch49–53 的問卷專題）
+### Spring Boot 專題章節（ch51–57，取代原本 ch49–53 的問卷專題）
 
 | 章 | 主題 | 內容 |
 | -- | ---- | ---- |
-| 1 | 專題總覽與資料模型 | 需求與畫面導覽、8 張表、Flyway（`V1__schema.sql`、`V2__seed.sql` 含預設管理員）、Entity 與 Repository |
-| 2 | 會員、權限與統一回應 | `AppResponse<T>`、`RspCode`、`BizException`、註冊登入、JWT、`/api/admin/**` 限 ADMIN |
-| 3 | 商品與後台商品管理 | 商品與規格查詢（分頁、搜尋、排序）、後台商品 CRUD、上下架、圖片上傳、分類快取 |
-| 4 | 購物車 | 購物車 API、登入後合併、庫存與數量檢查、運費試算 |
-| 5 | 訂單與模擬付款 | 建立訂單（交易、防超賣、金額重算、明細快照）、訂單狀態、取消、逾時排程、模擬付款 |
-| 6 | 綠界金流 | 檢查碼與單元測試、產生付款表單、接收付款通知、結果頁轉址、Cloudflare Tunnel、向綠界查詢 |
-| 7 | 後台訂單與報表 | 出貨、完成、取消、營運摘要、MyBatis 銷售報表 |
+| ch51 | 專題總覽與資料模型 | 需求與畫面導覽、8 張表、Flyway（`V1__schema.sql`、`V2__seed.sql` 含預設管理員）、Entity 與 Repository |
+| ch52 | 會員、權限與統一回應 | `AppResponse<T>`、`RspCode`、`BizException`、註冊登入、JWT、`/api/admin/**` 限 ADMIN |
+| ch53 | 商品與後台商品管理 | 商品與規格查詢（分頁、搜尋、排序）、後台商品 CRUD、上下架、圖片上傳、分類快取 |
+| ch54 | 購物車 | 購物車 API、登入後合併、庫存與數量檢查、運費試算 |
+| ch55 | 訂單與模擬付款 | 建立訂單（交易、防超賣、金額重算、明細快照）、訂單狀態、取消、逾時排程、模擬付款 |
+| ch56 | 綠界金流 | 檢查碼與單元測試、產生付款表單、接收付款通知、結果頁轉址、Cloudflare Tunnel、向綠界查詢 |
+| ch57 | 後台訂單與報表 | 出貨、完成、取消、營運摘要、MyBatis 銷售報表 |
 
 **前端不在 Spring Boot 課**：電商畫面全部放在 Angular 課；Spring Boot 課只講後端，前端用 API 測試工具或瀏覽器開發者工具驗證。原本 Spring Boot ch53（問卷的 Angular 前端舊內容）隨問卷專題一起淘汰。
 
