@@ -50,5 +50,5 @@ stages:
   - title: 專題：轉角咖啡一頁式網站
     desc: 把前後端兜起來，完成菜單與訂位
     items:
-      - { soon: "前後端串接：CORS、同時啟動兩端、看懂瀏覽器的網路請求", course: springboot }
-      - { soon: "專題整合：轉角咖啡一頁式網站", note: "照 specs/CAFE-SPEC.md 實作並逐項驗收" }
+      - { course: springboot, chapters: [49, 50] }
+      - { course: angular, chapters: [58] }

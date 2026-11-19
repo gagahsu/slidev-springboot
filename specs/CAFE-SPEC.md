@@ -149,9 +149,9 @@ reservations（獨立，不跟其他表關聯）
 | Spring Boot ch12–21 | 菜單 API（GET）、訂位 API（POST、`@RequestBody`）、RESTful 路徑設計 |
 | Spring Boot ch22–23、26–28 | 連上 MySQL，`Product` / `Category` / `Reservation` 的 JPA Entity 與 Repository |
 | Spring Boot ch36–37、39、41 | 三層分工、DTO、訂位欄位檢查與錯誤回應 |
-| **新章：前後端串接** | CORS、兩邊同時啟動、Angular 呼叫自己的 API、用瀏覽器開發者工具看請求、常見錯誤（CORS、404、400） |
+| **Spring Boot ch49 前後端串接** | CORS、兩邊同時啟動、Angular 呼叫自己的 API、用瀏覽器開發者工具看請求、常見錯誤（CORS、404、400） |
 | Angular ch12–30 | TypeScript、元件、繫結、`@for` / `@if`、呼叫 API |
-| **新章：專題整合** | 照本規格把前後端兜起來，逐項對照 §9 驗收 |
+| **Spring Boot ch50 專題後端、Angular ch58 專題前端** | 照本規格把前後端兜起來，逐項對照 §9 驗收；參考解答在 `projects/cafe-api`、`projects/cafe-web` |
 
 > 現有教材的例子（Spring Boot 的小明、飲料店、學校教務處）**不用改成咖啡店**；咖啡店只出現在專題、練習題和新章。
 

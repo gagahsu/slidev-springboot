@@ -20,29 +20,18 @@ export class MenuComponent implements OnInit {
 
   ngOnInit(): void {
     this.api.getCategories().subscribe({
-      next: (data) => {
-        this.categories = data;
-        this.loadProducts();
-      },
+      next: (cats) => this.api.getProducts().subscribe({
+        next: (data) => {
+          this.products = data;
+          // 只留下有品項的分類，預設選第一個
+          this.categories = cats.filter((c) => data.some((p) => p.categoryId === c.id));
+          this.selectedId = this.categories[0]?.id ?? 0;
+          this.loading = false;
+        },
+        error: () => this.showError(),
+      }),
       error: () => this.showError(),
     });
-  }
-
-  loadProducts(): void {
-    this.api.getProducts().subscribe({
-      next: (data) => {
-        this.products = data;
-        // 只顯示有供應中品項的分類，預設選第一個
-        this.categories = this.categories.filter((c) => data.some((p) => p.categoryId === c.id));
-        this.selectedId = this.categories[0]?.id ?? 0;
-        this.loading = false;
-      },
-      error: () => this.showError(),
-    });
-  }
-
-  select(id: number): void {
-    this.selectedId = id;
   }
 
   // 目前選中分類的品項

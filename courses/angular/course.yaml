@@ -23,6 +23,7 @@ units:
   - { title: 版面與表單, desc: 後台版型、動態表單、RWD, from: 48, to: 53, color: green }
   - { title: 打包與部署, desc: 打包上線，作品見天日, from: 54, to: 55, color: blue }
   - { title: 綜合練習與總複習, desc: 員工管理系統實作、全課程總複習, from: 56, to: 57, color: purple }
+  - { title: 實戰專題, desc: 轉角咖啡一頁式網站、線上商店, from: 58, to: 99, color: orange }
 
 chapters:
   ch01: { title: "前端開發介紹", subtitle: "Frontend Intro" }
@@ -82,3 +83,4 @@ chapters:
   ch55: { title: "Angular 部署", subtitle: "Firebase Hosting" }
   ch56: { title: "綜合練習 Ch32–39", subtitle: "員工管理系統實作" }
   ch57: { title: "全課程總複習 Ch1–55", subtitle: "九站速記・快問快答・易錯 Top 10" }
+  ch58: { title: "專題：轉角咖啡前端", subtitle: "元件拼頁面 / 菜單 API / 訂位表單" }

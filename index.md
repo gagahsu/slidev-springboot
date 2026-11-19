@@ -319,28 +319,13 @@ style: |
     </Link>
     <Link to="ch49" class="chapter-card">
       <div class="chapter-num">Ch 49</div>
-      <div>實戰專題（一）：專案總覽與資料模型</div>
-      <div class="chapter-subtitle">Entity 關聯 / @Query / 專案結構</div>
+      <div>前後端串接</div>
+      <div class="chapter-subtitle">CORS / 同時啟動 / 開發者工具查錯</div>
     </Link>
     <Link to="ch50" class="chapter-card">
       <div class="chapter-num">Ch 50</div>
-      <div>實戰專題（二）：統一回應與登入</div>
-      <div class="chapter-subtitle">AppResponse / BizException / JWT / CORS</div>
-    </Link>
-    <Link to="ch51" class="chapter-card">
-      <div class="chapter-num">Ch 51</div>
-      <div>實戰專題（三）：後台問卷管理</div>
-      <div class="chapter-subtitle">巢狀 DTO / Session 暫存 / 統計</div>
-    </Link>
-    <Link to="ch52" class="chapter-card">
-      <div class="chapter-num">Ch 52</div>
-      <div>實戰專題（四）：前台作答流程</div>
-      <div class="chapter-subtitle">三步驟作答 / 重複檢查 / 個人紀錄</div>
-    </Link>
-    <Link to="ch53" class="chapter-card">
-      <div class="chapter-num">Ch 53</div>
-      <div>實戰專題（五）：前端 Angular</div>
-      <div class="chapter-subtitle">Angular / Material / Chart.js</div>
+      <div>專題：轉角咖啡後端</div>
+      <div class="chapter-subtitle">菜單 API / 訂位 API / 統一錯誤格式</div>
     </Link>
 
   </div>
@@ -491,18 +476,9 @@ src: ./courses/springboot/47-jwt.md
 src: ./courses/springboot/48-spring-cloud.md
 ---
 ---
-src: ./courses/springboot/49-dynamic-survey-model.md
+src: ./courses/springboot/49-frontend-backend.md
 ---
 ---
-src: ./courses/springboot/50-dynamic-survey-auth.md
----
----
-src: ./courses/springboot/51-dynamic-survey-admin.md
----
----
-src: ./courses/springboot/52-dynamic-survey-answer.md
----
----
-src: ./courses/springboot/53-dynamic-survey-frontend.md
+src: ./courses/springboot/50-cafe-backend.md
 ---
 

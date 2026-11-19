@@ -25,7 +25,7 @@ units:
   - { title: 架構與實務, desc: MVC 分層、資料物件、API 文件與驗證, from: 36, to: 41, color: orange }
   - { title: 進階功能, desc: Session、測試與日誌、排程、快取, from: 42, to: 45, color: pink }
   - { title: 安全與微服務, desc: Spring Security、JWT、Spring Cloud, from: 46, to: 48, color: teal }
-  - { title: 實戰專題, desc: 把整門課串起來的完整專案, from: 49, to: 99, color: yellow }
+  - { title: 實戰專題, desc: 前後端串接、轉角咖啡與線上商店, from: 49, to: 99, color: yellow }
 
 # 章節卡片的標題與副標（可省略：沒寫的章節用該章第一頁 frontmatter 的 title）
 chapters:
@@ -77,8 +77,5 @@ chapters:
   ch46: { title: "Spring Security", subtitle: "SecurityFilterChain / BCrypt / CSRF" }
   ch47: { title: "JWT 認證", subtitle: "jjwt / OncePerRequestFilter / Stateless" }
   ch48: { title: "Spring Cloud 微服務", subtitle: "Eureka / Gateway / OpenFeign / Config" }
-  ch49: { title: "實戰專題（一）：專案總覽與資料模型", subtitle: "Entity 關聯 / @Query / 專案結構" }
-  ch50: { title: "實戰專題（二）：統一回應與登入", subtitle: "AppResponse / BizException / JWT / CORS" }
-  ch51: { title: "實戰專題（三）：後台問卷管理", subtitle: "巢狀 DTO / Session 暫存 / 統計" }
-  ch52: { title: "實戰專題（四）：前台作答流程", subtitle: "三步驟作答 / 重複檢查 / 個人紀錄" }
-  ch53: { title: "實戰專題（五）：前端 Angular", subtitle: "Angular / Material / Chart.js" }
+  ch49: { title: "前後端串接", subtitle: "CORS / 同時啟動 / 開發者工具查錯" }
+  ch50: { title: "專題：轉角咖啡後端", subtitle: "菜單 API / 訂位 API / 統一錯誤格式" }

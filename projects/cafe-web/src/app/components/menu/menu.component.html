@@ -8,7 +8,7 @@
   } @else {
     <div class="tabs">
       @for (c of categories; track c.id) {
-        <button [class.active]="c.id === selectedId" (click)="select(c.id)">{{ c.name }}</button>
+        <button [class.active]="c.id === selectedId" (click)="selectedId = c.id">{{ c.name }}</button>
       }
     </div>
 
