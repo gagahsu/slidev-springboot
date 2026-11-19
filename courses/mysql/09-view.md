@@ -361,25 +361,25 @@ layout: default
 ---
 
 # 練習 1：任務說明
-### 把「問卷狀態」與「作答人數」封裝成 VIEW
+### 把「訂單摘要」與「每日營業額」封裝成 VIEW
 
-前台、後台列表都要顯示狀態與作答人數，每個查詢都寫一次太麻煩。請在 `dynamic_survey` 用 VIEW 封裝：
+後台的訂單列表和營運摘要，每次都要 JOIN、算狀態、加總金額，寫起來很長。請在 `cafe_shop` 用 VIEW 封裝：
 
 **任務：**
-1. 建立 `survey_status_view`：`id`、`title`、`start_date`、`end_date`、`published`，以及計算出來的 `status`
-2. 建立 `survey_response_count_view`：每份問卷的 `survey_id`、`title`、`response_count`（沒人作答也要出現，人數為 0）
-3. 結合兩個 VIEW，找出進行中的問卷裡，作答人數最多的前三名
+1. 建立 `order_summary_view`：訂單 `id`、`order_no`、會員姓名、中文狀態（待付款 / 已付款 / 已出貨 / 已完成 / 已取消）、商品件數、`total_amount`、`created_at`
+2. 建立 `daily_sales_view`：每天的訂單數與營業額，**只算已付款、已出貨、已完成**的訂單
+3. 用 `daily_sales_view` 找出近 7 天（含今天）營業額最高的 3 天
 
 <!--
-前台和後台都要顯示問卷狀態和作答人數。之前我們已經寫過這些查詢，這題要把它們包成 VIEW，之後就不用重寫了。
+第一題，我們把後台常用的兩個查詢封裝成 VIEW。先執行 `sql/cafe_shop/schema.sql` 和 `seed.sql`，取得線上商店的範例資料。
 
-第一個 VIEW 用的是 DQL 那一章寫過的 CASE。第二個 VIEW 要用 LEFT JOIN，保留沒人作答的問卷。第三個任務，就把兩個 VIEW 當成普通的表來 JOIN。
+訂單摘要要 JOIN 會員和訂單明細，狀態要從英文代碼轉成中文，商品件數要把明細的數量加總。每日營業額要注意，待付款和已取消的訂單不能算進去。
 
-思考一下，VIEW 裡的狀態，是建立那天就固定了，還是每次查詢才計算？
+思考一下，第一題的 CASE 和 GROUP BY 放在 VIEW 裡，之後查詢 VIEW 的人還需要知道這些細節嗎？
 
 我們先暫停一下，自己動手寫寫看。
 
-【講師】給大家十分鐘，可以請同學先翻出 DQL 那一章的 CASE 解答。
+【講師】給大家十到十五分鐘，第一題比較長，可以先寫出 SELECT，確認結果對了再包成 VIEW。
 -->
 
 ---
@@ -389,28 +389,29 @@ layout: default
 # 練習 1：解題提示
 
 ```sql
--- 1. 問卷狀態 VIEW
-CREATE OR REPLACE VIEW survey_status_view AS
-SELECT id, title, start_date, end_date, published,
-  CASE
-    WHEN published = 0          THEN '未發佈'
-    WHEN CURDATE() < start_date THEN '尚未開始'
-    WHEN CURDATE() <= end_date  THEN '進行中'
-    ELSE '已結束'
-  END AS status
-FROM surveys;
+CREATE VIEW order_summary_view AS
+SELECT o.id, o.order_no, u.name AS member_name,
+  CASE o.status
+    WHEN 'PENDING_PAYMENT' THEN '待付款'
+    WHEN 'PAID'            THEN '已付款'
+    WHEN 'SHIPPED'         THEN '已出貨'
+    WHEN 'COMPLETED'       THEN '已完成'
+    ELSE '已取消'
+  END AS status_label,
+  SUM(i.quantity) AS item_count,
+  o.total_amount, o.created_at
+FROM orders o
+  JOIN users u       ON o.user_id = u.id
+  JOIN order_items i ON i.order_id = o.id
+GROUP BY o.id, o.order_no, u.name, o.status, o.total_amount, o.created_at;
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 VIEW 存的是<b>查詢定義</b>，不是資料。<code>CURDATE()</code> 每次查詢都重新計算，狀態永遠跟著今天走。
-</div>
-
 <!--
-第一個 VIEW 就是把 CASE 包起來。
+第一題。CASE 把英文的狀態代碼轉成中文，這裡用的是 CASE 的另一種寫法：CASE 後面直接放欄位，WHEN 後面放要比對的值，比較簡潔。
 
-這也回答了剛才的思考題。VIEW 存的是查詢定義，不是資料，所以 `CURDATE()` 是每次查詢時才計算。今天建立的 VIEW，明天查詢，狀態就會跟著明天走，不需要任何排程去更新。
+訂單和明細是一對多，JOIN 之後一張訂單會變成好幾列，所以要依訂單分組，再用 SUM 加總數量。
 
-這也是我們當初決定不把狀態存進資料庫的好處。
+這也回答了剛才的思考題。建好之後，查詢的人只要寫 `SELECT * FROM order_summary_view`，完全不用知道背後有 JOIN、CASE 和 GROUP BY。執行看看，會看到十張訂單，最新的是王小明一張待付款的訂單。
 -->
 
 ---
@@ -420,32 +421,29 @@ layout: default
 # 練習 1：解題提示（續）
 
 ```sql
--- 2. 每份問卷的作答人數（含 0 人）
-CREATE OR REPLACE VIEW survey_response_count_view AS
-SELECT s.id AS survey_id, s.title,
-       COUNT(r.id) AS response_count
-FROM surveys s
-LEFT JOIN survey_responses r ON r.survey_id = s.id
-GROUP BY s.id, s.title;
+-- 2. 每日營業額：只算有效的訂單
+CREATE VIEW daily_sales_view AS
+SELECT DATE(created_at) AS sales_date,
+       COUNT(*) AS order_count,
+       SUM(total_amount) AS revenue
+FROM orders
+WHERE status IN ('PAID', 'SHIPPED', 'COMPLETED')
+GROUP BY DATE(created_at);
 
--- 3. 進行中的問卷，作答人數前三名
-SELECT v.id, v.title, c.response_count
-FROM survey_status_view v
-INNER JOIN survey_response_count_view c
-        ON c.survey_id = v.id
-WHERE v.status = '進行中'
-ORDER BY c.response_count DESC
+-- 3. 近 7 天營業額最高的 3 天
+SELECT sales_date, revenue
+FROM daily_sales_view
+WHERE sales_date >= CURDATE() - INTERVAL 6 DAY
+ORDER BY revenue DESC
 LIMIT 3;
 ```
 
 <!--
-第二個 VIEW 用 LEFT JOIN 保留沒人作答的問卷。`COUNT(r.id)` 不算 NULL，所以問卷 4 和 5 的人數是零。
+第二題，`DATE` 函式把日期時間只留下日期，再依日期分組。WHERE 用 IN 列出三種有效的狀態，待付款和已取消就不會被算進營業額。
 
-第三個任務，`status` 已經是 VIEW 裡算好的欄位，外層的 WHERE 可以直接用。這樣就不會有 DQL 那一章別名不能放在 WHERE 的問題。
+第三題，查詢 VIEW 就跟查詢一般的表一樣，可以加 WHERE、ORDER BY 和 LIMIT。今天往前推六天，加上今天，就是近七天。
 
-執行結果是午餐偏好調查四人，課程回饋調查兩人，新品口味調查一人。
-
-別忘了，VIEW 是讓查詢更好寫的工具，不是讓查詢變快的工具。
+範例資料的日期都相對於今天，所以隨時執行，結果都是三天前一千八百九十元最高，四天前一千三百九十元第二，今天一千兩百六十元第三。
 -->
 
 ---
@@ -453,13 +451,13 @@ layout: default
 ---
 
 # 練習 2：任務說明
-### 用 VIEW 保護作答者的個資
+### 用 VIEW 保護會員的個資
 
-作答紀錄有姓名、手機和 Email，客服和數據分析師不該看到完整資料：
+會員資料有手機、Email 和密碼雜湊，客服和數據分析師不該看到完整資料：
 
 **任務：**
-1. 建立 `response_masked_view`（給客服）：`id`、`survey_id`、`name`、遮罩後的手機（`0933***006`）、遮罩後的 Email（`a6***@example.com`）、`age`、`submitted_at`
-2. 建立 `answer_stats_view`（給分析師）：只有 `question_id` 與 `answer_text`
+1. 建立 `member_masked_view`（給客服）：`id`、`name`、遮罩後的手機（`0912***678`）、遮罩後的 Email（`us***@cornercafe.test`）、`role`、`created_at`，**不含密碼**
+2. 建立 `sales_item_view`（給分析師）：下單日期、商品名稱、規格名稱、數量、小計，只算有效訂單，**不含收件人資料**
 3. 說明為什麼這些 VIEW 比直接開放資料表權限更安全
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
@@ -467,15 +465,15 @@ layout: default
 </div>
 
 <!--
-第二題換到安全性的應用。作答紀錄裡有手機和 Email，不是每個人都該看到完整的資料。
+第二題換個角度，用 VIEW 保護個資。客服需要確認是哪位會員，但不需要看到完整的手機和 Email，更不能看到密碼。分析師只需要銷售數字，不需要知道東西寄到哪裡。
 
-請大家幫客服建立一個遮罩個資的 VIEW，再幫數據分析師建立一個只有題目編號和答案的 VIEW。字串函式的用法，畫面上都有提示。
+提示裡列了幾個字串函式，可以把手機和 Email 的中間遮起來。
 
-思考一下，分析師要做統計，真的需要知道每個答案是誰填的嗎？
+思考一下，如果直接給客服 `users` 表的查詢權限，會有什麼風險？
 
 我們先暫停一下，自己動手寫寫看。
 
-【講師】給大家十分鐘，可以先示範一次 `SUBSTRING_INDEX` 的結果。
+【講師】給大家十分鐘，遮罩的格式可以讓同學自由發揮，重點是敏感欄位不能出現在 VIEW 裡。
 -->
 
 ---
@@ -485,27 +483,29 @@ layout: default
 # 練習 2：解題提示
 
 ```sql
--- 1. 遮罩個資（給客服）
-CREATE OR REPLACE VIEW response_masked_view AS
-SELECT id, survey_id, name,
-  CONCAT(LEFT(phone, 4), '***', RIGHT(phone, 3))
-    AS masked_phone,
-  CONCAT(LEFT(email, 2), '***@',
-         SUBSTRING_INDEX(email, '@', -1))
-    AS masked_email,
-  age, submitted_at
-FROM survey_responses;
+-- 1. 給客服：遮罩手機與 Email，不含密碼
+CREATE VIEW member_masked_view AS
+SELECT id, name,
+  CONCAT(LEFT(phone, 4), '***', RIGHT(phone, 3)) AS phone,
+  CONCAT(LEFT(email, 2), '***@', SUBSTRING_INDEX(email, '@', -1)) AS email,
+  role, created_at
+FROM users;
 
--- 2. 只有答案，沒有人（給分析師）
-CREATE OR REPLACE VIEW answer_stats_view AS
-SELECT question_id, answer_text
-FROM response_answers;
+-- 2. 給分析師：只有銷售數字，沒有收件人資料
+CREATE VIEW sales_item_view AS
+SELECT DATE(o.created_at) AS order_date,
+       i.product_name, i.variant_name, i.quantity, i.subtotal
+FROM order_items i
+  JOIN orders o ON i.order_id = o.id
+WHERE o.status IN ('PAID', 'SHIPPED', 'COMPLETED');
 ```
 
 <!--
-第一個 VIEW 用字串函式把個資遮起來。執行後，手機 0933000006 會顯示成前四碼加星號再加後三碼，Email 也只留前兩碼和網域。要注意，遮罩只發生在查詢輸出的時候，資料庫裡存的仍然是完整資料。
+第一題，手機取前四碼和後三碼，中間補三個星號；Email 取前兩個字元，加上星號和 @ 後面的網域。密碼雜湊根本不放進 VIEW，客服就不可能看到。
 
-第二個 VIEW 更簡單，只有兩個欄位。這也回答了剛才的思考題，分析師只需要知道哪一題、答了什麼，不需要知道是誰答的。
+第二題，分析師的 VIEW 只有日期、商品、規格、數量和小計。收件人的姓名、電話和地址都在 `orders` 表裡，我們沒有選，所以完全不會出現。
+
+試著用 `sales_item_view` 算每個商品的銷售額，會看到綜合濾掛包賣得最好，共兩千三百八十元。
 -->
 
 ---
@@ -514,27 +514,26 @@ layout: default
 
 # 練習 2：解題提示（續）
 
-```sql
--- 3. 帳號只拿到 VIEW 的權限
-CREATE USER 'support'@'%' IDENTIFIED BY 'change-me';
-CREATE USER 'analyst'@'%' IDENTIFIED BY 'change-me';
+**為什麼 VIEW 比直接開放資料表安全？**
 
-GRANT SELECT ON dynamic_survey.response_masked_view
-  TO 'support'@'%';
-GRANT SELECT ON dynamic_survey.answer_stats_view
-  TO 'analyst'@'%';
+| 直接開放 `users` 表 | 開放 `member_masked_view` |
+| --- | --- |
+| 看得到完整手機、Email | 只看得到遮罩後的資料 |
+| 看得到密碼雜湊 | 根本沒有密碼欄位 |
+| 以後新增敏感欄位，也會自動看得到 | 只有 VIEW 定義裡選的欄位 |
+
+```sql
+-- 建立客服帳號，只給它 VIEW 的查詢權限，不給原始資料表
+CREATE USER 'support'@'%' IDENTIFIED BY 'Support1234';
+GRANT SELECT ON cafe_shop.member_masked_view TO 'support'@'%';
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>最小權限原則：</b>客服只看得到遮罩後的資料，分析師完全看不到作答者。就算帳號被盜用，外洩範圍也有限。
-</div>
-
 <!--
-第三個任務的關鍵在權限。這兩個帳號只拿到 VIEW 的查詢權限，沒有原始資料表的權限，所以繞不過 VIEW。
+第三題。直接開放資料表，客服看得到完整的手機、Email，甚至密碼雜湊。密碼雖然加密過，外洩之後還是可能被暴力破解。
 
-這就是最小權限原則，每個使用者只拿到真正需要的權限。就算其中一個帳號外洩，也看不到完整的個資。
+VIEW 就像一扇只開了幾個格子的窗戶，客服只看得到我們選出來、而且已經遮罩過的欄位。更重要的是，以後 `users` 表新增了身分證字號之類的敏感欄位，VIEW 不會自動多出這一欄。
 
-實際上，我們的 Spring Boot 專案只會用一個帳號連線，所以這裡算是觀念練習。不過報表和客服系統各用不同帳號，在公司裡是很常見的做法。
+搭配權限設定，先建立客服專用的帳號，只給它 VIEW 的查詢權限，不給原始資料表的權限，個資就有兩層保護。注意 MySQL 8 之後，GRANT 不會自動幫我們建立帳號，所以要先 CREATE USER。
 -->
 
 ---

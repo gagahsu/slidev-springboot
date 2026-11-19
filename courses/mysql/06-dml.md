@@ -471,30 +471,31 @@ layout: default
 ---
 
 # 練習 1：任務說明
-### 動態問卷：後台的新增、發佈與刪除
+### 轉角咖啡：菜單的新增、調價與下架
 
-請重新執行 `sql/schema.sql` 與 `sql/seed.sql` 重置資料，再模擬管理員的操作：
+請重新執行 `sql/corner_cafe/schema.sql` 與 `sql/corner_cafe/seed.sql` 重置資料，再模擬老闆整理菜單：
 
 **任務：**
-1. 新增問卷「社團博覽會意見調查」，開始日期為今天 + 2、結束日期為今天 + 7，先不發佈
-2. 批次新增兩個題目：「你會參加嗎？」（單選、必填）、「其他建議」（文字）
-3. 按下「儲存並發佈」：把這份問卷的 `published` 改成 1
-4. 管理員勾選了問卷 2、4、5 要刪除，但只有未發佈或尚未開始的問卷可以刪。先 SELECT 確認，再 DELETE
+1. 新增品項「冰滴咖啡」到咖啡分類（`category_id = 1`）：說明「低溫萃取 12 小時」、價格 150、排序 5
+2. 一次新增兩個甜點（`category_id = 3`）：「提拉米蘇」160 元、「肉桂捲」95 元
+3. 咖啡豆漲價：咖啡分類的品項**全部加 10 元**
+4. 巴斯克乳酪（`id = 9`）今天賣完了：改成暫停供應
+5. 清掉已經過去的訂位。先 SELECT 確認，再 DELETE
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>提示：</b><code>DATE_ADD(CURDATE(), INTERVAL 2 DAY)</code> 算出兩天後；<code>SET @sid = LAST_INSERT_ID();</code> 記下剛新增的 id。
+💡 <b>提示：</b>一次新增多筆：<code>INSERT INTO 表 (欄位…) VALUES (…), (…);</code>　暫停供應不是刪除，是把 <code>available</code> 改成 0。
 </div>
 
 <!--
-這題模擬管理員在後台的三個動作，新增、發佈和批次刪除。
+這一題模擬老闆整理菜單的日常操作：上新品、調價格、標示賣完，再清掉過期的訂位。
 
-題目要掛在剛新增的問卷底下，可是 id 是自動產生的，要怎麼知道？畫面上的 `LAST_INSERT_ID` 就能取回它，再存到變數 `@sid` 裡。
+第一、二題練習 INSERT，第二題一次新增兩筆。第三題是批次修改，第四題是改單一筆。第五題要刪除資料，請一定先 SELECT 看看會刪到哪些，再執行 DELETE。
 
-思考一下，問卷 2 也被勾選了，但它正在進行中，不能刪。這個規則要怎麼寫進 DELETE？
+思考一下，第三題的 UPDATE 如果忘了寫 WHERE，會發生什麼事？
 
-我們先暫停一下，自己動手試試看。
+我們先暫停一下，自己動手寫寫看。
 
-【講師】給大家十五分鐘，提醒同學先重置資料，才會和解答的結果一致。
+【講師】給大家十分鐘，提醒同學每一步做完都 SELECT 確認結果。
 -->
 
 ---
@@ -504,31 +505,27 @@ layout: default
 # 練習 1：解題提示
 
 ```sql
--- 1. 新增問卷（published 預設就是 0，也就是先不發佈）
-INSERT INTO surveys
-  (title, description, start_date, end_date)
-VALUES ('社團博覽會意見調查', '你對博覽會有什麼想法？',
-        DATE_ADD(CURDATE(), INTERVAL 2 DAY),
-        DATE_ADD(CURDATE(), INTERVAL 7 DAY));
+-- 1. 新增一筆
+INSERT INTO products (category_id, name, description, price, sort_order)
+VALUES (1, '冰滴咖啡', '低溫萃取 12 小時', 150, 5);
 
--- 2. 記下剛新增的 id，批次新增題目
-SET @sid = LAST_INSERT_ID();
-INSERT INTO questions
-  (survey_id, title, type, required, order_index)
-VALUES (@sid, '你會參加嗎？', 'SINGLE', 1, 1),
-       (@sid, '其他建議',     'TEXT',   0, 2);
+-- 2. 一次新增兩筆（沒寫的欄位用預設值）
+INSERT INTO products (category_id, name, price, sort_order)
+VALUES (3, '提拉米蘇', 160, 4),
+       (3, '肉桂捲',   95, 5);
 
--- 3. 儲存並發佈
-UPDATE surveys SET published = 1
-WHERE id = @sid AND published = 0;
+-- 3. 咖啡分類全部加 10 元
+UPDATE products SET price = price + 10 WHERE category_id = 1;
 ```
 
 <!--
-第一步沒有寫 `published`，因為它的預設值就是 0，正好是先不發佈。
+第一題，`available` 和 `created_at` 沒有寫，就會用建表時設定的預設值：供應中、現在的時間。
 
-第二步用 `LAST_INSERT_ID` 取回剛產生的 id。它只看自己這條連線，就算別人同時也在新增，也不會拿到別人的 id。
+第二題一次新增兩筆，用逗號隔開每一組 VALUES。
 
-第三步的 UPDATE 多加了 `published = 0` 的條件。已經發佈過的問卷就不會被重複修改，這也是 UPDATE 一定要寫好 WHERE 的好習慣。
+第三題回答剛才的思考題。如果忘了寫 WHERE，整張表的價格都會加十元，連甜點和茶飲都漲價了。所以 UPDATE 和 DELETE 一定要先確認 WHERE。
+
+`price = price + 10` 的意思是：拿目前的價格加十，再存回去。執行後，美式咖啡從九十變成一百，連剛新增的冰滴咖啡也變成一百六十。
 -->
 
 ---
@@ -538,27 +535,29 @@ layout: default
 # 練習 1：解題提示（續）
 
 ```sql
--- 4. 先用同樣的條件 SELECT 確認範圍
-SELECT id, title FROM surveys
-WHERE id IN (2, 4, 5)
-  AND (published = 0 OR CURDATE() < start_date);
+-- 4. 暫停供應：改狀態，不刪除
+UPDATE products SET available = 0 WHERE id = 9;
 
--- 確認無誤再 DELETE
-DELETE FROM surveys
-WHERE id IN (2, 4, 5)
-  AND (published = 0 OR CURDATE() < start_date);
+-- 5. 先確認會刪到哪些
+SELECT id, name, reserve_date
+FROM reservations
+WHERE reserve_date < CURDATE();
+
+-- 確認沒問題，再刪除
+DELETE FROM reservations
+WHERE reserve_date < CURDATE();
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>結果：</b>只有 4（尚未開始）、5（未發佈）被刪，2（進行中）保留。它們的題目也因為 <code>ON DELETE CASCADE</code> 一起消失。
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>DELETE 前先 SELECT：</b>把同一個 WHERE 先拿去 SELECT，確認筆數和內容都對了，再把 SELECT 換成 DELETE。
 </div>
 
 <!--
-這就回答了剛才的思考題。把可以刪除的規則直接寫進 WHERE，就算問卷 2 在勾選清單裡，也不會被刪掉。
+第四題，賣完了只是暫時的，明天還會再做，所以不刪除，把 `available` 改成 0。菜單查詢只顯示供應中的品項，它就自動從網頁上消失了。
 
-執行前先用一模一樣的條件 SELECT，確認看到的只有問卷 4 和 5，再執行 DELETE。
+第五題先用同樣的條件 SELECT。範例資料裡只有一筆已過去的訂位，是黃小華的包場慶生。確認無誤再執行 DELETE，刪完剩下五筆。
 
-規則寫在 SQL 裡還有一個好處，就算有人繞過畫面直接呼叫後端，進行中的問卷一樣刪不掉。
+這個「先 SELECT、再 DELETE」的習慣請一定要養成。資料刪掉就回不來了。
 -->
 
 ---
@@ -566,25 +565,31 @@ layout: default
 ---
 
 # 練習 2：任務說明
-### 送出一份作答（Transaction）
+### 新增季節分類（Transaction）
 
-使用者按下「確認送出」時，要寫入一筆 `survey_responses`，再寫入每一題的答案 `response_answers`。這兩件事必須**同時成功或同時失敗**。
+老闆要推出「冬季限定」：新增一個分類，再新增兩個品項放進去。這兩件事必須**同時成功或同時失敗**，不能出現空的分類。
 
 **任務：**
-1. 用 Transaction 為問卷 3 新增一份作答：姓名「周小華」、手機 `0933000011`、Email `a11@example.com`、年齡 22；題目 5 選「芝麻」、題目 6 填「黑芝麻香」
-2. 再用**同一個 Email** 對問卷 3 送出第二次，觀察錯誤訊息，並用 `ROLLBACK` 收尾
-3. 查詢確認：問卷 3 目前有幾份作答、剛才那份有幾筆答案
+1. 用 Transaction 新增分類「冬季限定」（排序 6），再新增兩個品項：「薑汁拿鐵」140 元、「熱可可」120 元
+2. 再用 Transaction 新增「春季限定」與品項「櫻花拿鐵」，但價格**不小心打成 -150**，觀察錯誤訊息，並用 `ROLLBACK` 收尾
+3. 查詢確認：「冬季限定」有兩個品項，「春季限定」**沒有**留下來
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>提示：</b>新增分類後，用 <code>SET @cid = LAST_INSERT_ID();</code> 記下它的 id，新增品項時就能用 <code>@cid</code>。
+</div>
 
 <!--
-第二題是使用者按下確認送出時，資料庫要做的事。作答紀錄和每一題的答案要一起寫入，所以要放進同一個交易。
+第二題練習 Transaction。新增分類和新增品項是兩個動作，如果分類建好了、品項卻失敗，網站上就會出現一個空的分類。所以這兩件事要包在同一個交易裡。
 
-第二個步驟要故意重複送出，請大家仔細看 MySQL 回報的錯誤訊息。
+分類的 id 是自動產生的，新增完用 LAST_INSERT_ID 記下來，新增品項時就能用。
 
-思考一下，如果沒有交易，寫完作答紀錄之後，寫入答案時失敗了，資料庫會留下什麼？
+第二小題故意製造錯誤：價格打成負一百五十，會被我們在上一章設的 CHECK 約束擋下來。
+
+思考一下，錯誤發生時，前面已經新增成功的「春季限定」分類，還在不在？
 
 我們先暫停一下，自己動手試試看。
 
-【講師】給大家十分鐘，可以提示這裡也用得到剛才的 `LAST_INSERT_ID`。
+【講師】給大家十分鐘，建議用同一個連線視窗依序執行，才看得到交易的效果。
 -->
 
 ---
@@ -594,27 +599,20 @@ layout: default
 # 練習 2：解題提示
 
 ```sql
--- 1. 一次作答 = 一個 Transaction
+-- 1. 兩件事包在同一個交易
 START TRANSACTION;
-
-INSERT INTO survey_responses
-  (survey_id, name, phone, email, age)
-VALUES (3, '周小華', '0933000011', 'a11@example.com', 22);
-
-SET @rid = LAST_INSERT_ID();
-
-INSERT INTO response_answers
-  (response_id, question_id, answer_text)
-VALUES (@rid, 5, '芝麻'),
-       (@rid, 6, '黑芝麻香');
-
+INSERT INTO categories (name, sort_order) VALUES ('冬季限定', 6);
+SET @cid = LAST_INSERT_ID();
+INSERT INTO products (category_id, name, price, sort_order)
+VALUES (@cid, '薑汁拿鐵', 140, 1),
+       (@cid, '熱可可',   120, 2);
 COMMIT;
 ```
 
 <!--
-`START TRANSACTION` 之後的修改，在 COMMIT 之前都還沒有正式生效。我們先寫入作答紀錄，用 `@rid` 記下它的 id，再把兩筆答案掛上去，最後一起提交。
+第一題。START TRANSACTION 開始交易，接著新增分類，用 LAST_INSERT_ID 記下它的編號，再用這個編號新增兩個品項。兩個 INSERT 都成功了，才 COMMIT 確認寫入。
 
-這也回答了剛才的思考題。如果沒有交易，答案寫入失敗時，資料庫就會留下一筆殘缺的紀錄。它有作答者，卻沒有任何答案，後台看到的就是一份空白的作答。
+COMMIT 之前，這些資料只有這個連線看得到；COMMIT 之後，才真正存進資料庫，別人也看得到。
 -->
 
 ---
@@ -624,28 +622,26 @@ layout: default
 # 練習 2：解題提示（續）
 
 ```sql
--- 2. 同一 Email 重複送出，違反 UNIQUE (survey_id, email)
+-- 2. 第二個品項的價格打錯了
 START TRANSACTION;
-INSERT INTO survey_responses (survey_id, name, phone, email)
-VALUES (3, '周小華', '0933000011', 'a11@example.com');
--- ERROR 1062 (23000): Duplicate entry '3-a11@example.com'
---   for key 'survey_responses.uk_survey_email'
+INSERT INTO categories (name, sort_order) VALUES ('春季限定', 7);
+SET @cid = LAST_INSERT_ID();
+INSERT INTO products (category_id, name, price, sort_order)
+VALUES (@cid, '櫻花拿鐵', -150, 1);
+-- ERROR 3819: Check constraint 'chk_products_price' is violated.
 ROLLBACK;
 
 -- 3. 確認結果
-SELECT COUNT(*) AS response_count
-FROM survey_responses WHERE survey_id = 3;  -- 2
-
-SELECT COUNT(*) AS answer_count
-FROM response_answers WHERE response_id = @rid;  -- 2
+SELECT id, name FROM categories WHERE name LIKE '%季限定';  -- 只有冬季限定（id 6）
+SELECT name, price FROM products WHERE category_id = 6;     -- 薑汁拿鐵、熱可可
 ```
 
 <!--
-第二次送出會被唯一約束擋下來，MySQL 回傳錯誤碼 1062。我們用 ROLLBACK 取消這個交易。
+第二題，新增品項時價格是負數，被 CHECK 約束擋下來，出現 3819 的錯誤。
 
-程式當然可以先查有沒有填過，但兩個請求同時進來時，可能都查到沒填過。所以實務上兩者並用，程式負責給出友善的提示，資料庫約束當最後一道防線。
+這裡回答剛才的思考題。錯誤只讓那一行 INSERT 失敗，前面新增的「春季限定」分類其實還在交易裡。所以要自己下 ROLLBACK，把整個交易撤銷。
 
-最後確認一下，問卷 3 有兩份作答，一份是原本的，一份是周小華的，周小華的作答有兩筆答案。
+第三題確認一下：名稱以「季限定」結尾的分類只有冬季限定，春季限定沒有留下來。冬季限定的編號是 6，底下有薑汁拿鐵和熱可可兩個品項。這就是交易的「全部成功，或全部失敗」。
 -->
 
 ---

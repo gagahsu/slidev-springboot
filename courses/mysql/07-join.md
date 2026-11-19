@@ -364,25 +364,27 @@ layout: default
 ---
 
 # 練習 1：任務說明
-### 動態問卷：後台「問卷回饋」的查詢
+### 轉角咖啡：菜單頁的 JOIN
 
-使用 `dynamic_survey` 資料庫。後台要列出某份問卷的所有作答，點進去還要看細節：
+使用 `corner_cafe` 資料庫（`sql/corner_cafe/schema.sql` + `seed.sql`）。網站的菜單要顯示分類名稱，後台還要檢查分類有沒有內容：
 
 **任務：**
-1. 列出問卷 2 的所有作答，顯示問卷標題、作答者姓名、Email、送出時間，依填寫編號**倒序**（INNER JOIN）
-2. 找出**還沒有任何人作答**的問卷（LEFT JOIN + IS NULL）
-3. 作答紀錄 4 的細節頁：顯示每一題的題目與答案，依題目順序排列
+1. 列出供應中的菜單：分類名稱、品項名稱、價格，依分類的排序、再依品項的排序（INNER JOIN）
+2. 找出**還沒有任何品項**的分類（LEFT JOIN + IS NULL）
+3. 「甜點」分類的所有品項（含暫停供應），顯示名稱、價格、是否供應，依品項排序
 
 <!--
-這一題對應後台的兩個頁面，問卷回饋的列表頁和細節頁。
+第一題就是網站菜單背後的查詢。`products` 只存了分類的編號，畫面上要顯示的是分類名稱，所以要和 `categories` JOIN。
 
-第一題是基本的 INNER JOIN，把作答和問卷接起來，最新的排在最上面。第二題要找出左表有、右表沒有的資料。第三題則是細節頁要顯示的內容。
+第二題，老闆新增了一個分類，但還沒放品項。這種「左邊有、右邊沒有」的資料，要用 LEFT JOIN 找。
 
-思考一下，第三題為什麼要 JOIN `questions`？只查 `response_answers` 不行嗎？
+第三題要用分類名稱篩選，同樣需要 JOIN。
+
+思考一下，第二題如果用 INNER JOIN，查得出來嗎？
 
 我們先暫停一下，自己動手寫寫看。
 
-【講師】給大家十分鐘，範例資料如果被改過，可以依序重新執行 `sql/schema.sql` 和 `sql/seed.sql`。
+【講師】給大家十分鐘，可以先請同學說說每一題的左表應該是誰。
 -->
 
 ---
@@ -392,34 +394,33 @@ layout: default
 # 練習 1：解題提示
 
 ```sql
--- 1. 問卷 2 的作答列表，最新的在最上面
-SELECT s.title, r.id AS response_id, r.name,
-       r.email, r.submitted_at
-FROM survey_responses r
-INNER JOIN surveys s ON s.id = r.survey_id
-WHERE s.id = 2
-ORDER BY r.id DESC;
+-- 1. 供應中的菜單
+SELECT c.name AS category, p.name, p.price
+FROM products p
+  INNER JOIN categories c ON p.category_id = c.id
+WHERE p.available = 1
+ORDER BY c.sort_order, p.sort_order;
 
--- 2. 還沒有人作答的問卷
-SELECT s.id, s.title
-FROM surveys s
-LEFT JOIN survey_responses r ON r.survey_id = s.id
-WHERE r.id IS NULL;
+-- 2. 沒有任何品項的分類
+SELECT c.id, c.name
+FROM categories c
+  LEFT JOIN products p ON p.category_id = c.id
+WHERE p.id IS NULL;
 
--- 3. 作答 4 的細節（題目 + 答案）
-SELECT q.order_index, q.title AS question, a.answer_text
-FROM response_answers a
-INNER JOIN questions q ON q.id = a.question_id
-WHERE a.response_id = 4
-ORDER BY q.order_index;
+-- 3. 甜點分類的所有品項
+SELECT p.name, p.price, p.available
+FROM categories c
+  JOIN products p ON p.category_id = c.id
+WHERE c.name = '甜點'
+ORDER BY p.sort_order;
 ```
 
 <!--
-第一題結果有四筆，編號最大的李佳蓉排在最上面。
+第一題，INNER JOIN 只留下兩邊都對得上的資料。排序用的是分類的 `sort_order`，這樣咖啡會排在茶飲前面，跟網站上的順序一樣。結果有十一個品項，季節水果塔暫停供應，所以沒有出現。
 
-第二題用 LEFT JOIN 保留所有問卷。沒有作答的問卷，右邊的欄位都是 NULL，再用 `r.id IS NULL` 把它們挑出來。結果是問卷 4 和 5。
+第二題回答剛才的思考題。INNER JOIN 會把沒有品項的分類直接丟掉，所以查不出來。LEFT JOIN 會保留左邊所有的分類，右邊對不上的就填 NULL，再用 `p.id IS NULL` 找出來。結果是「季節限定」，老闆下個月才要上新品。
 
-第三題回答剛才的思考題。`response_answers` 只有題目編號，沒有題目文字，所以要 JOIN `questions`。結果有三列，其中多選題的答案是青菜分號滷蛋，顯示時由前端拆開。
+第三題，甜點有三個品項：原味司康、巴斯克乳酪，以及暫停供應的季節水果塔，它的 `available` 是 0。
 -->
 
 ---
@@ -427,27 +428,25 @@ layout: default
 ---
 
 # 練習 2：任務說明
-### 動態問卷：統計與填寫紀錄
+### 轉角咖啡：分類統計
 
 **任務：**
-1. 後台統計：單選題「最喜歡的校園活動」（題目 4）列出**每個選項**被選的次數，**沒人選的選項也要出現**，次數顯示 0
-2. 後台列表：列出每份問卷的作答人數，**沒人作答的問卷也要出現**，依人數由多到少排序
-3. 會員中心：列出每位會員填寫過的問卷標題與送出時間，**沒填過的會員也要出現**
+1. 列出每個分類的品項數，**沒有品項的分類也要出現**，數量顯示 0，依分類排序
+2. 改成只算「供應中」的品項，**沒有供應中品項的分類一樣要出現**
+3. 列出每個分類供應中品項的最低價與最高價，沒有品項的分類顯示 NULL
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>提示：</b>想想看每一題的左表應該是誰。要計算次數時，<code>COUNT(*)</code> 和 <code>COUNT(欄位)</code> 的結果一樣嗎？
+💡 <b>提示：</b>要計算次數時，<code>COUNT(*)</code> 和 <code>COUNT(欄位)</code> 的結果一樣嗎？「只算供應中」的條件，放在 <code>WHERE</code> 和放在 <code>ON</code>，結果一樣嗎？
 </div>
 
 <!--
-第二題的三個查詢，有一個共同點，都要求沒有對應資料的那一方也要出現，這正是 LEFT JOIN 的強項。
+第二題是後台的分類統計，三小題都要讓沒有品項的分類也出現，所以都是 LEFT JOIN 加上 GROUP BY。
 
-關鍵是選對左表。例如要列出所有選項，就要以 `options` 當左表，如果反過來以答案為主，沒人選的選項就不見了。
+這一題藏了兩個常見的陷阱，提示裡已經寫出來了：COUNT 星號和 COUNT 欄位一不一樣？條件放在 WHERE 和放在 ON，又一不一樣？
 
-思考一下，沒有對應資料的時候，`COUNT(*)` 和 `COUNT(a.id)` 算出來的結果一樣嗎？
+請大家實際執行看看，比較結果。
 
-我們先暫停一下，自己動手試試看。
-
-【講師】給大家十分鐘，可以先請同學說說三題的左表各是哪一張。
+【講師】給大家十分鐘，這兩個陷阱很適合讓同學先自己踩一次。
 -->
 
 ---
@@ -457,27 +456,22 @@ layout: default
 # 練習 2：解題提示
 
 ```sql
--- 1. 單選題各選項次數（LEFT JOIN 保留 0 次的選項）
-SELECT o.label, COUNT(a.id) AS votes
-FROM options o
-LEFT JOIN response_answers a
-       ON a.question_id = o.question_id
-      AND a.answer_text = o.label
-WHERE o.question_id = 4
-GROUP BY o.id, o.label, o.order_index
-ORDER BY o.order_index;
+-- 1. COUNT(p.id) 不算 NULL，空分類才會是 0
+SELECT c.name, COUNT(p.id) AS cnt
+FROM categories c
+  LEFT JOIN products p ON p.category_id = c.id
+GROUP BY c.id, c.name
+ORDER BY c.sort_order;
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>結果：</b>運動會 1、園遊會 2、<b>音樂祭 0</b>。答案的比對條件要放在 <code>ON</code>，放到 <code>WHERE</code> 的話，音樂祭就會消失。
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>陷阱一：</b>寫成 <code>COUNT(*)</code>，「季節限定」會顯示 <b>1</b>。LEFT JOIN 幫它補了一列全是 NULL 的資料，<code>COUNT(*)</code> 也把這一列算進去；<code>COUNT(p.id)</code> 不算 NULL，才是正確的 0。
 </div>
 
 <!--
-`options` 是左表，所以每個選項至少出現一次。這也回答了剛才的思考題，沒有對應答案時，`a.id` 是 NULL，`COUNT(a.id)` 不算它，結果就是零。如果寫成 `COUNT(*)`，會把這一列算成一，答案就錯了。
+第一題，用 LEFT JOIN 保留所有分類，再依分類分組計數。結果是咖啡四項、茶飲三項、甜點三項、輕食兩項、季節限定零項。
 
-另外，比對答案的條件要放在 ON。放到 WHERE 的話，NULL 那一列會被刷掉，音樂祭就消失了。
-
-多選題的答案串成字串，比對比較麻煩，後端課程再處理。
+這裡是第一個陷阱。如果寫成 COUNT 星號，季節限定會變成一。因為 LEFT JOIN 幫它補了一列全是 NULL 的資料，COUNT 星號只看「有幾列」，就把這一列也算進去了。COUNT 欄位會跳過 NULL，所以要數右表的欄位，例如 `p.id`。
 -->
 
 ---
@@ -487,27 +481,31 @@ layout: default
 # 練習 2：解題提示（續）
 
 ```sql
--- 2. 每份問卷的作答人數（含 0 人）
-SELECT s.id, s.title, COUNT(r.id) AS response_count
-FROM surveys s
-LEFT JOIN survey_responses r ON r.survey_id = s.id
-GROUP BY s.id, s.title
-ORDER BY response_count DESC, s.id;
+-- 2. 條件放在 ON：先篩選右表，再保留左表
+SELECT c.name, COUNT(p.id) AS cnt
+FROM categories c
+  LEFT JOIN products p ON p.category_id = c.id AND p.available = 1
+GROUP BY c.id, c.name
+ORDER BY c.sort_order;
 
--- 3. 每位會員的填寫紀錄（含沒填過的會員）
-SELECT u.name, s.title, r.submitted_at
-FROM users u
-LEFT JOIN survey_responses r ON r.user_id = u.id
-LEFT JOIN surveys s ON s.id = r.survey_id
-ORDER BY u.id, r.submitted_at DESC;
+-- 3. 最低價與最高價
+SELECT c.name, MIN(p.price) AS min_price, MAX(p.price) AS max_price
+FROM categories c
+  LEFT JOIN products p ON p.category_id = c.id AND p.available = 1
+GROUP BY c.id, c.name
+ORDER BY c.sort_order;
 ```
 
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
+⚠️ <b>陷阱二：</b>寫成 <code>WHERE p.available = 1</code>，「季節限定」會整列消失。補出來的 NULL 不等於 1，被 WHERE 篩掉，LEFT JOIN 就變得跟 INNER JOIN 一樣。
+</div>
+
 <!--
-第二題的寫法和剛才一樣，以 `surveys` 當左表，用 `COUNT(r.id)` 計算。問卷 4 和 5 沒有人作答，人數就顯示零。
+第二題是第二個陷阱。如果把 `p.available = 1` 寫在 WHERE，季節限定整列會消失。因為 WHERE 在 JOIN 之後才執行，補出來的那一列 `available` 是 NULL，不等於一，就被篩掉了。
 
-第三題要接兩次 LEFT JOIN。第二個如果寫成 INNER JOIN，沒填過問卷的會員又會被刷掉。
+條件放在 ON，意思是「JOIN 的時候只找供應中的品項」，找不到的分類還是會被保留下來。結果是咖啡四項、茶飲三項、甜點兩項、輕食兩項、季節限定零項。甜點少了暫停供應的季節水果塔。
 
-執行後，管理員沒填過問卷，所以問卷標題和送出時間都是 NULL。王小明有三筆紀錄，林美玲有兩筆，訪客因為沒有會員資料，不會出現在這裡。
+第三題用同樣的寫法，季節限定沒有品項，最低價和最高價都是 NULL。
 -->
 
 ---

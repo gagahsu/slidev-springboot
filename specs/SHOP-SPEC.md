@@ -49,9 +49,10 @@
 | `role` | `ADMIN` |
 
 - 教材要提醒：正式上線前一定要改密碼，或改用環境變數在啟動時建立管理員。
-- 範例資料另外建 2 個一般會員（`user1@cornercafe.test`、`user2@cornercafe.test`），方便示範訂單與權限。
+- 範例資料另外建 3 個一般會員（`user1～3@cornercafe.test`，密碼都是 `User1234`；user3 還沒下過單），方便示範訂單、權限與「沒有訂單的會員」。
+- 實際的建表與範例資料：`courses/mysql/sql/cafe_shop/schema.sql`、`seed.sql`（MySQL 9.7 驗證過；8 張表，訂單時間相對於今天）。
 
-## 4. 資料表（9 張）
+## 4. 資料表（8 張）
 
 ```
 users 1 ──< cart_items >── 1 product_variants >── 1 products >── 1 categories
@@ -318,7 +319,7 @@ Angular                    Spring Boot                          綠界（測試�
 | ----------- | ------------ |
 | Git 一般版 ch05、ch09 | 分組開發：功能分支、Git Flow、Pull Request 審查 |
 | Java 進階 | 泛型、enum（訂單狀態）、Optional、例外設計（`BizException`）、多執行緒概念（為什麼會超賣） |
-| MySQL ch02–03 | 正規化、9 張表的關聯設計（為什麼訂單明細要存快照） |
+| MySQL ch02–03 | 正規化、8 張表的關聯設計（為什麼訂單明細要存快照） |
 | MySQL ch08–10 | 商品搜尋的索引、報表查詢（GROUP BY、子查詢）、VIEW |
 | MySQL ch11 | 用 Flyway 管理 `cafe_shop` 的結構 |
 | Spring Boot ch29 | 商品 1—N 規格、訂單 1—N 明細的 JPA 關聯 |
@@ -337,7 +338,7 @@ Spring Boot ch48 Spring Cloud 不在進階學程內。
 
 | 章 | 主題 | 內容 |
 | -- | ---- | ---- |
-| 1 | 專題總覽與資料模型 | 需求與畫面導覽、9 張表、Flyway（`V1__schema.sql`、`V2__seed.sql` 含預設管理員）、Entity 與 Repository |
+| 1 | 專題總覽與資料模型 | 需求與畫面導覽、8 張表、Flyway（`V1__schema.sql`、`V2__seed.sql` 含預設管理員）、Entity 與 Repository |
 | 2 | 會員、權限與統一回應 | `AppResponse<T>`、`RspCode`、`BizException`、註冊登入、JWT、`/api/admin/**` 限 ADMIN |
 | 3 | 商品與後台商品管理 | 商品與規格查詢（分頁、搜尋、排序）、後台商品 CRUD、上下架、圖片上傳、分類快取 |
 | 4 | 購物車 | 購物車 API、登入後合併、庫存與數量檢查、運費試算 |

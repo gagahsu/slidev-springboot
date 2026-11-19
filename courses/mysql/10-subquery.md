@@ -665,25 +665,25 @@ layout: default
 ---
 
 # 練習 1：任務說明
-### 動態問卷：用子查詢與 EXISTS 找答案
+### 轉角咖啡：用子查詢與 EXISTS 找答案
 
-使用 `dynamic_survey` 資料庫（`sql/schema.sql` + `sql/seed.sql`）：
+使用 `cafe_shop` 資料庫（`sql/cafe_shop/schema.sql` + `seed.sql`）。「有效訂單」指狀態是已付款、已出貨或已完成。
 
 **任務：**
-1. 找出作答人數**高於平均**的問卷，顯示 ID、標題、作答人數（平均只算有人作答的問卷）
-2. 「待填寫」清單：找出**進行中**、而且 `ming@example.com` **還沒填過**的問卷（NOT EXISTS）
-3. 找出**有人填寫過**，而且**包含必填題目**的問卷（EXISTS）
+1. 找出金額**高於平均**的有效訂單，顯示訂單編號與金額（平均也只算有效訂單）
+2. 找出**上架中**、但**從來沒有人訂購過**的商品（NOT EXISTS）
+3. 找出**買過「器材」分類**（`category_id = 3`）商品的會員，不算已取消的訂單（EXISTS）
 
 <!--
-這一題有三個問卷系統的真實需求，難度一題比一題高。
+這一題用線上商店的資料，練習三種子查詢。
 
-第一題要比較作答人數和平均，可是平均要先算出每份問卷的人數才能計算。第二題要找不存在的紀錄。第三題有兩個條件，各自對應一個 EXISTS。
+第一題要先算出平均，再拿每張訂單去比，平均要用子查詢算出來。第二題要找「不存在」的資料，用 NOT EXISTS。第三題要找「存在」的資料，用 EXISTS，子查詢裡會用到外層的會員編號。
 
-思考一下，平均人數可以直接寫成 `AVG(COUNT(*))` 嗎？
+思考一下，第一題的平均，能不能直接寫在 WHERE 裡，像 `total_amount > AVG(total_amount)`？
 
 我們先暫停一下，自己動手寫寫看。
 
-【講師】給大家十五分鐘，第一題可以提示先寫出每份問卷的人數。
+【講師】給大家十到十五分鐘，第三題的子查詢要 JOIN 三張表，可以提示同學先單獨寫出子查詢。
 -->
 
 ---
@@ -693,33 +693,31 @@ layout: default
 # 練習 1：解題提示
 
 ```sql
--- 1. 作答人數高於平均的問卷
-SELECT s.id, s.title,
-       (SELECT COUNT(*) FROM survey_responses r
-        WHERE r.survey_id = s.id) AS response_count
-FROM surveys s
-WHERE (SELECT COUNT(*) FROM survey_responses r
-       WHERE r.survey_id = s.id) > (
-        SELECT AVG(cnt)
-        FROM (SELECT COUNT(*) AS cnt
-              FROM survey_responses
-              GROUP BY survey_id) t
-      )
-ORDER BY response_count DESC;
+-- 1. 高於平均的有效訂單
+SELECT order_no, total_amount
+FROM orders
+WHERE status IN ('PAID', 'SHIPPED', 'COMPLETED')
+  AND total_amount > (
+    SELECT AVG(total_amount) FROM orders
+    WHERE status IN ('PAID', 'SHIPPED', 'COMPLETED')
+  )
+ORDER BY total_amount DESC;
+
+-- 2. 上架中、從來沒人訂購過的商品
+SELECT p.id, p.name
+FROM products p
+WHERE p.status = 'ON_SALE'
+  AND NOT EXISTS (
+    SELECT 1 FROM order_items i WHERE i.product_id = p.id
+  );
 ```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>結果：</b>平均是 2.5 人，所以是午餐偏好調查（4 人）和校園活動調查（3 人）。
-</div>
-
 <!--
-先回答思考題，`AVG(COUNT(*))` 是不行的，聚合函式不能這樣巢狀使用。
+第一題回答剛才的思考題。聚合函式不能直接寫在 WHERE 裡，所以用子查詢先把平均算出來，有效訂單的平均是一千一百零三元多。高於平均的有四張：磨豆機那張一千八百九十元最高，接著是一千三百九十、一千兩百八十和一千兩百六十元。
 
-所以我們用衍生表，先算出每份問卷的人數，再取平均，得到二點五。外層再拿每份問卷的人數和它比較。
+第二題，NOT EXISTS 對每一個商品問一次：明細裡找得到這個商品嗎？找不到，就留下來。結果是單品濾掛包，它的規格剛好賣完、庫存是零，所以一直沒有人買到。
 
-每份問卷的人數，用相關子查詢算出來，因為它要參照外層的 `s.id`。
-
-執行後會查到兩份問卷，午餐偏好調查四人，校園活動調查三人。
+子查詢裡的 `SELECT 1` 只是佔位，EXISTS 只在乎有沒有資料，不在乎選了什麼欄位。
 -->
 
 ---
@@ -729,32 +727,30 @@ layout: default
 # 練習 1：解題提示（續）
 
 ```sql
--- 2. 進行中，且 ming 還沒填過的問卷
-SELECT s.id, s.title, s.end_date
-FROM surveys s
-WHERE s.published = 1
-  AND CURDATE() BETWEEN s.start_date AND s.end_date
-  AND NOT EXISTS (
-    SELECT 1 FROM survey_responses r
-    WHERE r.survey_id = s.id
-      AND r.email = 'ming@example.com'
-  );
-
--- 3. 有人填寫過，且包含必填題目的問卷
-SELECT s.id, s.title
-FROM surveys s
-WHERE EXISTS (SELECT 1 FROM survey_responses r
-              WHERE r.survey_id = s.id)
-  AND EXISTS (SELECT 1 FROM questions q
-              WHERE q.survey_id = s.id AND q.required = 1);
+-- 3. 買過器材的會員（不算已取消的訂單）
+SELECT u.id, u.name
+FROM users u
+WHERE EXISTS (
+  SELECT 1
+  FROM orders o
+    JOIN order_items i ON i.order_id = o.id
+    JOIN products p    ON p.id = i.product_id
+  WHERE o.user_id = u.id
+    AND o.status <> 'CANCELLED'
+    AND p.category_id = 3
+);
 ```
 
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>關聯子查詢：</b>子查詢裡的 <code>o.user_id = u.id</code> 用到了外層的 <code>u</code>，所以每位會員都會各跑一次子查詢。
+</div>
+
 <!--
-第二題，對每份進行中的問卷問一次，ming 有沒有填過？沒有的話就留下來。進行中的是問卷 2、3、6，ming 填過 2 和 6，所以只剩下新品口味調查。
+第三題，子查詢把訂單、明細和商品 JOIN 起來，條件是「這位會員的、沒取消的、器材分類的」。只要找得到一筆，EXISTS 就成立，這位會員就留下來。
 
-第三題，兩個 EXISTS 用 AND 連接，各自判斷有沒有作答、有沒有必填題。結果是問卷 1、2、3、6。
+注意 `o.user_id = u.id` 這個條件用到了外層的 `u`，這叫關聯子查詢，每位會員都會各跑一次。
 
-EXISTS 只要找到一筆就會停止，所以很適合只想確認存不存在的情境。
+結果是王小明和林美玲。王小明買過磨豆機；林美玲取消過一張手沖壺的訂單，但她也有一張完成的手沖壺訂單，所以一樣會出現。陳大文還沒下過單，所以不在名單上。
 -->
 
 ---
@@ -762,26 +758,36 @@ layout: default
 ---
 
 # 練習 2：任務說明
-### NOT IN 的 NULL 陷阱：真實的問卷資料
+### NOT IN 的 NULL 陷阱：綠界對帳
 
-問卷允許**訪客免登入**作答，所以 `survey_responses.user_id` 裡有 `NULL`。這正好會踩到 `NOT IN` 的陷阱，請親手驗證：
+付款失敗或還沒付款的紀錄，綠界不會給交易編號，所以 `payments.trade_no` 裡有 `NULL`。這正好會踩到 `NOT IN` 的陷阱。請模擬對帳：
+
+```sql
+-- 綠界後台匯出的交易清單（多了一筆我們沒記到的）
+CREATE TABLE ecpay_trades (
+  trade_no VARCHAR(20) PRIMARY KEY,
+  amount   INT NOT NULL
+);
+INSERT INTO ecpay_trades (trade_no, amount)
+SELECT trade_no, amount FROM payments WHERE status = 'PAID';
+INSERT INTO ecpay_trades VALUES ('26110000909901', 780);
+```
 
 **任務：**
-1. 找出**從未填寫過問卷的會員**，先用 `WHERE id NOT IN (SELECT user_id FROM survey_responses)` 寫寫看
+1. 找出綠界清單裡、我們 `payments` **沒有記錄到**的交易，先用 `WHERE trade_no NOT IN (SELECT trade_no FROM payments)` 寫寫看
 2. 改用 `NOT EXISTS` 與 `LEFT JOIN ... IS NULL` 版本，比較結果
-3. 說明為什麼 `NOT IN` 版本找不到「管理員」（`id = 1`）
-4. 如果一定要用 `NOT IN`，該怎麼修正？
+3. 說明為什麼 `NOT IN` 版本什麼都找不到；如果一定要用 `NOT IN`，該怎麼修正？
 
 <!--
-剛才我們學過 NOT IN 的 NULL 陷阱，這題就在問卷資料上親手驗證。不用另外造假資料，因為範例資料裡本來就有訪客作答，`user_id` 是 NULL。
+第二題是一個很真實的情境：對帳。綠界的伺服器有時候會漏通知，我們的資料庫就少了一筆付款成功的紀錄。所以要定期拿綠界後台的交易清單，跟自己的紀錄比對。
 
-請大家用三種寫法找出沒填過問卷的會員，比較結果有什麼不同。
+畫面上先建一張表，模擬綠界匯出的清單。裡面是我們所有付款成功的交易，再加上一筆我們沒收到通知的交易。
 
-思考一下，`NOT IN` 的清單裡有 NULL 時，條件會展開成什麼樣子？
+請大家用三種寫法找出這一筆，比較結果。
 
-我們先暫停一下，自己動手試試看。
+思考一下，`payments` 裡交易編號是 NULL 的那幾筆，會對 NOT IN 造成什麼影響？
 
-【講師】給大家十分鐘，可以請同學先預測三種寫法的結果。
+【講師】給大家十分鐘，先讓同學執行 NOT IN 版本，看到「什麼都沒有」的結果再討論。
 -->
 
 ---
@@ -791,35 +797,33 @@ layout: default
 # 練習 2：解題提示
 
 ```sql
--- NOT IN 版本（有 NULL 陷阱，結果為空）
-SELECT id, name FROM users
-WHERE id NOT IN (SELECT user_id FROM survey_responses);
+-- 1. NOT IN：什麼都找不到！
+SELECT trade_no, amount FROM ecpay_trades
+WHERE trade_no NOT IN (SELECT trade_no FROM payments);
 
--- NOT EXISTS 版本（正確：管理員）
-SELECT id, name FROM users u
-WHERE NOT EXISTS (SELECT 1 FROM survey_responses r
-                  WHERE r.user_id = u.id);
+-- 2. NOT EXISTS 與 LEFT JOIN：找到 26110000909901
+SELECT e.trade_no, e.amount FROM ecpay_trades e
+WHERE NOT EXISTS (SELECT 1 FROM payments p WHERE p.trade_no = e.trade_no);
 
--- LEFT JOIN + IS NULL 版本（正確：管理員）
-SELECT u.id, u.name
-FROM users u
-LEFT JOIN survey_responses r ON r.user_id = u.id
-WHERE r.id IS NULL;
+SELECT e.trade_no, e.amount FROM ecpay_trades e
+  LEFT JOIN payments p ON p.trade_no = e.trade_no
+WHERE p.id IS NULL;
 
--- 修正 NOT IN：子查詢排除 NULL
-SELECT id, name FROM users
-WHERE id NOT IN (SELECT user_id FROM survey_responses
-                 WHERE user_id IS NOT NULL);
+-- 3. 一定要用 NOT IN：先排除 NULL
+SELECT trade_no, amount FROM ecpay_trades
+WHERE trade_no NOT IN (
+  SELECT trade_no FROM payments WHERE trade_no IS NOT NULL
+);
 ```
 
 <!--
-第一個版本查不到任何資料，後面三個版本都正確找到管理員。
+第一題，NOT IN 的結果是空的，明明有一筆對不上。原因是 `payments` 裡有三筆交易編號是 NULL：兩筆還沒付款，一筆刷卡失敗。
 
-原因是 NOT IN 會展開成一連串的不等於，其中包含不等於 NULL。和 NULL 比較的結果既不是真也不是假，整個條件就不會成立，所以一筆都查不到。
+NOT IN 的意思是「不等於清單裡的每一個值」。拿 26110000909901 去比，跟其他交易編號都不相等，但跟 NULL 比的結果是「不知道」。只要有一個「不知道」，整個 NOT IN 就不成立，所以這一筆被丟掉了。
 
-NOT EXISTS 不受影響，因為它只看有沒有符合的紀錄。
+第二題，NOT EXISTS 和 LEFT JOIN 都只看「找不找得到相等的資料」，不會被 NULL 影響，都能正確找到這筆漏掉的交易，金額七百八十元。
 
-修正的方法是在子查詢排除 NULL，但這要靠寫的人記得，所以還是優先用 NOT EXISTS。
+第三題，如果一定要用 NOT IN，就在子查詢裡先把 NULL 排除掉。實務上建議直接用 NOT EXISTS，比較不會出錯。對帳找到這一筆之後，就可以用規格書裡的「向綠界查詢」功能補上這筆付款。
 -->
 
 ---

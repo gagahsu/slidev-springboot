@@ -525,23 +525,20 @@ layout: default
 ---
 
 # 練習 1：任務說明
-### 動態問卷：前台列表的查詢
+### 轉角咖啡：菜單頁的查詢
 
-先執行 `sql/schema.sql` 與 `sql/seed.sql`，取得 `dynamic_survey` 的範例資料。
+先執行 `sql/corner_cafe/schema.sql` 與 `sql/corner_cafe/seed.sql`，取得 `corner_cafe` 的範例資料。
 
 **任務：**
-1. 查詢「進行中」的問卷（已發佈，且今天介於開始與結束日期之間），標題包含「調查」，依結束日期由早到晚排序，取前 10 筆
-2. 承上題，寫出第 2 頁（每頁 10 筆）的 SQL
-3. 統計每份問卷的作答人數，只顯示人數**大於等於 2** 的問卷，依人數由多到少排序
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>提示：</b>今天的日期用 <code>CURDATE()</code> 取得。範例資料的日期都相對於今天，所以隨時執行都會有進行中的問卷。
-</div>
+1. 「百元左右」專區：查詢供應中、價格 **120 元以下**的品項，依價格由低到高排序（同價再依 id），取前 5 筆
+2. 承上題，寫出第 2 頁（每頁 5 筆）的 SQL
+3. 搜尋框輸入「拿鐵」：查出名稱包含「拿鐵」的品項
+4. 統計每個分類有幾個供應中的品項與平均價格，只顯示品項**大於等於 3** 的分類，依品項數由多到少排序
 
 <!--
-從這裡開始，我們換到動態問卷的資料庫來練習。這一題就是前台問卷列表頁背後的查詢。
+從這裡開始，我們換到轉角咖啡的資料庫來練習。這幾題就是網站菜單頁背後的查詢。
 
-第一題要組合 WHERE、LIKE、ORDER BY 和 LIMIT。今天的日期可以用 `CURDATE()` 這個函式取得。第二題練習分頁。第三題要統計作答人數，只用 `survey_responses` 一張表就夠了。
+第一題要組合 WHERE、ORDER BY 和 LIMIT。注意要排除暫停供應的品項。第二題練習分頁。第三題是搜尋框，用 LIKE。第四題要統計，只用 `products` 一張表就夠了。
 
 思考一下，第 N 頁的 OFFSET 應該怎麼算？
 
@@ -557,32 +554,36 @@ layout: default
 # 練習 1：解題提示
 
 ```sql
--- 1. 進行中、標題含「調查」，依結束日期排序，前 10 筆
-SELECT id, title, start_date, end_date
-FROM surveys
-WHERE published = 1
-  AND CURDATE() BETWEEN start_date AND end_date
-  AND title LIKE '%調查%'
-ORDER BY end_date
-LIMIT 10;
+-- 1. 120 元以下、供應中，依價格排序，前 5 筆
+SELECT id, name, price
+FROM products
+WHERE available = 1 AND price <= 120
+ORDER BY price, id
+LIMIT 5;
 
--- 2. 第 2 頁：把最後一行改成 LIMIT 10 OFFSET 10
+-- 2. 第 2 頁：把最後一行改成 LIMIT 5 OFFSET 5
 --    OFFSET = (頁碼 - 1) * 每頁筆數
 
--- 3. 作答人數大於等於 2 的問卷
-SELECT survey_id, COUNT(*) AS response_count
-FROM survey_responses
-GROUP BY survey_id
-HAVING COUNT(*) >= 2
-ORDER BY response_count DESC;
+-- 3. 名稱包含「拿鐵」
+SELECT id, name, price FROM products WHERE name LIKE '%拿鐵%';
+
+-- 4. 品項數大於等於 3 的分類
+SELECT category_id, COUNT(*) AS cnt, AVG(price) AS avg_price
+FROM products
+WHERE available = 1
+GROUP BY category_id
+HAVING COUNT(*) >= 3
+ORDER BY cnt DESC;
 ```
 
 <!--
-第一題，`published = 1` 排除草稿，`BETWEEN` 篩出進行中的問卷，開始和結束當天都算在內。執行後會看到三份問卷，快結束的排在前面。
+第一題，`available = 1` 排除暫停供應的品項。價格一樣時再依 id 排序，結果才會固定。執行後是原味司康、美式咖啡、伯爵紅茶、蜂蜜檸檬和拿鐵。
 
-第二題回答剛才的思考題，OFFSET 等於頁碼減一，再乘上每頁筆數。範例資料只有三筆，所以第二頁是空的，這是正常的結果。
+第二題回答剛才的思考題，OFFSET 等於頁碼減一，再乘上每頁筆數。第二頁只剩卡布奇諾和蔬菜貝果兩筆。
 
-第三題，條件是聚合後的結果，所以要寫在 HAVING。結果是問卷 2 有四人、問卷 1 有三人、問卷 6 有兩人。
+第三題，百分比符號代表任意長度的文字，所以拿鐵和抹茶拿鐵都會被找到。
+
+第四題，條件是聚合後的結果，所以要寫在 HAVING。結果是分類 1 咖啡有四項，分類 2 茶飲有三項。甜點雖然有三個品項，但季節水果塔暫停供應，只算兩項，所以不會出現。
 -->
 
 ---
@@ -590,30 +591,29 @@ layout: default
 ---
 
 # 練習 2：任務說明
-### 用 CASE 算出問卷狀態
+### 用 CASE 算出訂位狀態
 
-資料庫**沒有**存「進行中 / 已結束」，要在查詢時計算：
+資料庫**沒有**存「今天 / 已過去」，要在查詢時計算：
 
-- `published = 0`：未發佈
-- 已發佈，且今天早於開始日期：尚未開始
-- 已發佈，且今天介於開始與結束日期：進行中
-- 已發佈，且今天晚於結束日期：已結束
+- 訂位日期早於今天：已過去
+- 訂位日期是今天：今天
+- 訂位日期晚於今天：即將到來
 
 **任務：**
-1. 列出所有問卷的 `id`、`title` 與計算出來的 `status`
-2. 統計每種狀態各有幾份問卷
-3. 只列出進行中的問卷。思考：能直接寫 `WHERE status = '進行中'` 嗎？
+1. 列出所有訂位的 `id`、`name`、日期、時間與計算出來的 `status`，依日期與時間排序
+2. 統計每種狀態各有幾筆訂位、共幾位客人
+3. 店員只想看「今天和之後」的訂位。思考：能直接寫 `WHERE status <> '已過去'` 嗎？
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>新語法 CASE：</b><code>CASE WHEN 條件 THEN 值 WHEN 條件 THEN 值 ELSE 值 END</code>，由上往下判斷，符合第一個條件就停止。
+💡 <b>新語法 CASE：</b><code>CASE WHEN 條件 THEN 值 WHEN 條件 THEN 值 ELSE 值 END</code>，由上往下判斷，符合第一個條件就停止。今天的日期用 <code>CURDATE()</code> 取得。
 </div>
 
 <!--
-第二題要算出問卷狀態。這裡會用到一個新語法 CASE，它就像一連串的如果，由上往下判斷，符合了就回傳對應的值，後面就不再看了。
+第二題要算出訂位狀態。這裡會用到一個新語法 CASE，它就像一連串的如果，由上往下判斷，符合了就回傳對應的值，後面就不再看了。
 
-請大家依畫面上的規則算出狀態，再統計每種狀態有幾份。
+為什麼不把狀態存在資料表裡？因為今天的訂位到了明天就變成已過去，存起來就得每天更新。能算出來的東西，就不要存。
 
-思考一下，第三題能不能直接寫 `WHERE status` 等於進行中？想想我們剛學的子句執行順序。
+思考一下，第三題能不能直接寫 `WHERE status` 不等於已過去？想想我們剛學的子句執行順序。
 
 我們先暫停一下，自己動手試試看。
 
@@ -628,26 +628,24 @@ layout: default
 
 ```sql
 -- 1. 計算狀態
-SELECT id, title,
+SELECT id, name, reserve_date, reserve_time,
   CASE
-    WHEN published = 0          THEN '未發佈'
-    WHEN CURDATE() < start_date THEN '尚未開始'
-    WHEN CURDATE() <= end_date  THEN '進行中'
-    ELSE '已結束'
+    WHEN reserve_date < CURDATE() THEN '已過去'
+    WHEN reserve_date = CURDATE() THEN '今天'
+    ELSE '即將到來'
   END AS status
-FROM surveys;
+FROM reservations
+ORDER BY reserve_date, reserve_time;
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>順序很重要：</b>第一行處理掉未發佈，後面就不用再寫 <code>published = 1</code>；第二行處理掉尚未開始，第三行只要判斷有沒有超過結束日期。
+💡 <b>順序很重要：</b>第一行處理掉已過去的，第二行處理掉今天的，剩下的一定是即將到來，所以用 <code>ELSE</code> 就好。
 </div>
 
 <!--
-CASE 由上往下判斷，所以條件可以越寫越短。第一行先處理掉未發佈的問卷，後面就不用再判斷有沒有發佈。第二行處理掉尚未開始的，第三行只要看有沒有超過結束日期。
+CASE 由上往下判斷。第一行先處理掉日期早於今天的，第二行處理掉今天的，剩下的一定都在今天之後，所以用 ELSE 收尾就好。
 
-如果順序寫反了，未發佈的問卷就可能被當成進行中，所以順序很重要。
-
-執行後，六份問卷會分別顯示自己的狀態。
+範例資料的日期都相對於今天，所以隨時執行都會看到：一筆已過去，是黃小華的包場慶生；兩筆是今天，王小明和林美玲；三筆即將到來。
 -->
 
 ---
@@ -657,32 +655,32 @@ layout: default
 # 練習 2：解題提示（續）
 
 ```sql
--- 2. 每種狀態的數量
+-- 2. 每種狀態的筆數與人數
 SELECT
   CASE
-    WHEN published = 0          THEN '未發佈'
-    WHEN CURDATE() < start_date THEN '尚未開始'
-    WHEN CURDATE() <= end_date  THEN '進行中'
-    ELSE '已結束'
+    WHEN reserve_date < CURDATE() THEN '已過去'
+    WHEN reserve_date = CURDATE() THEN '今天'
+    ELSE '即將到來'
   END AS status,
-  COUNT(*) AS cnt
-FROM surveys
+  COUNT(*) AS cnt,
+  SUM(people) AS total_people
+FROM reservations
 GROUP BY status
 ORDER BY cnt DESC;
 
 -- 3. WHERE 看不到別名 status，把條件直接寫出來
-SELECT id, title
-FROM surveys
-WHERE published = 1
-  AND CURDATE() BETWEEN start_date AND end_date;
+SELECT id, name, reserve_date, reserve_time, people
+FROM reservations
+WHERE reserve_date >= CURDATE()
+ORDER BY reserve_date, reserve_time;
 ```
 
 <!--
-第二題，把算出來的 `status` 拿來 GROUP BY，MySQL 是允許的。結果是進行中三份，已結束、尚未開始和未發佈各一份。
+第二題，把算出來的 `status` 拿來 GROUP BY，MySQL 是允許的。結果是即將到來三筆、共十一位；今天兩筆、共六位；已過去一筆、八位。
 
 第三題不能直接寫，MySQL 會回報 Unknown column。原因就在執行順序，WHERE 比 SELECT 先執行，這時候別名 `status` 還不存在。
 
-解法很單純，把進行中的原始條件直接寫進 WHERE，也就是練習一的寫法。這樣查到的就是問卷 2、3、6。
+解法很單純，把原始條件直接寫進 WHERE：日期大於等於今天。這樣會查到五筆訂位。
 -->
 
 ---

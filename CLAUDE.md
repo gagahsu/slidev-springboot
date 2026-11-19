@@ -36,8 +36,9 @@ courses/
   mysql/                 ← copied from gagahsu/slidev-mysql (files there are named chNN-topic.md)
     course.yaml
     01-db-design-principles.md … 11-flyway.md
-    sql/schema.sql, sql/seed.sql   ← the 動態問卷系統 database used by the ch04–ch10 exercises
-    SURVEY-SPEC.md       ← survey project spec shared across courses (keep in sync with the other repos)
+    sql/corner_cafe/     ← schema.sql + seed.sql of the basic project (3 tables), used by the ch04–07 exercises
+    sql/cafe_shop/       ← schema.sql + seed.sql of the advanced project (8 tables), used by ch03 and ch08–10
+                            (both verified on MySQL 9.7; dates in the seeds are relative to today)
   angular/               ← copied from gagahsu/slidev-angular (chapters only: its practice-*.md decks,
     course.yaml             code/, course-demo/ and lecture PDFs were left in that repo)
     01-frontend-intro.md … 57-final-review.md
@@ -49,7 +50,7 @@ courses/
 tracks/basic.yaml        ← learning tracks (學程): ordered stages of chapters across courses
 tracks/advanced.yaml
 specs/CAFE-SPEC.md       ← DRAFT: basic-track project (Corner Café one-page site); shared by all courses
-specs/SHOP-SPEC.md       ← DRAFT: advanced-track project (Corner Café online shop + ECPay sandbox); replaces SURVEY-SPEC.md
+specs/SHOP-SPEC.md       ← DRAFT: advanced-track project (Corner Café online shop + ECPay sandbox); replaced the retired survey project
 public/screenshots/…     ← Spring Boot images (`/screenshots/...` in the Markdown)
 public/images/<NN-topic>/… ← Angular images (`/images/...`)
 public/beginner/…        ← Git beginner screenshots (used by `<Shot file="…">`)

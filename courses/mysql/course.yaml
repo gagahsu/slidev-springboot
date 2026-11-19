@@ -1,10 +1,12 @@
 # 課程設定。資料夾名稱（mysql）就是課程代碼：#/mysql/ch04/3
 # 章節檔案：NN-主題.md。內容來自 gagahsu/slidev-mysql（原檔名 chNN-主題.md）。
-# sql/schema.sql、sql/seed.sql 是 ch04 之後練習題用的「動態問卷系統」資料庫；SURVEY-SPEC.md 是跨課程共用的規格。
+# 練習題用「轉角咖啡」的兩個資料庫（MySQL 9.7 驗證過）：
+#   sql/corner_cafe/ — 基礎專題的 3 張表（ch04–07，基礎學程），規格見 specs/CAFE-SPEC.md
+#   sql/cafe_shop/   — 進階專題的 8 張表（ch03、ch08–10，進階學程），規格見 specs/SHOP-SPEC.md
 
 title: MySQL 資料庫設計與 SQL
 short: MySQL
-description: 從資料表設計、正規化、DDL / DQL / DML，到 JOIN、索引、VIEW、子查詢與 Flyway，練習題全部用「動態問卷系統」的資料庫。
+description: 從資料表設計、正規化、DDL / DQL / DML，到 JOIN、索引、VIEW、子查詢與 Flyway，練習題用「轉角咖啡」的菜單訂位與線上商店資料庫。
 logo: M
 color: blue
 order: 2

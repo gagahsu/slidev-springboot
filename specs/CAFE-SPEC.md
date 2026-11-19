@@ -62,9 +62,10 @@ reservations（獨立，不跟其他表關聯）
 - 菜單只顯示 `available = 1` 的品項，依 `categories.sort_order`、`products.sort_order` 排序。
 - `products` 的欄位名稱與型別，進階電商會原樣沿用再加欄位，**不要改名**。
 
-### 範例資料（`seed.sql`，待補完整內容）
+### 範例資料（`seed.sql`）
 
-- 分類 4 個：咖啡、茶飲、甜點、輕食。
+- 分類 5 個：咖啡、茶飲、甜點、輕食、季節限定。「季節限定」目前沒有品項（MySQL ch07 的 LEFT JOIN 練習用）；前端的分類頁籤只顯示有供應中品項的分類。
+- 實際的建表與範例資料：`courses/mysql/sql/corner_cafe/schema.sql`、`seed.sql`（MySQL 9.7 驗證過）。
 - 品項每類 3～4 個，例如：美式咖啡 90、拿鐵 120、卡布奇諾 120、手沖單品 160；伯爵紅茶 100……；其中 1 個設 `available = 0` 用來示範「暫停供應不顯示」。
 - 訂位 5～6 筆，日期用 `CURDATE()` 加減天數（跟 MySQL 課現在的做法一樣），任何時候執行都有「今天」「明天」的資料。
 

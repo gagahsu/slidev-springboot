@@ -599,30 +599,30 @@ layout: default
 ---
 
 # 練習 1：任務說明
-### 設計動態問卷系統的資料庫
+### 設計轉角咖啡線上商店的資料庫
 
-後面的課程會做一套「動態問卷系統」，資料庫就從這裡開始設計：
+進階專題要幫「轉角咖啡」開線上商店，資料庫就從這裡開始設計：
 
-- 一份問卷（surveys）有多個題目（questions），題目有多個選項（options）
-- 會員（users）可以填寫多份問卷，也允許**未登入**的訪客填寫
-- 每次填寫是一筆作答紀錄（survey_responses），底下有每一題的答案（response_answers）
-- 同一份問卷、同一個 Email 只能填寫一次
+- 商品分成幾個分類；一個商品有多種規格（例如「半磅」「一磅」），每種規格有自己的售價與庫存
+- 會員可以把規格放進購物車，同一個規格在購物車裡只算一筆，數量可以改
+- 下單後產生一張訂單，底下有多筆明細；商品之後改名或改價，**已成立的訂單不能跟著變**
+- 一張訂單可能付款好幾次（第一次刷卡失敗、再付一次），每次付款都要留下紀錄
 
 **任務：**
-1. 識別每組關聯的類型（一對一、一對多或多對多）
+1. 識別每組關聯的類型（一對多或多對多）
 2. 設計所有必要的資料表與外鍵，並決定 `ON DELETE` 行為
-3. 用約束保證「同一 Email 不能重複填寫同一份問卷」
+3. 用約束保證「同一會員的購物車，同一規格只有一筆」
 
 <!--
-接下來的練習，都會圍繞同一個專案：動態問卷系統。後面的章節也會繼續用到這裡設計的資料表。
+接下來的練習，都圍繞進階專題：轉角咖啡的線上商店。後面的索引、VIEW、子查詢章節，也都會用這裡設計的資料表。
 
-這題有六張表要設計。請大家先找出每組關聯的類型，再決定外鍵放在哪裡，刪除時又該怎麼處理。
+這題一共有八張表。請大家先找出每組關聯的類型，再決定外鍵放在哪裡，刪除時又該怎麼處理。
 
-思考一下，訪客不用登入也能填寫，那作答紀錄裡的 `user_id` 可以設成 NOT NULL 嗎？
+思考一下，訂單明細裡要不要再存一次商品名稱和單價？明明 `products` 表裡已經有了。
 
 我們先暫停一下，自己動手設計看看。
 
-【講師】給大家十到十五分鐘，可以先請同學在白板上畫出六張表的關聯。
+【講師】給大家十到十五分鐘，可以先請同學在白板上畫出八張表的關聯。
 -->
 
 ---
@@ -631,91 +631,38 @@ layout: default
 
 # 練習 1：解題提示（Part 1）
 
-`surveys` 是最上層的表，先把問卷本身的資料存好：
+分類 → 商品 → 規格，兩組都是一對多，外鍵放在「多」的那邊：
 
 ```sql
-CREATE TABLE surveys (
+CREATE TABLE products (
   id          INT AUTO_INCREMENT PRIMARY KEY,
-  title       VARCHAR(50) NOT NULL,
-  description VARCHAR(300),
-  start_date  DATE NOT NULL,
-  end_date    DATE NOT NULL,
-  published   TINYINT NOT NULL DEFAULT 0,
-  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  category_id INT NOT NULL,
+  name        VARCHAR(50) NOT NULL,
+  price       INT NOT NULL,          -- 列表顯示用的起始價
+  status      VARCHAR(10) NOT NULL DEFAULT 'ON_SALE',
+  FOREIGN KEY (category_id) REFERENCES categories(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
 
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>「進行中 / 已結束」不存進資料庫。</b>狀態可以由日期算出來，存成欄位反而會過期。
-</div>
-
-<!--
-我們從最上層的問卷開始。`surveys` 不參照別的表，只存問卷本身的資料。
-
-這裡有個重要的設計決定。問卷的進行中或已結束，我們沒有存成欄位。因為這個狀態每天都可能改變，存起來就得天天更新，很容易出錯。
-
-所以我們只存有沒有發佈，以及起訖日期，狀態等查詢時再算出來。怎麼算，後面查詢的章節會練習到。
--->
-
----
-layout: default
----
-
-# 練習 1：解題提示（Part 1 續）
-
-`surveys` 到 `questions` 是一對多，外鍵放在「多」的那邊：
-
-```sql
-CREATE TABLE questions (
-  id          INT AUTO_INCREMENT PRIMARY KEY,
-  survey_id   INT NOT NULL,
-  title       VARCHAR(200) NOT NULL,
-  type        VARCHAR(10) NOT NULL,
-  required    TINYINT NOT NULL DEFAULT 0,
-  order_index INT NOT NULL,
-  INDEX idx_questions_survey (survey_id),
-  FOREIGN KEY (survey_id) REFERENCES surveys(id)
-    ON DELETE CASCADE
+CREATE TABLE product_variants (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  product_id INT NOT NULL,
+  name       VARCHAR(30) NOT NULL,   -- 半磅、一磅
+  sku        VARCHAR(30) NOT NULL UNIQUE,
+  price      INT NOT NULL,
+  stock      INT NOT NULL DEFAULT 0,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
 <!--
-接著是題目。一份問卷有很多題目，這是一對多，所以外鍵 `survey_id` 放在 `questions` 這邊。
+我們從商品開始。一個分類有很多商品，一個商品又有很多規格，兩組都是一對多，外鍵都放在「多」的那一邊。
 
-外鍵用 `ON DELETE CASCADE`。問卷刪掉之後，它的題目也沒有意義了，就一起刪除。
+為什麼要把規格拆成另一張表？因為同一包咖啡豆，半磅和一磅的價格、庫存都不一樣。如果都塞在 `products`，就得開「半磅價格」「一磅價格」這種欄位，規格一多就加不完。
 
-`order_index` 用來記錄畫面上的順序。資料表本身不保證順序，想固定順序就要自己存一個欄位。
+規格的外鍵用 `ON DELETE CASCADE`，商品刪掉，它的規格也沒有意義了。不過實務上商品通常只「下架」不刪除，這點等一下的訂單會看到原因。
+
+完整的欄位，例如說明、圖片、排序，都在 `sql/cafe_shop/schema.sql` 裡，這裡只列出和關聯有關的部分。
 -->
-
----
-layout: default
----
-
-# 練習 1：解題提示（Part 1 續）
-
-`options` 也一樣，外鍵放在「多」的那邊：
-
-```sql
-CREATE TABLE options (
-  id          INT AUTO_INCREMENT PRIMARY KEY,
-  question_id INT NOT NULL,
-  label       VARCHAR(100) NOT NULL,
-  order_index INT NOT NULL,
-  INDEX idx_options_question (question_id),
-  FOREIGN KEY (question_id) REFERENCES questions(id)
-    ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
-
-<!--
-一個題目也有很多選項，同樣是一對多，外鍵放在 `options`。
-
-文字題沒有選項，只要在這張表裡沒有對應的資料列就好，不需要另外處理。
-
-到這裡，問卷、題目和選項這三層就串起來了。
--->
-
-
 
 ---
 layout: default
@@ -723,60 +670,30 @@ layout: default
 
 # 練習 1：解題提示（Part 2）
 
-`users` 存會員資料，`email` 不可重複：
+會員 ↔ 規格是**多對多**：一位會員的購物車有很多規格，一個規格也會出現在很多人的購物車。中間表就是 `cart_items`：
 
 ```sql
-CREATE TABLE users (
+CREATE TABLE cart_items (
   id         INT AUTO_INCREMENT PRIMARY KEY,
-  name       VARCHAR(50) NOT NULL,
-  email      VARCHAR(100) NOT NULL UNIQUE,
-  password   VARCHAR(100) NOT NULL,
-  phone      VARCHAR(20),
-  role       VARCHAR(10) NOT NULL DEFAULT 'USER',
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  user_id    INT NOT NULL,
+  variant_id INT NOT NULL,
+  quantity   INT NOT NULL,
+  UNIQUE KEY uk_cart_user_variant (user_id, variant_id),
+  FOREIGN KEY (user_id)    REFERENCES users(id)            ON DELETE CASCADE,
+  FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-<!--
-再來是會員。`users` 也不參照別的表，重點是 `email` 加上 `UNIQUE`，同一個 Email 不能註冊兩次。
-
-`role` 用來區分一般會員和管理員，預設是一般會員。
-
-`password` 的長度給到一百，因為之後存的不是密碼原文，而是加密過的雜湊字串，長度會比原本的密碼長很多。
--->
-
----
-layout: default
----
-
-# 練習 1：解題提示（Part 2 續）
-
-訪客免登入，所以 `user_id` 可以是 `NULL`：
-
-```sql
-CREATE TABLE survey_responses (
-  id           INT AUTO_INCREMENT PRIMARY KEY,
-  survey_id    INT NOT NULL,
-  user_id      INT,
-  name         VARCHAR(50) NOT NULL,
-  phone        VARCHAR(20) NOT NULL,
-  email        VARCHAR(100) NOT NULL,
-  age          INT,
-  submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uk_survey_email (survey_id, email),
-  FOREIGN KEY (survey_id) REFERENCES surveys(id)
-    ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id)
-    ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>複合唯一：</b><code>(user_id, variant_id)</code> 同一組只能有一筆。再加一次同樣的規格，要做的是「把數量加上去」，而不是多一列。
+</div>
 
 <!--
-作答紀錄把姓名、手機和 Email 直接存在自己身上，因為訪客沒有會員資料可以關聯。這也回答了剛才的思考題，`user_id` 不能是 NOT NULL。
+購物車是這題的多對多。一位會員可以放很多規格，同一個規格也會在很多人的購物車裡，所以要一張中間表。這張表還存了數量，所以有自己的 `id`。
 
-刪除會員時用 `SET NULL`。帳號刪掉了，作答資料還是要保留，只是變成匿名。
+任務三的答案就是這個複合唯一約束。程式雖然可以先查一次有沒有放過，但兩個請求同時進來時，可能都查到沒有，結果多出兩列。資料庫的唯一約束才擋得住這種情況。
 
-重點是 `UNIQUE KEY (survey_id, email)`。這是複合唯一，同一份問卷同一個 Email 只能有一筆，換一份問卷就可以再填。
+兩個外鍵都用 CASCADE。會員刪掉了，購物車留著也沒用；規格刪掉了，購物車裡的那一項也一起清掉。
 -->
 
 ---
@@ -785,33 +702,73 @@ layout: default
 
 # 練習 1：解題提示（Part 3）
 
-`response_answers` 同時參照「哪一次作答」與「哪一道題」：
+訂單明細要存「下單當時」的商品名稱和單價：
 
 ```sql
-CREATE TABLE response_answers (
-  id          INT AUTO_INCREMENT PRIMARY KEY,
-  response_id INT NOT NULL,
-  question_id INT NOT NULL,
-  answer_text VARCHAR(500),
-  INDEX idx_answers_response (response_id),
-  INDEX idx_answers_question (question_id),
-  FOREIGN KEY (response_id) REFERENCES survey_responses(id)
-    ON DELETE CASCADE,
-  FOREIGN KEY (question_id) REFERENCES questions(id)
-    ON DELETE CASCADE
+CREATE TABLE orders (
+  id           INT AUTO_INCREMENT PRIMARY KEY,
+  order_no     VARCHAR(20) NOT NULL UNIQUE,
+  user_id      INT NOT NULL,
+  status       VARCHAR(20) NOT NULL DEFAULT 'PENDING_PAYMENT',
+  total_amount INT NOT NULL,
+  created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE order_items (
+  id           INT AUTO_INCREMENT PRIMARY KEY,
+  order_id     INT NOT NULL,
+  product_id   INT NOT NULL,
+  variant_id   INT NOT NULL,
+  product_name VARCHAR(50) NOT NULL,  -- 快照
+  variant_name VARCHAR(30) NOT NULL,  -- 快照
+  unit_price   INT NOT NULL,          -- 快照
+  quantity     INT NOT NULL,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>取捨：</b>多選答案用分號串接，例如 <code>青菜;滷蛋</code>。嚴格說這違反 1NF，這裡是為了讓表結構簡單，代價是統計時要拆字串。
+<!--
+接著是訂單。一位會員有很多訂單，一張訂單有很多明細，又是兩組一對多。
+
+這裡回答剛才的思考題。明細裡再存一次商品名稱、規格名稱和單價，看起來重複，其實是刻意的。下個月咖啡豆漲價，上個月的訂單金額不能跟著變；商品改名或下架，舊訂單也要看得懂當時買了什麼。這叫做「快照」。
+
+所以 `order_items` 只對 `orders` 設外鍵，商品和規格的編號留著方便追查，但不依賴它們。
+
+`orders.user_id` 沒有設 CASCADE。訂單是交易紀錄，就算會員要刪除，訂單也不應該跟著消失。
+-->
+
+---
+layout: default
+---
+
+# 練習 1：解題提示（Part 3 續）
+
+一張訂單可以有多次付款嘗試，所以付款是另一張表：
+
+```sql
+CREATE TABLE payments (
+  id                INT AUTO_INCREMENT PRIMARY KEY,
+  order_id          INT NOT NULL,
+  merchant_trade_no VARCHAR(20) NOT NULL UNIQUE,  -- 每次付款都不同
+  amount            INT NOT NULL,
+  status            VARCHAR(10) NOT NULL DEFAULT 'PENDING',
+  trade_no          VARCHAR(20),                  -- 綠界回傳的交易編號
+  paid_at           DATETIME,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>完整的八張表</b>（含所有欄位與約束）在 <code>sql/cafe_shop/schema.sql</code>，範例資料在 <code>sql/cafe_shop/seed.sql</code>。第八到十章的練習都會用到。
 </div>
 
 <!--
-最後是每一題的答案。一次作答有很多題的答案，一道題也有很多人的答案，所以這張表有兩個外鍵。它還存了答案內容，所以用自己的 `id` 當主鍵。
+最後是付款。為什麼不把付款資訊直接放在 `orders`？因為一張訂單可能付好幾次。第一次刷卡失敗，客人再付一次，兩次都要留下紀錄。
 
-這裡要老實說一個取捨。多選題的答案用分號串成一個字串，其實違反了第一正規化。我們的規格選擇這樣做，好處是一題一列、結構簡單，壞處是統計時要把字串拆開。
+綠界規定每次付款送出的交易編號不能重複，所以 `merchant_trade_no` 加上唯一約束。`trade_no` 是付款成功後綠界回傳的編號，付款前是空的，所以允許 NULL。這個 NULL 在子查詢那一章還會再遇到。
 
-設計本來就常有取捨，重要的是知道自己放棄了什麼。
+八張表到這裡全部設計完了：分類、商品、規格、會員、購物車、訂單、明細和付款。
 -->
 
 ---
@@ -819,35 +776,34 @@ layout: default
 ---
 
 # 練習 2：任務說明
-### 分析並修正問卷資料表設計
+### 分析並修正訂單資料表設計
 
 請從設計、資料型別、引擎、外鍵行為、約束，找出至少五個問題並修正：
 
 ```sql
-CREATE TABLE survey (
+CREATE TABLE shop_order (
   id         INT AUTO_INCREMENT PRIMARY KEY,
-  title      VARCHAR(50),
-  questions  TEXT,         -- 存成 'Q1;Q2;Q3'
-  published  VARCHAR(5),   -- 存成 'yes' / 'no'
-  start_date VARCHAR(10),  -- 存成 '2025/01/10'
-  end_date   VARCHAR(10)
+  member     VARCHAR(50),   -- 存會員姓名
+  items      TEXT,          -- 存成 '耶加雪菲 半磅x2;濾掛包x1'
+  total      FLOAT,         -- 存成 1080.0
+  status     VARCHAR(10),   -- 有人寫 '已付款'，有人寫 'paid'
+  order_date VARCHAR(10)    -- 存成 '2026/11/19'
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
-CREATE TABLE survey_answer (
-  id        INT AUTO_INCREMENT PRIMARY KEY,
-  survey_id INT NOT NULL,
-  email     VARCHAR(100),
-  answers   TEXT,          -- 存成 'A;B;C;D'
-  FOREIGN KEY (survey_id) REFERENCES survey(id)
+CREATE TABLE cart (
+  id       INT AUTO_INCREMENT PRIMARY KEY,
+  user_id  INT,
+  sku      VARCHAR(30),
+  quantity INT
 ) ENGINE=MyISAM;
 ```
 
 <!--
-第二題換個角度，我們來當審查的人。畫面上是一位新手設計的問卷資料表，看起來能用，其實問題不少。
+第二題換個角度，我們來當審查的人。畫面上是一位新手設計的訂單和購物車，看起來能用，其實問題不少。
 
 請大家從設計、資料型別、引擎、外鍵行為和約束這幾個方向，找出至少五個問題，並想想該怎麼修正。
 
-思考一下，如果要修改第二題的題目名稱，或是統計第二題有多少人選 B，這個設計做得到嗎？
+思考一下，如果老闆想知道「上個月耶加雪菲賣了幾包」，這個設計查得出來嗎？
 
 我們先暫停一下，自己找找看。
 
@@ -862,19 +818,19 @@ layout: default
 
 | 問題 | 說明 | 修正 |
 | --- | --- | --- |
-| `questions TEXT` 存 `Q1;Q2;Q3` | 違反 1NF，也無法設定題型、必填 | 拆成 `questions`、`options` |
-| `answers TEXT` 串起整份答案 | 無法統計單一題目的結果 | 改成 `response_answers`，一題一列 |
-| `published VARCHAR(5)` | 字串容易打錯，也佔空間 | 改用 `TINYINT`（0 / 1） |
-| `start_date VARCHAR(10)` | 無法做日期比較，也沒有格式檢查 | 改用 `DATE` |
+| `items TEXT` 串起整張訂單的品項 | 違反 1NF，無法統計單一商品的銷量 | 拆成 `order_items`，一個品項一列 |
+| `member` 存姓名 | 同名的人分不出來，改名後也對不上 | 改成 `user_id` 外鍵 |
+| `total FLOAT` | 浮點數會有誤差，金額不能用 | 改用 `INT`（元）或 `DECIMAL` |
+| `order_date VARCHAR(10)` | 無法做日期比較，也沒有格式檢查 | 改用 `DATETIME` |
 
 <!--
 前四個問題都和設計與型別有關。
 
-最值得討論的是 `answers` 這一欄。整份答案串成一個字串，看起來省事，卻沒辦法回答第二題有多少人選 B，而這正是後台統計頁要做的事。
+最值得討論的是 `items` 這一欄。整張訂單的品項串成一個字串，看起來省事，卻回答不了剛才的思考題：上個月耶加雪菲賣了幾包。這正是後台報表要做的事，所以要拆成獨立的明細表。
 
-這也回答了剛才的思考題。題目和答案都塞在一個欄位裡，要修改或統計其中一題都很困難，所以要拆成獨立的資料表。
+`member` 存姓名也一樣危險。兩位都叫王小明怎麼辦？會員改名了，舊訂單就找不到人。應該存會員的編號，用外鍵連過去。
 
-日期存成字串也一樣，沒辦法正確比較先後，也擋不住格式錯誤的資料。
+金額用 FLOAT 是很常見的錯誤。浮點數存不準確，加總久了會出現幾分錢的誤差，金額一律用整數或 DECIMAL。
 -->
 
 ---
@@ -885,19 +841,21 @@ layout: default
 
 | 問題 | 說明 | 修正 |
 | --- | --- | --- |
-| `ENGINE=MyISAM` | FOREIGN KEY 不起作用 | 改用 `ENGINE=InnoDB` |
+| `status` 自由填寫 | `'已付款'`、`'paid'` 混在一起，查不準 | 固定幾個值，加 `CHECK` 約束 |
+| `ENGINE=MyISAM` | FOREIGN KEY 不起作用，也不支援交易 | 改用 `ENGINE=InnoDB` |
 | `CHARSET=utf8` | 不支援 emoji 等 4-byte 字元 | 改用 `utf8mb4` |
-| 沒有 `UNIQUE (survey_id, email)` | 同一人可以重複填寫 | 加上複合唯一約束 |
-| 外鍵沒有 `ON DELETE`、沒明確加 `INDEX` | 行為與意圖都不清楚 | 明確指定 `CASCADE`，並加上 `INDEX` |
+| `cart` 沒有外鍵與 `UNIQUE (user_id, sku)` | 同一商品重複多列、可以放不存在的商品 | 改成 `cart_items`：外鍵加複合唯一約束 |
 
 <!--
-後面四個問題和引擎與約束有關。
+後面四個問題和約束與引擎有關。
 
-用了 MyISAM，外鍵語法不會報錯，卻完全不起作用，這就是剛才提過的隱蔽陷阱。
+狀態讓人自由填寫，一定會有人寫中文、有人寫英文、有人大小寫不一樣，查「已付款的訂單」就會漏掉一半。固定幾個值，再用 CHECK 約束擋住其他寫法。
 
-唯一約束也很容易漏掉。程式雖然可以先查一次有沒有填過，但兩個請求同時進來時，可能都查到沒填過。資料庫的唯一約束才擋得住這種情況。
+用了 MyISAM，外鍵語法不會報錯，卻完全不起作用，而且它不支援交易。訂單一定要用 InnoDB。
 
-我們這裡一共列了八個問題，大家找到幾個呢？關聯設計到這裡就練完了，這六張表下一章會真正建立起來。
+購物車缺了外鍵和唯一約束，就可能放進不存在的商品，或是同一個商品出現好幾列。
+
+我們這裡一共列了八個問題，大家找到幾個呢？關聯設計到這裡就練完了。
 -->
 
 ---

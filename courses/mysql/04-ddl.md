@@ -514,30 +514,29 @@ layout: default
 ---
 
 # 練習 1：任務說明
-### 建立動態問卷資料庫（schema.sql）
+### 建立轉角咖啡的資料庫（schema.sql）
 
-上一章我們設計好了六張表，現在要把它變成能實際執行的 `schema.sql`：
+基礎專題「轉角咖啡一頁式網站」需要三張表：菜單**分類**、菜單**品項**，以及客人的**訂位**。請寫出能實際執行的 `schema.sql`：
 
 **任務：**
-1. 建立資料庫 `dynamic_survey`（字元集 `utf8mb4`）
-2. 依上一章的設計建立六張表（完整欄位見 `SURVEY-SPEC.md` §3）
+1. 建立資料庫 `corner_cafe`（字元集 `utf8mb4`）
+2. 建立三張表（欄位見下一頁的提示，或 `specs/CAFE-SPEC.md` §4）
 3. 用**條件約束**保證資料品質：
-   - `questions.type` 只能是 `SINGLE`、`MULTI`、`TEXT`
-   - `surveys` 的結束日期不可早於開始日期
-   - `users.role` 只能是 `USER`、`ADMIN`
-   - `survey_responses` 的 `(survey_id, email)` 不可重複
+   - 分類名稱不可重複
+   - 品項價格不可小於 0
+   - 訂位人數只能是 1～8 人
 4. 所有資料表使用 InnoDB，注意建表順序
 
 <!--
-上一章我們畫好了設計圖，這一題要把它真正蓋起來。之後的章節都會用到這個資料庫，所以請把結果存成 `schema.sql`。
+從這裡開始，我們動手建立基礎專題的資料庫：轉角咖啡的一頁式網站。之後的查詢、新增和 JOIN 練習，都會用這三張表。
 
-除了建立六張表，還要用這一章學的約束，把資料品質的規則放進資料庫。
+三張表很單純。一個分類有很多品項，品項要記得是哪個分類；訂位是獨立的一張表，不跟其他表關聯。
 
-思考一下，六張表要用什麼順序建立？被參照的表要先存在，所以誰應該排最前面？
+思考一下，分類和品項，哪一張要先建？為什麼？
 
 我們先暫停一下，自己動手寫寫看。
 
-【講師】給大家十五分鐘，寫完可以直接執行，確認每張表都建立成功。
+【講師】給大家十到十五分鐘，寫完請同學實際執行一次，確認沒有錯誤。
 -->
 
 ---
@@ -546,64 +545,27 @@ layout: default
 
 # 練習 1：解題提示（Part 1）
 
-`users` 和 `surveys` 不參照別人，可以最先建立：
-
 ```sql
-CREATE DATABASE IF NOT EXISTS dynamic_survey
-  DEFAULT CHARACTER SET utf8mb4;
-USE dynamic_survey;
+SET NAMES utf8mb4;
+DROP DATABASE IF EXISTS corner_cafe;
+CREATE DATABASE corner_cafe
+  DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+USE corner_cafe;
 
-CREATE TABLE users (
+-- 先建被參照的表
+CREATE TABLE categories (
   id         INT AUTO_INCREMENT PRIMARY KEY,
-  name       VARCHAR(50) NOT NULL,
-  email      VARCHAR(100) NOT NULL UNIQUE,
-  password   VARCHAR(100) NOT NULL,
-  phone      VARCHAR(20),
-  role       VARCHAR(10) NOT NULL DEFAULT 'USER',
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT chk_users_role
-    CHECK (role IN ('USER', 'ADMIN'))
+  name       VARCHAR(20) NOT NULL UNIQUE,
+  sort_order INT         NOT NULL DEFAULT 0
 ) ENGINE=InnoDB;
 ```
 
 <!--
-我們來看解答。先回答順序的問題，`users` 和 `surveys` 不參照任何人，所以排最前面。
+第一步，建立資料庫並切換過去。`DROP DATABASE IF EXISTS` 讓這份腳本可以重複執行，每次都從乾淨的狀態開始。
 
-`users` 的 `role` 加上 CHECK 約束，只接受兩個值。不管是程式寫錯還是有人手動輸入，都不會出現其他的角色名稱。
+接著先建分類。因為等一下的品項要用外鍵參照分類，被參照的表一定要先存在，這也回答了剛才的思考題。
 
-執行之後，資料庫和第一張表就建立好了。
--->
-
----
-layout: default
----
-
-# 練習 1：解題提示（Part 1 續）
-
-```sql
-CREATE TABLE surveys (
-  id          INT AUTO_INCREMENT PRIMARY KEY,
-  title       VARCHAR(50) NOT NULL,
-  description VARCHAR(300),
-  start_date  DATE NOT NULL,
-  end_date    DATE NOT NULL,
-  published   TINYINT NOT NULL DEFAULT 0,
-  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT chk_survey_dates
-    CHECK (end_date >= start_date)
-) ENGINE=InnoDB;
-```
-
-<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>資料庫是最後一道防線：</b>程式和前端也會檢查日期，但就算有人繞過程式直接寫資料庫，CHECK 一樣會擋下來。
-</div>
-
-<!--
-`surveys` 的重點是這個 CHECK 約束，結束日期不可以早於開始日期。
-
-程式和前端當然也會檢查，那為什麼資料庫還要再檢查一次？因為資料庫是最後一道防線，就算有人繞過程式直接寫入，也會被擋下來。
-
-要注意的是，CHECK 約束需要 MySQL 8.0.16 以上才會真的生效，舊版本只會略過。
+分類名稱加上 UNIQUE，就不會出現兩個「咖啡」分類。`sort_order` 用來決定網頁上的顯示順序。
 -->
 
 ---
@@ -612,56 +574,28 @@ layout: default
 
 # 練習 1：解題提示（Part 2）
 
-接著建立題目與選項，先從 `questions` 開始：
-
 ```sql
-CREATE TABLE questions (
+CREATE TABLE products (
   id          INT AUTO_INCREMENT PRIMARY KEY,
-  survey_id   INT NOT NULL,
-  title       VARCHAR(200) NOT NULL,
-  type        VARCHAR(10) NOT NULL,
-  required    TINYINT NOT NULL DEFAULT 0,
-  order_index INT NOT NULL,
-  INDEX idx_questions_survey (survey_id),
-  CONSTRAINT chk_question_type
-    CHECK (type IN ('SINGLE', 'MULTI', 'TEXT')),
-  FOREIGN KEY (survey_id) REFERENCES surveys(id)
-    ON DELETE CASCADE
+  category_id INT          NOT NULL,
+  name        VARCHAR(50)  NOT NULL,
+  description VARCHAR(200),
+  price       INT          NOT NULL,           -- 新台幣元
+  image_url   VARCHAR(200),
+  available   TINYINT      NOT NULL DEFAULT 1, -- 1 供應中、0 暫停
+  sort_order  INT          NOT NULL DEFAULT 0,
+  created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT chk_products_price CHECK (price >= 0),
+  FOREIGN KEY (category_id) REFERENCES categories(id)
 ) ENGINE=InnoDB;
 ```
 
 <!--
-接著是題目。題目參照問卷，所以要等 `surveys` 建好之後才能建立。
+接著是品項。`category_id` 是外鍵，指向分類。說明和圖片可以不填，所以允許 NULL；其他欄位都是 NOT NULL。
 
-`type` 用 CHECK 限制只能是三種題型，這樣就不會出現小寫的 single，或其他打錯的值。
+價格用 INT，單位是元。咖啡店的價格沒有小數，用整數最單純，也不會有浮點數的誤差。
 
-外鍵加上 `ON DELETE CASCADE`，問卷刪掉時，底下的題目也會一起刪除。
--->
-
----
-layout: default
----
-
-# 練習 1：解題提示（Part 2 續）
-
-```sql
-CREATE TABLE options (
-  id          INT AUTO_INCREMENT PRIMARY KEY,
-  question_id INT NOT NULL,
-  label       VARCHAR(100) NOT NULL,
-  order_index INT NOT NULL,
-  INDEX idx_options_question (question_id),
-  FOREIGN KEY (question_id) REFERENCES questions(id)
-    ON DELETE CASCADE
-) ENGINE=InnoDB;
-```
-
-<!--
-選項參照題目，所以排在題目後面。
-
-`options` 不是保留字，可以直接當表名。如果某些圖形化工具把它標成關鍵字，用反引號包起來就可以了。
-
-執行之後，問卷、題目和選項這三層就串起來了。
+CHECK 約束擋住負數的價格。暫停供應不是刪除，而是把 `available` 改成 0，這樣菜單就能只顯示供應中的品項。
 -->
 
 ---
@@ -670,67 +604,31 @@ layout: default
 
 # 練習 1：解題提示（Part 3）
 
-最後建立作答紀錄與每一題的答案：
-
 ```sql
-CREATE TABLE survey_responses (
+CREATE TABLE reservations (
   id           INT AUTO_INCREMENT PRIMARY KEY,
-  survey_id    INT NOT NULL,
-  user_id      INT,
-  name         VARCHAR(50) NOT NULL,
-  phone        VARCHAR(20) NOT NULL,
-  email        VARCHAR(100) NOT NULL,
-  age          INT,
-  submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uk_survey_email (survey_id, email),
-  CONSTRAINT chk_response_age
-    CHECK (age IS NULL OR age BETWEEN 1 AND 120),
-  FOREIGN KEY (survey_id) REFERENCES surveys(id)
-    ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id)
-    ON DELETE SET NULL
-) ENGINE=InnoDB;
-```
-
-<!--
-作答紀錄同時參照問卷和會員，所以要等這兩張表都建好。
-
-`(survey_id, email)` 用複合唯一約束，保證同一個 Email 不能重複填同一份問卷。
-
-年齡是選填，所以 CHECK 寫成可以是 NULL，或是介於一到一百二十之間。這樣沒填年齡的人可以正常送出，填了不合理的年齡才會被擋下來。
--->
-
----
-layout: default
----
-
-# 練習 1：解題提示（Part 3 續）
-
-```sql
-CREATE TABLE response_answers (
-  id          INT AUTO_INCREMENT PRIMARY KEY,
-  response_id INT NOT NULL,
-  question_id INT NOT NULL,
-  answer_text VARCHAR(500),
-  INDEX idx_answers_response (response_id),
-  INDEX idx_answers_question (question_id),
-  FOREIGN KEY (response_id) REFERENCES survey_responses(id)
-    ON DELETE CASCADE,
-  FOREIGN KEY (question_id) REFERENCES questions(id)
-    ON DELETE CASCADE
+  name         VARCHAR(20)  NOT NULL,
+  phone        VARCHAR(10)  NOT NULL,
+  email        VARCHAR(100),
+  reserve_date DATE         NOT NULL,
+  reserve_time TIME         NOT NULL,
+  people       TINYINT      NOT NULL,
+  note         VARCHAR(200),
+  created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT chk_reservations_people CHECK (people BETWEEN 1 AND 8)
 ) ENGINE=InnoDB;
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>建表順序：</b><code>users</code>、<code>surveys</code>、<code>questions</code>、<code>options</code>、<code>survey_responses</code>、<code>response_answers</code>。要重來時，反過來 DROP。
+💡 <b>驗證約束：</b>試著新增一筆 9 人的訂位，會看到 <code>Check constraint 'chk_reservations_people' is violated</code>。完整腳本與範例資料在 <code>sql/corner_cafe/</code>。
 </div>
 
 <!--
-最後一張表參照作答紀錄和題目，所以排在最後面。
+最後是訂位。手機存成 VARCHAR，不是數字，因為開頭的 0 不能消失，而且我們也不會拿手機號碼來做加減。Email 是選填，所以允許 NULL。
 
-整理一下完整的順序，先是會員和問卷，再來是題目、選項，接著是作答紀錄，最後是答案。要重來的時候，刪除順序剛好相反。
+日期和時間分成兩個欄位，方便查「某一天的所有訂位」。人數用 CHECK 限制在一到八人，一次最多預約八位，跟網站的規則一樣。
 
-把這些語法存成 `schema.sql`，就可以一次建立整個資料庫。課程也附了一份 `sql/schema.sql`，大家可以對照看看。
+寫完之後，可以故意新增一筆九人的訂位，看看約束有沒有擋下來。完整的腳本和範例資料都放在 `sql/corner_cafe` 資料夾，下一章開始就會用到。
 -->
 
 ---
@@ -740,35 +638,36 @@ layout: default
 # 練習 2：任務說明
 ### 修改現有結構（需求變更）
 
-請在練習用的資料庫 `ch04_practice` 建立第一版的 `surveys`，再依新需求修改：
+請在練習用的資料庫 `ch04_practice` 建立第一版的訂位表，再依新需求修改：
 
 ```sql
-CREATE TABLE surveys (
-  id         INT AUTO_INCREMENT PRIMARY KEY,
-  title      VARCHAR(50) NOT NULL,
-  start_date DATE NOT NULL,
-  end_date   DATE NOT NULL,
-  enabled    TINYINT NOT NULL DEFAULT 0,
-  temp_note  VARCHAR(100)
+CREATE TABLE reservations (
+  id           INT AUTO_INCREMENT PRIMARY KEY,
+  name         VARCHAR(20) NOT NULL,
+  phone        VARCHAR(10) NOT NULL,
+  reserve_date DATE        NOT NULL,
+  reserve_time TIME        NOT NULL,
+  persons      TINYINT     NOT NULL,
+  temp_note    VARCHAR(100)
 ) ENGINE=InnoDB;
 ```
 
-1. 把 `enabled` 改名為 `published`
+1. 把 `persons` 改名為 `people`
 2. 新增 `created_at DATETIME`，預設為建立當下的時間
-3. 新增 `(published, start_date, end_date)` 複合索引
-4. `title` 不可為空字串（提示：`CHECK (CHAR_LENGTH(title) > 0)`）
+3. 新增 `(reserve_date, reserve_time)` 複合索引
+4. 人數只能是 1～8（`CHECK (people BETWEEN 1 AND 8)`）
 5. 刪除暫時用的 `temp_note` 欄位
 
 <!--
-第二題的情境很常見，專案做到一半，需求改了。第一版把發佈欄位叫做 `enabled`，還留著一個暫時用的欄位。
+第二題模擬真實工作會遇到的狀況：資料表已經上線了，需求才改變。這時候不能刪掉重建，要用 ALTER TABLE 一步一步修改。
 
-請大家先建立第一版的資料表，再用 ALTER TABLE 完成這五個修改。
+五個需求分別練習改欄位名稱、新增欄位、加索引、加約束和刪除欄位。
 
-思考一下，這五個修改一定要分成五句執行嗎？能不能寫在同一個 ALTER TABLE 裡？
+思考一下，第三題的索引，為什麼日期要放在時間前面？
 
 我們先暫停一下，自己動手試試看。
 
-【講師】給大家十分鐘，提醒同學在 `ch04_practice` 練習，不要動到 `dynamic_survey`。
+【講師】給大家十分鐘，提醒同學每改一步就用 DESC 或 SHOW CREATE TABLE 確認結果。
 -->
 
 ---
@@ -777,31 +676,36 @@ layout: default
 
 # 練習 2：解題提示
 
-五個修改可以合併在同一個 `ALTER TABLE`：
-
 ```sql
-ALTER TABLE surveys
-  RENAME COLUMN enabled TO published,
-  ADD COLUMN created_at DATETIME NOT NULL
-    DEFAULT CURRENT_TIMESTAMP,
-  ADD INDEX idx_pub_dates (published, start_date, end_date),
-  ADD CONSTRAINT chk_title_not_empty
-    CHECK (CHAR_LENGTH(title) > 0),
-  DROP COLUMN temp_note;
+-- 1. 改欄位名稱
+ALTER TABLE reservations RENAME COLUMN persons TO people;
+
+-- 2. 新增建立時間
+ALTER TABLE reservations
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+-- 3. 複合索引：最常用的查詢是「某一天的訂位，依時間排序」
+CREATE INDEX idx_reservations_date_time
+  ON reservations (reserve_date, reserve_time);
+
+-- 4. 人數限制
+ALTER TABLE reservations
+  ADD CONSTRAINT chk_reservations_people CHECK (people BETWEEN 1 AND 8);
+
+-- 5. 刪除暫時欄位
+ALTER TABLE reservations DROP COLUMN temp_note;
+
+SHOW CREATE TABLE reservations;
 ```
 
-<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <b>新增 CHECK 時，MySQL 會檢查現有資料。</b>如果已經有空字串的標題，ALTER 會直接失敗，要先修正舊資料再加約束。
-</div>
-
 <!--
-答案是可以合併。分開寫也能完成，不過對大型資料表來說，每次 ALTER 都可能花上不少時間，合併執行通常比較有效率。
+第一題用 RENAME COLUMN，只改名字，型別和資料都不變。
 
-執行後，欄位名稱改好了，也多了 `created_at` 和索引。這時候如果新增空字串的標題，CHECK 就會擋下來。
+第二題新增欄位時給了預設值，已經存在的資料列也會自動填上目前的時間。
 
-要注意的是，加上 CHECK 時，MySQL 也會檢查已經存在的資料。只要有一筆不符合，整個 ALTER 就會失敗，所以實務上要先修正舊資料。
+第三題回答剛才的思考題。店家最常查的是「某一天有哪些訂位，依時間排序」，所以日期放前面、時間放後面。順序反過來，查某一天的訂位就用不上這個索引，這個規則第八章會詳細說明。
 
-至於索引的欄位順序為什麼這樣排，到索引那一章會再說明。
+第四題加上約束之後，再新增九人的訂位就會被擋下來。最後用 SHOW CREATE TABLE 看一次，五個需求都應該反映在結果裡。
 -->
 
 ---
