@@ -191,7 +191,7 @@ class: flex flex-col justify-center items-center text-center
 
 - 我們寫的 Java 程式，電腦**不能直接看懂**
 - **JDK**（Java Development Kit）：寫 Java 需要的整套工具，包含把程式翻成電腦看得懂的樣子、以及執行它
-- 這門課用 **Java 17**：它是長期支援版（LTS），會維護很多年，Spring Boot 4 也要求至少 17
+- 這門課用 **Java 21**：它是長期支援版（LTS），會維護很多年；Spring Boot 4 最低要求 17，我們直接用更新的 21
 
 </v-clicks>
 
@@ -210,19 +210,19 @@ JDK 是什麼？
 
 （下一步）JDK，全名是 Java Development Kit，Java 開發工具包。它是寫 Java 需要的整套工具。其中最重要的兩件事：把我們寫的程式翻成電腦看得懂的樣子，以及執行它。
 
-（下一步）這門課用 Java 17。它是長期支援版，英文縮寫 LTS，會維護很多年。我們用的 Spring Boot 4，也要求至少是 Java 17。
+（下一步）這門課用 Java 21。它是長期支援版，英文縮寫 LTS，會維護很多年。我們用的 Spring Boot 4 最低要求是 Java 17，我們直接用更新的 21。
 
 （下一步）JDK 有很多家公司在做，內容幾乎一樣。這門課用免費的 Eclipse Temurin，到 adoptium.net 下載。注意它和等一下要裝的 Eclipse 書桌是兩樣東西，只是名字很像。
 -->
 
 ---
 
-# 安裝 JDK 17
+# 安裝 JDK 21
 
 <v-clicks>
 
 1. 前往 `adoptium.net`，點選上方的 **Temurin**，再點 **Other platforms and versions**
-2. 作業系統選 **Windows**、架構選 **x64**、版本選 **17 - LTS**，下載 **.msi**
+2. 作業系統選 **Windows**、架構選 **x64**、版本選 **21 - LTS**，下載 **.msi**
 3. 執行安裝程式。在選擇功能的畫面，把 **Set JAVA_HOME variable** 改成「安裝在本機」
 4. 其他保持預設，一路按 **Next**，最後按 **Install**
 
@@ -236,16 +236,16 @@ JDK 是什麼？
 java -version
 ```
 
-看到 `openjdk version "17.0.…"` 就是裝好了。
+看到 `openjdk version "21.0.…"` 就是裝好了。
 
 </v-click>
 
 <!--
-安裝 JDK 17。這一段沒有截圖，請照著文字一步一步做。
+安裝 JDK 21。這一段沒有截圖，請照著文字一步一步做。
 
 （下一步）第一步，前往 adoptium.net。首頁會推薦最新的版本，我們要的不是最新版，所以點上方的 Temurin，再點 Other platforms and versions，其他平台和版本。
 
-（下一步）第二步，作業系統選 Windows，架構選 x64，版本選 17 - LTS。下載副檔名是 msi 的安裝檔。
+（下一步）第二步，作業系統選 Windows，架構選 x64，版本選 21 - LTS。下載副檔名是 msi 的安裝檔。
 
 （下一步）第三步，執行安裝程式。中間有一個選擇功能的畫面，其中有一項叫 Set JAVA_HOME variable，預設是不安裝的。請點它，改成「安裝在本機」。JAVA_HOME 是一個系統設定，告訴其他程式 JDK 裝在哪裡，第三章建立專案的時候會用到。
 
@@ -253,7 +253,7 @@ java -version
 
 （下一步）裝好之後確認一下。按 Win 加 R，輸入 cmd，開啟命令提示字元。輸入 java 空格 減號 version。
 
-看到 openjdk version 17 開頭，就是裝好了。如果說找不到 java 這個指令，請把命令提示字元關掉重開一次，新的設定才會生效。
+看到 openjdk version 21 開頭，就是裝好了。如果說找不到 java 這個指令，請把命令提示字元關掉重開一次，新的設定才會生效。
 -->
 
 ---
@@ -308,7 +308,7 @@ Eclipse 是什麼？
 
 1. 前往 `eclipse.org/downloads`，下載 **Eclipse Installer**
 2. 執行後，在清單裡選 **Eclipse IDE for Enterprise Java and Web Developers**
-3. **Java VM** 選剛才裝好的 JDK 17；安裝位置保持預設，按 **INSTALL**
+3. **Java VM** 選剛才裝好的 JDK 21；安裝位置保持預設，按 **INSTALL**
 4. 裝好後按 **LAUNCH**，第一次開啟會問 **Workspace**（放專案的資料夾）
 
 </v-clicks>
@@ -328,7 +328,7 @@ Eclipse 是什麼？
 
 （下一步）第二步，執行之後會出現一份清單，選 Eclipse IDE for Enterprise Java and Web Developers。
 
-（下一步）第三步，Java VM 這一欄，選剛才裝好的 JDK 17。安裝位置保持預設，按 INSTALL。中間會問是否接受授權條款，按接受。
+（下一步）第三步，Java VM 這一欄，選剛才裝好的 JDK 21。安裝位置保持預設，按 INSTALL。中間會問是否接受授權條款，按接受。
 
 （下一步）第四步，裝好之後按 LAUNCH 開啟。第一次開啟會問 Workspace，意思是放專案的資料夾。
 
@@ -810,7 +810,7 @@ class: flex flex-col justify-center items-center text-center
 
 <v-clicks>
 
-- ✅ `java -version` 顯示 17
+- ✅ `java -version` 顯示 21
 - ✅ Eclipse 打得開，Workspace 路徑沒有中文
 - ✅ MySQL Workbench 用 root 密碼連得進去
 - ✅ `git --version` 有版本號
@@ -821,7 +821,7 @@ class: flex flex-col justify-center items-center text-center
 <!--
 看到 GitHub Desktop 的主畫面，六樣工具就全部裝好了。我們用一份清單確認一次。
 
-（下一步）java 減號 version 顯示 17。
+（下一步）java 減號 version 顯示 21。
 
 （下一步）Eclipse 打得開，Workspace 路徑沒有中文。
 
@@ -838,12 +838,12 @@ class: flex flex-col justify-center items-center text-center
 
 # 複習：小明的文具
 
-<Pairs left="小明的文具" right="工具" rows="book,寫作業的語言=code,JDK 17（Eclipse Temurin）|shop,書桌=code,Eclipse（Enterprise Java 版）|cabinet,檔案櫃=server,MySQL + Workbench（記住 root 密碼）|doc,每一段的存檔點=code,Git（commit）|browser,雲端作業簿=browser,GitHub（repository）|ok,有按鈕的小幫手=code,GitHub Desktop" />
+<Pairs left="小明的文具" right="工具" rows="book,寫作業的語言=code,JDK 21（Eclipse Temurin）|shop,書桌=code,Eclipse（Enterprise Java 版）|cabinet,檔案櫃=server,MySQL + Workbench（記住 root 密碼）|doc,每一段的存檔點=code,Git（commit）|browser,雲端作業簿=browser,GitHub（repository）|ok,有按鈕的小幫手=code,GitHub Desktop" />
 
 <!--
 我們用一張圖複習今天的內容。
 
-（下一步）寫作業的語言，是 JDK 17，我們用 Eclipse Temurin。
+（下一步）寫作業的語言，是 JDK 21，我們用 Eclipse Temurin。
 
 （下一步）書桌，是 Eclipse，選 Enterprise Java 的版本。
 
@@ -862,7 +862,7 @@ class: flex flex-col justify-center items-center text-center
 
 <v-clicks>
 
-- **JDK 17**：讓電腦看得懂 Java；安裝時記得設定 `JAVA_HOME`
+- **JDK 21**：讓電腦看得懂 Java；安裝時記得設定 `JAVA_HOME`
 - **Eclipse**：寫程式的 IDE；Workspace 路徑不要有中文或空格
 - **MySQL**：資料庫，Port 3306；root 密碼一定要記住
 - **Git**：版本控制，每個存檔點叫 commit；**GitHub**：把它們放到雲端
@@ -879,7 +879,7 @@ class: flex flex-col justify-center items-center text-center
 <!--
 最後整理今天的重點。
 
-（依序按下一步）JDK 17 讓電腦看得懂 Java，安裝時記得設定 JAVA_HOME。Eclipse 是寫程式的 IDE，Workspace 路徑不要有中文或空格。MySQL 是資料庫，Port 是 3306，root 密碼一定要記住。Git 是版本控制，每個存檔點叫 commit；GitHub 把它們放到雲端。GitHub Desktop 是 Git 的按鈕版，Email 要和 GitHub 相同。
+（依序按下一步）JDK 21 讓電腦看得懂 Java，安裝時記得設定 JAVA_HOME。Eclipse 是寫程式的 IDE，Workspace 路徑不要有中文或空格。MySQL 是資料庫，Port 是 3306，root 密碼一定要記住。Git 是版本控制，每個存檔點叫 commit；GitHub 把它們放到雲端。GitHub Desktop 是 Git 的按鈕版，Email 要和 GitHub 相同。
 
 （最後一步）下一章，我們就在這張書桌上建立第一個 Spring Boot 專案，讓瀏覽器顯示 Hello World。
 -->

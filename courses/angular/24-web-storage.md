@@ -122,16 +122,16 @@ class: flex flex-col justify-center items-center text-center
 
 Angular 未內建 CookieService（舊版 `cookieStore` 已淘汰），目前主流使用 **ngx-cookie-service**。
 
-指定 19.0.0 版本安裝（最新版與 Angular 19 有衝突）：
+指定主版本 21 安裝（套件的主版本要和 Angular 一致）：
 
 ```bash
-npm install ngx-cookie-service@19.0.0
+npm install ngx-cookie-service@21
 ```
 
 <!--
 Angular 本身沒有內建方便操作 Cookie 的工具，目前主流的做法是安裝第三方套件 `ngx-cookie-service`。
 
-安裝時請指定 19.0.0 版本。因為最新版跟我們使用的 Angular 19 有相容性的問題，指定版本可以避免安裝時出現錯誤。
+安裝時請指定主版本 21。這個套件的主版本號跟 Angular 對應，我們用的是 Angular 21，就裝 21 版，可以避免安裝時出現版本不相容的錯誤。
 
 這也呼應了我們之前學的版本觀念：套件版本要和 Angular 版本對得上。
 -->

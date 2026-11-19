@@ -161,7 +161,7 @@ layout: default
 | 指令 | 用途 | 章節 |
 | --- | --- | --- |
 | `cd 路徑`／`cd ..` | 切換目錄／回上一層 | Ch4 |
-| `nvm install 22`／`nvm use 22` | 安裝／切換 Node.js 版本 | Ch5 |
+| `nvm install 24`／`nvm use 24` | 安裝／切換 Node.js 版本 | Ch5 |
 | `npm install -g @angular/cli` | 全域安裝 Angular CLI | Ch5 |
 | `ng new my-app` | 建立新專案 | Ch5 |
 | `ng serve -o` | 啟動開發伺服器並開啟瀏覽器 | Ch5, Ch7 |

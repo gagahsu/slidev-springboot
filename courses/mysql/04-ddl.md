@@ -171,7 +171,7 @@ USE shop;
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>MySQL 8.x：</b>預設字元集已是 utf8mb4，但建立時明確指定是好習慣，確保在所有環境下一致。
+💡 <b>MySQL 8 之後（包含本課用的 9.7）：</b>預設字元集已是 utf8mb4，但建立時明確指定是好習慣，確保在所有環境下一致。
 </div>
 
 <!--

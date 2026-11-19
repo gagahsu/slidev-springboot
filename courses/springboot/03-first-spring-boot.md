@@ -208,7 +208,7 @@ Spring Initializr 是什麼？
 - Language：**Java**
 - Spring Boot：**保持預設**（4 開頭，不要選有 SNAPSHOT、RC、M 的）
 - Group：`com.example`，Artifact：`demo`
-- Packaging：**Jar**，Java：**17**
+- Packaging：**Jar**，Java：**21**
 
 </v-clicks>
 
@@ -231,7 +231,7 @@ Spring Initializr 是什麼？
 
 （下一步）Group 填 com.example，Artifact 填 demo。這兩個合起來，就是專案的名字和套件的名字。
 
-（下一步）Packaging 選 Jar，Java 選 17，和上一章裝的 JDK 一樣。
+（下一步）Packaging 選 Jar，Java 選 21，和上一章裝的 JDK 一樣。
 -->
 
 ---
@@ -378,12 +378,12 @@ class: flex flex-col justify-center items-center text-center
 
 ---
 
-# 補充：Gradle 找不到 JDK 17
+# 補充：Gradle 找不到 JDK 21
 
 匯入時如果出現：
 
 ```text
-Cannot find a Java installation matching: {languageVersion=17}
+Cannot find a Java installation matching: {languageVersion=21}
 ```
 
 <v-clicks>
@@ -397,21 +397,21 @@ Cannot find a Java installation matching: {languageVersion=17}
 
 ```groovy
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 ```
 
 </v-click>
 
 <!--
-補充一個常見的問題。匯入的時候，如果出現 Cannot find a Java installation matching languageVersion 17，意思是 Gradle 找不到 JDK 17。
+補充一個常見的問題。匯入的時候，如果出現 Cannot find a Java installation matching languageVersion 21，意思是 Gradle 找不到 JDK 21。
 
 （下一步）先確認上一章安裝 JDK 的時候，有沒有設定 JAVA_HOME。設定之後要把 Eclipse 關掉重開，再匯入一次。
 
 （下一步）還是不行的話，打開 build.gradle，找到 java 大括號 toolchain 那一段，換成下面的寫法。存檔之後，對專案按右鍵，選 Gradle，再選 Refresh Gradle Project。
 
-（下一步）這個寫法的意思是：直接用 Eclipse 正在用的 JDK，編譯成 Java 17 的程式，不要求 Gradle 自己去找。
+（下一步）這個寫法的意思是：直接用 Eclipse 正在用的 JDK，編譯成 Java 21 的程式，不要求 Gradle 自己去找。
 -->
 
 ---
@@ -702,12 +702,12 @@ public String hello() {
 
 # 複習：第一次到便利商店
 
-<Pairs left="便利商店" right="今天做的事" rows="backpack,配好的工具箱=code,start.spring.io：Gradle、Java 17、Spring Web|shop,搬上書桌=code,Eclipse：Import → Existing Gradle Project|clerk,掛名牌的店員=code,@RestController + @RequestMapping(&quot;/test&quot;)|printer,按下列印鈕=code,Run As → Java Application|ok,作業印出來了=browser,localhost:8080/test → Hello World" />
+<Pairs left="便利商店" right="今天做的事" rows="backpack,配好的工具箱=code,start.spring.io：Gradle、Java 21、Spring Web|shop,搬上書桌=code,Eclipse：Import → Existing Gradle Project|clerk,掛名牌的店員=code,@RestController + @RequestMapping(&quot;/test&quot;)|printer,按下列印鈕=code,Run As → Java Application|ok,作業印出來了=browser,localhost:8080/test → Hello World" />
 
 <!--
 我們用一張圖複習今天的內容。
 
-（下一步）配好的工具箱，是 start.spring.io，選 Gradle、Java 17，加上 Spring Web。
+（下一步）配好的工具箱，是 start.spring.io，選 Gradle、Java 21，加上 Spring Web。
 
 （下一步）搬上書桌，是 Eclipse 的 Import，選 Existing Gradle Project。
 

@@ -166,29 +166,33 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.5/install.sh | bash
 NVM 安裝完成後，用它來安裝 Node.js。建議先至官方確認目前的 LTS（長期支援）穩定版本。
 
 ```bash
-# 安裝指定版本（例如安裝 22.x 最新版）
-nvm install 22
+# 安裝 Node.js 24（LTS，內建 npm 11）
+nvm install 24
 
 # 列出已安裝的 Node.js 版本
 nvm list
 
 # 切換使用指定版本（依 nvm list 顯示的版本填入）
-nvm use 22.xx.x
+nvm use 24.xx.x
 
-# 確認安裝成功
+# 確認安裝成功：node 是 v24、npm 是 11 開頭
 node -v
+npm -v
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>技巧：</b> 只輸入主版本號（如 <code>22</code>），NVM 會自動安裝該版本最新的小版號。可用 <code>nvm list</code> 查看已安裝版本，再用 <code>nvm use</code> 切換。若 <code>node -v</code> 無反應，關閉命令提示字元重開再試。
+⚠️ <b>請裝 24：</b>Node.js 22 內建的 npm 10.9，在建立 Angular 21 專案時會出現 <code>Cannot read properties of null (reading 'edgesOut')</code> 的錯誤；Node.js 24 內建 npm 11，沒有這個問題。<br>
+💡 <b>技巧：</b> 只輸入主版本號（如 <code>24</code>），NVM 會自動安裝該版本最新的小版號。可用 <code>nvm list</code> 查看已安裝版本，再用 <code>nvm use</code> 切換。若 <code>node -v</code> 無反應，關閉命令提示字元重開再試。
 </div>
 
 <!--
 NVM 裝好之後，就可以用它來安裝 Node.js。
 
-第一行 `nvm install 22`，會下載並安裝 Node.js 22 版。只輸入主版本號的話，NVM 會自動挑選這個版本裡最新的一版。接著用 `nvm list` 列出已經安裝的版本，再用 `nvm use` 加上完整版本號，切換到要使用的版本。
+第一行 `nvm install 24`，會下載並安裝 Node.js 24 版。只輸入主版本號的話，NVM 會自動挑選這個版本裡最新的一版。接著用 `nvm list` 列出已經安裝的版本，再用 `nvm use` 加上完整版本號，切換到要使用的版本。
 
-最後輸入 `node -v`，如果顯示 v22 開頭的版本號，就代表安裝成功了。
+最後輸入 `node -v` 和 `npm -v`。node 顯示 v24 開頭、npm 顯示 11 開頭，就代表安裝成功了。
+
+為什麼一定要 24？因為 Node.js 22 內建的 npm 是 10.9 版，它在安裝 Angular 21 專案的套件時，會出現一個看不太懂的錯誤，訊息裡有 edgesOut 這個字。Node.js 24 內建 npm 11，就沒有這個問題。如果電腦上已經有 22，用 nvm 裝一個 24 再切換過去就好。
 
 實務上，我們通常會選擇 LTS 版本，也就是長期支援版，因為它比較穩定。如果 `node -v` 沒有反應，一樣先把命令提示字元關掉重開。
 -->
@@ -201,7 +205,7 @@ Node.js 安裝完成後，用 npm 全域安裝 Angular CLI：
 
 ```bash
 # 安裝 Angular CLI
-npm install -g @angular/cli@19.0.5
+npm install -g @angular/cli@21
 
 # 確認安裝成功
 ng v
@@ -216,7 +220,7 @@ Node.js 準備好之後，就可以安裝這門課的主角工具：Angular CLI�
 
 CLI 是命令列工具的意思，之後建立專案、啟動網頁、新增元件，都要靠它。
 
-輸入 `npm install -g @angular/cli@19.0.5`。其中 `-g` 代表「全域安裝」，裝好之後，不管在哪個資料夾都能使用 `ng` 指令。後面的 `19.0.5` 是指定版本，讓大家的環境保持一致。
+輸入 `npm install -g @angular/cli@21`。其中 `-g` 代表「全域安裝」，裝好之後，不管在哪個資料夾都能使用 `ng` 指令。後面的 `@21` 是指定主版本，會裝 Angular 21 最新的一版，讓大家的環境保持一致。
 
 安裝完成後，輸入 `ng v`。如果看到 Angular 的 Logo 和一份版本清單，就代表安裝成功了。
 -->
@@ -240,11 +244,12 @@ class: flex flex-col justify-center items-center text-center
 開啟命令提示字元，切換至想放置專案的目錄，再執行 `ng new`：
 
 ```bash
-# 建立新專案
-ng new 專案名稱
+# 建立新專案（後面兩個參數讓專案和這門課的寫法一致）
+ng new 專案名稱 --file-name-style-guide=2016 --zoneless=false
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>兩個參數：</b><code>--file-name-style-guide=2016</code> 讓檔名是 <code>app.component.ts</code> 這種寫法；<code>--zoneless=false</code> 讓畫面在資料改變時自動更新，跟課程的範例一樣。<br>
 💡 <b>Windows 快捷：</b> 在資料夾路徑列直接輸入 <code>cmd</code>，可直接在該目錄開啟命令提示字元。
 </div>
 
@@ -255,6 +260,8 @@ ng new 專案名稱
 
 專案名稱要注意兩件事：不要用中文，也不要有空格。建議用英文小寫，單字之間用連字號連接，例如 `my-first-app`。
 
+後面兩個參數請一定要加。Angular 20 之後，新專案的檔名預設變短了，例如 `app.ts`；加上 `--file-name-style-guide=2016`，檔名才會是這門課用的 `app.component.ts`。`--zoneless=false` 則是讓 Angular 在資料改變時自動更新畫面，課程裡的範例都依賴這個行為。
+
 另外，用 Windows 的話，可以在檔案總管的路徑列直接輸入 cmd，就會在那個資料夾開啟命令提示字元。
 -->
 
@@ -262,23 +269,59 @@ ng new 專案名稱
 
 # 建立專案 — 安裝選項
 
-執行 `ng new` 後會出現兩個問題：
+執行 `ng new` 後會出現三個問題：
 
 | 問題 | 選擇 | 說明 |
 | --- | --- | --- |
 | 第一個選項（樣式格式） | **Sass (SCSS)** | 選擇 SCSS 作為樣式格式 |
 | 第二個選項（Server-Side Rendering） | **N** | 輸入 N，不啟用 SSR |
+| 第三個選項（AI 工具設定） | **None** | 不產生 AI 工具的設定檔，直接按 Enter |
 
 選完後等待安裝完成，看到成功畫面即代表專案建立完畢。
 
 <!--
-執行 `ng new` 之後，CLI 會問我們兩個問題。
+執行 `ng new` 之後，CLI 會問我們三個問題。
 
 第一個問題是樣式要用哪一種格式。請用方向鍵選擇 Sass，也就是 SCSS。它是 CSS 的進階版本，可以寫得更有條理，這門課會一直使用它。
 
 第二個問題是要不要啟用 Server-Side Rendering，也就是伺服器端渲染。請輸入 N 再按 Enter。這個功能會讓專案架構變得比較複雜，初學階段先不需要。
 
+第三個問題是要不要替 AI 寫程式工具產生設定檔。這門課用不到，選 None，直接按 Enter 就好。
+
 選完之後，CLI 會開始下載套件，需要等一段時間，看到成功的訊息就代表專案建立完成了。
+-->
+
+---
+
+# 讓元件的名稱和教材一致
+
+專案建立後，打開 `angular.json`，找到 `@schematics/angular:component`，把 `addTypeToClassName` 改成 `true`：
+
+```json
+"@schematics/angular:component": {
+  "style": "scss",
+  "type": "component",
+  "addTypeToClassName": true
+}
+```
+
+| 設定 | `ng g c home` 產生的類別 |
+| --- | --- |
+| `false`（預設） | `export class Home` |
+| `true`（改完） | `export class HomeComponent` ✅ 和教材一樣 |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>根元件：</b>新專案的 <code>app.component.ts</code> 裡，類別名稱是 <code>App</code>。教材裡看到的 <code>AppComponent</code> 指的就是它，兩種名稱都可以。
+</div>
+
+<!--
+專案建好之後，還有一個小設定，讓之後產生的元件名稱和教材一樣。
+
+打開專案根目錄的 `angular.json`，搜尋 `@schematics/angular:component`，把底下的 `addTypeToClassName` 從 false 改成 true。
+
+改完之後，用 `ng g c home` 產生元件時，類別名稱會是 HomeComponent，跟教材的程式碼一樣，複製範例的時候就不會對不起來。
+
+最後提醒一下，新專案裡根元件的類別叫做 App。教材裡看到的 AppComponent，指的就是它，名稱不同而已。
 -->
 
 ---
