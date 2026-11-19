@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>轉址中…</title>
+<script>
+  // GitHub Pages serves this page for every path it cannot find.
+  // The new site (root) uses hash URLs, so a missing path is an old Slidev link:
+  //   /<repo>/5, /<repo>/ch04, /<repo>/presenter/5        (before the move)
+  //   /<repo>/slidev/5                                     (history-style link into the moved copy)
+  // Send them to the old Slidev deck, now under /<repo>/slidev/ with hash URLs.
+  (function () {
+    var parts = location.pathname.split('/')
+    var base = '/' + parts[1] + '/'                // project pages: /<repo>/
+    var rest = location.pathname.slice(base.length)
+    if (rest.indexOf('slidev/') === 0) rest = rest.slice('slidev/'.length)
+    location.replace(base + 'slidev/#/' + rest + location.search)
+  })()
+</script>
+</head>
+<body>
+<p>正在前往舊版投影片… 如果沒有自動跳轉，請回到 <a href="/">首頁</a>。</p>
+</body>
+</html>

@@ -84,6 +84,18 @@ pnpm site:export     # PDFs to site/export/<course>/ (every chapter + one merged
 pnpm -C site export springboot ch04 ch13 --no-merge   # a subset of one course
 ```
 
+### Deployment (GitHub Pages)
+
+`.github/workflows/deploy.yml` runs on every push to `main` (or by hand: Actions → Run workflow) and publishes:
+
+| URL | Content |
+|---|---|
+| `https://<owner>.github.io/<repo>/` | the new site (`site/dist`, hash URLs) |
+| `https://<owner>.github.io/<repo>/slidev/` | the original Slidev deck (`pnpm build --base /<repo>/slidev/`; `routerMode: hash` in `index.md`) |
+| any missing path | `deploy/404.html` sends old Slidev links (`/<repo>/5`, `/<repo>/ch04`, `/<repo>/presenter/5`) to `/<repo>/slidev/#/…` |
+
+To try the same layout locally: `pnpm site:build && pnpm build --base /<repo>/slidev/ --out dist-slidev`, then copy `site/dist/*` into a folder, `dist-slidev` into its `slidev/`, and `deploy/404.html` next to them.
+
 ### Courses
 
 The site home `#/` is a course picker; each course lives under its own URL prefix and has its own home page, units, sidebar, search scope, progress, lite route, drawings and PDF export.

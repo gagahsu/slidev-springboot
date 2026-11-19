@@ -6,6 +6,8 @@ lineNumbers: true
 transition: slide-left
 title: Spring Boot Masterclass
 routeAlias: home
+# hash URLs (/slidev/#/5): the deck is deployed under /<repo>/slidev/ next to the new site
+routerMode: hash
 style: |
   .slidev-layout p,
   .slidev-layout li,

@@ -47,3 +47,7 @@ net/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Pages assembly (see .github/workflows/deploy.yml)
+dist-slidev/
+_site/

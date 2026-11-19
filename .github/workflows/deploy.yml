@@ -1,8 +1,14 @@
-name: Deploy Slidev to GitHub Pages
+name: Deploy to GitHub Pages
+
+# Site layout on GitHub Pages:
+#   /<repo>/          the new multi-course site (site/, hash URLs)
+#   /<repo>/slidev/   the original Slidev deck of the Spring Boot course (hash URLs)
+#   404.html          sends old Slidev links (/<repo>/5, /<repo>/ch04 …) to /<repo>/slidev/#/…
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -23,20 +29,35 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            site/pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm -C site install --frozen-lockfile
 
-      - name: Build
-        run: pnpm build --base /slidev-springboot/
+      - name: Build the new site
+        run: pnpm site:build
+
+      - name: Build the Slidev deck
+        run: pnpm build --base /${{ github.event.repository.name }}/slidev/ --out dist-slidev
+
+      - name: Assemble
+        run: |
+          mkdir _site
+          cp -r site/dist/. _site/
+          cp -r dist-slidev _site/slidev
+          cp deploy/404.html _site/404.html
 
       - uses: actions/configure-pages@v4
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/
+          path: _site/
 
       - uses: actions/deploy-pages@v4
         id: deployment
