@@ -18,15 +18,15 @@ services:
       MYSQL_USER: shop
       MYSQL_PASSWORD: ${DB_PASSWORD}
       TZ: Asia/Taipei
+      LANG: C.UTF-8                      # docker compose exec db mysql 打中文才不會變亂碼
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
     volumes:
       - db-data:/var/lib/mysql           # 資料庫檔案（Docker ch07）
-    healthcheck:                         # 真的能連線了才算「健康」，api 才開始啟動（Docker ch08）
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u shop -p\"$$MYSQL_PASSWORD\" --silent"]
+    healthcheck:                         # 真的能連線了才算「健康」，api 才開始啟動（Docker ch05）
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
       interval: 5s
-      timeout: 3s
-      retries: 20
-      start_period: 20s
+      retries: 10
+      start_period: 30s
     # 想用 MySQL Workbench 連進來看資料，就把下面兩行打開（本機的 3307 → 容器的 3306）
     # ports:
     #   - "3307:3306"

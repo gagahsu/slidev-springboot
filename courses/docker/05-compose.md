@@ -44,9 +44,9 @@ style: |
 <!--
 歡迎來到第五章，Docker Compose。
 
-前面幾章，我們用 `docker run` 一個一個操作容器，上一章也把 TaskBoard 前後端打包成了 Image。但真實的應用不會只有一個容器，TaskBoard 就有三個，而且彼此要互相溝通。
+前面幾章，我們用 `docker run` 一個一個操作容器，上一章也把線上商店前後端打包成了 Image。但真實的應用不會只有一個容器，線上商店就有三個，而且彼此要互相溝通。
 
-這一章要解決的，就是同時管理很多容器這件麻煩事。學完之後，我們只要一行指令，就能把整套 TaskBoard 啟動起來。
+這一章要解決的，就是同時管理很多容器這件麻煩事。學完之後，我們只要一行指令，就能把整套線上商店啟動起來。
 -->
 
 ---
@@ -62,7 +62,7 @@ layout: default
 - **總結**
 
 <!--
-這一章分成三部分。先搞懂 compose.yaml 這份設定檔怎麼寫，再學怎麼用 `docker compose` 指令操作它。最後把 TaskBoard 的資料庫、後端和前端寫進同一份檔案，做出完整的三層架構。中間有兩題練習，從簡單到進階。
+這一章分成三部分。先搞懂 compose.yaml 這份設定檔怎麼寫，再學怎麼用 `docker compose` 指令操作它。最後把線上商店的資料庫、後端和前端寫進同一份檔案，做出完整的三層架構。中間有兩題練習，從簡單到進階。
 -->
 
 ---
@@ -80,13 +80,13 @@ class: flex flex-col justify-center items-center text-center
 
 # 為什麼需要 Docker Compose？
 
-- TaskBoard 光是跑起來就要三個容器：`taskboard-web`、`taskboard-api`、`taskboard-db`，而且彼此要能互相溝通
+- 線上商店光是跑起來就要三個容器：`cafe-shop-web`、`cafe-shop-api`、`cafe-shop-db`，而且彼此要能互相溝通
 - 第三章我們用 `docker run` 逐一啟動，那三行指令加起來十幾個參數，還得記得先起資料庫、再起 API，新同事第一天就要照抄一整頁 README
 - Docker Compose：「**define and manage multi-container apps in one YAML file, streamlining orchestration**」——用一份 YAML 檔案定義並管理多容器應用
 - 比喻：Compose 如同「**樂團總譜**」，一次定義每個容器（樂手）用什麼映像檔（樂器）、跟誰同網路（合奏），再用 `docker compose` 指令統一啟動
 
 <!--
-先請大家回想第三章，啟動 TaskBoard 的那三行 `docker run`。
+先請大家回想第三章，啟動線上商店的那三行 `docker run`。
 
 每一行都很長，加起來十幾個參數，還有那個不太好看的 `host.docker.internal`。而且順序很重要，要先起資料庫，再起 API。MySQL 還沒初始化完，API 太早啟動就會連不上、直接停掉。新同事報到第一天，就要照著 README 抄一整頁指令。
 
@@ -148,18 +148,18 @@ compose.yaml 主要有三大區塊。services 定義要跑哪些容器，network
 ```yaml
 services:
   web:
-    image: taskboard-web:1.0.0
+    image: cafe-shop-web:1.0.0
     ports:
       - "8080:80"
   api:
-    image: taskboard-api:1.0.0
+    image: cafe-shop-api:1.0.0
     ports:
       - "8081:8080"
   db:
-    image: mysql:8.4
+    image: mysql:9.7
     environment:
       MYSQL_ROOT_PASSWORD: rootpw
-      MYSQL_DATABASE: taskboard
+      MYSQL_DATABASE: cafe_shop
 
 networks:
   default:
@@ -172,7 +172,7 @@ volumes:
 <!--
 這一頁給一個最小的骨架，對照剛才的三大區塊來看。
 
-services 底下有三個服務，web、api、db，分別對應 TaskBoard 的三層。web 和 api 用的是我們上一章打包的 Image，db 用官方的 `mysql:8.4`，並帶入兩個環境變數。下面再宣告一個 network 和一個 volume。
+services 底下有三個服務，web、api、db，分別對應線上商店的三層。web 和 api 用的是我們上一章打包的 Image，db 用官方的 `mysql:9.7`，並帶入兩個環境變數。下面再宣告一個 network 和一個 volume。
 
 這份還很陽春，API 還沒有資料庫連線設定，資料也還沒真的存進 volume，第三部分會把它補完整。現在先讓大家看看三個服務並排在同一份檔案裡的樣子。
 
@@ -254,7 +254,7 @@ docker compose logs -f
 docker compose logs --tail 50 api
 
 # 進資料庫容器下 SQL（不用管容器全名叫什麼）
-docker compose exec db mysql -uappuser -papppw taskboard
+docker compose exec db mysql -ushop -pshoppw cafe_shop
 
 # 只重新建置並重啟 api（改完 Java 之後最常打的一行）
 docker compose up -d --build api
@@ -307,7 +307,7 @@ class: flex flex-col justify-center items-center text-center
 # 多容器應用範例（web + db）
 
 <!--
-指令會用了，現在把語法和指令串起來，做一個最貼近實務的範例，把 TaskBoard 的三個服務完整寫進 Compose。
+指令會用了，現在把語法和指令串起來，做一個最貼近實務的範例，把線上商店的三個服務完整寫進 Compose。
 -->
 
 ---
@@ -316,7 +316,7 @@ class: flex flex-col justify-center items-center text-center
 
 「**同一個 compose.yaml 裡的所有 service，預設會被放進同一個內部網路，彼此可以用『服務名稱』當作主機名稱互相溝通**」，不需要知道對方的 IP，也不需要額外設定。
 
-例如資料庫 service 命名為 `db`，Spring Boot 的連線字串就直接寫 `jdbc:mysql://db:3306/taskboard`，Compose 內建 DNS 會自動解析成正確的容器 IP。第三章那個難看的 `host.docker.internal:3307` 到這裡終於可以退場了。
+例如資料庫 service 命名為 `db`，Spring Boot 的連線字串就直接寫 `jdbc:mysql://db:3306/cafe_shop`，Compose 內建 DNS 會自動解析成正確的容器 IP。第三章那個難看的 `host.docker.internal:3307` 到這裡終於可以退場了。
 
 | 概念 | 說明 |
 | --- | --- |
@@ -332,67 +332,70 @@ class: flex flex-col justify-center items-center text-center
 
 延續總譜的比喻，每位樂手都有自己的譜號，總譜上寫「小提琴接鋼琴」，樂手看譜號就知道要跟誰合奏，不用另外查對方站在哪裡。
 
-拉回 TaskBoard，資料庫服務叫 db，Spring Boot 的連線字串就直接寫 db 冒號 3306。Compose 內建的 DNS 會自動找到正確的容器。第三章那個 `host.docker.internal`，到這裡終於可以退場了。
+拉回線上商店，資料庫服務叫 db，Spring Boot 的連線字串就直接寫 db 冒號 3306。Compose 內建的 DNS 會自動找到正確的容器。第三章那個 `host.docker.internal`，到這裡終於可以退場了。
 
 很多人會在連線字串寫 localhost，這是錯的。容器裡的 localhost 指的是容器自己，要連別的容器，一定要寫對方的服務名稱。
 -->
 
 ---
 
-# 完整範例：TaskBoard 三層架構
+# 完整範例：線上商店三層架構
 
 ```yaml
+# cafe-shop-deploy/compose.yaml（和 cafe-shop-api、cafe-shop-web 放在同一層）
 services:
-  web:                                   # Angular + nginx
-    build: ./taskboard-web
+  web:                                   # Angular + Nginx
+    build: ../cafe-shop-web
     ports: ["8080:80"]
     depends_on: [api]
 
   api:                                   # Spring Boot
-    build: ./taskboard-api
+    build: ../cafe-shop-api
     ports: ["8081:8080"]
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/taskboard
-      SPRING_DATASOURCE_USERNAME: appuser
-      SPRING_DATASOURCE_PASSWORD: apppw
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      DB_URL: jdbc:mysql://db:3306/cafe_shop
+      DB_USERNAME: shop
+      DB_PASSWORD: shoppw
     depends_on:
       db: { condition: service_healthy }  # 等 db 真的能連線再啟動
 ```
 
 <!--
-這份就是 TaskBoard 正式的 compose.yaml，之後每天開發都會用它。因為比較長，拆成兩頁，這頁先看 web 和 api。
+這份就是線上商店正式的 compose.yaml，之後每天開發都會用它。因為比較長，拆成兩頁，這頁先看 web 和 api。
 
-web 用 `build: ./taskboard-web`，代表用那個目錄的 Dockerfile 現場建構，也就是上一章寫的 Multi-stage 版本，對外開放 8080。
+先看最上面的註解。前端和後端是兩個各自的 Git 專案，所以我們另外開一個資料夾 `cafe-shop-deploy` 放 compose.yaml，三個資料夾放在同一層。
 
-api 是重點。連線字串直接寫 `jdbc:mysql://db:3306/taskboard`，這個 db 就是下一頁那個服務的名稱。注意 port 是 3306 不是 3307，3307 是映射給主機用的，容器之間走內部網路，用的是容器原本的 port。
+web 用 `build: ../cafe-shop-web`，兩個點代表上一層，意思是用隔壁那個資料夾的 Dockerfile 現場建構，也就是上一章寫的 Multi-stage 版本，對外開放 8080。
 
-那些 SPRING 開頭的環境變數，就是第三章講過的設定覆蓋規則。application.yml 完全不用改，換環境只要換 compose 檔。
+api 是重點。連線字串直接寫 `jdbc:mysql://db:3306/cafe_shop`，這個 db 就是下一頁那個服務的名稱。注意 port 是 3306 不是 3307，3307 是映射給主機用的，容器之間走內部網路，用的是容器原本的 port。
+
+那三個 DB 開頭的環境變數，就是第三章講過的寫法，application.properties 完全不用改，換環境只要換 compose 檔。資料表也不用操心，api 一啟動，Flyway 就會在 cafe_shop 裡建好八張表和範例資料。
 
 最後看 depends_on，條件寫的是 `service_healthy`，代表要等 db 真的能連線，才啟動 api。下一頁會看到 db 怎麼回報自己的健康狀態。
 -->
 
 ---
 
-# 完整範例：TaskBoard 三層架構（續）
+# 完整範例：線上商店三層架構（續）
 
 ```yaml
 services:
   # ...（接上頁 web、api）
 
   db:                                    # MySQL
-    image: mysql:8.4
+    image: mysql:9.7
     environment:
       MYSQL_ROOT_PASSWORD: rootpw
-      MYSQL_DATABASE: taskboard
-      MYSQL_USER: appuser
-      MYSQL_PASSWORD: apppw
+      MYSQL_DATABASE: cafe_shop
+      MYSQL_USER: shop
+      MYSQL_PASSWORD: shoppw
     volumes:
       - db-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
       interval: 5s
       retries: 10
+      start_period: 30s
 
 volumes:
   db-data:
@@ -401,7 +404,9 @@ volumes:
 <!--
 接著看 db 和最下面的 volumes。
 
-db 有兩個重點。第一，資料掛到名為 db-data 的 volume，容器刪掉重建，資料還在，這是第七章的主題。第二是 healthcheck，用 `mysqladmin ping` 每五秒問一次「可以接受連線了嗎」，最多問十次。
+db 有兩個重點。第一，資料掛到名為 db-data 的 volume，容器刪掉重建，資料還在，這是第七章的主題。第二是 healthcheck，用 `mysqladmin ping` 每五秒問一次「可以接受連線了嗎」，最多問十次。`start_period` 是給它的暖身時間：第一次啟動 MySQL 要初始化十幾秒，這段時間失敗不算數。
+
+這裡的 `-h` 故意寫 `127.0.0.1` 不寫 localhost。MySQL 第一次初始化時，會先開一個只接受本機 socket 的臨時伺服器，寫 localhost 會走 socket，臨時伺服器也回應「我活著」，api 就太早開始連；寫 127.0.0.1 會走網路，要等真正的伺服器起來才會通。
 
 回到上一頁的 depends_on。如果只寫服務名稱，Compose 只保證 db 容器啟動了，不保證 MySQL 已經初始化完成。加上 healthcheck 和 `service_healthy` 條件之後，Compose 會等到 db 的健康檢查通過，才啟動 api。這解決了第三章遇到的痛點，API 比資料庫早就緒就啟動失敗。
 
@@ -416,7 +421,8 @@ db 有兩個重點。第一，資料掛到名為 db-data 的 volume，容器刪�
 | --- | --- |
 | `depends_on` 的限制 | 單純列服務名稱只保證「容器啟動」，不保證 MySQL 已就緒；要搭配 `condition: service_healthy` |
 | API 啟動就掛掉 | 先看 `docker compose logs api`，`Communications link failure` 幾乎都是資料庫還沒 ready |
-| 環境變數管理密碼 | 正式環境改用 `.env` 檔搭配 `${VAR}`，不要把 `apppw` 寫死在 yaml 進版控 |
+| 環境變數管理密碼 | 正式環境改用 `.env` 檔搭配 `${VAR}`，不要把 `shoppw` 寫死在 yaml 進版控 |
+| API 啟動報 Flyway 錯誤 | 資料庫裡有 Flyway 不認識的表（例如第三章的練習表）：刪掉那張表，或 `down -v` 從空的資料庫重來 |
 | 資料庫資料保存 | 一定要用 `volumes` 掛載 `/var/lib/mysql`，否則 `down -v` 後資料全消失 |
 | 改了 Java 沒生效 | `docker compose up -d` 不會自動重 build，要加 `--build` |
 
@@ -438,16 +444,16 @@ db 有兩個重點。第一，資料掛到名為 db-data 的 volume，容器刪�
 
 **難度：基礎**
 
-先把 TaskBoard 的資料庫從 `docker run` 搬進 Compose。請寫一份 `compose.yaml`：
+先把線上商店的資料庫從 `docker run` 搬進 Compose。請寫一份 `compose.yaml`：
 
-1. 一個叫 `db` 的服務，使用 `mysql:8.4` 映像檔
+1. 一個叫 `db` 的服務，使用 `mysql:9.7` 映像檔
 2. 主機 `3307` 對應到容器 `3306`
-3. 帶入四個環境變數：`MYSQL_ROOT_PASSWORD=rootpw`、`MYSQL_DATABASE=taskboard`、`MYSQL_USER=appuser`、`MYSQL_PASSWORD=apppw`
-4. `docker compose up -d` 啟動後，用 `docker compose exec db mysql -uappuser -papppw taskboard` 確認能連進去
+3. 帶入四個環境變數：`MYSQL_ROOT_PASSWORD=rootpw`、`MYSQL_DATABASE=cafe_shop`、`MYSQL_USER=shop`、`MYSQL_PASSWORD=shoppw`
+4. `docker compose up -d` 啟動後，用 `docker compose exec db mysql -ushop -pshoppw cafe_shop` 確認能連進去
 5. 對照一下：這份 YAML 跟第三章那行又臭又長的 `docker run`，內容其實一模一樣
 
 <!--
-接下來是練習一，難度基礎。我們把 TaskBoard 的資料庫從 `docker run` 搬進 Compose。
+接下來是練習一，難度基礎。我們把線上商店的資料庫從 `docker run` 搬進 Compose。
 
 任務是寫一份只有 db 服務的 compose.yaml，設定 port 映射和四個環境變數，啟動後用 `docker compose exec` 連進資料庫確認。
 
@@ -465,14 +471,14 @@ db 有兩個重點。第一，資料掛到名為 db-data 的 volume，容器刪�
 ```yaml
 services:
   db:
-    image: mysql:8.4
+    image: mysql:9.7
     ports:
       - "3307:3306"
     environment:
       MYSQL_ROOT_PASSWORD: rootpw
-      MYSQL_DATABASE: taskboard
-      MYSQL_USER: appuser
-      MYSQL_PASSWORD: apppw
+      MYSQL_DATABASE: cafe_shop
+      MYSQL_USER: shop
+      MYSQL_PASSWORD: shoppw
 ```
 
 啟動與驗證：
@@ -481,7 +487,7 @@ services:
 docker compose up -d
 docker compose ps
 docker compose logs db | grep "ready for connections"
-docker compose exec db mysql -uappuser -papppw taskboard -e "show tables;"
+docker compose exec db mysql -ushop -pshoppw cafe_shop -e "show tables;"
 ```
 
 <!--
@@ -500,23 +506,23 @@ ports 的寫法是主機 port 在左、容器 port 在右，順序不能顛倒�
 
 **難度：進階**
 
-把 TaskBoard 整套三層架構寫成一份 `compose.yaml`：
+把線上商店整套三層架構寫成一份 `compose.yaml`：
 
-1. `db` 服務：`mysql:8.4`，資料庫 `taskboard`，資料用 named volume `db-data` 掛在 `/var/lib/mysql`
-2. `api` 服務：用 `build: ./taskboard-api` 建置，對外開 `8081:8080`，透過**服務名稱**連線資料庫（不准出現 `localhost` 或 `host.docker.internal`）
-3. `web` 服務：用 `build: ./taskboard-web` 建置，對外開 `8080:80`
+1. `db` 服務：`mysql:9.7`，資料庫 `cafe_shop`，資料用 named volume `db-data` 掛在 `/var/lib/mysql`
+2. `api` 服務：用 `build: ../cafe-shop-api` 建置，對外開 `8081:8080`，透過**服務名稱**連線資料庫（不准出現 `localhost` 或 `host.docker.internal`）
+3. `web` 服務：用 `build: ../cafe-shop-web` 建置，對外開 `8080:80`
 4. 幫 `db` 加上 healthcheck，並讓 `api` 等到 `db` 健康之後才啟動
 5. 驗證：`docker compose logs api` 要看到 Spring Boot 正常啟動、沒有 `Communications link failure`
-6. 最後測試持久化：新增一筆任務 → `docker compose down`（不加 `-v`）→ `up -d` → 資料是否還在？
+6. 最後測試持久化：到前台註冊一個會員 → `docker compose down`（不加 `-v`）→ `up -d` → 還能用這個帳號登入嗎？
 
 <!--
-練習二難度進階，把 TaskBoard 整套三層架構寫成一份 compose.yaml。
+練習二難度進階，把線上商店整套三層架構寫成一份 compose.yaml。
 
 這題整合了本章所有重點，build、多服務、用服務名稱連線、healthcheck，還有 volume 持久化。
 
-第二點特別禁止 localhost，這是最多人犯的錯。習慣性把 application.yml 裡的 localhost 照抄過來，API 就會一直連不上。
+第二點特別禁止 localhost，這是最多人犯的錯。習慣性把 application.properties 裡的 localhost 照抄過來，API 就會一直連不上。
 
-第六步請大家想一想：新增一筆任務後，`docker compose down` 再 `up`，資料還會在嗎？對照第三章練習二那個「容器一刪資料就沒了」的問題，這次有什麼不同？
+第六步請大家想一想：註冊一個會員之後，`docker compose down` 再 `up`，這個帳號還在嗎？對照第三章練習二那個「容器一刪資料就沒了」的問題，這次有什麼不同？
 
 我們先暫停一下，自己動手試試看。
 
@@ -530,16 +536,16 @@ ports 的寫法是主機 port 在左、容器 port 在右，順序不能顛倒�
 ```yaml
 services:
   web:
-    build: ./taskboard-web
+    build: ../cafe-shop-web
     ports: ["8080:80"]
     depends_on: [api]
   api:
-    build: ./taskboard-api
+    build: ../cafe-shop-api
     ports: ["8081:8080"]
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/taskboard
-      SPRING_DATASOURCE_USERNAME: appuser
-      SPRING_DATASOURCE_PASSWORD: apppw
+      DB_URL: jdbc:mysql://db:3306/cafe_shop
+      DB_USERNAME: shop
+      DB_PASSWORD: shoppw
     depends_on:
       db: { condition: service_healthy }
 ```
@@ -560,17 +566,18 @@ depends_on 用 `service_healthy` 條件，讓 api 等 db 健康之後才啟動�
 services:
   # ...（接上頁 web、api）
   db:
-    image: mysql:8.4
+    image: mysql:9.7
     environment:
-      MYSQL_DATABASE: taskboard
+      MYSQL_DATABASE: cafe_shop
       MYSQL_ROOT_PASSWORD: rootpw
-      MYSQL_USER: appuser
-      MYSQL_PASSWORD: apppw
+      MYSQL_USER: shop
+      MYSQL_PASSWORD: shoppw
     volumes: [db-data:/var/lib/mysql]
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
       interval: 5s
       retries: 10
+      start_period: 30s
 
 volumes:
   db-data:
@@ -581,7 +588,7 @@ volumes:
 
 db 加上 healthcheck，資料掛在 db-data 這個 volume 的 `/var/lib/mysql`，最下面宣告 volumes。
 
-回答第六步的問題。因為資料存在 volume 裡，down 不加 `-v` 只會移除容器，volume 還在。重新 up 之後，前端頁面上的任務清單完整還在。這就是跟第三章最大的差別。
+回答第六步的問題。因為資料存在 volume 裡，down 不加 `-v` 只會移除容器，volume 還在。重新 up 之後，剛才註冊的帳號照樣能登入。這就是跟第三章最大的差別。
 
 有兩個常見錯誤。一是忘記在最下面宣告 db-data，Compose 會直接報錯。二是掛載路徑打錯，MySQL 的資料目錄是 `/var/lib/mysql`，路徑錯了資料一樣不會被保存，而且要到下次重建才會發現。
 -->
@@ -636,7 +643,7 @@ layout: end
 有任何問題嗎？
 
 <!--
-這一章我們把 TaskBoard 三個服務寫進同一份 compose.yaml，從此一行指令就能啟動整套環境。
+這一章我們把線上商店三個服務寫進同一份 compose.yaml，從此一行指令就能啟動整套環境。
 
 建議大家把練習二的 compose.yaml 留在專案裡，接下來幾章都會在這份檔案上繼續修改。我們下一章見。
 

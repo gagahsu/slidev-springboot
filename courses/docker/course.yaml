@@ -1,8 +1,9 @@
-# 課程設定。內容來自 gagahsu/slidev-docker。安裝截圖在 public/docker/（原本在 public/ 根目錄，路徑已改成 /docker/...）。
+# 課程設定。內容來自 gagahsu/slidev-docker，2026-11 把貫穿專案從 TaskBoard 換成轉角咖啡線上商店（projects/cafe-shop-*）。
+# 安裝截圖在 public/docker/（原本在 public/ 根目錄，路徑已改成 /docker/...）。
 
 title: Docker 容器化與部署
 short: Docker
-description: 映像檔、容器、Dockerfile、Compose、網路與 Volume，最後把應用程式部署上線。
+description: 映像檔、容器、Dockerfile、Compose、網路與 Volume，最後把轉角咖啡線上商店（MySQL + Spring Boot + Angular/Nginx）部署上線。
 logo: D
 color: teal
 order: 7
@@ -22,5 +23,5 @@ chapters:
   ch04: { title: "Dockerfile", subtitle: "語法 / 最佳實踐 / 多階段建構" }
   ch05: { title: "Docker Compose", subtitle: "services / networks / volumes" }
   ch06: { title: "網路設定", subtitle: "bridge / host / overlay / DNS" }
-  ch07: { title: "Volume 資料持久化", subtitle: "named volumes / bind mounts / tmpfs" }
-  ch08: { title: "部署實戰", subtitle: "production / health check / limits" }
+  ch07: { title: "Volume 資料持久化", subtitle: "資料庫 / 商品圖片 / 備份還原" }
+  ch08: { title: "部署實戰", subtitle: ".env / tag / Registry / 綠界網址" }

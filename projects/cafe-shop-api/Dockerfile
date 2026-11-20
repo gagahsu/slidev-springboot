@@ -1,23 +1,24 @@
 # 轉角咖啡線上商店後端（Docker ch04：多階段建置）
 
-# 第一階段：用 JDK 把程式編譯成 jar
+# ---- 第一階段：用 JDK 編譯，本機不需要裝 JDK ----
 FROM eclipse-temurin:21-jdk AS build
 WORKDIR /src
-# 先只複製建置設定並下載套件：程式碼改了，這一層還能沿用快取
+# 先只複製 Gradle 設定並下載依賴：只改 Java 檔時，這一層會吃快取
 COPY gradlew settings.gradle build.gradle ./
-COPY gradle gradle
+COPY gradle ./gradle
 RUN chmod +x gradlew && ./gradlew dependencies --no-daemon > /dev/null
-COPY src src
+COPY src ./src
 RUN ./gradlew bootJar --no-daemon -x test
 
-# 第二階段：執行只需要 JRE 和 jar
-FROM eclipse-temurin:21-jre
+# ---- 第二階段：只留 JRE 跟打包好的 jar ----
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-# 不用 root 執行
-RUN useradd --system --create-home shop && mkdir -p /app/uploads && chown shop /app/uploads
-USER shop
+# 不用 root 執行；uploads 先建好並交給 app，掛上 Volume 後 app 才寫得進去（Docker ch07）
+RUN addgroup -S app && adduser -S app -G app && mkdir uploads && chown app:app uploads
 COPY --from=build /src/build/libs/*.jar app.jar
-# 上傳的圖片放這裡，compose 會掛上 Volume（Docker ch07）
+USER app
+# 預設用正式設定（沒有模擬付款）；上傳的圖片放 /app/uploads
+ENV SPRING_PROFILES_ACTIVE=prod
 ENV UPLOAD_DIR=/app/uploads
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -44,7 +44,7 @@ style: |
 <!--
 歡迎來到第二章，映像檔管理。
 
-上一章我們用一行 `docker run` 跑起了 TaskBoard 的資料庫。那個容器到底是用什麼做出來的？答案就是 Image。
+上一章我們用一行 `docker run` 跑起了線上商店的資料庫。那個容器到底是用什麼做出來的？答案就是 Image。
 
 這一章我們會搞懂 Image 是怎麼組成的，學會從 Registry 下載和上傳 Image，還有版本標籤該怎麼命名。學完之後，我們就能把自己的 Image 貼上版本號，分享給整個團隊。
 -->
@@ -109,12 +109,12 @@ Docker Image 解決的就是類似的問題。「Image 是一個標準化的封�
 
 「Image 採用分層（Layer）架構，每一層代表一組檔案系統的變更——新增、刪除或修改某些檔案。」
 
-以 TaskBoard 的後端 `taskboard-api` 為例：
+以線上商店的後端 `cafe-shop-api` 為例：
 
 - 最底層：作業系統基礎環境（Alpine Linux）
 - 中間層：JRE 21 執行環境（`eclipse-temurin:21-jre-alpine`）
 - 再上一層：Gradle 產出的相依函式庫
-- 最上層：複製我們自己打包出來的 `taskboard-api.jar`
+- 最上層：複製我們自己打包出來的 `cafe-shop-api.jar`
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 💡 <b>重點：</b> Image「建立後不可修改」，只能在既有 Layer 上面疊加新的 Layer；相同的底層 Layer 可以被多個 Image 共用，不用重複下載。
@@ -123,7 +123,7 @@ Docker Image 解決的就是類似的問題。「Image 是一個標準化的封�
 <!--
 Image 有一個很聰明的設計，叫做 Layer，分層。
 
-「每一層代表一組檔案系統的變更」。以 TaskBoard 的後端為例，最底層是 Alpine Linux，往上是 JRE 21，再往上是相依函式庫，最上面才是我們自己打包的 jar 檔。
+「每一層代表一組檔案系統的變更」。以線上商店的後端為例，最底層是 Alpine Linux，往上是 JRE 21，再往上是相依函式庫，最上面才是我們自己打包的 jar 檔。
 
 Image 建立之後就不能修改，只能在上面疊加新的一層。很多人以為改檔案就是改掉原本那一層，其實 Docker 是建了一個新的 Layer 疊上去，底下完全不動。
 
@@ -192,27 +192,27 @@ class: flex flex-col justify-center items-center text-center
 
 # docker pull — 範例
 
-先把 TaskBoard 之後會用到的基礎 Image 都抓下來：
+先把線上商店之後會用到的基礎 Image 都抓下來：
 
 ```bash
 # 沒指定 tag，預設抓 latest（不建議用在專案上）
 docker pull mysql
 
-# 指定版本，TaskBoard 專案統一用這幾個
-docker pull mysql:8.4                      # 資料庫
-docker pull eclipse-temurin:21-jre-alpine  # 跑 taskboard-api.jar
-docker pull nginx:1.27-alpine              # 服務 Angular 打包後的靜態檔
+# 指定版本，線上商店專案統一用這幾個
+docker pull mysql:9.7                      # 資料庫
+docker pull eclipse-temurin:21-jre-alpine  # 跑 cafe-shop-api.jar
+docker pull nginx:1.31-alpine              # 服務 Angular 打包後的靜態檔
 
 # 從公司內部私有 registry 下載
-docker pull registry-host:5000/myadmin/taskboard-api:1.0.0
+docker pull registry-host:5000/myadmin/cafe-shop-api:1.0.0
 ```
 
 執行後 Docker 會逐層（layer）顯示下載進度，如果本機已經有相同的 Layer，會直接顯示 `Already exists`，不會重複下載。
 
 <!--
-這一頁我們用 pull，把 TaskBoard 之後會用到的基礎 Image 先抓下來。
+這一頁我們用 pull，把線上商店之後會用到的基礎 Image 先抓下來。
 
-先看第一行，`docker pull mysql` 沒有指定 tag，Docker 會預設抓 latest。很多人以為 latest 代表最新的穩定版，其實它只是一個標籤名稱，維護者想指到哪個版本都可以。哪天 MySQL 出了新的大版本，latest 就會悄悄換掉，Spring Boot 的連線可能直接出問題。所以專案裡我們一律鎖定版本，像下面寫的 `mysql:8.4`。
+先看第一行，`docker pull mysql` 沒有指定 tag，Docker 會預設抓 latest。很多人以為 latest 代表最新的穩定版，其實它只是一個標籤名稱，維護者想指到哪個版本都可以。哪天 MySQL 出了新的大版本，latest 就會悄悄換掉，Spring Boot 的連線可能直接出問題。所以專案裡我們一律鎖定版本，像下面寫的 `mysql:9.7`。
 
 再看 `eclipse-temurin:21-jre-alpine` 這個名字。21 是 Java 版本，jre 表示只有執行環境，alpine 是很精簡的 Linux。選 jre 加 alpine，Image 可以從四百多 MB 降到一百多 MB。
 
@@ -230,25 +230,25 @@ docker pull registry-host:5000/myadmin/taskboard-api:1.0.0
 docker images
 
 # REPOSITORY        TAG               IMAGE ID       SIZE
-# taskboard-api     1.0.0             8f3c1a92be04   198MB
-# taskboard-api     latest            8f3c1a92be04   198MB
-# taskboard-web     1.0.0             2d47e5b310cc   52MB
-# mysql             8.4               a19b7c4d5e6f   612MB
+# cafe-shop-api     1.0.0             8f3c1a92be04   409MB
+# cafe-shop-api     latest            8f3c1a92be04   409MB
+# cafe-shop-web     1.0.0             2d47e5b310cc   52MB
+# mysql             9.7               a19b7c4d5e6f   612MB
 # eclipse-temurin   21-jre-alpine     71e0d3f8a1b2   187MB
 
 # 用 Image ID 刪除
 docker rmi 2d47e5b310cc
 
 # 用 repository:tag 刪除
-docker rmi taskboard-web:1.0.0
+docker rmi cafe-shop-web:1.0.0
 ```
 
 <!--
 pull 下來之後，我們用 images 看本機有什麼，用 rmi 清掉不要的。
 
-看這份清單，`taskboard-api` 的 1.0.0 和 latest 兩列，IMAGE ID 完全一樣。代表它們是同一份 Image，只是貼了兩張不同的標籤，硬碟上只佔一份空間。
+看這份清單，`cafe-shop-api` 的 1.0.0 和 latest 兩列，IMAGE ID 完全一樣。代表它們是同一份 Image，只是貼了兩張不同的標籤，硬碟上只佔一份空間。
 
-也看一下大小。`taskboard-web` 只有 52MB，因為裡面只有靜態檔案加上精簡版的 nginx。`mysql` 最大，六百多 MB。
+也看一下大小。`cafe-shop-web` 只有 52MB，因為裡面只有靜態檔案加上精簡版的 nginx。`mysql` 最大，六百多 MB。
 
 刪除的時候，可以用 Image ID，也可以用名稱加 tag。要注意，如果有 Container 還在使用這個 Image，就算是停止狀態，rmi 也會失敗，要先把 Container 刪掉。
 
@@ -285,26 +285,26 @@ pull 下來之後，我們用 images 看本機有什麼，用 rmi 清掉不要�
 
 # docker push — 範例
 
-把本機建好的 `taskboard-api` 推到公司內部 Registry，完整流程如下：
+把本機建好的 `cafe-shop-api` 推到公司內部 Registry，完整流程如下：
 
 ```bash
 # Step 1：登入 registry
 docker login registry-host:5000
 
 # Step 2：幫本機 Image 打上目標位置的 tag
-docker image tag taskboard-api:1.0.0 registry-host:5000/myadmin/taskboard-api:1.0.0
+docker image tag cafe-shop-api:1.0.0 registry-host:5000/myadmin/cafe-shop-api:1.0.0
 
 # Step 3：推送上去
-docker push registry-host:5000/myadmin/taskboard-api:1.0.0
+docker push registry-host:5000/myadmin/cafe-shop-api:1.0.0
 
 # 一次推送這個 repository 的所有標籤版本
-docker push -a registry-host:5000/myadmin/taskboard-api
+docker push -a registry-host:5000/myadmin/cafe-shop-api
 ```
 
 <!--
-這一頁走一次完整的 push 流程，把 `taskboard-api` 推到公司的私有 Registry。
+這一頁走一次完整的 push 流程，把 `cafe-shop-api` 推到公司的私有 Registry。
 
-關鍵在 Step 2。我們不會直接推送 `taskboard-api:1.0.0`，而是先用 `docker image tag` 再貼一張標籤，把 Registry 的位址寫進名稱裡。沒有寫位址的話，Docker 預設就是送去 Docker Hub。
+關鍵在 Step 2。我們不會直接推送 `cafe-shop-api:1.0.0`，而是先用 `docker image tag` 再貼一張標籤，把 Registry 的位址寫進名稱裡。沒有寫位址的話，Docker 預設就是送去 Docker Hub。
 
 要注意，tag 不是改名，而是新增一張標籤。原本的名稱還在，兩個名稱指向同一個 Image ID。
 
@@ -359,11 +359,11 @@ Docker Hub 提供的核心功能：
 
 | 命名方式 | 範例 | 用途 |
 | --- | --- | --- |
-| 語意化版本 | `taskboard-api:1.4.2` | 明確標示版本號，正式環境首選 |
-| 主版本簡寫 | `taskboard-api:1.4`、`taskboard-api:1` | 允許在小版本內自動更新 |
-| latest | `taskboard-api:latest` | 預設標籤，不建議在正式環境依賴它 |
-| 環境標籤 | `taskboard-api:staging`、`taskboard-api:prod` | 依部署環境區分 |
-| Commit / 建置編號 | `taskboard-api:git-a1b2c3d` | 精確對應到某一次程式碼版本，方便追蹤 |
+| 語意化版本 | `cafe-shop-api:1.4.2` | 明確標示版本號，正式環境首選 |
+| 主版本簡寫 | `cafe-shop-api:1.4`、`cafe-shop-api:1` | 允許在小版本內自動更新 |
+| latest | `cafe-shop-api:latest` | 預設標籤，不建議在正式環境依賴它 |
+| 環境標籤 | `cafe-shop-api:staging`、`cafe-shop-api:prod` | 依部署環境區分 |
+| Commit / 建置編號 | `cafe-shop-api:git-a1b2c3d` | 精確對應到某一次程式碼版本，方便追蹤 |
 
 <!--
 Tag 就是貼在 Image 名稱後面的版本標記，格式是 repository 冒號 tag。
@@ -379,32 +379,32 @@ Tag 就是貼在 Image 名稱後面的版本標記，格式是 repository 冒號
 
 # Tag 命名 — 實際範例
 
-TaskBoard 後端發布一個新版本的完整流程：
+線上商店後端發布一個新版本的完整流程：
 
 ```bash
-# 在 taskboard-api/ 目錄下建置 Image（Dockerfile 第四章會寫）
-docker build -t taskboard-api:latest .
+# 在 cafe-shop-api/ 目錄下建置 Image（Dockerfile 第四章會寫）
+docker build -t cafe-shop-api:latest .
 
 # 同時貼上不同精細度的版本 tag
-docker image tag taskboard-api:latest taskboard-api:1.4.2
-docker image tag taskboard-api:latest taskboard-api:1.4
+docker image tag cafe-shop-api:latest cafe-shop-api:1.4.2
+docker image tag cafe-shop-api:latest cafe-shop-api:1.4
 
 # 推送到 Docker Hub（帳號為 myaccount）
-docker image tag taskboard-api:latest myaccount/taskboard-api:1.4.2
-docker push myaccount/taskboard-api:1.4.2
+docker image tag cafe-shop-api:latest myaccount/cafe-shop-api:1.4.2
+docker push myaccount/cafe-shop-api:1.4.2
 
-# 一次推送所有本機的 taskboard-api 標籤
-docker push -a myaccount/taskboard-api
+# 一次推送所有本機的 cafe-shop-api 標籤
+docker push -a myaccount/cafe-shop-api
 ```
 
 <!--
-這一頁把 Tag 命名落地成實際的指令，看 TaskBoard 後端怎麼發布新版本。
+這一頁把 Tag 命名落地成實際的指令，看線上商店後端怎麼發布新版本。
 
 先 build 出 latest，接著同一個 Image 再貼上 1.4.2 和 1.4 兩個標籤。這樣不同環境可以各取所需。測試環境固定抓 1.4，自動吃到修 bug 的小版本。正式環境鎖死 1.4.2，什麼都不會自己變。
 
 這個 1.4.2 實務上通常來自 `build.gradle` 裡的 version 設定，CI 讀出來直接當 tag，程式碼版本和 Image 版本就永遠對得起來。
 
-推送到 Docker Hub 時，名稱前面一定要帶帳號，例如 `myaccount/taskboard-api`，不然會被當成要推到官方的命名空間，直接被拒絕。
+推送到 Docker Hub 時，名稱前面一定要帶帳號，例如 `myaccount/cafe-shop-api`，不然會被當成要推到官方的命名空間，直接被拒絕。
 
 完成後，到 Docker Hub 的頁面上，就能看到這些 tag。
 -->
@@ -413,23 +413,23 @@ docker push -a myaccount/taskboard-api
 layout: default
 ---
 
-# 練習：準備 TaskBoard 的基礎 Image
+# 練習：準備線上商店的基礎 Image
 ### 任務說明
 
-我們要把 TaskBoard 後面幾章需要的基礎 Image 先準備好。請完成以下操作：
+我們要把線上商店後面幾章需要的基礎 Image 先準備好。請完成以下操作：
 
-1. 從 Docker Hub 下載 `eclipse-temurin` 的 `21-jre-alpine` 版本（之後用來跑 `taskboard-api.jar`）
+1. 從 Docker Hub 下載 `eclipse-temurin` 的 `21-jre-alpine` 版本（之後用來跑 `cafe-shop-api.jar`）
 2. 用 `docker images` 確認本機已經有這個 Image，並記下它的 IMAGE ID 與大小
-3. 幫這個 Image 新增一個標籤，命名為 `taskboard-runtime:v1`
-4. 刪除原本的 `eclipse-temurin:21-jre-alpine` 標籤（保留 `taskboard-runtime:v1`）
-5. 再執行一次 `docker images`，確認 `taskboard-runtime:v1` 還在，而且 IMAGE ID 跟第 2 步記下的一樣
+3. 幫這個 Image 新增一個標籤，命名為 `cafe-shop-runtime:v1`
+4. 刪除原本的 `eclipse-temurin:21-jre-alpine` 標籤（保留 `cafe-shop-runtime:v1`）
+5. 再執行一次 `docker images`，確認 `cafe-shop-runtime:v1` 還在，而且 IMAGE ID 跟第 2 步記下的一樣
 
 <!--
 接下來是本章的練習，我們順便把第四章要用的 runtime Image 先準備好。
 
-任務是：下載 `eclipse-temurin:21-jre-alpine`，記下它的 IMAGE ID，幫它貼上新標籤 `taskboard-runtime:v1`，再刪掉原本的標籤。
+任務是：下載 `eclipse-temurin:21-jre-alpine`，記下它的 IMAGE ID，幫它貼上新標籤 `cafe-shop-runtime:v1`，再刪掉原本的標籤。
 
-請大家先想一個問題：刪掉 `eclipse-temurin` 這個標籤之後，剛剛貼的 `taskboard-runtime:v1` 會不會一起消失？
+請大家先想一個問題：刪掉 `eclipse-temurin` 這個標籤之後，剛剛貼的 `cafe-shop-runtime:v1` 會不會一起消失？
 
 我們先暫停一下，自己動手試試看。
 
@@ -446,9 +446,9 @@ layout: default
 ```bash
 docker pull eclipse-temurin:21-jre-alpine
 docker images                       # 記下 IMAGE ID，約 187MB
-docker image tag eclipse-temurin:21-jre-alpine taskboard-runtime:v1
+docker image tag eclipse-temurin:21-jre-alpine cafe-shop-runtime:v1
 docker rmi eclipse-temurin:21-jre-alpine
-docker images                       # taskboard-runtime:v1 還在，ID 不變
+docker images                       # cafe-shop-runtime:v1 還在，ID 不變
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
@@ -458,9 +458,9 @@ docker images                       # taskboard-runtime:v1 還在，ID 不變
 <!--
 我們來看解答。前面四個指令依序就是 pull、images、tag、rmi。
 
-回到剛才的問題，`taskboard-runtime:v1` 不會消失。因為 tag 只是貼在同一個 Image ID 上的標籤，刪掉其中一張，不會刪到底層的 Image。只要還有至少一個 tag 指著它，Image 就還在。反過來說，最後一個 tag 也被刪掉時，Image 才會真的從硬碟上消失。
+回到剛才的問題，`cafe-shop-runtime:v1` 不會消失。因為 tag 只是貼在同一個 Image ID 上的標籤，刪掉其中一張，不會刪到底層的 Image。只要還有至少一個 tag 指著它，Image 就還在。反過來說，最後一個 tag 也被刪掉時，Image 才會真的從硬碟上消失。
 
-所以最後一次 `docker images`，只會看到 `taskboard-runtime:v1`，而且 IMAGE ID 跟一開始記下的完全一樣。
+所以最後一次 `docker images`，只會看到 `cafe-shop-runtime:v1`，而且 IMAGE ID 跟一開始記下的完全一樣。
 -->
 
 ---
@@ -513,7 +513,7 @@ layout: end
 <!--
 這一章我們把 Image 從裡到外看了一遍，從分層結構，到下載、上傳和版本命名。
 
-記得剛才準備好的 `taskboard-runtime:v1`，第四章寫 Dockerfile 時還會用到。我們下一章見。
+記得剛才準備好的 `cafe-shop-runtime:v1`，第四章寫 Dockerfile 時還會用到。我們下一章見。
 
 【講師】開放 Q&A，可以引導大家回想 tag 和 Image ID 的關係、latest 的風險。
 -->

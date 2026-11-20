@@ -21,13 +21,14 @@
 
 ## 二、專題相關，規格書有寫但還沒做
 
-### 2. Docker 部署 — `待辦`
+### 2. Docker 部署 — `完成`（2026-11-20）
 
 SHOP-SPEC §10：`docker compose` 跑三個服務（`db` MySQL、`api` 後端、`web` Nginx 前端加 `/api` 反向代理），資料庫與上傳圖片放在 Volume。
 
-- [ ] `projects/` 加 Dockerfile（api 多階段建置、web 用 Nginx）、`nginx.conf`、`docker-compose.yml`、`.env.example`，實際 `docker compose up` 驗證。
-- [ ] Docker 課 ch01–08 改成部署線上商店（目前還是 slidev-docker 原本的內容）。
-- [ ] 進階學程最後一個階段（Docker）要和專題接得起來。
+- [x] `projects/cafe-shop-api/Dockerfile`、`projects/cafe-shop-web/Dockerfile` + `nginx.conf` + `config.docker.ts`（angular.json 的 `docker` 設定）、`projects/cafe-shop-deploy/`（`compose.yaml`、`.env.example`、README），實際 `docker compose up` 驗證（見該 README）。
+- [x] Docker 課 ch01–08 的貫穿專案從 TaskBoard 換成線上商店，指令與專案檔案一致；ch08 新增「綠界要連得到：兩個網址」「完成品：一行指令開店」。
+- [x] 進階學程最後一個階段（Docker）接上專題。
+- 沒做：Docker 課仍是原本 slidev-docker 的講法（沒有改成 CLAUDE.md 的「生活故事 → Pairs → Poll」初學者格式）；GitHub Actions 自動建置推送只講概念。
 
 ### 3. 其他課的專題切入點 — `待辦`
 

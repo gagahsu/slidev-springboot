@@ -44,11 +44,11 @@ style: |
 <!--
 歡迎來到第四章，Dockerfile。
 
-前面幾章用的 Image 都是別人做好的。如果我們想把 TaskBoard 的後端和前端，打包成自己的 Image，就要靠 Dockerfile。
+前面幾章用的 Image 都是別人做好的。如果我們想把線上商店的後端和前端，打包成自己的 Image，就要靠 Dockerfile。
 
 我們可以把 Dockerfile 想成一份寫下來的食譜，`docker build` 照著做，任何人在任何地方都會做出同一個 Image。
 
-學完這一章，我們就能為 TaskBoard 前後端各寫一份精簡又安全的 Dockerfile。
+學完這一章，我們就能為線上商店前後端各寫一份精簡又安全的 Dockerfile。
 -->
 
 ---
@@ -90,20 +90,20 @@ Dockerfile 是一份純文字檔案，裡面一行一行寫著「怎麼組出一
 
 「Dockerfile 是食譜的文字版：照著步驟做，就能在任何地方做出一模一樣的 image。」
 
-先看最陽春的版本：把 Gradle 已經打包好的 `taskboard-api.jar` 塞進 image 裡跑起來。
+先看最陽春的版本：把 Gradle 已經打包好的 `cafe-shop-api.jar` 塞進 image 裡跑起來。
 
 ```dockerfile
-# taskboard-api/Dockerfile（第一版，之後會再改良）
+# cafe-shop-api/Dockerfile（第一版，之後會再改良）
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY build/libs/taskboard-api-1.0.0.jar app.jar
+COPY build/libs/cafe-shop-api-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
 CMD ["java", "-jar", "app.jar"]
 ```
 
 ```bash
 ./gradlew bootJar                       # 先在本機打包出 jar
-docker build -t taskboard-api:1.0.0 .   # 再包成 image
+docker build -t cafe-shop-api:1.0.0 .   # 再包成 image
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
@@ -152,7 +152,7 @@ ENV 則是設定環境變數，build 和容器執行時都會生效。
 
 # Dockerfile 常用指令 — 範例
 
-把七個指令都用上，寫一份比較完整的 `taskboard-api` Dockerfile：
+把七個指令都用上，寫一份比較完整的 `cafe-shop-api` Dockerfile：
 
 ```dockerfile
 FROM eclipse-temurin:21-jre-alpine
@@ -160,7 +160,7 @@ ENV APP_HOME=/app
 ENV SPRING_PROFILES_ACTIVE=prod
 WORKDIR $APP_HOME
 RUN addgroup -S app && adduser -S app -G app
-COPY build/libs/taskboard-api-1.0.0.jar app.jar
+COPY build/libs/cafe-shop-api-0.0.1-SNAPSHOT.jar app.jar
 USER app
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
@@ -172,7 +172,7 @@ CMD ["--server.port=8080"]
 </div>
 
 <!--
-這一頁把七個指令放在一起，寫一份比較完整的 `taskboard-api` Dockerfile。
+這一頁把七個指令放在一起，寫一份比較完整的 `cafe-shop-api` Dockerfile。
 
 先看第二個 ENV，`SPRING_PROFILES_ACTIVE=prod`。它讓 Image 預設啟用 prod 的設定檔。因為只是預設值，`docker run` 時加 `-e` 就能蓋掉，同一個 Image 可以用在不同環境。
 
@@ -226,11 +226,11 @@ class: flex flex-col justify-center items-center text-center
 「docker build 會把 Dockerfile 逐行讀進去，每一行變成一個 layer（層），疊起來組成最終的 image。」
 
 ```bash
-# 在 taskboard-api/ 目錄下執行
-docker build -t taskboard-api:1.0.0 .
+# 在 cafe-shop-api/ 目錄下執行
+docker build -t cafe-shop-api:1.0.0 .
 
 # 指定不同檔名的 Dockerfile（單一 repo 放多個服務時常見）
-docker build -f Dockerfile.web -t taskboard-web:1.0.0 ./taskboard-web
+docker build -f Dockerfile.web -t cafe-shop-web:1.0.0 ./cafe-shop-web
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
@@ -320,7 +320,7 @@ RUN ./gradlew bootJar --no-daemon
 | `--no-cache` | 建構時強制忽略所有快取，從頭重新跑一次 |
 
 ```bash
-docker build --no-cache -t taskboard-api:1.0.0 .
+docker build --no-cache -t cafe-shop-api:1.0.0 .
 ```
 
 <!--
@@ -328,7 +328,7 @@ docker build --no-cache -t taskboard-api:1.0.0 .
 
 「把常變動的指令放後面，把穩定不變的指令放前面，快取效益才會最大。」
 
-TaskBoard 的前後端剛好是同一個模式。後端的 build.gradle 對應前端的 package.json，都是很少改的依賴清單。後端的 Java 原始碼對應前端的 TypeScript，都是天天改的。所以順序都一樣，先複製清單、安裝依賴，再複製原始碼、編譯。
+線上商店的前後端剛好是同一個模式。後端的 build.gradle 對應前端的 package.json，都是很少改的依賴清單。後端的 Java 原始碼對應前端的 TypeScript，都是天天改的。所以順序都一樣，先複製清單、安裝依賴，再複製原始碼、編譯。
 
 至於 `--no-cache`，會強制忽略所有快取，從頭跑一次。通常用在懷疑快取有問題的時候，例如明明改了設定卻沒生效，或是 CI 要確保完全乾淨的建構。平常開發不要加，加了就完全沒有加速效果。
 -->
@@ -371,62 +371,67 @@ class: flex flex-col justify-center items-center text-center
 
 ---
 
-# Multi-stage Build — taskboard-api
+# Multi-stage Build — cafe-shop-api
 
 ```dockerfile
-# ---- 第一階段：用 Gradle 編譯，本機不需要裝 JDK ----
-FROM gradle:8.10-jdk21 AS build
+# ---- 第一階段：用 JDK 編譯，本機不需要裝 JDK ----
+FROM eclipse-temurin:21-jdk AS build
 WORKDIR /src
 COPY gradlew settings.gradle build.gradle ./
 COPY gradle ./gradle
-RUN ./gradlew dependencies --no-daemon
+RUN chmod +x gradlew && ./gradlew dependencies --no-daemon > /dev/null
 COPY src ./src
-RUN ./gradlew bootJar --no-daemon
+RUN ./gradlew bootJar --no-daemon -x test
 
 # ---- 第二階段：只留 JRE 跟打包好的 jar ----
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-RUN addgroup -S app && adduser -S app -G app
+RUN addgroup -S app && adduser -S app -G app && mkdir uploads && chown app:app uploads
 COPY --from=build /src/build/libs/*.jar app.jar
 USER app
+ENV SPRING_PROFILES_ACTIVE=prod
+ENV UPLOAD_DIR=/app/uploads
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>成果：</b> 建構階段的 <code>gradle:8.10-jdk21</code> 約 800MB，但最終 image 只有 <b>約 200MB</b> — 完整 JDK、Gradle、原始碼、依賴快取全部留在第一階段，不會進到成品裡。
+💡 <b>成果：</b> 建構階段的 <code>eclipse-temurin:21-jdk</code> 加上依賴快取將近 1GB，最終 image 約 <b>400MB</b>（推上 Registry 時壓縮成約 130MB） — 完整 JDK、Gradle、原始碼、依賴快取全部留在第一階段，不會進到成品裡。
 </div>
 
 <!--
-這一頁是整章的重點，也是之後會直接放進專案裡用的 Dockerfile。
+這一頁是整章的重點，也是專案裡真的在用的 Dockerfile，放在 `cafe-shop-api/Dockerfile`。
 
-第一階段用 `gradle:8.10-jdk21`，裡面有完整的 JDK 和 Gradle，所以編譯整個搬進容器裡做。不管誰的電腦或 CI 伺服器，只要有 Docker 就能 build，不用再擔心本機的 JDK 版本。中間幾行就是剛才講的快取排序。
+第一階段用 `eclipse-temurin:21-jdk`，裡面有完整的 JDK。Gradle 不用另外裝，專案內附的 gradlew 會自己下載對的版本，所以編譯整個搬進容器裡做。不管誰的電腦或 CI 伺服器，只要有 Docker 就能 build，不用再擔心本機的 JDK 版本。中間幾行就是剛才講的快取排序。`chmod +x` 是因為在 Windows 上建的專案，gradlew 有時候會少了執行權限；`-x test` 表示打包時先跳過測試，測試交給 CI 去跑。
+
+第二階段多了兩件事。第一，先建好 uploads 資料夾並交給 app 這個使用者，後台上傳的商品圖片會存在這裡，第七章會把它掛上 Volume。第二，兩個 ENV：預設用 prod 設定，開發用的模擬付款就不會出現；圖片資料夾指到 `/app/uploads`。
 
 第二階段是關鍵。重新從 `eclipse-temurin:21-jre-alpine` 開始，注意是 jre 不是 jdk，我們只需要執行，不需要編譯器。再用 `COPY --from=build` 把第一階段產出的 jar 拿過來。
 
-結果是，第一階段將近 1GB 的 JDK、Gradle、依賴快取和原始碼，全部留在原地。最終 Image 只有大約 200MB。Image 越小，push、pull、部署都越快，裡面沒有編譯器和原始碼，也更安全。
+結果是，第一階段將近 1GB 的 JDK、Gradle、依賴快取和原始碼，全部留在原地。最終 Image 大約 400MB，推上 Registry 時壓縮成一百三十 MB 左右。Image 越小，push、pull、部署都越快，裡面沒有編譯器和原始碼，也更安全。
 
-要注意 `*.jar` 這個寫法，前提是 build 目錄底下只有一支 jar。如果 Gradle 也產出了 plain jar，要在 build.gradle 把它關掉，不然可能複製到錯的那支。
+要注意 `*.jar` 這個寫法，前提是 build 目錄底下只有一支 jar。我們只執行 bootJar，所以只會有一支；如果改成執行 build，Gradle 會多產出一支 plain jar，就可能複製到錯的那支。
 -->
 
 ---
 
-# Multi-stage Build — taskboard-web
+# Multi-stage Build — cafe-shop-web
 
 Angular 更適合 multi-stage：Node 只在建構時需要，跑起來根本用不到。
 
 ```dockerfile
 # ---- 第一階段：用 Node 編譯 Angular ----
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /src
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-RUN npm run build          # 產出到 dist/taskboard-web/browser
+# 用 docker 設定打包，產出到 dist/cafe-shop-web/browser
+RUN npm run build -- --configuration docker
 
 # ---- 第二階段：只留 nginx 跟靜態檔 ----
-FROM nginx:1.27-alpine
-COPY --from=build /src/dist/taskboard-web/browser /usr/share/nginx/html
+FROM nginx:1.31-alpine
+COPY --from=build /src/dist/cafe-shop-web/browser /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 ```
@@ -440,7 +445,9 @@ EXPOSE 80
 
 Angular 專案的 node_modules 動輒幾百 MB 到 1GB。但這些只有編譯時需要，編譯完就是一堆 HTML、CSS、JS 靜態檔，執行時完全用不到 Node。
 
-所以第一階段用 node 執行 `npm ci` 和 `npm run build`，第二階段直接換成 nginx，只把 dist 底下的產出物複製到 nginx 的網站目錄。最終 Image 大約 50MB，裡面連 Node 都沒有。
+所以第一階段用 node 執行 `npm ci` 和 `npm run build`。後面的 `-- --configuration docker` 是把參數傳給 ng build，選用 angular.json 裡的 docker 設定：它會把 `config.ts` 換成 `config.docker.ts`，API 的位址從 `http://localhost:8080` 變成空字串，也就是「跟網頁同一個網址」，第六章會讓 Nginx 把 `/api` 轉給後端。
+
+第二階段直接換成 nginx，只把 dist 底下的產出物複製到 nginx 的網站目錄。最終 Image 大約 50MB，裡面連 Node 都沒有。
 
 注意這裡用的是 `npm ci`，不是 `npm install`。ci 會嚴格照著 lock 檔安裝，版本完全固定，每次 build 結果都一樣。容器建構一律用 ci。
 
@@ -466,7 +473,7 @@ Angular 專案的 node_modules 動輒幾百 MB 到 1GB。但這些只有編譯�
 
 「.dockerignore 用來排除不需要送進建構上下文的檔案」，寫法跟大家熟悉的 .gitignore 幾乎一樣。
 
-為什麼需要它？前面說過，`docker build` 會把整個目錄送進建構上下文。TaskBoard 前端的 node_modules 動輒 1GB，後端的 .gradle 和 build 目錄也有幾百 MB。這些全部送進去，光是傳送就要等好幾十秒，而且進去之後，第一階段還會重新安裝一次，完全白費。
+為什麼需要它？前面說過，`docker build` 會把整個目錄送進建構上下文。線上商店前端的 node_modules 動輒 1GB，後端的 .gradle 和 build 目錄也有幾百 MB。這些全部送進去，光是傳送就要等好幾十秒，而且進去之後，第一階段還會重新安裝一次，完全白費。
 
 表格的最後一列也很重要，它還能避免機密檔案被打包進去，下一頁的範例會看到。
 -->
@@ -475,19 +482,23 @@ Angular 專案的 node_modules 動輒幾百 MB 到 1GB。但這些只有編譯�
 
 # .dockerignore — 範例
 
-TaskBoard 前後端各放一份，與各自的 Dockerfile 同一層：
+線上商店前後端各放一份，與各自的 Dockerfile 同一層：
 
 <div class="grid grid-cols-2 gap-6">
 
 <div>
 
 ```plaintext
-# taskboard-api/.dockerignore
+# cafe-shop-api/.dockerignore
 .git
 .gradle/
 build/
-*.md
-src/main/resources/application-local.yml
+bin/
+uploads/
+.settings/
+.classpath
+.project
+src/main/resources/application-local.properties
 ```
 
 </div>
@@ -495,10 +506,12 @@ src/main/resources/application-local.yml
 <div>
 
 ```plaintext
-# taskboard-web/.dockerignore
+# cafe-shop-web/.dockerignore
 .git
 node_modules/
 dist/
+.angular/
+.vscode/
 .env*
 ```
 
@@ -507,9 +520,9 @@ dist/
 </div>
 
 <!--
-TaskBoard 的前後端各放一份 .dockerignore，跟各自的 Dockerfile 在同一層。
+線上商店的前後端各放一份 .dockerignore，跟各自的 Dockerfile 在同一層。
 
-左邊是後端，排除 Gradle 的快取和 build 目錄，還有 `application-local.yml`，這個檔案常常放著本機資料庫的密碼。右邊是前端，排除 node_modules、dist，以及 `.env` 開頭的檔案，裡面常有 API key。
+左邊是後端，排除 Gradle 的快取和 build 目錄、Eclipse 的設定檔，還有 uploads，那是我們在本機測試時上傳的商品圖片，不該跟著程式進 Image。最後一行 `application-local.properties`，這種檔案常常放著自己電腦的資料庫密碼。右邊是前端，排除 node_modules、dist、Angular 的建構快取 `.angular`，以及 `.env` 開頭的檔案，裡面常有 API key。
 
 這些機密絕對不能進 Image。Image 會被 push 到 Registry，任何人拉下來都能翻出來看。
 
@@ -520,18 +533,18 @@ TaskBoard 的前後端各放一份 .dockerignore，跟各自的 Dockerfile 在�
 layout: default
 ---
 
-# 練習 1：修好 taskboard-api 的 Dockerfile
+# 練習 1：修好 cafe-shop-api 的 Dockerfile
 ### 任務說明
 
 同事寫的這份 Dockerfile 可以動，但每次改一行 Java 就要重抓一次所有 Spring Boot 依賴，build 一次要一分半：
 
 ```dockerfile
-FROM gradle:8.10-jdk21
+FROM eclipse-temurin:21-jdk
 WORKDIR /src
 COPY . .
-RUN ./gradlew bootJar --no-daemon
+RUN ./gradlew bootJar --no-daemon -x test
 EXPOSE 8080
-CMD ["java", "-jar", "build/libs/taskboard-api-1.0.0.jar"]
+CMD ["java", "-jar", "build/libs/cafe-shop-api-0.0.1-SNAPSHOT.jar"]
 ```
 
 任務：
@@ -540,7 +553,7 @@ CMD ["java", "-jar", "build/libs/taskboard-api-1.0.0.jar"]
 2. 實測：改一行 Controller 再 build 一次，觀察哪幾步顯示 `CACHED`
 
 <!--
-接下來是練習一，修好 taskboard-api 的 Dockerfile。
+接下來是練習一，修好 cafe-shop-api 的 Dockerfile。
 
 同事寫的這份可以動，但每改一行 Java，就要重新下載所有依賴，build 一次要一分半。任務是調整指令順序，讓只改 src 的時候，依賴那層能吃到快取，並且實際 build 兩次，觀察哪幾步出現 CACHED。
 
@@ -568,7 +581,7 @@ COPY gradlew settings.gradle build.gradle ./
 COPY gradle ./gradle
 RUN ./gradlew dependencies --no-daemon
 COPY src ./src
-RUN ./gradlew bootJar --no-daemon
+RUN ./gradlew bootJar --no-daemon -x test
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
@@ -589,23 +602,23 @@ RUN ./gradlew bootJar --no-daemon
 layout: default
 ---
 
-# 練習 2：把 taskboard-web 改成 Multi-stage
+# 練習 2：把 cafe-shop-web 改成 Multi-stage
 ### 任務說明
 
 前端目前這份 Dockerfile 建出來的 image 有 **1.2GB**，而且裡面看得到完整原始碼與 `.env`：
 
 ```dockerfile
-FROM node:20-alpine
+FROM node:24-alpine
 WORKDIR /app
 COPY . .
 RUN npm install
-RUN npm run build
+RUN npm run build -- --configuration docker
 EXPOSE 4200
-CMD ["npx", "http-server", "dist/taskboard-web/browser"]
+CMD ["npx", "http-server", "dist/cafe-shop-web/browser"]
 ```
 
 <!--
-練習二是這一章的驗收題，把 taskboard-web 改成 Multi-stage。
+練習二是這一章的驗收題，把 cafe-shop-web 改成 Multi-stage。
 
 先看目前的狀況。這份 Dockerfile 用 node 一路做到底，建出來的 Image 有 1.2GB，而且裡面看得到完整的原始碼和 `.env`。
 
@@ -618,10 +631,10 @@ CMD ["npx", "http-server", "dist/taskboard-web/browser"]
 layout: default
 ---
 
-# 練習 2：把 taskboard-web 改成 Multi-stage
+# 練習 2：把 cafe-shop-web 改成 Multi-stage
 ### 任務要求
 
-1. 改寫成 multi-stage：第一階段用 Node 編譯，第二階段換成 `nginx:1.27-alpine`，只複製 `dist/taskboard-web/browser` 的產出物
+1. 改寫成 multi-stage：第一階段用 Node 編譯，第二階段換成 `nginx:1.31-alpine`，只複製 `dist/cafe-shop-web/browser` 的產出物
 2. 把 `npm install` 換成 `npm ci`，並調整順序讓依賴安裝能吃快取
 3. 新增 `.dockerignore`，確保 `node_modules`、`dist`、`.env` 不會被送進建構上下文
 4. 驗證：`docker images` 比較改寫前後的大小，並進容器確認裡面沒有 `.ts` 原始碼與 `.env`
@@ -644,15 +657,15 @@ layout: default
 ### 提示說明
 
 ```dockerfile
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /src
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-RUN npm run build
+RUN npm run build -- --configuration docker
 
-FROM nginx:1.27-alpine
-COPY --from=build /src/dist/taskboard-web/browser /usr/share/nginx/html
+FROM nginx:1.31-alpine
+COPY --from=build /src/dist/cafe-shop-web/browser /usr/share/nginx/html
 EXPOSE 80
 ```
 
@@ -665,7 +678,7 @@ dist
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-⚠️ <b>驗證方式：</b> <code>docker run --rm -it taskboard-web:1.0.0 sh</code> 進容器，
+⚠️ <b>驗證方式：</b> <code>docker run --rm -it cafe-shop-web:1.0.0 sh</code> 進容器，
 <code>ls /usr/share/nginx/html</code> 應該只有 <code>index.html</code> 跟一堆雜湊檔名的 js/css，找不到任何 <code>.ts</code>。
 </div>
 
@@ -677,6 +690,8 @@ dist
 很多人會以為用了 Multi-stage 就安全了。但如果 .dockerignore 沒排除 `.env`，第一階段的 `COPY . .` 還是會把它讀進去，只要哪個階段不小心複製到，就會外洩。所以這兩個技巧要一起用。
 
 最後進容器檢查，應該找不到任何 ts 檔，Image 也從 1.2GB 降到大約 50MB。
+
+專案裡的正式版 `cafe-shop-web/Dockerfile` 還多了一行 `COPY nginx.conf`，讓 Nginx 把 `/api` 轉給後端，這個設定第六章再來寫。
 -->
 
 ---
@@ -714,7 +729,7 @@ layout: default
 
 第一，Dockerfile 用幾個常用指令把組 Image 的步驟寫下來，ENTRYPOINT 決定跑什麼，CMD 決定預設參數。第二，`docker build` 每一行產生一個 layer。第三，Layer Cache 由上而下比對，常變動的指令要放後面。第四，Multi-stage Build 只把成品搬進最終 Image。最後，.dockerignore 讓 build 更快，也避免機密外洩。
 
-下一章，我們要用 Docker Compose，把 TaskBoard 的三個服務一次啟動。
+下一章，我們要用 Docker Compose，把線上商店的三個服務一次啟動。
 -->
 
 ---
@@ -726,7 +741,7 @@ layout: end
 有任何問題嗎？
 
 <!--
-這一章我們親手為 TaskBoard 寫出了前後端的 Dockerfile，也學會讓 build 更快、Image 更小、更安全。
+這一章我們親手為線上商店寫出了前後端的 Dockerfile，也學會讓 build 更快、Image 更小、更安全。
 
 建議大家自己動手寫一份 Dockerfile 並 build 一次，實際做過一次，比看投影片有用得多。我們下一章見。
 

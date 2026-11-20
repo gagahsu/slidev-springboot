@@ -58,6 +58,7 @@ layout: default
 - **環境變數管理與 .env**
 - **Image 版本控制與 Tag 策略**
 - **CI/CD 概念與推送至 Registry**
+- **綠界網址與完成品** — 一行指令開店
 - **練習題**
 - **總結：課程回顧**
 
@@ -85,11 +86,12 @@ class: flex flex-col justify-center items-center text-center
 Docker Compose 官方文件說明：**「路徑是相對於 compose.yaml 檔案的位置」**——`.env` 通常放在跟 `compose.yaml` 同一層目錄。
 
 ```bash
-# .env（放在 compose.yaml 同一層）
-MYSQL_ROOT_PASSWORD=rootpw
-MYSQL_PASSWORD=apppw
+# cafe-shop-deploy/.env（放在 compose.yaml 同一層）
+DB_ROOT_PASSWORD=rootpw
+DB_PASSWORD=shoppw
+JWT_SECRET=請換成至少-32-個字元的亂數字串
 SPRING_PROFILES_ACTIVE=prod
-TASKBOARD_VERSION=1.0.0
+SHOP_VERSION=1.0.0
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
@@ -103,7 +105,7 @@ TASKBOARD_VERSION=1.0.0
 
 為什麼要分開？因為程式碼會進 Git。密碼一旦進了 Git 的歷史紀錄，就算之後刪掉檔案，舊的 commit 裡還是找得到。
 
-範例裡放的，就是前面幾章一直寫死在 compose.yaml 裡的值，資料庫密碼、Spring 的 profile，還有 Image 的版本號。之前為了教學方便直接寫死，這一章我們要把它們全部搬出來。
+範例裡放的，就是前面幾章一直寫死在 compose.yaml 裡的值，資料庫密碼、Spring 的 profile，還有 Image 的版本號。另外多了一個 JWT_SECRET，它是後端簽發登入通行證用的鑰匙，誰拿到它，誰就能自己做出一張管理員的通行證，所以比資料庫密碼還要保密。之前為了教學方便直接寫死，這一章我們要把它們全部搬出來。
 
 格式很簡單，一行一個 KEY 等於 VALUE。
 -->
@@ -134,31 +136,34 @@ TASKBOARD_VERSION=1.0.0
 
 # .env 用法 — 範例
 
-把 TaskBoard 的 compose.yaml 改成完全不含密碼的版本：
+把線上商店的 compose.yaml 改成完全不含密碼的版本：
 
 ```yaml
 # compose.yaml — 這份可以安心進版控
 services:
   web:
-    image: myaccount/taskboard-web:${TASKBOARD_VERSION}
-    ports: ["8080:80"]
+    image: myaccount/cafe-shop-web:${SHOP_VERSION}
+    ports: ["80:80"]
   api:
-    image: myaccount/taskboard-api:${TASKBOARD_VERSION}
+    image: myaccount/cafe-shop-api:${SHOP_VERSION}
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/taskboard
-      SPRING_DATASOURCE_USERNAME: appuser
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      DB_URL: jdbc:mysql://db:3306/cafe_shop
+      DB_USERNAME: shop
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
 ```
 
 <!--
-這一頁把 TaskBoard 的 compose.yaml 改成完全不含密碼的版本。因為比較長，拆成兩頁，這頁先看 web 和 api。
+這一頁把線上商店的 compose.yaml 改成完全不含密碼的版本。因為比較長，拆成兩頁，這頁先看 web 和 api。
 
 對照第五章那份，差別就是所有敏感的值，都換成了插值。
 
-先看 image 那行，版本號也用了 TASKBOARD_VERSION。要升版或回到舊版，只要改 .env 裡的一行，再執行一次 `docker compose up -d`，compose.yaml 完全不用動。
+先看 image 那行，版本號也用了 SHOP_VERSION。要升版或回到舊版，只要改 .env 裡的一行，再執行一次 `docker compose up -d`，compose.yaml 完全不用動。
 
-api 的資料庫密碼，則是從 MYSQL_PASSWORD 這個變數讀進來。
+web 這次改開 80，這是網站的預設 port，網址就不用再打冒號 8080。api 沒有 ports，外面只能透過 web 的 `/api` 進來。
+
+api 的資料庫密碼和 JWT 密鑰，則是從 .env 的變數讀進來。
 -->
 
 ---
@@ -169,16 +174,17 @@ api 的資料庫密碼，則是從 MYSQL_PASSWORD 這個變數讀進來。
 services:
   # ...（接上頁 web、api）
   db:
-    image: mysql:8.4
+    image: mysql:9.7
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: taskboard
-      MYSQL_USER: appuser
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: cafe_shop
+      MYSQL_USER: shop
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes: [db-data:/var/lib/mysql]
 
 volumes:
   db-data:
+  uploads:      # api 的 volumes 寫 uploads:/app/uploads（第七章）
 ```
 
 <!--
@@ -186,7 +192,7 @@ volumes:
 
 Compose 會自動讀取同一層目錄的 .env，把這些佔位符換成實際的值。所以這份 compose.yaml 完全不含密碼，可以放心 commit 進 Git，給任何人看。
 
-這裡有一個最多人搞混的地方。.env 裡的變數，是用來替換 Compose 檔案本身的文字，不會自動變成容器裡的環境變數。api 拿得到密碼，是因為我們在 environment 裡明確寫了 SPRING_DATASOURCE_PASSWORD 引用它。只寫在 .env、沒有在 environment 引用的變數，容器裡是看不到的。
+這裡有一個最多人搞混的地方。.env 裡的變數，是用來替換 Compose 檔案本身的文字，不會自動變成容器裡的環境變數。api 拿得到密碼，是因為我們在 environment 裡明確寫了 `DB_PASSWORD: ${DB_PASSWORD}` 引用它。左邊是容器裡的變數名稱，右邊是從 .env 讀來的值，兩邊剛好同名而已，也可以不同名。只寫在 .env、沒有在 environment 引用的變數，容器裡是看不到的。
 
 啟動之後，用 `docker compose exec api env` 搭配 grep，就能確認密碼確實被注入了容器。
 -->
@@ -198,18 +204,17 @@ Compose 會自動讀取同一層目錄的 .env，把這些佔位符換成實際�
 Docker Compose 官方最佳實踐明確提到：**「Be cautious about including sensitive data in environment variables. Consider using Secrets for managing sensitive information.」**（謹慎處理環境變數中的敏感資料，考慮改用 Secrets 管理）
 
 ```bash
-# .gitignore
+# cafe-shop-deploy/.gitignore
 .env
-*.env.local
-taskboard-api/src/main/resources/application-local.yml
 ```
 
 ```bash
-# .env.example — 這份要進版控，只寫欄位不寫真值
-MYSQL_ROOT_PASSWORD=
-MYSQL_PASSWORD=
+# .env.example — 這份要進版控，只寫欄位和說明，不寫真的密碼
+DB_ROOT_PASSWORD=change-me-root
+DB_PASSWORD=change-me-shop
+JWT_SECRET=change-me-to-a-long-random-string-at-least-32-bytes
 SPRING_PROFILES_ACTIVE=prod
-TASKBOARD_VERSION=1.0.0
+SHOP_VERSION=1.0.0
 ```
 
 <div class="mt-4 p-3 bg-red-50 border-l-4 border-red-400 text-gray-700 text-sm text-left">
@@ -227,7 +232,7 @@ TASKBOARD_VERSION=1.0.0
 
 所以專案一開始，就要把 .env 加進 .gitignore，養成習慣，不要等到不小心 commit 了才補救。
 
-那新同事怎麼知道要設定哪些變數？團隊常見的做法是放一份 `.env.example`，只寫欄位名稱，不寫真正的值，這份可以進版控。
+那新同事怎麼知道要設定哪些變數？團隊常見的做法是放一份 `.env.example`，只寫欄位名稱和一看就知道要換掉的假值，這份可以進版控。新同事 clone 下來，`cp .env.example .env`，把 change-me 都換掉就能啟動。專案的 `projects/cafe-shop-deploy` 就是這樣做的。
 
 另外官方也建議，正式環境真正機密的資料，不要只靠環境變數，可以進一步改用 Docker Secrets 這類專門的機密管理機制。
 -->
@@ -252,7 +257,7 @@ class: flex flex-col justify-center items-center text-center
 「Tag（標籤）」是幫 image 每一個版本貼上可辨識名字的機制，格式為 `NAME[:TAG]`，例如 `my-app:1.2.0`。Docker 官方建構最佳實踐提醒：**tag 是「可變的」（mutable）**——同一個 tag 隨時可能被覆蓋成不同內容的 image，這也是版本策略重要的原因。
 
 ```bash
-docker image tag taskboard-api:latest taskboard-api:1.2.0
+docker image tag cafe-shop-api:latest cafe-shop-api:1.2.0
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
@@ -300,16 +305,16 @@ docker image tag taskboard-api:latest taskboard-api:1.2.0
 用語意化版號（Semantic Versioning，`主版本.次版本.修訂版本`）搭配環境標記：
 
 ```bash
-# 修好任務刪除的 bug，只加修訂版本
-docker build -t taskboard-api:1.2.1 ./taskboard-api
+# 修好運費計算的 bug，只加修訂版本
+docker build -t cafe-shop-api:1.2.1 ./cafe-shop-api
 
-# 新增「任務標籤」功能，加次版本
-docker build -t taskboard-api:1.3.0 ./taskboard-api
+# 新增「優惠券」功能，加次版本
+docker build -t cafe-shop-api:1.3.0 ./cafe-shop-api
 
 # 同時打上多個 tag：版本號 + git commit hash + 環境
-docker build -t taskboard-api:1.3.0 \
-  -t taskboard-api:$(git rev-parse --short HEAD) \
-  -t taskboard-api:staging ./taskboard-api
+docker build -t cafe-shop-api:1.3.0 \
+  -t cafe-shop-api:$(git rev-parse --short HEAD) \
+  -t cafe-shop-api:staging ./cafe-shop-api
 ```
 
 更保險的做法：搭配 digest（映像的內容雜湊值）鎖定版本，即使 tag 被覆蓋也不受影響：
@@ -352,8 +357,8 @@ class: flex flex-col justify-center items-center text-center
 | 概念 | 說明 |
 | --- | --- |
 | Registry | 存放 image 的伺服器服務，例如 Docker Hub |
-| Repository | Registry 裡的一個專案空間，例如 `myaccount/taskboard-api` |
-| Tag | Repository 底下的具體版本，例如 `myaccount/taskboard-api:1.2.0` |
+| Repository | Registry 裡的一個專案空間，例如 `myaccount/cafe-shop-api` |
+| Tag | Repository 底下的具體版本，例如 `myaccount/cafe-shop-api:1.2.0` |
 | Public repository | 任何人都能 pull，數量不限 |
 | Private repository | 需要權限才能存取，適合內部專案 |
 
@@ -362,7 +367,7 @@ class: flex flex-col justify-center items-center text-center
 
 「Registry 是集中存放、管理、分享 Docker image 的地方。」我們把做好的 Image 放進去，同事的電腦或正式伺服器，就能直接拉下來用。
 
-表格裡三個名詞容易搞混，可以想成倉庫、貨架和批號。Registry 是整個倉庫服務，像 Docker Hub。Repository 是倉庫裡的一個貨架，例如 `myaccount/taskboard-api`。Tag 則是貨架上具體的那一批貨，也就是版本。
+表格裡三個名詞容易搞混，可以想成倉庫、貨架和批號。Registry 是整個倉庫服務，像 Docker Hub。Repository 是倉庫裡的一個貨架，例如 `myaccount/cafe-shop-api`。Tag 則是貨架上具體的那一批貨，也就是版本。
 
 要注意，public repository 任何人都能拉。還沒公開的專案，或含有機密資訊的 Image，不要推到公開的地方。
 -->
@@ -374,53 +379,53 @@ class: flex flex-col justify-center items-center text-center
 | 步驟 | 指令 | 說明 |
 | --- | --- | --- |
 | 1. 登入 | `docker login [REGISTRY_URL]` | 驗證帳號權限，Docker Hub 可省略網址 |
-| 2. 建置 | `docker build -t taskboard-api:1.2.0 ./taskboard-api` | 依 Dockerfile 組出 image |
-| 3. 標記 | `docker image tag taskboard-api:1.2.0 myaccount/taskboard-api:1.2.0` | 加上 registry/使用者前綴 |
-| 4. 推送 | `docker image push myaccount/taskboard-api:1.2.0` | 上傳到 Registry |
-| 5. 驗證 | `docker pull myaccount/taskboard-api:1.2.0` | 從部署伺服器測試拉取 |
+| 2. 建置 | `docker build -t cafe-shop-api:1.2.0 ./cafe-shop-api` | 依 Dockerfile 組出 image |
+| 3. 標記 | `docker image tag cafe-shop-api:1.2.0 myaccount/cafe-shop-api:1.2.0` | 加上 registry/使用者前綴 |
+| 4. 推送 | `docker image push myaccount/cafe-shop-api:1.2.0` | 上傳到 Registry |
+| 5. 驗證 | `docker pull myaccount/cafe-shop-api:1.2.0` | 從部署伺服器測試拉取 |
 
 <!--
 這張表把「從自己的電腦，到讓別人拉得到」拆成五個步驟。
 
 第一步登入，向 Registry 證明我們的身分。第二步 build，照 Dockerfile 組出 Image。
 
-第三步很多新手會漏掉。推送之前，要把 Image 標記成包含帳號的完整名稱。只用 `taskboard-api` 的話，會被當成要推到官方的命名空間，直接被拒絕。
+第三步很多新手會漏掉。推送之前，要把 Image 標記成包含帳號的完整名稱。只用 `cafe-shop-api` 的話，會被當成要推到官方的命名空間，直接被拒絕。
 
 第四步才是真正上傳。第五步是驗證，最好換一台機器，或先刪掉本機的 Image，重新拉一次，確認別人真的拉得到、拉得對。
 
-順帶一提，TaskBoard 只需要推 api 和 web 兩個 Image。資料庫直接用官方的 `mysql:8.4`，這也是一個實務原則，能用官方 Image 就不要自己包。
+順帶一提，線上商店只需要推 api 和 web 兩個 Image。資料庫直接用官方的 `mysql:9.7`，這也是一個實務原則，能用官方 Image 就不要自己包。
 -->
 
 ---
 
 # Build → Tag → Push — 範例
 
-TaskBoard 發布 1.2.0 版的完整流程：
+線上商店發布 1.2.0 版的完整流程：
 
 ```bash
 # 1. 登入 Docker Hub
 docker login
 
 # 2. 建置兩個服務的 image
-docker build -t taskboard-api:1.2.0 ./taskboard-api
-docker build -t taskboard-web:1.2.0 ./taskboard-web
+docker build -t cafe-shop-api:1.2.0 ./cafe-shop-api
+docker build -t cafe-shop-web:1.2.0 ./cafe-shop-web
 
 # 3. 標記成含帳號的完整名稱
-docker image tag taskboard-api:1.2.0 myaccount/taskboard-api:1.2.0
-docker image tag taskboard-api:1.2.0 myaccount/taskboard-api:latest
-docker image tag taskboard-web:1.2.0 myaccount/taskboard-web:1.2.0
+docker image tag cafe-shop-api:1.2.0 myaccount/cafe-shop-api:1.2.0
+docker image tag cafe-shop-api:1.2.0 myaccount/cafe-shop-api:latest
+docker image tag cafe-shop-web:1.2.0 myaccount/cafe-shop-web:1.2.0
 
 # 4. 推送
-docker image push --all-tags myaccount/taskboard-api
-docker image push myaccount/taskboard-web:1.2.0
+docker image push --all-tags myaccount/cafe-shop-api
+docker image push myaccount/cafe-shop-web:1.2.0
 
 # 5. 在部署伺服器上：改 .env 的版本號後拉新版重啟
-#    TASKBOARD_VERSION=1.2.0
+#    SHOP_VERSION=1.2.0
 docker compose pull && docker compose up -d
 ```
 
 <!--
-這一頁把五個步驟實際走一次，這就是 TaskBoard 上線的樣子。
+這一頁把五個步驟實際走一次，這就是線上商店上線的樣子。
 
 第三步同時打了 1.2.0 和 latest。版本號用來精準追蹤，latest 方便沒指定版本時拉取。但正式環境的 compose.yaml，一定要明確寫版本號。
 
@@ -455,7 +460,7 @@ docker compose pull && docker compose up -d
 
 這裡我們先建立觀念，不深入特定工具的語法。說穿了，CI/CD 跑的就是我們剛才手動打的那些指令。
 
-【講師】可補充 Testcontainers：Spring Boot 整合測試可以直接開一個真正的 MySQL 8.4 容器，不用再用 H2 假裝成 MySQL。
+【講師】可補充 Testcontainers：Spring Boot 整合測試可以直接開一個真正的 MySQL 9.7 容器，不用再用 H2 假裝成 MySQL。
 -->
 
 ---
@@ -465,10 +470,10 @@ docker compose pull && docker compose up -d
 ```yaml
 services:
   api:
-    image: myaccount/taskboard-api:${TASKBOARD_VERSION}
+    image: myaccount/cafe-shop-api:${SHOP_VERSION}
     restart: unless-stopped              # 掛掉自動重啟，主機重開也會自己起來
-    healthcheck:                         # 用 Actuator 判斷「活著」
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+    healthcheck:                         # 打一支公開的 API 判斷「活著」
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/categories"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -486,7 +491,7 @@ services:
 
 第一是 restart。容器因為錯誤停掉，Docker 會自動重啟，主機重開機也會自己起來。unless-stopped 的意思是除非我們手動 stop，否則一直重啟。
 
-第二是 healthcheck，用 Spring Boot Actuator 的 health 端點判斷服務是否正常。Java 程式還在跑，但資料庫連線池已經滿了，這種情況只有健康檢查抓得到。注意 start_period，Spring Boot 啟動要二三十秒，沒有寬限期，它會在啟動途中就被判定為不健康。
+第二是 healthcheck，定期打一支公開的 API，商品分類，判斷服務是否正常。這支 API 要查資料庫，所以 Java 程式還在跑、但資料庫連不上的情況也抓得到。專案如果加了 Spring Boot Actuator，可以改打它的 `/actuator/health`。alpine 版的 Image 裡內建 wget，不用另外安裝。注意 start_period，Spring Boot 啟動要二三十秒，沒有寬限期，它會在啟動途中就被判定為不健康。
 
 第三是資源限制。JVM 預設會依照整台主機的記憶體決定能用多少。萬一 API 有記憶體洩漏，可能把整台機器連同資料庫一起拖垮。設了 1g 的上限，超過時只有這個容器被停掉，其他服務不受影響。
 
@@ -494,22 +499,91 @@ services:
 -->
 
 ---
+
+# 綠界要連得到：兩個網址
+
+付款時綠界會用到後端的兩個網址（Spring Boot ch56），部署時要換成**外面連得到**的網址：
+
+| 網址 | 誰來連 | 本機 Docker 測試 | 雲端主機 |
+| --- | --- | --- | --- |
+| `ReturnURL`（付款結果通知） | 綠界的伺服器 | Cloudflare Tunnel 的網址 | 正式網域 |
+| `OrderResultURL`（付完回商店） | 使用者的瀏覽器 | `http://localhost` | 正式網域 |
+
+```yaml
+  api:
+    environment:
+      FRONTEND_URL: ${PUBLIC_URL}                                       # 付完款轉回前台
+      ECPAY_RETURN_URL: ${ECPAY_PUBLIC_URL}/api/payments/ecpay/notify
+      ECPAY_ORDER_RESULT_URL: ${PUBLIC_URL}/api/payments/ecpay/result
+```
+
+```bash
+cloudflared tunnel --url http://localhost:80   # 本機測試：通道接到 Nginx 的 80，不是 8080
+```
+
+<!--
+線上商店比一般專案多一個部署的關卡：綠界。
+
+付款的時候，綠界會用到後端的兩個網址。第一個是 ReturnURL，付款結果通知，這是綠界的伺服器自己連過來的，所以它一定要是網路上連得到的公開網址，寫 localhost 綠界根本找不到。第二個是 OrderResultURL，使用者付完款，瀏覽器帶著結果回到我們的網站，這個是使用者的瀏覽器在連，本機測試寫 localhost 就可以。
+
+下面的設定把這兩個網址都改成從 .env 讀。PUBLIC_URL 是使用者開網站的網址，ECPAY_PUBLIC_URL 是綠界要連的網址。網址後面接的 `/api/payments/...`，會先到 Nginx，Nginx 看到 `/api` 開頭，再轉給後端，所以不用替後端另外開 port。
+
+本機測試時，跟 Spring Boot 第五十六章一樣用 Cloudflare Tunnel，只是這次通道要接到 Nginx 的 80，不是後端的 8080。拿到的 trycloudflare 網址填進 ECPAY_PUBLIC_URL，再 `docker compose up -d`，Compose 發現 api 的設定變了，就只會重建 api。
+
+部署到雲端主機、有了正式網域之後，兩個網址都填正式網域，Tunnel 就不需要了。
+-->
+
+---
+
+# 完成品：一行指令開店
+
+完整的設定在 `projects/cafe-shop-deploy/`，三個資料夾放在同一層：
+
+```plaintext
+cafe-shop-api/      Dockerfile（JDK 編譯 → JRE 執行）、.dockerignore
+cafe-shop-web/      Dockerfile（Node 打包 → Nginx）、.dockerignore、nginx.conf
+cafe-shop-deploy/   compose.yaml、.env.example、.gitignore
+```
+
+```bash
+cd cafe-shop-deploy
+cp .env.example .env            # 第一次：把 change-me 都換掉
+docker compose up -d --build    # 第一次要建映像檔，約 3～5 分鐘
+docker compose ps               # db 是 (healthy)，api、web 是 Up
+```
+
+- 前台 `http://localhost`，後台 `http://localhost/admin`（`admin@cornercafe.test` / `Admin1234`）
+- 驗收：`docker compose down` 再 `up -d`，訂單和後台上傳的圖片都還在
+
+<!--
+最後把八章做的東西收在一起，這就是專案裡的完成品。
+
+三個資料夾放在同一層。cafe-shop-api 和 cafe-shop-web 各有自己的 Dockerfile 和 .dockerignore，前端多一份 nginx.conf。第三個資料夾 cafe-shop-deploy 只放部署用的設定：compose.yaml、.env.example 和 .gitignore。
+
+使用方式只有三行。第一次先把 .env.example 複製成 .env，把密碼和 JWT 密鑰換掉。接著 `up -d --build`，第一次要下載和建置，大約三到五分鐘。最後 ps 確認三個服務都起來了，db 要顯示 healthy。
+
+打開 localhost 就是前台，後台在 `/admin`，管理員帳號是 Flyway 建好的那一個。
+
+最後的驗收對應規格書的最後一條：down 再 up，訂單和圖片都要還在。做到這一步，第一章那句「打包一次，到處都能跑」，就真的發生在我們自己的專題上了。
+-->
+
+---
 layout: default
 ---
 
-# 練習 1：把 TaskBoard 的密碼從版控裡趕出去
+# 練習 1：把線上商店的密碼從版控裡趕出去
 ### 任務說明
 
-拿出第五章那份 `compose.yaml`，裡面 `rootpw`、`apppw` 都是明文寫死的。請完成：
+拿出第五章那份 `compose.yaml`，裡面 `rootpw`、`shoppw` 都是明文寫死的。請完成：
 
-1. 建立 `.env`，把 `MYSQL_ROOT_PASSWORD`、`MYSQL_PASSWORD`、`TASKBOARD_VERSION` 移進去
+1. 建立 `.env`，把 `DB_ROOT_PASSWORD`、`DB_PASSWORD`、`JWT_SECRET`、`SHOP_VERSION` 移進去
 2. 改寫 `compose.yaml`，全部改用 `${}` 插值，確保檔案裡**看不到任何一個明文密碼**
 3. 把 `.env` 加進 `.gitignore`，並建立可進版控的 `.env.example`
-4. 幫 `taskboard-api` 與 `taskboard-web` 補上語意化版號 tag `1.0.0`
-5. 驗證：`docker compose up -d` 之後，用 `docker compose exec api env | grep SPRING` 確認密碼真的有被注入容器
+4. 幫 `cafe-shop-api` 與 `cafe-shop-web` 補上語意化版號 tag `1.0.0`
+5. 驗證：`docker compose up -d` 之後，用 `docker compose exec api env | grep -E "DB_|JWT"` 確認密碼真的有被注入容器
 
 <!--
-接下來是練習一，把 TaskBoard 的密碼從版控裡趕出去。
+接下來是練習一，把線上商店的密碼從版控裡趕出去。
 
 拿出第五章那份 compose.yaml，把密碼和版本號移到 .env，compose.yaml 全部改用插值。再把 .env 加進 .gitignore，並建立 `.env.example`。最後用 exec 驗證密碼真的有被注入容器。
 
@@ -528,25 +602,26 @@ layout: default
 
 ```bash
 # .env（不進版控）
-MYSQL_ROOT_PASSWORD=rootpw
-MYSQL_PASSWORD=apppw
-TASKBOARD_VERSION=1.0.0
+DB_ROOT_PASSWORD=rootpw
+DB_PASSWORD=shoppw
+JWT_SECRET=y8Qn2...（openssl rand -base64 48 產生）
+SHOP_VERSION=1.0.0
 ```
 
 ```yaml
 # compose.yaml 片段
   db:
-    image: mysql:8.4
+    image: mysql:9.7
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
 ```
 
 ```bash
 echo ".env" >> .gitignore
-docker image tag taskboard-api:latest taskboard-api:1.0.0
+docker image tag cafe-shop-api:latest cafe-shop-api:1.0.0
 docker compose config          # 展開後檢查變數有沒有正確代入
-docker compose exec api env | grep SPRING
+docker compose exec api env | grep -E "DB_|JWT"
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
@@ -567,20 +642,20 @@ docker compose exec api env | grep SPRING
 layout: default
 ---
 
-# 練習 2：完整發布 TaskBoard 到 Registry
+# 練習 2：完整發布線上商店到 Registry
 ### 任務說明
 
-把 TaskBoard 1.0.0 版發布出去，並模擬部署伺服器拉取。
+把線上商店 1.0.0 版發布出去，並模擬部署伺服器拉取。
 
 1. 登入 Docker Hub
-2. 建置 `taskboard-api` 與 `taskboard-web` 的 1.0.0 版 image
+2. 建置 `cafe-shop-api` 與 `cafe-shop-web` 的 1.0.0 版 image
 3. 標記成含帳號的完整名稱（版本號 + `latest` + git commit hash 三種 tag）
 4. 推送到 Registry
 5. 模擬部署伺服器：刪掉本機 image 後重新 `pull`，用只有 `compose.yaml` + `.env` 的方式啟動整套
 6. **想一想**：正式環境發現 1.0.0 有嚴重 bug，要在三十秒內回到 0.9.0，你要改哪裡、打哪兩個指令？
 
 <!--
-練習二是整個課程的收尾題，把 TaskBoard 1.0.0 版完整發布出去。
+練習二是整個課程的收尾題，把線上商店 1.0.0 版完整發布出去。
 
 任務是登入、建構兩個 Image、打上版本號、latest 和 commit hash 三種 tag，推送到 Registry。第五步請大家真的把本機的 Image 刪掉，再重新拉取，只用 compose.yaml 和 .env 啟動整套。因為這才是部署伺服器的真實狀態，沒有原始碼，只有 Docker 和兩個設定檔。
 
@@ -600,27 +675,27 @@ layout: default
 ```bash
 # 1-2. 登入並建置
 docker login
-docker build -t taskboard-api:1.0.0 ./taskboard-api
-docker build -t taskboard-web:1.0.0 ./taskboard-web
+docker build -t cafe-shop-api:1.0.0 ./cafe-shop-api
+docker build -t cafe-shop-web:1.0.0 ./cafe-shop-web
 
 # 3. 三種 tag
 GIT_SHA=$(git rev-parse --short HEAD)
-docker image tag taskboard-api:1.0.0 myaccount/taskboard-api:1.0.0
-docker image tag taskboard-api:1.0.0 myaccount/taskboard-api:latest
-docker image tag taskboard-api:1.0.0 myaccount/taskboard-api:$GIT_SHA
+docker image tag cafe-shop-api:1.0.0 myaccount/cafe-shop-api:1.0.0
+docker image tag cafe-shop-api:1.0.0 myaccount/cafe-shop-api:latest
+docker image tag cafe-shop-api:1.0.0 myaccount/cafe-shop-api:$GIT_SHA
 
 # 4. 推送
-docker image push --all-tags myaccount/taskboard-api
-docker image push --all-tags myaccount/taskboard-web
+docker image push --all-tags myaccount/cafe-shop-api
+docker image push --all-tags myaccount/cafe-shop-web
 
 # 5. 模擬部署機：清乾淨再拉
 docker compose down
-docker rmi myaccount/taskboard-api:1.0.0 myaccount/taskboard-web:1.0.0
+docker rmi myaccount/cafe-shop-api:1.0.0 myaccount/cafe-shop-web:1.0.0
 docker compose pull && docker compose up -d
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-⚠️ <b>第 6 題答案：</b> 改 <code>.env</code> 的 <code>TASKBOARD_VERSION=0.9.0</code>，然後
+⚠️ <b>第 6 題答案：</b> 改 <code>.env</code> 的 <code>SHOP_VERSION=0.9.0</code>，然後
 <code>docker compose pull && docker compose up -d</code> — 這就是版本 tag 存在的全部意義。
 </div>
 
@@ -629,9 +704,9 @@ docker compose pull && docker compose up -d
 
 第五步的驗證非常重要。很多人推送完就以為結束了，但沒有實際拉取過，就不知道部署機是不是真的拿得到、拿到的是不是預期的版本。
 
-回答第六題。把 .env 的 TASKBOARD_VERSION 改成 0.9.0，然後執行 pull 和 up 兩個指令，三十秒就回到上一版。出事時能快速回到上一個好的版本，就是我們堅持打版本 tag、不依賴 latest 的全部理由。
+回答第六題。把 .env 的 SHOP_VERSION 改成 0.9.0，然後執行 pull 和 up 兩個指令，三十秒就回到上一版。出事時能快速回到上一個好的版本，就是我們堅持打版本 tag、不依賴 latest 的全部理由。
 
-回頭看，第一章我們只用 docker run 起了一個 MySQL。到了第八章，TaskBoard 已經有一套版本化、密碼不進版控、可以快速回滾的完整部署流程。
+回頭看，第一章我們只用 docker run 起了一個 MySQL。到了第八章，線上商店已經有一套版本化、密碼不進版控、可以快速回滾的完整部署流程。
 -->
 
 ---
@@ -658,14 +733,14 @@ layout: default
 <tr><td>Ch5 Docker Compose</td><td>用 YAML 一次定義、啟動多個服務</td></tr>
 <tr><td>Ch6 網路設定</td><td>自訂 bridge network 取代已淘汰的 --link</td></tr>
 <tr><td>Ch7 Volume 資料持久化</td><td>資料要活得比 container 久，就交給 Volume</td></tr>
-<tr><td>Ch8 部署實戰</td><td>.env 管密碼、tag 管版本、Registry 負責分享</td></tr>
+<tr><td>Ch8 部署實戰</td><td>.env 管密碼、tag 管版本、Registry 負責分享、綠界要連得到公開網址</td></tr>
 </tbody>
 </table>
 
 <!--
 最後，我們把八章串起來回顧一次。
 
-第一章，我們知道 Container 比 VM 更輕量。第二章，Image 是模板，Container 是實例。第三章學會 run、exec、logs 這些基本功。第四章用 Dockerfile 把組 Image 的過程寫成腳本。第五章用 Compose 一次啟動多個服務。第六章用自訂網路讓容器用名字溝通。第七章用 Volume 讓資料活得比容器久。這一章，則用 .env、版本 tag 和 Registry，把 TaskBoard 正式送出去。
+第一章，我們知道 Container 比 VM 更輕量。第二章，Image 是模板，Container 是實例。第三章學會 run、exec、logs 這些基本功。第四章用 Dockerfile 把組 Image 的過程寫成腳本。第五章用 Compose 一次啟動多個服務。第六章用自訂網路讓容器用名字溝通。第七章用 Volume 讓資料庫和商品圖片活得比容器久。這一章，則用 .env、版本 tag 和 Registry，把線上商店正式送出去，並讓綠界找得到我們的付款通知網址。
 
 這八章其實是一條完整的路徑，從認識容器，到能獨立把一個專案部署上線。
 -->
@@ -681,13 +756,13 @@ layout: default
 </div>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-🎉 <b>恭喜完成全部 8 章：</b> 接下來找一個自己的小專案，實際走一次 Dockerfile、Compose、tag、push 完整流程，動手做過一次才會變成真正的技能。
+🎉 <b>恭喜完成全部 8 章：</b> 線上商店已經能一行 <code>docker compose up -d --build</code> 開起來了。試著把它部署到一台雲端主機、綁上自己的網域，再刷一次綠界測試卡，整個專題就真的上線了。
 </div>
 
 <!--
 最後留給大家三句話。密碼別進版控，Image 別只靠 latest，推送之後一定要驗證。做到這三件事，就已經避開了新手最常踩的坑。
 
-接下來，建議大家找一個自己的小專案，實際走一次 Dockerfile、Compose、tag、push 的完整流程。動手做過一次，才會真正變成自己的技能。
+接下來，建議大家把線上商店部署到一台雲端主機，綁上自己的網域，把 .env 的兩個網址改成正式網域，再用綠界的測試卡付一次款。看到訂單自己變成已付款，這個專題就真的上線了。
 -->
 
 ---
@@ -699,7 +774,7 @@ layout: end
 有任何問題嗎？
 
 <!--
-這門 Docker 課程到這裡就全部結束了。我們從「在我電腦上可以跑」出發，一路把 TaskBoard 變成在任何裝了 Docker 的機器上都能跑的專案。
+這門 Docker 課程到這裡就全部結束了。我們從「在我電腦上可以跑」出發，一路把線上商店變成在任何裝了 Docker 的機器上都能跑的專案。
 
 謝謝大家這八章的參與，祝大家在之後的專案裡，都能用上這些容器化的技能。
 

@@ -4,9 +4,9 @@
 
 ```
 projects/
-  cafe-shop-api/      Dockerfile（多階段：JDK 編譯 → JRE 執行）
-  cafe-shop-web/      Dockerfile（多階段：Node 打包 → Nginx）、nginx.conf
-  cafe-shop-deploy/   docker-compose.yml、.env.example   ← 這裡
+  cafe-shop-api/      Dockerfile（多階段：JDK 編譯 → Alpine JRE 執行，非 root）、.dockerignore
+  cafe-shop-web/      Dockerfile（多階段：Node 打包 → Nginx）、.dockerignore、nginx.conf
+  cafe-shop-deploy/   compose.yaml、.env.example   ← 這裡
 ```
 
 ## 啟動
@@ -49,5 +49,11 @@ cloudflared tunnel --url http://localhost:80
 
 ## 驗證紀錄
 
-2026-11-20，Docker 29.10 / Compose 5.7：`mysql:9.7`（9.7.4）、`eclipse-temurin:21`、`node:24-alpine`、`nginx:1.31-alpine`。
-驗證項目：三個服務啟動（db healthy 後 api 才啟動）、前台與商品圖片、Angular 路由重新整理（`/admin/orders`）、管理員登入、上傳圖片、加入購物車、下單、產生綠界表單（`ReturnURL` / `OrderResultURL` 使用 `.env` 的網址）、`OrderResultURL` 302 回前台、`prod` 時沒有模擬付款、`docker compose down` 再 `up` 後訂單與上傳的圖片都還在。
+2026-11-20，Docker 29.10 / Compose 5.7：`mysql:9.7`（9.7.4）、`eclipse-temurin:21-jdk` / `21-jre-alpine`、`node:24-alpine`、`nginx:1.31-alpine`。映像檔大小：api 409MB（壓縮 132MB）、web 95MB。
+
+- 三個服務啟動，db healthy 後 api 才啟動；前台、商品圖片、Angular 路由重新整理（`/admin/orders`）
+- 管理員登入、上傳圖片（檔案擁有者是 `app`）、加入購物車、下單、產生綠界表單（`ReturnURL` / `OrderResultURL` 用 `.env` 的網址）、`OrderResultURL` 302 回前台、`prod` 時沒有模擬付款
+- `docker compose down` 再 `up`：訂單與上傳的圖片都還在
+- 只重建 api（`up -d --force-recreate api`）後 Nginx 仍連得到新的 api；api 停著時 web 也能啟動（`/api` 回 502，api 回來後恢復）
+- Docker 課 ch06、ch07 的手動 `docker run` 指令（`--network-alias api`、Volume 換容器後資料還在）
+- 容器裡的 `mysql` 命令列預設是 latin1：課程指令打中文時加 `--default-character-set=utf8mb4`；compose 的 db 設了 `LANG=C.UTF-8`，`docker compose exec db mysql` 不用加

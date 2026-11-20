@@ -304,15 +304,15 @@ Angular                    Spring Boot                          綠界（測試�
 
 ## 10. 部署（Docker）
 
-`docker-compose.yml` 三個服務 + 兩個 Volume：
+`compose.yaml`（`projects/cafe-shop-deploy/`）三個服務 + 兩個 Volume：
 
 | 服務 | 說明 |
 | ---- | ---- |
-| `db` | MySQL 9.7（官方映像檔，標籤寫教材時確認，預期為 `mysql:9.7`），資料存在 Volume `db-data` |
-| `api` | `cafe-shop-api`（多階段建置的 Dockerfile），綠界金鑰與 JWT 密鑰用環境變數；上傳圖片存在 Volume `uploads` |
-| `web` | `cafe-shop-web` 打包後用 Nginx 提供，`/api` 反向代理到 `api` |
+| `db` | `mysql:9.7`（2026-11 實測為 9.7.4），資料存在 Volume `db-data`；資料表由後端的 Flyway 建立；`healthcheck` 用 `mysqladmin ping -h 127.0.0.1` |
+| `api` | `cafe-shop-api`（多階段：`eclipse-temurin:21-jdk` 編譯 → `eclipse-temurin:21-jre-alpine` 執行，非 root 使用者 `app`），等 `db` healthy 才啟動；不對外開 port；資料庫密碼、JWT 密鑰、綠界金鑰與網址用環境變數（`.env`）；上傳圖片存在 Volume `uploads`（`/app/uploads`）；預設 profile `prod`（沒有模擬付款） |
+| `web` | `cafe-shop-web` 用 `ng build --configuration docker` 打包（`config.docker.ts`：API 走同一個網址），`nginx:1.31-alpine` 提供；`/api`、`/uploads` 反向代理到 `api`（用 Docker DNS `127.0.0.11` 動態解析）；對外 80 |
 
-部署到雲端主機後，`ReturnURL` 改成正式網域，就不需要 Cloudflare Tunnel。
+本機用 Docker 測綠界時，`cloudflared tunnel --url http://localhost:80`，網址填進 `.env` 的 `ECPAY_PUBLIC_URL`。部署到雲端主機後，`PUBLIC_URL` / `ECPAY_PUBLIC_URL` 改成正式網域，就不需要 Cloudflare Tunnel。2026-11-20 以 Docker 29.10 / Compose 5.7 實際啟動驗證（見 `projects/cafe-shop-deploy/README.md`）。
 
 ## 11. 各課切入點（初稿）
 
@@ -331,7 +331,7 @@ Angular                    Spring Boot                          綠界（測試�
 | Angular ch31–55 | Material 版面、表格、Select、Dialog、圓餅圖、RxJS、Signals 購物車、Sidenav 後台版型、Reactive Forms（結帳、商品規格 FormArray）、RWD、打包 |
 | Angular 新章 | HTTP 攔截器、路由守衛 |
 | **Angular 專題章（新增）** | 電商前台與後台的全部畫面（§7），接在 Material、Signals、Reactive Forms 之後；章數與切分待寫 Angular 部分時再定 |
-| Docker ch01–08 | 以 `db` / `api` / `web` 三個容器貫穿，ch07 Volume、ch08 部署 |
+| Docker ch01–08 | 以 `db` / `api` / `web` 三個容器貫穿（2026-11-20 已從 TaskBoard 改寫）：ch03 手動 run、ch04 兩份 Dockerfile、ch05 Compose、ch06 網路與 Nginx 反向代理、ch07 資料庫與商品圖片的 Volume、ch08 `.env`、版本 tag、綠界網址與完成品 |
 
 Spring Boot ch48 Spring Cloud 不在進階學程內。
 
@@ -359,7 +359,7 @@ Spring Boot ch48 Spring Cloud 不在進階學程內。
 - [ ] 未付款訂單 30 分鐘後自動取消並回補庫存。
 - [ ] 已出貨的訂單不能取消；非管理員打 `/api/admin/**` 回 403。
 - [ ] 後台能上傳商品圖片、新增多個規格、上下架；報表數字與訂單資料一致。
-- [ ] `docker compose up` 一次啟動三個服務，重開後資料與圖片都還在。
+- [x] `docker compose up` 一次啟動三個服務，重開後資料與圖片都還在。（2026-11-20）
 
 ## 13. 決定紀錄與待確認
 

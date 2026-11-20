@@ -48,6 +48,6 @@ stages:
       - { course: angular, chapters: [60, 61] }
 
   - title: 部署：Docker
-    desc: 映像檔、容器、Compose、Volume，把商店部署上線
+    desc: 映像檔、容器、Dockerfile、Compose、網路、Volume，把線上商店（MySQL + Spring Boot + Nginx）部署上線
     items:
-      - { course: docker, chapters: ["1-8"] }
+      - { course: docker, chapters: ["1-8"] }   # 貫穿專案就是線上商店，完成品在 projects/cafe-shop-deploy

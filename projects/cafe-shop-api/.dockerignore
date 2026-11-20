@@ -1,8 +1,9 @@
-build
-.gradle
-uploads
-bin
-.idea
-.settings
+.git
+.gradle/
+build/
+bin/
+uploads/
+.settings/
 .classpath
 .project
+src/main/resources/application-local.properties

@@ -58,42 +58,44 @@ layout: default
 - **為什麼需要容器化** — VM vs Container 的差異
 - **Docker 架構** — Client / Daemon / Registry 怎麼合作
 - **安裝與驗證** — 安裝 Docker Desktop、跑第一個 hello-world
-- **練習** — 用課程專案 TaskBoard 走一次 `docker run` 流程
+- **練習** — 用課程專案線上商店走一次 `docker run` 流程
 
 <!--
 今天的路線是這樣的。我們先從「為什麼」開始，看看容器化解決了什麼問題，順便比較容器和虛擬機。
 
-接著拆開 Docker 的架構，搞懂 Client、Daemon、Registry 各自負責什麼。最後實際安裝 Docker Desktop，並且用課程專案 TaskBoard 走一次 `docker run` 的完整流程。
+接著拆開 Docker 的架構，搞懂 Client、Daemon、Registry 各自負責什麼。最後實際安裝 Docker Desktop，並且用課程專案線上商店走一次 `docker run` 的完整流程。
 -->
 
 ---
 layout: default
 ---
 
-# 課程貫穿專案：TaskBoard
+# 課程貫穿專案：轉角咖啡線上商店
 
-這八章的範例與練習，都圍繞同一個專案 **TaskBoard（任務看板）**，剛好用上大家已經學過的三項技術：
+這八章要把進階學程做好的**轉角咖啡線上商店**（`specs/SHOP-SPEC.md`）部署起來，三個服務各放進一個容器：
 
-| 元件 | 技術 | 專案資料夾 | 之後的 Image |
+| 服務 | 技術 | 專案資料夾 | 用的 Image |
 | --- | --- | --- | --- |
-| 前端 | Angular（build 後用 nginx 服務） | `taskboard-web/` | `taskboard-web:1.0.0` |
-| 後端 | Spring Boot + Gradle（Java 21） | `taskboard-api/` | `taskboard-api:1.0.0` |
-| 資料庫 | MySQL 8.4 | `db/init.sql` | `mysql:8.4`（官方 Image） |
+| `web` 前端 | Angular 21，打包後用 Nginx 提供 | `cafe-shop-web/` | 自己建：`cafe-shop-web:1.0.0` |
+| `api` 後端 | Spring Boot 4.1 + Gradle（Java 21） | `cafe-shop-api/` | 自己建：`cafe-shop-api:1.0.0` |
+| `db` 資料庫 | MySQL 9.7，資料表由 Flyway 建立 | （不用資料夾） | 官方的 `mysql:9.7` |
 
 ```
-瀏覽器 → taskboard-web (nginx :80) → taskboard-api (:8080) → taskboard-db (:3306)
+瀏覽器 → web（Nginx :80）─ /api、/uploads → api（:8080）→ db（:3306）
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>課程節奏：</b> 第 1～3 章先用官方 Image 把三個服務手動跑起來，第 4 章自己寫 Dockerfile 打包 API 與前端，第 5 章用 Compose 一次拉起整套，第 6～8 章處理網路、資料持久化與正式部署。
+💡 <b>課程節奏：</b> 第 1～3 章先用官方 Image 手動跑起資料庫和後端，第 4 章寫 Dockerfile 打包後端與前端，第 5 章用 Compose 一次拉起整套，第 6～8 章處理網路、商品圖片與資料庫的保存，最後完成正式部署。完成品在 <code>projects/cafe-shop-deploy/</code>。
 </div>
 
 <!--
-在進入觀念之前，先介紹這門課的貫穿專案，TaskBoard 任務看板。
+在進入觀念之前，先介紹這門課的貫穿專案，就是大家在 Spring Boot 和 Angular 課做好的轉角咖啡線上商店。
 
-大家之前學過 Spring Boot、Angular 跟 MySQL，這門課不會再教這三項技術本身。我們要學的，是怎麼把這樣一個三層架構的專案容器化。
+這門課不會再教 Spring Boot、Angular、MySQL 本身。我們要學的，是怎麼把這樣一個三層架構的專案裝進容器，讓任何一台有 Docker 的電腦，一行指令就能把整間商店開起來。
 
-看表格的最後一欄，前端和後端之後會各自變成一個 Image，資料庫則直接用官方的 `mysql:8.4`。請求的路線很單純：瀏覽器先到 nginx，nginx 轉給 Spring Boot，Spring Boot 再去查 MySQL。
+看表格的最後一欄，前端和後端之後會各自變成一個我們自己建的 Image，資料庫則直接用官方的 `mysql:9.7`。資料表不用自己建，後端啟動時 Flyway 會幫我們建好，連範例商品和管理員帳號都會一起放進去。
+
+請求的路線是這樣：瀏覽器只連到 Nginx，畫面由 Nginx 直接給；網址開頭是 `/api` 或 `/uploads` 的，Nginx 再轉給 Spring Boot，Spring Boot 再去查 MySQL。
 
 要特別提醒，這八章是連續的。第一章手動跑起來的 MySQL 容器，第七章還會回來處理它的資料保存問題。所以每一章的練習，請盡量真的動手做過。
 -->
@@ -130,7 +132,7 @@ class: flex flex-col justify-center items-center text-center
 
 生活一點來說，容器就像便當盒。飯、菜、湯分開裝好，帶到哪裡打開都是同樣的味道。
 
-拉回 TaskBoard，前端、API、資料庫就可以分別放進三個容器，彼此不會互相干擾。不過要注意，Container 不是虛擬機，這個差異我們下一頁馬上來看。
+拉回線上商店，前端、API、資料庫就可以分別放進三個容器，彼此不會互相干擾。不過要注意，Container 不是虛擬機，這個差異我們下一頁馬上來看。
 -->
 
 ---
@@ -215,17 +217,17 @@ Docker 有三個關鍵角色。Client 是我們打指令的地方，Daemon 是�
 
 # 指令怎麼流動：以 docker run 為例
 
-當我們打下 `docker run` 這個指令，背後其實是 Client、Daemon、Registry 三方合作的結果。這裡直接把 TaskBoard 的資料庫跑起來：
+當我們打下 `docker run` 這個指令，背後其實是 Client、Daemon、Registry 三方合作的結果。這裡直接把線上商店的資料庫跑起來：
 
 ```bash
-docker run -d --name taskboard-db -p 3307:3306 \
+docker run -d --name cafe-shop-db -p 3307:3306 \
   -e MYSQL_ROOT_PASSWORD=rootpw \
-  -e MYSQL_DATABASE=taskboard \
-  mysql:8.4
+  -e MYSQL_DATABASE=cafe_shop \
+  mysql:9.7
 ```
 
 1. **Client** 把 `docker run` 指令送給 **Daemon**
-2. **Daemon** 檢查本機有沒有 `mysql:8.4` 這個 Image
+2. **Daemon** 檢查本機有沒有 `mysql:9.7` 這個 Image
 3. 如果沒有，**Daemon** 會向 **Registry**（例如 Docker Hub）發出 `docker pull` 請求下載 Image
 4. **Daemon** 用這個 Image 建立並啟動一個新的 **Container**
 5. Container 啟動後，`-p 3307:3306` 把主機的 3307 port 映射到容器內的 3306 port
@@ -233,15 +235,15 @@ docker run -d --name taskboard-db -p 3307:3306 \
 執行後，我們就能用平常慣用的 MySQL Workbench 或 DBeaver，連到 `localhost:3307` 使用這個資料庫。
 
 <!--
-這一頁我們直接拿 TaskBoard 的資料庫，走一次 `docker run` 背後的流程。
+這一頁我們直接拿線上商店的資料庫，走一次 `docker run` 背後的流程。
 
-先看參數。`-d` 讓容器在背景執行，`--name taskboard-db` 幫容器取名字，之後所有指令都用這個名字操作它。`-e` 是帶環境變數進去，MySQL 官方 Image 就是靠這兩個變數設定 root 密碼和建立資料庫。
+先看參數。`-d` 讓容器在背景執行，`--name cafe-shop-db` 幫容器取名字，之後所有指令都用這個名字操作它。`-e` 是帶環境變數進去，MySQL 官方 Image 就是靠這兩個變數設定 root 密碼和建立資料庫。
 
 `-p 3307:3306` 是 port 映射，左邊是我們電腦的 port，右邊是容器裡的 port。主機用 3307 而不是 3306，是因為很多人電腦本來就裝了 MySQL，佔用了 3306，這樣可以避開衝突。
 
-流程就是下面這五步。Client 把指令送給 Daemon，Daemon 先找本機有沒有 `mysql:8.4`，沒有就去 Registry 下載，接著建立並啟動容器。
+流程就是下面這五步。Client 把指令送給 Daemon，Daemon 先找本機有沒有 `mysql:9.7`，沒有就去 Registry 下載，接著建立並啟動容器。
 
-第一次執行要等下載，這是正常的。執行完會印出一長串容器 ID，接著用 DBeaver 連 `localhost:3307`，就能看到一個叫 taskboard 的空資料庫。
+第一次執行要等下載，這是正常的。執行完會印出一長串容器 ID，接著用 DBeaver 連 `localhost:3307`，就能看到一個叫 cafe_shop 的空資料庫。
 -->
 
 ---
@@ -662,16 +664,16 @@ docker run hello-world
 layout: default
 ---
 
-# 練習：走一遍 TaskBoard 資料庫的啟動流程
+# 練習：走一遍商店資料庫的啟動流程
 ### 任務說明
 
 假設我們在一台剛裝好 Docker Desktop、從來沒下載過任何 Image 的電腦上，執行：
 
 ```bash
-docker run -d --name taskboard-db -p 3307:3306 \
+docker run -d --name cafe-shop-db -p 3307:3306 \
   -e MYSQL_ROOT_PASSWORD=rootpw \
-  -e MYSQL_DATABASE=taskboard \
-  mysql:8.4
+  -e MYSQL_DATABASE=cafe_shop \
+  mysql:9.7
 ```
 
 1. 寫出從指令送出到 Container 啟動的完整步驟，標出 Client / Daemon / Registry 各負責哪一段
@@ -681,24 +683,24 @@ docker run -d --name taskboard-db -p 3307:3306 \
 <!--
 接下來是本章的練習。
 
-假設我們在一台剛裝好 Docker、從來沒下載過任何 Image 的電腦上，執行這段建立 TaskBoard 資料庫的指令。請寫出從指令送出到容器啟動的完整步驟，標出 Client、Daemon、Registry 各負責哪一段。
+假設我們在一台剛裝好 Docker、從來沒下載過任何 Image 的電腦上，執行這段建立線上商店資料庫的指令。請寫出從指令送出到容器啟動的完整步驟，標出 Client、Daemon、Registry 各負責哪一段。
 
 第三小題請大家想一想：如果同事把 port 改成 3306，而他的電腦本來就裝了 MySQL，會發生什麼事？
 
 我們先暫停一下，自己動手試試看。
 
-【講師】給大家三到五分鐘，鼓勵實際執行指令，這個 taskboard-db 容器後面幾章都會用到。
+【講師】給大家三到五分鐘，鼓勵實際執行指令，這個 cafe-shop-db 容器後面幾章都會用到。
 -->
 
 ---
 layout: default
 ---
 
-# 練習：走一遍 TaskBoard 資料庫的啟動流程
+# 練習：走一遍商店資料庫的啟動流程
 ### 解題提示
 
 1. 回顧「指令怎麼流動：以 docker run 為例」那五個步驟
-2. 先問自己：本機有沒有 `mysql:8.4`？既然是全新安裝，答案是沒有 → 所以會多一段下載
+2. 先問自己：本機有沒有 `mysql:9.7`？既然是全新安裝，答案是沒有 → 所以會多一段下載
 3. 沒有 Image 的話，Daemon 會向誰要求下載？下載完才進入建立與啟動 Container 的階段
 4. Port 映射：冒號左邊 `3307` 是**主機**的 port，右邊 `3306` 是**容器內**的 port
 5. 第 3 小題想想：主機的 3306 已經被本機 MySQL 佔用，Docker 再去綁同一個 port 會怎樣
@@ -710,7 +712,7 @@ layout: default
 <!--
 我們來看解題的關鍵。
 
-因為是全新安裝，本機一定沒有 `mysql:8.4`，所以流程會多一段下載。Client 把指令交給 Daemon，Daemon 找不到 Image，就向 Registry 下載，下載完才建立並啟動容器。
+因為是全新安裝，本機一定沒有 `mysql:9.7`，所以流程會多一段下載。Client 把指令交給 Daemon，Daemon 找不到 Image，就向 Registry 下載，下載完才建立並啟動容器。
 
 port 映射的部分，冒號左邊的 3307 是主機的 port，右邊的 3306 是容器裡的 port。
 
@@ -771,7 +773,7 @@ layout: end
 <!--
 這一章就到這裡。我們從容器化的動機出發，一路走到親手把 Docker 裝起來、跑起第一個資料庫容器。
 
-接下來，記得讓 taskboard-db 這個容器留著，後面幾章都會繼續用到它。我們下一章見。
+接下來，記得讓 cafe-shop-db 這個容器留著，後面幾章都會繼續用到它。我們下一章見。
 
 【講師】開放 Q&A，可以引導大家回想 VM 和 Container 的差異、Docker 架構或安裝過程的問題。
 -->

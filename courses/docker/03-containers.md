@@ -62,7 +62,7 @@ layout: default
 - 總結
 
 <!--
-這一章分成三部分。第一部分學五個基本指令，run、ps、stop、start、rm。第二部分搞懂前景和背景執行的差別，順便學會怎麼進入一個正在跑的容器。第三部分把整個生命週期串起來，並學會用 logs 除錯。最後有兩題練習，用 TaskBoard 的資料庫實際操作一遍。
+這一章分成三部分。第一部分學五個基本指令，run、ps、stop、start、rm。第二部分搞懂前景和背景執行的差別，順便學會怎麼進入一個正在跑的容器。第三部分把整個生命週期串起來，並學會用 logs 除錯。最後有兩題練習，用線上商店的資料庫實際操作一遍。
 -->
 
 ---
@@ -130,41 +130,41 @@ docker run hello-world
 
 # docker run — 範例
 
-把 TaskBoard 的三個服務逐一啟動：
+把線上商店的三個服務逐一啟動：
 
 ```bash
 # 1. 資料庫：帶環境變數初始化 database 與帳號
-docker run -d --name taskboard-db -p 3307:3306 \
+docker run -d --name cafe-shop-db -p 3307:3306 \
   -e MYSQL_ROOT_PASSWORD=rootpw \
-  -e MYSQL_DATABASE=taskboard \
-  -e MYSQL_USER=appuser -e MYSQL_PASSWORD=apppw \
-  mysql:8.4
+  -e MYSQL_DATABASE=cafe_shop \
+  -e MYSQL_USER=shop -e MYSQL_PASSWORD=shoppw \
+  mysql:9.7
 
-# 2. 後端：用環境變數覆蓋 Spring Boot 的資料庫連線設定
-docker run -d --name taskboard-api -p 8081:8080 \
-  -e SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3307/taskboard \
-  -e SPRING_DATASOURCE_USERNAME=appuser \
-  -e SPRING_DATASOURCE_PASSWORD=apppw \
-  taskboard-api:1.0.0
+# 2. 後端：用環境變數告訴 Spring Boot 資料庫在哪
+docker run -d --name cafe-shop-api -p 8081:8080 \
+  -e DB_URL=jdbc:mysql://host.docker.internal:3307/cafe_shop \
+  -e DB_USERNAME=shop \
+  -e DB_PASSWORD=shoppw \
+  cafe-shop-api:1.0.0
 
 # 3. 前端：Angular 打包後由 nginx 服務
-docker run -d --name taskboard-web -p 8080:80 taskboard-web:1.0.0
+docker run -d --name cafe-shop-web -p 8080:80 cafe-shop-web:1.0.0
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>補充：</b> 三行都跑完後，瀏覽器打開 <code>http://localhost:8080</code> 是前端、<code>http://localhost:8081/actuator/health</code> 是後端健康檢查。
+💡 <b>補充：</b> <code>http://localhost:8081/api/categories</code> 看得到商品分類，代表後端連上資料庫了。前端 <code>http://localhost:8080</code> 打得開，但商品出不來：它要透過 Nginx 找名叫 <code>api</code> 的容器，第六章接上網路才會通。
 </div>
 
 <!--
-這一頁我們用最原始的方式，把 TaskBoard 三個服務一個一個跑起來。
+這一頁我們用最原始的方式，把線上商店三個服務一個一個跑起來。
 
-第一段資料庫多了 `MYSQL_USER` 和 `MYSQL_PASSWORD`，會建一個給 Spring Boot 用的應用帳號。
+第一段資料庫多了 `MYSQL_USER` 和 `MYSQL_PASSWORD`，會建一個給 Spring Boot 用的應用帳號。資料庫裡的表不用自己建，後端第一次啟動時，Flyway 會建好八張表，連範例商品和管理員帳號都放進去。
 
-第二段是後端，這是最關鍵的觀念。Spring Boot 的設定可以用環境變數覆蓋，規則是把點換成底線、全部大寫。所以 `spring.datasource.url` 就變成 `SPRING_DATASOURCE_URL`。同一個 Image，只要換環境變數，就能連到不同的資料庫，完全不用重新 build。
+第二段是後端，這是最關鍵的觀念。我們在 `application.properties` 裡寫的是 `spring.datasource.url=${DB_URL:jdbc:mysql://localhost:3306/cafe_shop}`，意思是「有 DB_URL 這個環境變數就用它，沒有就用冒號後面的預設值」。所以同一個 Image，只要換環境變數，就能連到不同的資料庫，完全不用重新 build。另外 Spring Boot 本身也認得 `SPRING_DATASOURCE_URL` 這種寫法，把點換成底線、全部大寫，一樣能覆蓋設定。
 
 這裡的 `host.docker.internal` 是暫時的寫法。容器裡的 localhost 指的是容器自己，不是我們的電腦，所以不能寫 localhost。它代表跑 Docker 的這台主機，第六章會用自訂網路改掉它。
 
-三行都跑完後，瀏覽器打開 localhost 的 8080 就是前端。
+三行都跑完後，打開 localhost 8081 的 `/api/categories`，看到咖啡豆、濾掛包這些分類，就代表後端連上資料庫了。前端的 8080 畫面打得開，但商品是空的，因為前端的 Nginx 要找一個叫 api 的容器，現在三個容器還互相看不到。這個問題留到第六章解決。
 -->
 
 ---
@@ -199,21 +199,21 @@ docker run -d --name taskboard-web -p 8080:80 taskboard-web:1.0.0
 docker ps
 
 # NAMES            IMAGE                STATUS         PORTS
-# taskboard-web    taskboard-web:1.0.0  Up 3 minutes   0.0.0.0:8080->80/tcp
-# taskboard-api    taskboard-api:1.0.0  Up 3 minutes   0.0.0.0:8081->8080/tcp
-# taskboard-db     mysql:8.4            Up 4 minutes   0.0.0.0:3307->3306/tcp
+# cafe-shop-web    cafe-shop-web:1.0.0  Up 3 minutes   0.0.0.0:8080->80/tcp
+# cafe-shop-api    cafe-shop-api:1.0.0  Up 3 minutes   0.0.0.0:8081->8080/tcp
+# cafe-shop-db     mysql:9.7            Up 4 minutes   0.0.0.0:3307->3306/tcp
 
 # 連已經停止的容器也一起列出來
 docker ps -a
 
 # 下班了，把後端停掉（用名稱或 ID 都可以）
-docker stop taskboard-api
+docker stop cafe-shop-api
 
 # 隔天上班重新啟動，設定與資料都還在
-docker start taskboard-api
+docker start cafe-shop-api
 
 # 改完 Dockerfile 要換新 Image，先停再刪掉舊容器
-docker stop taskboard-api && docker rm taskboard-api
+docker stop cafe-shop-api && docker rm cafe-shop-api
 ```
 
 <!--
@@ -274,10 +274,10 @@ class: flex flex-col justify-center items-center text-center
 
 ```bash
 # 前景：Spring Boot 的啟動 log 直接洗在終端機上，Ctrl+C 會把服務停掉
-docker run taskboard-api:1.0.0
+docker run cafe-shop-api:1.0.0
 
 # 背景：只印出 Container ID，終端機馬上還給你
-docker run -d --name taskboard-api taskboard-api:1.0.0
+docker run -d --name cafe-shop-api cafe-shop-api:1.0.0
 ```
 
 <!--
@@ -316,14 +316,14 @@ Spring Boot 的例子最好懂。不加 `-d`，Spring 的啟動 log 會直接洗
 # -it / -d — 範例
 
 ```bash
-# 互動模式：開一個「用完就丟」的容器，測試 Gradle 版本對不對
-docker run -it --rm gradle:8.10-jdk21 bash
+# 互動模式：開一個「用完就丟」的容器，看看裡面的 Java 版本
+docker run -it --rm eclipse-temurin:21-jdk bash
 
-# 背景模式：長駐執行 TaskBoard 後端服務
-docker run -d --name taskboard-api -p 8081:8080 taskboard-api:1.0.0
+# 背景模式：長駐執行線上商店後端服務
+docker run -d --name cafe-shop-api -p 8081:8080 cafe-shop-api:1.0.0
 
 # 用 exec 進入「已經在跑」的容器，而不是新建一個
-docker exec -it taskboard-api sh
+docker exec -it cafe-shop-api sh
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
@@ -333,13 +333,13 @@ docker exec -it taskboard-api sh
 <!--
 這一頁對照三種用法。
 
-第一行是互動模式的實際用途。我們想確認 `gradle:8.10-jdk21` 裡的 Java 是不是 21，就開一個臨時容器進去看，看完 exit 離開。因為加了 `--rm`，容器會自動消失。第四章寫 Dockerfile 之前，很適合先這樣進去確認環境。
+第一行是互動模式的實際用途。我們想確認 `eclipse-temurin:21-jdk` 裡的 Java 是不是 21，就開一個臨時容器進去打 `java -version`，看完 exit 離開。因為加了 `--rm`，容器會自動消失。第四章寫 Dockerfile 之前，很適合先這樣進去確認環境。
 
 第二行是背景執行，我們部署的 API 和資料庫幾乎都是這種模式。
 
 第三行帶到下一個重點，`docker exec`。它不是新建容器，而是進入一個已經在跑的容器。
 
-這裡有一個差別要記住。第一行的容器，一 exit 離開 bash 就會停止，因為 bash 是它的主行程。第三行進去 taskboard-api 再離開，服務照常運作，因為它的主行程是 java。
+這裡有一個差別要記住。第一行的容器，一 exit 離開 bash 就會停止，因為 bash 是它的主行程。第三行進去 cafe-shop-api 再離開，服務照常運作，因為它的主行程是 java。
 -->
 
 ---
@@ -350,7 +350,7 @@ docker exec -it taskboard-api sh
 
 ```bash
 # 進到資料庫容器裡，直接用 mysql client 查資料
-docker exec -it taskboard-db mysql -uappuser -papppw taskboard
+docker exec -it cafe-shop-db mysql -ushop -pshoppw cafe_shop
 ```
 
 <!--
@@ -389,27 +389,27 @@ docker exec -it taskboard-db mysql -uappuser -papppw taskboard
 # docker exec — 範例
 
 ```bash
-# 進資料庫容器下 SQL：確認 Spring Boot 的 JPA 有沒有幫我們建表
-docker exec -it taskboard-db mysql -uappuser -papppw taskboard -e "show tables;"
+# 進資料庫容器下 SQL：確認 Flyway 有沒有幫我們建好八張表
+docker exec -it cafe-shop-db mysql -ushop -pshoppw cafe_shop -e "show tables;"
 
 # 進後端容器的 shell，看看 jar 檔到底放在哪
-docker exec -it taskboard-api sh
+docker exec -it cafe-shop-api sh
 
 # 檢查容器實際吃到的環境變數（除錯資料庫連線必看）
-docker exec taskboard-api env | grep SPRING
+docker exec cafe-shop-api env | grep -E "DB_|SPRING"
 
 # 指定工作目錄執行指令：看 Angular 打包出來的靜態檔
-docker exec -w /usr/share/nginx/html taskboard-web ls
+docker exec -w /usr/share/nginx/html cafe-shop-web ls
 ```
 
 <!--
-這四行是除錯 TaskBoard 時的標準工具組。
+這四行是除錯線上商店時的標準工具組。
 
-第一行用 `-e` 直接帶一句 SQL 進去，確認 JPA 有沒有幫我們建表。不用進互動模式，很適合寫在腳本裡。
+第一行用 `-e` 直接帶一句 SQL 進去，確認 Flyway 有沒有幫我們建表。應該看到 products、orders 這些表，還有一張 `flyway_schema_history`，那是 Flyway 自己記錄跑過哪些版本用的。不用進互動模式，很適合寫在腳本裡。
 
 第二行進後端的 shell 逛一圈，確認 jar 檔放在哪裡。
 
-第三行是最推薦大家記起來的。API 連不上資料庫的時候，大部分問題都出在環境變數，可能拼錯，可能少打一個 `-e`。這行會把容器實際收到的 SPRING 開頭變數全部列出來，一看就知道。
+第三行是最推薦大家記起來的。API 連不上資料庫的時候，大部分問題都出在環境變數，可能拼錯，可能少打一個 `-e`。這行會把容器實際收到的 DB 和 SPRING 開頭變數全部列出來，一看就知道。
 
 第四行查看 nginx 目錄下有沒有 Angular 的檔案，網頁出現 404 時先查這個。
 
@@ -428,7 +428,10 @@ docker exec -w /usr/share/nginx/html taskboard-web ls
 
 ```bash
 # 多重指令一定要包在 sh -c "..." 裡面
-docker exec -it taskboard-api sh -c "ls /app && cat /app/application.yml"
+docker exec -it cafe-shop-api sh -c "ls -l /app && ls -l /app/uploads"
+
+# 在容器裡的 mysql 打中文：一定要加 --default-character-set=utf8mb4
+docker exec -it cafe-shop-db mysql --default-character-set=utf8mb4 -ushop -pshoppw cafe_shop
 ```
 
 <!--
@@ -438,7 +441,9 @@ docker exec -it taskboard-api sh -c "ls /app && cat /app/application.yml"
 
 用開店來說，`docker run -it` 進去的我們就是店長，店長一走，整間店就打烊了。`docker exec -it` 則像臨時進去巡店的訪客，訪客離開，店照常營業。
 
-下面這行還有一個常見錯誤。要在 exec 裡串好幾個指令，一定要包在 `sh -c` 裡面，直接把兩個指令用 and 符號串起來丟進去，會報錯。執行後會先列出 app 目錄，再印出設定檔的內容。
+下面第一行還有一個常見錯誤。要在 exec 裡串好幾個指令，一定要包在 `sh -c` 裡面，直接把兩個指令用 and 符號串起來丟進去，第二個指令會跑到我們自己的電腦上執行。執行後會先列出 app 目錄，看到 app.jar，再列出上傳圖片的資料夾。
+
+第二行是商店一定會遇到的坑。MySQL 容器裡沒有設定語系，命令列工具會用 latin1 這個舊編碼跟資料庫說話。查出來的商品名稱會變成問號；更糟的是，用它寫進去的中文會被存成亂碼，在 CLI 裡看起來正常，網站上卻是一串奇怪的字。所以在容器裡用 mysql 碰到中文，一律加上 `--default-character-set=utf8mb4`。
 -->
 
 ---
@@ -507,18 +512,18 @@ class: flex flex-col justify-center items-center text-center
 
 ```bash
 # 建立並啟動
-docker run -d --name taskboard-api -p 8081:8080 taskboard-api:1.0.0
+docker run -d --name cafe-shop-api -p 8081:8080 cafe-shop-api:1.0.0
 
 # 暫停與恢復（凍結行程，記憶體內容保留）
-docker pause taskboard-api
-docker unpause taskboard-api
+docker pause cafe-shop-api
+docker unpause cafe-shop-api
 
 # 停止與重新啟動（Spring Boot 會完整重跑一次啟動流程）
-docker stop taskboard-api
-docker start taskboard-api
+docker stop cafe-shop-api
+docker start cafe-shop-api
 
 # 查看目前狀態
-docker ps -a --filter name=taskboard
+docker ps -a --filter name=cafe-shop
 ```
 
 <!--
@@ -528,7 +533,7 @@ docker ps -a --filter name=taskboard
 
 也因為 pause 期間請求會卡住、沒有任何回應，正式環境要謹慎使用。
 
-最後一行用 `--filter` 篩選名稱，只列出 TaskBoard 相關的容器狀態。
+最後一行用 `--filter` 篩選名稱，只列出線上商店相關的容器狀態。
 -->
 
 ---
@@ -538,7 +543,7 @@ docker ps -a --filter name=taskboard
 「`docker logs` 會把容器的標準輸出（STDOUT）跟標準錯誤（STDERR）印出來，這是除錯的第一道防線。」
 
 ```bash
-docker logs taskboard-api
+docker logs cafe-shop-api
 ```
 
 <!--
@@ -578,16 +583,16 @@ docker logs taskboard-api
 
 ```bash
 # 即時追蹤 log（最常用於除錯：一邊按前端，一邊看 API 有沒有收到請求）
-docker logs -f taskboard-api
+docker logs -f cafe-shop-api
 
 # 只看最後 50 行，並加上時間戳記
-docker logs -n 50 -t taskboard-api
+docker logs -n 50 -t cafe-shop-api
 
 # 只看最近 30 分鐘的 log
-docker logs --since 30m taskboard-api
+docker logs --since 30m cafe-shop-api
 
 # 直接撈出錯誤：Spring Boot 的例外堆疊都在這
-docker logs taskboard-api 2>&1 | grep -i "exception\|error"
+docker logs cafe-shop-api 2>&1 | grep -i "exception\|error"
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
@@ -595,7 +600,7 @@ docker logs taskboard-api 2>&1 | grep -i "exception\|error"
 </div>
 
 <!--
-第一行是日常除錯最常打的指令。實務上的用法是，開一個終端機視窗掛著 `docker logs -f taskboard-api`，然後去瀏覽器操作前端，新增一筆任務。回頭看 log 有沒有出現 insert 語句，就能確定請求有沒有打到後端、有沒有寫進資料庫。
+第一行是日常除錯最常打的指令。實務上的用法是，開一個終端機視窗掛著 `docker logs -f cafe-shop-api`，然後用瀏覽器或 curl 打一次 API，例如登入或查商品。回頭看 log 有沒有出現新的訊息或錯誤，就能確定請求有沒有打到後端。
 
 第二、三行是回顧型的查詢。服務已經跑了很久，我們只想看最近發生的事，不想從頭滑到尾。
 
@@ -615,7 +620,7 @@ docker logs taskboard-api 2>&1 | grep -i "exception\|error"
 </div>
 
 ```bash
-docker ps -a && docker logs --tail 20 taskboard-api
+docker ps -a && docker logs --tail 20 cafe-shop-api
 ```
 
 <!--
@@ -632,22 +637,22 @@ docker ps -a && docker logs --tail 20 taskboard-api
 layout: default
 ---
 
-# 練習 1：啟動 TaskBoard 資料庫並巡查
+# 練習 1：啟動線上商店資料庫並巡查
 ### 任務說明
 
-我們要把 TaskBoard 的資料庫容器完整操作一遍：
+我們要把線上商店的資料庫容器完整操作一遍：
 
-1. 用背景模式啟動 `mysql:8.4`，命名為 `taskboard-db`，主機 `3307` 映射到容器 `3306`，並帶入四個環境變數：
-   `MYSQL_ROOT_PASSWORD=rootpw`、`MYSQL_DATABASE=taskboard`、`MYSQL_USER=appuser`、`MYSQL_PASSWORD=apppw`
+1. 用背景模式啟動 `mysql:9.7`，命名為 `cafe-shop-db`，主機 `3307` 映射到容器 `3306`，並帶入四個環境變數：
+   `MYSQL_ROOT_PASSWORD=rootpw`、`MYSQL_DATABASE=cafe_shop`、`MYSQL_USER=shop`、`MYSQL_PASSWORD=shoppw`
 2. 確認容器有成功在背景執行，並記下 PORTS 欄位顯示的內容
 3. 查看這個容器的 log，找到 `ready for connections` 這句話（MySQL 要跑幾秒初始化，太快查會看不到）
 4. 停止容器，並確認狀態變成 Exited
 5. 重新啟動它，再確認狀態變回 Up
 
 <!--
-接下來是練習一，我們把 TaskBoard 的資料庫容器完整操作一遍，順便把後面每一章都會用到的資料庫建起來。
+接下來是練習一，我們把線上商店的資料庫容器完整操作一遍，順便把後面每一章都會用到的資料庫建起來。
 
-任務是用背景模式啟動 `taskboard-db`，確認它在執行，查看 log，然後停止再重新啟動。
+任務是用背景模式啟動 `cafe-shop-db`，確認它在執行，查看 log，然後停止再重新啟動。
 
 請大家特別想一想第三步：為什麼要在 log 裡找 ready for connections 這句話？容器 run 起來，不就代表資料庫可以用了嗎？
 
@@ -665,14 +670,14 @@ layout: default
 
 1. 啟動：
    ```bash
-   docker run -d --name taskboard-db -p 3307:3306 \
-     -e MYSQL_ROOT_PASSWORD=rootpw -e MYSQL_DATABASE=taskboard \
-     -e MYSQL_USER=appuser -e MYSQL_PASSWORD=apppw mysql:8.4
+   docker run -d --name cafe-shop-db -p 3307:3306 \
+     -e MYSQL_ROOT_PASSWORD=rootpw -e MYSQL_DATABASE=cafe_shop \
+     -e MYSQL_USER=shop -e MYSQL_PASSWORD=shoppw mysql:9.7
    ```
 2. 確認執行中：`docker ps`（PORTS 欄應顯示 `0.0.0.0:3307->3306/tcp`）
-3. 查看 log：`docker logs taskboard-db | grep "ready for connections"`
-4. 停止並確認：`docker stop taskboard-db && docker ps -a`
-5. 重新啟動：`docker start taskboard-db`
+3. 查看 log：`docker logs cafe-shop-db | grep "ready for connections"`
+4. 停止並確認：`docker stop cafe-shop-db && docker ps -a`
+5. 重新啟動：`docker start cafe-shop-db`
 
 <!--
 我們來看解題的關鍵，這些都是第一部分教過的指令，重點在把它們組成完整流程。
@@ -689,25 +694,26 @@ layout: default
 # 練習 2：進資料庫容器除錯
 ### 任務說明
 
-延續練習 1 的 `taskboard-db` 容器：
+延續練習 1 的 `cafe-shop-db` 容器：
 
-1. 用互動模式進入容器，執行 `mysql -uappuser -papppw taskboard`，再下 `show tables;` 看看現在有沒有表
-2. 在 SQL 提示字元裡手動建一張表並塞一筆資料（模擬 Spring Boot 的 JPA 之後會做的事）：
+1. 用互動模式進入容器，執行 `mysql -ushop -pshoppw cafe_shop`，再下 `show tables;` 看看現在有沒有表
+2. 在 SQL 提示字元裡建一張練習用的表並塞一筆資料：
    ```sql
-   CREATE TABLE task (id BIGINT PRIMARY KEY AUTO_INCREMENT,
-                      title VARCHAR(100), done BOOLEAN DEFAULT FALSE);
-   INSERT INTO task (title) VALUES ('學會 docker exec');
+   CREATE TABLE practice (id BIGINT PRIMARY KEY AUTO_INCREMENT, note VARCHAR(100));
+   INSERT INTO practice (note) VALUES ('hello docker exec');
    ```
-3. 離開 SQL，用 `docker exec` 搭配 `-e` 參數，不進互動模式直接查出這筆資料
+3. 離開 SQL，用 `docker exec` 搭配 `-e` 參數，不進互動模式直接查出這筆資料，再用同樣方式 `DROP TABLE practice;`
 4. 用 `docker logs` 只看最近 10 分鐘的 log
-5. **想一想（先別動手）**：如果現在 `docker rm -f taskboard-db` 再重新 `docker run`，剛剛那筆資料還在嗎？
+5. **想一想（先別動手）**：如果現在 `docker rm -f cafe-shop-db` 再重新 `docker run`，剛剛那筆資料還在嗎？
 
 <!--
-練習二延續剛才的 taskboard-db，把 exec 和 logs 串在一起，情境就是真實除錯會做的事。
+練習二延續剛才的 cafe-shop-db，把 exec 和 logs 串在一起，情境就是真實除錯會做的事。
 
-任務是進入容器的 mysql，手動建一張 task 表、塞一筆資料，再用不進互動模式的方式查出來，最後看最近十分鐘的 log。
+任務是進入容器的 mysql，手動建一張 practice 表、塞一筆資料，再用不進互動模式的方式查出來、刪掉這張表，最後看最近十分鐘的 log。
 
-第五題請大家先想就好，不要真的動手：如果現在把 taskboard-db 刪掉再重新 run，剛剛那筆資料還在嗎？
+為什麼最後要刪掉？因為後端的 Flyway 很謹慎，它只願意在「空的」資料庫裡建表。如果 cafe_shop 裡已經有一張它不認識的表，又沒有它自己的紀錄表，後端一啟動就會報錯停下來。
+
+第五題請大家先想就好，不要真的動手：如果現在把 cafe-shop-db 刪掉再重新 run，剛剛那筆資料還在嗎？
 
 我們先暫停一下，自己動手試試看。
 
@@ -723,14 +729,16 @@ layout: default
 
 ```bash
 # 1-2. 進互動 SQL 提示字元，貼上建表與 insert
-docker exec -it taskboard-db mysql -uappuser -papppw taskboard
+docker exec -it cafe-shop-db mysql -ushop -pshoppw cafe_shop
 
-# 3. 不進互動模式，直接下 SQL 查資料
-docker exec taskboard-db mysql -uappuser -papppw taskboard \
-  -e "select * from task;"
+# 3. 不進互動模式，直接下 SQL 查資料，查完把練習表刪掉
+docker exec cafe-shop-db mysql -ushop -pshoppw cafe_shop \
+  -e "select * from practice;"
+docker exec cafe-shop-db mysql -ushop -pshoppw cafe_shop \
+  -e "drop table practice;"
 
 # 4. 篩選時間查 log
-docker logs --since 10m taskboard-db
+docker logs --since 10m cafe-shop-db
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
@@ -738,13 +746,13 @@ docker logs --since 10m taskboard-db
 </div>
 
 <!--
-我們來看解答。第一個指令用 `-it` 進互動模式，第二個不加 `-it`，直接用 `-e` 帶 SQL 進去，這是寫在腳本裡最常用的形式。執行後會印出一張表，看到剛才 insert 的「學會 docker exec」。
+我們來看解答。第一個指令用 `-it` 進互動模式，第二個不加 `-it`，直接用 `-e` 帶 SQL 進去，這是寫在腳本裡最常用的形式。執行後會印出一張表，看到剛才 insert 的 hello docker exec。
 
 回到第五題，答案是資料會全部消失。容器刪掉，它的可寫層就一起沒了。
 
-這就是為什麼大家常聽到「容器不要拿來存資料」。我們現在的 taskboard-db 其實很脆弱，同事一個手滑 rm，開發資料就歸零。第七章我們會用 Volume 解決這個問題。
+這就是為什麼大家常聽到「容器不要拿來存資料」。我們現在的 cafe-shop-db 其實很脆弱，同事一個手滑 rm，開發資料就歸零。第七章我們會用 Volume 解決這個問題。
 
-請大家先不要刪掉 taskboard-db，後面幾章還會用到。
+請大家先不要刪掉 cafe-shop-db，後面幾章還會用到。
 -->
 
 ---
@@ -787,7 +795,7 @@ layout: default
 
 用開店來串，run 是開幕，ps 是巡店，stop 和 start 是打烊和開門，exec 是進去巡視，logs 是看監視器回放，rm 才是真的拆店。
 
-下一章，我們要學 Dockerfile，把 TaskBoard 自己打包成 Image。
+下一章，我們要學 Dockerfile，把線上商店自己打包成 Image。
 -->
 
 ---

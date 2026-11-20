@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This repository holds **teaching slides for one or more courses**, rendered by a self-built Vue/Vite site (`site/`). There are seven courses: Spring Boot (57 chapters, `courses/springboot/`), MySQL (11, `courses/mysql/`), Angular (61, `courses/angular/`), Git (20, `courses/git/`), Java (28, `courses/java/`), Java 進階 (23, `courses/java-adv/`) and Docker (8, `courses/docker/`); more can be added as sibling folders. Two learning tracks (`tracks/`) order them for teaching. It is **not** a Spring Boot Java application — the content is about Spring Boot, but the repository itself is a Node.js project. The original Slidev setup in the repo root still works for the Spring Boot course.
+This repository holds **teaching slides for one or more courses**, rendered by a self-built Vue/Vite site (`site/`). There are seven courses: Spring Boot (57 chapters, `courses/springboot/`), MySQL (11, `courses/mysql/`), Angular (61, `courses/angular/`), Git (20, `courses/git/`), Java (28, `courses/java/`), Java 進階 (23, `courses/java-adv/`) and Docker (8, `courses/docker/`, deploys the online shop); more can be added as sibling folders. Two learning tracks (`tracks/`) order them for teaching. It is **not** a Spring Boot Java application — the content is about Spring Boot, but the repository itself is a Node.js project. The original Slidev setup in the repo root still works for the Spring Boot course.
 
 ## Commands
 
@@ -46,7 +46,9 @@ courses/
                             ch09–20 = its main deck ch01–12 (chapter refs and links in the text renumbered +8)
   java/                  ← copied from gagahsu/slidev-java: the 28 basic files chNN-topic.md
   java-adv/              ← the same repo's chNN-topic-adv.md files; chapter numbers match java/ (gaps where there is none)
-  docker/                ← copied from gagahsu/slidev-docker
+  docker/                ← copied from gagahsu/slidev-docker; the running project was switched from TaskBoard to the online shop
+                            (commands match projects/cafe-shop-*: DB_URL/DB_USERNAME/DB_PASSWORD, `--network-alias api`,
+                            volumes db-data + uploads, `--default-character-set=utf8mb4` for Chinese in the container's mysql CLI)
 tracks/basic.yaml        ← learning tracks (學程): ordered stages of chapters across courses
 tracks/advanced.yaml
 specs/CAFE-SPEC.md       ← basic-track project (Corner Café one-page site); shared by all courses
@@ -57,6 +59,9 @@ projects/                ← reference solutions the chapters quote (not part of
   cafe-shop-api/         ← Spring Boot 4.1.2 + Security/JWT + Flyway (V1 schema, V2 seed) + MyBatis reports + ECPay;
                             Spring Boot ch51–57. `./gradlew test` runs the CheckMacValue test (official ECPay example)
   cafe-shop-web/         ← Angular 21 + Material + Chart.js, storefront + /admin; Angular ch59–61
+  cafe-shop-deploy/      ← compose.yaml (db mysql:9.7 / api / web nginx:1.31-alpine) + .env.example; Docker ch05–08.
+                            api and web Dockerfiles live in their own folders (web builds with `--configuration docker`,
+                            which swaps in config.docker.ts so the API is same-origin behind nginx). Verified with Docker 29.10.
 public/screenshots/…     ← Spring Boot images (`/screenshots/...` in the Markdown)
 public/images/<NN-topic>/… ← Angular images (`/images/...`)
 public/beginner/…        ← Git beginner screenshots (used by `<Shot file="…">`)

@@ -46,7 +46,7 @@ style: |
 
 上一章我們用 Compose，讓 API 直接寫 db 就連上了資料庫，但當時沒有解釋為什麼。而在第三章，我們還被迫寫了一個不太好看的 `host.docker.internal`。
 
-這一章就要把背後的原理講清楚。容器之間要怎麼找到彼此？外部使用者又要怎麼連進來？學完之後，我們能讓 TaskBoard 只開一個對外的入口，後端和資料庫都安全地藏在內部網路裡。
+這一章就要把背後的原理講清楚。容器之間要怎麼找到彼此？外部使用者又要怎麼連進來？學完之後，我們能讓線上商店只開一個對外的入口，後端和資料庫都安全地藏在內部網路裡。
 -->
 
 ---
@@ -80,7 +80,7 @@ class: flex flex-col justify-center items-center text-center
 
 # 什麼是 Docker Network？
 
-多個 Container 各自運作於獨立沙盒，沒有網路設定時彼此互相看不到。TaskBoard 的 `taskboard-api` 要連 `taskboard-db`、前端要連後端，靠的全是 Docker Network。
+多個 Container 各自運作於獨立沙盒，沒有網路設定時彼此互相看不到。線上商店的 `cafe-shop-api` 要連 `cafe-shop-db`、前端要連後端，靠的全是 Docker Network。
 
 Docker Network 負責建立 Container 之間的通訊管道：
 
@@ -93,7 +93,7 @@ Docker 提供多種 **Network Driver（網路驅動程式）**，各代表不同
 - `none`：完全隔離，無對外連線
 
 <!--
-直接想 TaskBoard 的三個容器，前端、後端、資料庫。如果什麼都不設定，它們其實各自待在獨立的沙盒裡，彼此看不見。第三章我們繞一大圈寫 `host.docker.internal`，就是因為當時沒有設定網路。
+直接想線上商店的三個容器，前端、後端、資料庫。如果什麼都不設定，它們其實各自待在獨立的沙盒裡，彼此看不見。第三章我們繞一大圈寫 `host.docker.internal`，就是因為當時沒有設定網路。
 
 Docker Network 的工作，就是建立容器之間的通訊管道。Docker 提供了幾種 Network Driver，各代表不同的通訊規則。
 
@@ -114,9 +114,9 @@ Docker Network 的工作，就是建立容器之間的通訊管道。Docker 提�
 
 ```bash
 # 三種模式的基本語法
-docker run --network bridge taskboard-api:1.0.0   # 預設，TaskBoard 用這個
-docker run --network host taskboard-api:1.0.0     # 直接佔用主機 8080
-docker run --network none taskboard-api:1.0.0     # 連不到 DB，起不來
+docker run --network bridge cafe-shop-api:1.0.0   # 預設，線上商店用這個
+docker run --network host cafe-shop-api:1.0.0     # 直接佔用主機 8080
+docker run --network none cafe-shop-api:1.0.0     # 連不到 DB，起不來
 ```
 
 <!--
@@ -128,7 +128,7 @@ host 會移除容器和主機之間的網路隔離，容器直接借用主機的
 
 none 則是完全隔離，容器連對外連線的能力都沒有，通常用在不需要網路的批次運算。
 
-下面是三種模式的語法，都是用 `--network` 指定。TaskBoard 全程使用 bridge。要注意 host 模式在 Windows 和 Mac 的 Docker Desktop 上有限制，行為跟 Linux 不一樣。
+下面是三種模式的語法，都是用 `--network` 指定。線上商店全程使用 bridge。要注意 host 模式在 Windows 和 Mac 的 Docker Desktop 上有限制，行為跟 Linux 不一樣。
 -->
 
 ---
@@ -137,12 +137,12 @@ none 則是完全隔離，容器連對外連線的能力都沒有，通常用在
 
 ```bash
 # bridge：預設模式，Container 會拿到獨立的私有 IP
-docker run -d --name taskboard-db mysql:8.4
-docker inspect -f '{{.NetworkSettings.IPAddress}}' taskboard-db
+docker run -d --name cafe-shop-db mysql:9.7
+docker inspect -f '{{.NetworkSettings.IPAddress}}' cafe-shop-db
 # 172.17.0.2
 
 # host：不再有獨立 IP，Spring Boot 的 8080 直接等於主機的 8080
-docker run -d --network host --name taskboard-api taskboard-api:1.0.0
+docker run -d --network host --name cafe-shop-api cafe-shop-api:1.0.0
 # 不用 -p，但如果本機 IDE 也在跑 8080，就直接衝突
 
 # none：完全沒有網路介面
@@ -157,7 +157,7 @@ docker run --rm --network none alpine ip addr
 
 第二段用 host 模式跑 Spring Boot，容器裡的 8080 就直接等於主機的 8080，不需要 `-p`。但代價是沒有隔離，很多人 IDE 裡本來就開著一個 8080 的服務，兩個就會直接衝突。
 
-第三段用 none 模式，進去看網路介面，只剩下 loopback。如果 taskboard-api 掛在 none 上，它連資料庫都找不到，啟動就會失敗。
+第三段用 none 模式，進去看網路介面，只剩下 loopback。如果 cafe-shop-api 掛在 none 上，它連資料庫都找不到，啟動就會失敗。
 
 結論是三種模式的行為完全不同，絕大多數情況，用 bridge 就對了。
 -->
@@ -226,16 +226,16 @@ Container 內監聽的 port（例如 80）屬於自己的網路空間，主機�
 
 ```bash
 # 前端：主機 8080 對應容器 80，同事也能用你的 IP 連進來看
-docker run -d -p 8080:80 --name taskboard-web taskboard-web:1.0.0
+docker run -d -p 8080:80 --name cafe-shop-web cafe-shop-web:1.0.0
 
 # 資料庫：只允許本機連線，外部連不進來（開發機的正確做法）
-docker run -d -p 127.0.0.1:3307:3306 --name taskboard-db mysql:8.4
+docker run -d -p 127.0.0.1:3307:3306 --name cafe-shop-db mysql:9.7
 
 # 讓 Docker 自動挑一個沒被佔用的主機 port（會用 Dockerfile 裡的 EXPOSE 8080）
-docker run -d -P --name taskboard-api taskboard-api:1.0.0
+docker run -d -P --name cafe-shop-api cafe-shop-api:1.0.0
 
 # 查詢實際映射到哪個 port
-docker port taskboard-api
+docker port cafe-shop-api
 # 8080/tcp -> 0.0.0.0:32768
 ```
 
@@ -248,7 +248,7 @@ docker port taskboard-api
 
 第三段的大寫 `-P`，適合同時跑好幾個測試環境、不想自己分配 port 的時候。因為 port 是隨機的，要用最後一行的 `docker port` 查詢，才知道實際是哪一個。
 
-第一段跑完，打開瀏覽器連 localhost 的 8080，就能看到 TaskBoard 的畫面。
+第一段跑完，打開瀏覽器連 localhost 的 8080，就能看到線上商店的畫面。
 -->
 
 ---
@@ -336,39 +336,38 @@ Container 加入自訂網路後，Docker 會啟動內建 **DNS Server（位址 1
 # 自訂 Network — 範例
 
 ```bash
-# 1. 建立 TaskBoard 專用網路
-docker network create taskboard-net
+# 1. 建立線上商店專用網路
+docker network create cafe-shop-net
 
 # 2. 資料庫加入網路，不對外開 port
-docker run -d --network taskboard-net --name taskboard-db \
-  -e MYSQL_ROOT_PASSWORD=rootpw -e MYSQL_DATABASE=taskboard \
-  -e MYSQL_USER=appuser -e MYSQL_PASSWORD=apppw mysql:8.4
+docker run -d --network cafe-shop-net --name cafe-shop-db \
+  -e MYSQL_ROOT_PASSWORD=rootpw -e MYSQL_DATABASE=cafe_shop \
+  -e MYSQL_USER=shop -e MYSQL_PASSWORD=shoppw mysql:9.7
 
-# 3. 後端加入同一網路，連線字串終於可以寫服務名稱了
-docker run -d --network taskboard-net -p 8081:8080 --name taskboard-api \
-  -e SPRING_DATASOURCE_URL=jdbc:mysql://taskboard-db:3306/taskboard \
-  -e SPRING_DATASOURCE_USERNAME=appuser \
-  -e SPRING_DATASOURCE_PASSWORD=apppw \
-  taskboard-api:1.0.0
+# 3. 後端加入同一網路，連線字串終於可以寫容器名稱了
+docker run -d --network cafe-shop-net -p 8081:8080 --name cafe-shop-api \
+  -e DB_URL=jdbc:mysql://cafe-shop-db:3306/cafe_shop \
+  -e DB_USERNAME=shop -e DB_PASSWORD=shoppw \
+  cafe-shop-api:1.0.0
 
 # 4. 驗證 DNS 解析
-docker exec taskboard-api ping -c 2 taskboard-db
-# PING taskboard-db (172.18.0.2): 56 data bytes
+docker exec cafe-shop-api ping -c 2 cafe-shop-db
+# PING cafe-shop-db (172.18.0.2): 56 data bytes
 # 64 bytes from 172.18.0.2: seq=0 ttl=64 time=0.085 ms
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>對照第三章：</b> 當時被迫寫 <code>host.docker.internal:3307</code>（繞出容器再繞回來），現在直接寫 <code>taskboard-db:3306</code> — 容器內走的是內部網路，用的是 MySQL 原本的 3306，不是主機映射的 3307。
+💡 <b>對照第三章：</b> 當時被迫寫 <code>host.docker.internal:3307</code>（繞出容器再繞回來），現在直接寫 <code>cafe-shop-db:3306</code> — 容器內走的是內部網路，用的是 MySQL 原本的 3306，不是主機映射的 3307。
 </div>
 
 <!--
 這一頁是整章最重要的一頁，我們終於把第三章那個寫法修好了。
 
-第一步建立 taskboard-net，就像新建了一個有住戶名冊的社區。
+第一步建立 cafe-shop-net，就像新建了一個有住戶名冊的社區。
 
 第二步，資料庫加入網路，而且注意這次完全沒有 `-p`。API 是從網路內部連過來的，不需要經過主機。資料庫不對外開放，這是正式環境的標準做法。
 
-第三步是重點。連線字串從 `host.docker.internal:3307` 變成 `taskboard-db:3306`，主機名稱和 port 都改了。
+第三步是重點。連線字串從 `host.docker.internal:3307` 變成 `cafe-shop-db:3306`，主機名稱和 port 都改了。
 
 這個 port 的變化，是最多人卡住的地方。3307 是 `-p` 映射給主機看的 port。現在 API 從內部網路直接找資料庫，這條路上根本沒有經過 `-p`，所以要用 MySQL 在容器裡真正監聽的 3306。簡單記法是，容器對容器，一律用容器內的原始 port。
 
@@ -384,6 +383,7 @@ docker exec taskboard-api ping -c 2 taskboard-db
 | ⚠️ 版本注意 | 舊式的 `--link` 容器連結參數已經不建議使用（deprecated），現行做法一律改用自訂 bridge network，DNS 會自動解析容器名稱 |
 | 隔離性 | 只有加入同一個自訂網路的 Container 才能互相通訊，不同網路之間預設是隔離的，比預設 bridge 網路「大家都能互連」更安全 |
 | 與 Docker Compose 的關係 | 第五章的 `compose.yaml` 之所以能直接寫 `jdbc:mysql://db:3306/...`，就是因為 Compose 自動幫我們建了一個自訂網路，服務名稱天生就能互相解析 |
+| 別名 `--network-alias` | 一個容器可以在網路上多取幾個名字。Compose 就是用這招，讓容器 `cafe-shop-db-1` 也叫 `db` |
 
 <!--
 這一頁整理三個重點。
@@ -392,37 +392,37 @@ docker exec taskboard-api ping -c 2 taskboard-db
 
 第二，隔離性。只有加入同一個自訂網路的容器，才能互相溝通。不相關的服務不會意外連上彼此，比預設網路更安全。反過來說，兩個容器掛在不同網路，一樣找不到對方。
 
-第三，回頭解答上一章的謎。Compose 裡直接寫 db 就能連上，是因為 Compose 自動幫我們建了一個自訂網路，再把所有服務加進去。所以 Compose 不是魔法，只是把今天手動打的這些指令包起來了。
+第三，回頭解答上一章的謎。Compose 裡直接寫 db 就能連上，是因為 Compose 自動幫我們建了一個自訂網路，再把所有服務加進去，並且讓每個容器在網路上多一個別名，就是服務名稱。手動 run 的時候，也可以用 `--network-alias` 自己取別名，等一下的練習就會用到。所以 Compose 不是魔法，只是把今天手動打的這些指令包起來了。
 -->
 
 ---
 layout: default
 ---
 
-# 實戰：nginx 反向代理 /api
+# 實戰：Nginx 反向代理 /api
 
-前端 Angular 打 `http://localhost:8081/api/tasks` 會遇到 **CORS 跨域**問題。實務解法：讓 nginx 把 `/api` 轉發給後端，瀏覽器眼中只有一個來源。
+前端在 8080、後端在 8081，瀏覽器會擋下跨來源的請求（**CORS**）。實務解法：讓 Nginx 把 `/api` 轉給後端，瀏覽器眼中只有一個網站。
 
 ```nginx
-# taskboard-web/nginx.conf
+# cafe-shop-web/nginx.conf（節錄）
 server {
   listen 80;
+  root /usr/share/nginx/html;
 
-  location / {                          # Angular 路由 fallback
-    root /usr/share/nginx/html;
+  resolver 127.0.0.11 valid=10s;          # Docker 內建的 DNS，10 秒重查一次
+  set $api http://api:8080;               # 後端在網路上的名字叫 api
+
+  location /api/     { proxy_pass $api; } # 轉發給後端容器
+  location /uploads/ { proxy_pass $api; } # 商品圖片也在後端
+
+  location / {                            # Angular 路由 fallback
     try_files $uri $uri/ /index.html;
-  }
-
-  location /api/ {                      # 轉發給後端容器
-    proxy_pass http://taskboard-api:8080/api/;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
   }
 }
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>成果：</b> Angular 的 <code>environment.apiUrl</code> 直接寫 <code>/api</code>（相對路徑）即可 — 開發、測試、正式環境完全不用改前端程式碼。
+💡 <b>成果：</b> 打包時用的 <code>config.docker.ts</code> 把後端位址設成空字串，前端直接打 <code>/api/...</code>（同一個網址），不管部署到哪台主機，前端程式都不用改。
 </div>
 
 <!--
@@ -430,13 +430,17 @@ server {
 
 前端在 8080，後端在 8081，瀏覽器認為這是兩個不同的來源，請求會被擋下來。
 
-比較好的做法是反向代理。先看第二個 location。瀏覽器呼叫 `/api/tasks`，nginx 收到之後，在容器網路內部轉發給 `taskboard-api:8080`。這個主機名稱，就是剛才學的容器名稱解析。從瀏覽器的角度，它從頭到尾只跟一個網站說話，不會跨域。
+比較好的做法是反向代理。先看兩個 location。瀏覽器呼叫 `/api/products`，Nginx 收到之後，在容器網路內部轉發給 `api` 的 8080。商品圖片的 `/uploads` 也存在後端，所以一起轉過去。從瀏覽器的角度，它從頭到尾只跟一個網站說話，不會跨域。
 
-再看第一個 location 的 try_files。Angular 的路由都在前端，使用者在某個頁面重新整理，nginx 會去找一個不存在的檔案，回傳 404。try_files 的意思是找不到就回 index.html，讓 Angular 自己處理路由。
+`api` 這個名字從哪來？在 Compose 裡，它就是服務名稱。手動 run 的時候，我們用 `--network-alias api` 幫後端容器取這個別名。
 
-結果是 Angular 的 API 位址直接寫相對路徑 `/api`，各個環境都不用改前端程式。
+上面那兩行 resolver 和 set 是個小技巧。如果直接寫 `proxy_pass http://api:8080`，Nginx 只在啟動的那一刻查一次 api 的 IP：那時 api 還沒啟動，Nginx 就直接啟動失敗；之後 api 重建換了 IP，Nginx 還拿著舊的，就會一直回 502。`127.0.0.11` 是 Docker 在自訂網路裡內建的 DNS，搭配變數寫法，Nginx 就會每十秒重新查一次。
 
-【講師】可補充 proxy_pass 結尾有沒有寫路徑，轉發出去的網址會不同，要跟後端 Controller 的路徑對得上。
+最後看 try_files。Angular 的路由都在前端，使用者在 `/admin/orders` 重新整理，Nginx 會去找一個不存在的檔案，回傳 404。try_files 的意思是找不到就回 index.html，讓 Angular 自己處理路由。
+
+結果是前端的 API 位址直接寫成同一個網址的 `/api`，各個環境都不用改前端程式。
+
+【講師】可補充 proxy_pass 用變數、後面沒寫路徑時，原本的網址 `/api/products` 會原封不動轉過去，剛好對上後端 Controller 的路徑。
 -->
 
 ---
@@ -450,16 +454,16 @@ layout: default
 
 **目標：**
 
-1. 建立一個名為 `taskboard-net` 的自訂網路
-2. 啟動 `taskboard-db`（`mysql:8.4`）加入這個網路，**不要加 `-p`**
-3. 啟動 `taskboard-api` 加入同一個網路，`-p 8081:8080`，連線字串改用服務名稱
-4. 用 `docker exec` 驗證 API 容器能 ping 通 `taskboard-db`
-5. 看 `docker logs taskboard-api`，確認 Spring Boot 成功啟動、沒有 `Communications link failure`
+1. 建立一個名為 `cafe-shop-net` 的自訂網路
+2. 啟動 `cafe-shop-db`（`mysql:9.7`）加入這個網路，**不要加 `-p`**
+3. 啟動 `cafe-shop-api` 加入同一個網路，`-p 8081:8080`，連線字串改用服務名稱
+4. 用 `docker exec` 驗證 API 容器能 ping 通 `cafe-shop-db`
+5. 看 `docker logs cafe-shop-api`，確認 Spring Boot 成功啟動、沒有 `Communications link failure`
 
 <!--
 接下來是練習一，把第三章那個 `host.docker.internal` 的寫法徹底修掉。
 
-任務是建立 taskboard-net，讓資料庫和 API 都加入這個網路。資料庫不要加 `-p`，API 的連線字串改用容器名稱。最後用 ping 和 log 驗證。
+任務是建立 cafe-shop-net，讓資料庫和 API 都加入這個網路。資料庫不要加 `-p`，API 的連線字串改用容器名稱。最後用 ping 和 log 驗證。
 
 請大家想一個問題：資料庫沒有對外開放任何 port，API 還連得到它嗎？為什麼？
 
@@ -478,24 +482,24 @@ layout: default
 ### 提示說明
 
 ```bash
-docker network create taskboard-net
+docker network create cafe-shop-net
 
-docker run -d --network taskboard-net --name taskboard-db \
-  -e MYSQL_ROOT_PASSWORD=rootpw -e MYSQL_DATABASE=taskboard \
-  -e MYSQL_USER=appuser -e MYSQL_PASSWORD=apppw mysql:8.4
+docker run -d --network cafe-shop-net --name cafe-shop-db \
+  -e MYSQL_ROOT_PASSWORD=rootpw -e MYSQL_DATABASE=cafe_shop \
+  -e MYSQL_USER=shop -e MYSQL_PASSWORD=shoppw mysql:9.7
 
-docker run -d --network taskboard-net -p 8081:8080 --name taskboard-api \
-  -e SPRING_DATASOURCE_URL=jdbc:mysql://taskboard-db:3306/taskboard \
-  -e SPRING_DATASOURCE_USERNAME=appuser -e SPRING_DATASOURCE_PASSWORD=apppw \
-  taskboard-api:1.0.0
+docker run -d --network cafe-shop-net -p 8081:8080 --name cafe-shop-api \
+  -e DB_URL=jdbc:mysql://cafe-shop-db:3306/cafe_shop \
+  -e DB_USERNAME=shop -e DB_PASSWORD=shoppw \
+  cafe-shop-api:1.0.0
 
-docker exec taskboard-api ping -c 2 taskboard-db
-docker logs taskboard-api | tail -20
+docker exec cafe-shop-api ping -c 2 cafe-shop-db
+docker logs cafe-shop-api | tail -20
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
 ⚠️ <b>兩個必踩的坑：</b> (1) 連線字串 port 要寫 <b>3306</b> 不是 3307 — 容器對容器不經過 <code>-p</code> 映射。
-(2) 兩個容器都要加 <code>--network taskboard-net</code>，漏一個就掉回預設網路，用 <code>docker network inspect taskboard-net</code> 可以查誰在裡面。
+(2) 兩個容器都要加 <code>--network cafe-shop-net</code>，漏一個就掉回預設網路，用 <code>docker network inspect cafe-shop-net</code> 可以查誰在裡面。
 </div>
 
 <!--
@@ -517,19 +521,19 @@ layout: default
 
 **目標：** 前端對外、後端與資料庫全部藏在內部網路。
 
-1. 沿用 `taskboard-net`，啟動 `taskboard-db`（不對外）與 `taskboard-api`（**這次也不要加 `-p`**）
-2. 幫 `taskboard-web` 寫一份 `nginx.conf`，把 `/api/` 反向代理到 `http://taskboard-api:8080/api/`，並加上 SPA 的 `try_files` fallback
-3. 重新 build `taskboard-web:1.0.0`，啟動時只開放 `-p 8080:80`
+1. 沿用 `cafe-shop-net`，啟動 `cafe-shop-db`（不對外）與 `cafe-shop-api`（**這次也不要加 `-p`**，並用 `--network-alias api` 取別名）
+2. 確認 `cafe-shop-web/nginx.conf` 把 `/api/`、`/uploads/` 轉給 `api:8080`，並有 SPA 的 `try_files` fallback；Dockerfile 要 `COPY nginx.conf`
+3. 重新 build `cafe-shop-web:1.0.0`，啟動時只開放 `-p 8080:80`
 4. 驗證：
-   - 瀏覽器打開 `http://localhost:8080` 看得到前端，新增任務會成功寫進資料庫
-   - `curl http://localhost:8081/actuator/health` **應該連不上**（API 沒對外）
-   - `docker exec taskboard-web ping -c 2 taskboard-api` 應該通
+   - 瀏覽器打開 `http://localhost:8080` 看得到商品和圖片，登入 `user1@cornercafe.test` / `User1234` 能加入購物車
+   - `curl http://localhost:8081/api/categories` **應該連不上**（API 沒對外）
+   - `docker exec cafe-shop-web ping -c 2 api` 應該通
 5. 想一想：整套只曝露一個 port，這對正式環境的資安有什麼好處？
 
 <!--
 練習二是本章的整合題，目標是前端對外，後端和資料庫全部藏在內部網路。
 
-這次 API 也不加 `-p`。要幫前端寫一份 nginx.conf，把 `/api/` 轉發給後端，並加上 try_files。重新 build 前端之後，整套只開放 8080 一個 port。
+這次 API 也不加 `-p`，但要多加一個 `--network-alias api`，因為前端的 Nginx 是用 api 這個名字找後端的。打開專案裡的 nginx.conf，對照上一頁確認轉發的設定，重新 build 前端之後，整套只開放 8080 一個 port。
 
 驗證有三項，其中第二項特別重要。請大家親自確認，直接連 8081 的 API 是連不上的。
 
@@ -548,25 +552,25 @@ layout: default
 ### 提示說明
 
 ```bash
-docker run -d --network taskboard-net --name taskboard-db \
-  -e MYSQL_ROOT_PASSWORD=rootpw -e MYSQL_DATABASE=taskboard \
-  -e MYSQL_USER=appuser -e MYSQL_PASSWORD=apppw mysql:8.4
+docker run -d --network cafe-shop-net --name cafe-shop-db \
+  -e MYSQL_ROOT_PASSWORD=rootpw -e MYSQL_DATABASE=cafe_shop \
+  -e MYSQL_USER=shop -e MYSQL_PASSWORD=shoppw mysql:9.7
 
-docker run -d --network taskboard-net --name taskboard-api \
-  -e SPRING_DATASOURCE_URL=jdbc:mysql://taskboard-db:3306/taskboard \
-  -e SPRING_DATASOURCE_USERNAME=appuser -e SPRING_DATASOURCE_PASSWORD=apppw \
-  taskboard-api:1.0.0        # 注意：沒有 -p
+docker run -d --network cafe-shop-net --network-alias api --name cafe-shop-api \
+  -e DB_URL=jdbc:mysql://cafe-shop-db:3306/cafe_shop \
+  -e DB_USERNAME=shop -e DB_PASSWORD=shoppw \
+  cafe-shop-api:1.0.0        # 注意：沒有 -p
 
-docker run -d --network taskboard-net -p 8080:80 --name taskboard-web \
-  taskboard-web:1.0.0        # 整套只有這一個對外 port
+docker run -d --network cafe-shop-net -p 8080:80 --name cafe-shop-web \
+  cafe-shop-web:1.0.0        # 整套只有這一個對外 port
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>除錯順序：</b> 前端按下去沒反應時 → 先 <code>docker logs taskboard-web</code> 看 nginx 有沒有收到 <code>/api/</code> 請求 → 再 <code>docker logs taskboard-api</code> 看後端有沒有收到轉發。從外往內一層一層看。
+💡 <b>除錯順序：</b> 前端按下去沒反應時 → 先 <code>docker logs cafe-shop-web</code> 看 nginx 有沒有收到 <code>/api/</code> 請求 → 再 <code>docker logs cafe-shop-api</code> 看後端有沒有收到轉發。從外往內一層一層看。
 </div>
 
 <!--
-我們來看解答。重點在 taskboard-api 這次完全沒有 `-p`，它只服務同一個網路裡的 nginx，不需要對外開放。整套只有前端那一個對外的 port。
+我們來看解答。重點在 cafe-shop-api 這次完全沒有 `-p`，它只服務同一個網路裡的 nginx，不需要對外開放。整套只有前端那一個對外的 port。另外它多了 `--network-alias api`，少了這個，Nginx 找不到 api，商品列表會是空的，瀏覽器的 Network 分頁會看到 502。
 
 回答第五題。只開放一個 port，代表防火牆規則簡單，需要稽核的入口只有一個。攻擊者從外面連不到 API，也掃不到資料庫的弱密碼，少了一整個攻擊面。
 
@@ -625,9 +629,9 @@ layout: end
 有任何問題嗎？
 
 <!--
-這一章我們讓 TaskBoard 的容器學會用名字互相溝通，也把後端和資料庫藏進了內部網路。
+這一章我們讓線上商店的容器學會用名字互相溝通，也把後端和資料庫藏進了內部網路。
 
-建議大家保留練習二做好的 taskboard-net 和三個容器，下一章處理資料持久化時會接著用。我們下一章見。
+建議大家保留練習二做好的 cafe-shop-net 和三個容器，下一章處理資料持久化時會接著用。我們下一章見。
 
 【講師】開放 Q&A，可以引導大家回想容器對容器為什麼用 3306、自訂網路和預設網路的差別。
 -->

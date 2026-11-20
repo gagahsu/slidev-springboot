@@ -1,4 +1,6 @@
-node_modules
-dist
-.angular
-.vscode
+.git
+node_modules/
+dist/
+.angular/
+.vscode/
+.env*
