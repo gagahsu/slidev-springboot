@@ -975,7 +975,7 @@ public class Homework {
 JSON 裡的日期是**文字**，格式固定：
 
 ```json
-{ "title": "讀書心得", "dueDate": "2026-06-30", "createdAt": "2026-06-30T14:05:09" }
+{ "createdAt": "2026-06-30T14:05:09", "dueDate": "2026-06-30", "id": 1, "title": "讀書心得" }
 ```
 
 </v-click>

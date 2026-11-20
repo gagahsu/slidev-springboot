@@ -743,8 +743,9 @@ private ReportCard reportCard;
 <v-click>
 
 ```json
-{ "id": 1, "studentName": "Tom",
-  "scores": [ { "id": 1, "subject": "國文", "score": 85 }, { "id": 2, "subject": "數學", "score": 92 } ] }
+{ "id": 1,
+  "scores": [ { "id": 1, "score": 85, "subject": "國文" }, { "id": 2, "score": 92, "subject": "數學" } ],
+  "studentName": "Tom" }
 ```
 
 </v-click>

@@ -51,9 +51,11 @@ SHOP-SPEC §10：`docker compose` 跑三個服務（`db` MySQL、`api` 後端、
 
 進度（2026-11-20）：
 - 編譯：ch04–47 每章的完整類別都放進 Spring Boot 4.1.2 專案編譯，沒有框架 API 錯誤（剩下的錯誤都是投影片節錄造成的）。4.1 release notes 列的移除項目（舊 logging 屬性、Derby、layertools）投影片都沒用到。
-- 執行：ch12–21（MVC，curl 全部端點）、ch22–25（JDBC）、ch26–29（JPA 查詢、關聯、`@JsonIgnore`）、ch30–32（MyBatis 註解與 XML）在 MySQL 9.7 上通過。
+- 執行：ch12–21（MVC，curl 全部端點）、ch22–25（JDBC）、ch26–29（JPA 查詢、關聯、`@JsonIgnore`）、ch30–32（MyBatis 註解與 XML）、ch33–35（交易回滾、不加鎖超賣／悲觀鎖／樂觀鎖 409、SQL Injection 對照）、ch39–45（school 專案：CRUD、驗證、Swagger、Session、單元測試、排程、Caffeine 快取、log 檔）、ch46–47（httpBasic、註冊、JWT 登入、401／403、竄改 Token）在 MySQL 9.7 上通過。
 - 修正：ch30 `mybatis-spring-boot-starter` 4.0.1 → 4.1.0（4.1.0 對應 Spring Boot 4.1；4.0.1 實測也能跑）。
-- 待做：ch33–35、ch39–47 school 專案、ch48 Spring Cloud（Boot 4.1 要搭 Spring Cloud 2026.0）、JSON 範例的欄位順序（Jackson 3 預設照字母排序）。
+- 修正：ch47 `SecurityConfig` 要把 `/error` 加進 permitAll，否則學生權限不足會得到 401 而不是投影片寫的 403（JWT 過濾器不處理轉到 /error 的請求；Spring Security 6 起就是這樣，不是 4.1 才有）。
+- 修正：ch29、ch38、ch39 的回應 JSON 改成實際的欄位順序（Jackson 3 對一般類別照字母排序，record 照宣告順序），ch39 講稿補一句說明。
+- 待做：ch48 Spring Cloud（Boot 4.1 要搭 Spring Cloud 2026.0）。
 
 範例程式當初用 Spring Boot 4.0.9 編譯驗證，沒有用 4.1.2 重跑。新專案用 4.1.2 沒問題，風險不大，但沒有逐章確認。
 

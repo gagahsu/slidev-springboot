@@ -806,7 +806,7 @@ class: flex flex-col justify-center items-center text-center
 public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
     http
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/register", "/auth/login").permitAll()
+            .requestMatchers("/register", "/auth/login", "/error").permitAll()
             // 其他規則和上一章一樣
             .anyRequest().authenticated()
         )
@@ -819,7 +819,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter 
 ```
 
 - 方法的參數多一個 `JwtAuthFilter`，Spring 會把我們寫的關卡交進來
-- 登入的網址要公開
+- 登入的網址要公開；`/error` 也要公開（理由見講稿）
 - 不使用 Session：伺服器不替任何人保管東西
 - 把我們的關卡排進隊伍
 - 沒有通過認證的請求，回覆 401
@@ -832,7 +832,9 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter 
 
 （下一步）方法的參數多一個 JwtAuthFilter。和上一章的寫法一樣，寫在參數，Spring 就會把我們寫的關卡交進來。
 
-（下一步）規則的第一條，除了註冊，再加上登入的網址 /auth/login。登入一定要公開，道理和註冊一樣。其他規則都和上一章相同。
+（下一步）規則的第一條，除了註冊，再加上登入的網址 /auth/login。登入一定要公開，道理和註冊一樣。
+
+同一行還多了 /error。權限不夠的時候，Spring 會把請求轉到 /error 這個網址，由它產生錯誤訊息。這次轉送不會再經過我們的通行證關卡，所以 /error 如果沒有公開，就會被當成「沒帶通行證」，學生刪資料得到的就變成 401，而不是應該的 403。上一章用帳號密碼時沒有這個問題，換成通行證才要加。其他規則都和上一章相同。
 
 （下一步）sessionManagement 這一行，設定成 STATELESS，無狀態。意思是不使用 Session，伺服器不替任何人保管東西。
 

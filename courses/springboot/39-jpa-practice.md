@@ -762,7 +762,7 @@ class: flex flex-col justify-center items-center text-center
 回傳：
 
 ```json
-{ "id": 1, "name": "Judy", "score": 85, "letterGrade": "B" }
+{ "id": 1, "letterGrade": "B", "name": "Judy", "score": 85 }
 ```
 
 <v-clicks>
@@ -781,6 +781,8 @@ class: flex flex-col justify-center items-center text-center
 （下一步）送進去的 JSON 有 idNumber，回來的 JSON 沒有。身分證字號沒有流出來。
 
 （下一步）回來的多了 id 和 letterGrade。id 是資料庫編的，等第是 ScoreVO 算的。85 分是 B。
+
+順帶一提，回傳的欄位是照英文字母排的，id、letterGrade、name、score，不是照我們在 class 裡寫的順序。這是 Spring Boot 4 用的 JSON 工具 Jackson 3 的預設，前端是用名字拿欄位的，順序不影響使用。
 
 （下一步）再到 Workbench 查 student 資料表，可以看到 id_number 有確實存進去。資料庫有存，只是沒有給前端。
 
