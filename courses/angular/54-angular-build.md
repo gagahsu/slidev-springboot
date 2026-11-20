@@ -395,7 +395,7 @@ layout: default
 ng build
 
 # 2. 切換到 browser 目錄（請換成自己的專案名稱）
-cd dist/dynamic-questionnaire/browser
+cd dist/cafe-shop-web/browser
 
 # 3. 啟動本機伺服器
 npx http-server

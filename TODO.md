@@ -58,9 +58,16 @@ SHOP-SPEC §10：`docker compose` 跑三個服務（`db` MySQL、`api` 後端、
 - 方法：把投影片的程式抽出來組成可執行專案，在 MySQL 9.7 上用 curl 與整合測試逐項驗證；驗證用的專案沒有放進 repo（都是從投影片原文組出來的）。
 
 
-### 6. Angular ch01–57 在 Angular 21 上逐章實測 — `待辦`
+### 6. Angular ch01–57 在 Angular 21 上逐章實測 — `完成`（2026-11-20）
 
-只改了環境安裝相關的章節（ch05、ch24、ch55、ch57），其他章的範例程式沒有在 Angular 21 上逐章實測。
+- 環境：照 ch05 的步驟用 `@angular/cli@21` 實際 `ng new`（`--file-name-style-guide=2016 --zoneless=false`、SCSS、不開 SSR、不產生 AI 設定），再 `ng add @angular/material`、`npm install chart.js ngx-cookie-service@21`。Angular 21.2、Material 21.2、TypeScript 5.9、RxJS 7.8。
+- 確認 ch05 的說明都對：npm 10.9（Node 22）建立專案會出現 `edgesOut` 錯誤、npm 11（Node 24）正常；`addTypeToClassName: true` 後 `ng g c` 產生 `XxxComponent`；根元件類別是 `App`；專案檔案清單一致。
+- import 檢查：ch01–57 所有片段用到的 78 個 Angular / Material / RxJS / chart.js / ngx-cookie-service 符號都存在，沒有被標成 `@deprecated` 的。
+- 範本檢查：244 段 HTML 用 Angular 21 範本解析器檢查，錯誤只有語法說明的佔位文字、填空題和跨頁範本的後半段。
+- 編譯與執行：21 個完整範例（ch21、23、37、38、41–48、50、52、56）拼回完整元件，`ng build`（嚴格範本檢查）通過，瀏覽器逐一打開沒有 console 錯誤；Dialog、倒數計時、購物車（Service／Signals）、表單驗證、圓餅圖都實際操作過。另外 58 組含 `@Component` 的片段也編譯過，錯誤都是節錄造成的。
+- 修正：ch31 改成 Material 21 的 `ng add`：只問主題一題（4 個選項，沒有 Custom）、不再問排版與動畫、只改 package.json／styles.scss／index.html 三個檔案；補充練習改成在 `styles.scss` 換 `mat.theme()` 的 palette（原本教改 `angular.json` 的預建主題 CSS，新專案裡沒有那一行）。
+- 修正：ch12 說明 `standalone: true` 從 Angular 19 起是預設值、CLI 產生的檔案不會寫；ch18 指向 `@for`（原本寫第 26 章的 `*ngFor`）；ch43 練習只用 `@if`；ch54、ch55 的專案名稱從舊問卷專題改成 `cafe-shop-web`。
+- 沒有驗證：ch55 Firebase 的互動畫面（需要 Google 帳號登入）。
 
 ## 四、小事
 

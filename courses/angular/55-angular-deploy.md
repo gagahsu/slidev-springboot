@@ -362,12 +362,12 @@ Firebase 專案建立完成後，CLI 詢問 Angular 的公共目錄路徑：
 
 - 此路徑需指向 `ng build` 產出的 `dist/<專案名稱>/browser/` 目錄
 - 該目錄內必須包含 `index.html` 檔案
-- 範例：若專案名稱為 `quest`，則輸入 `dist/quest/browser`
+- 範例：若專案名稱為 `cafe-shop-web`，則輸入 `dist/cafe-shop-web/browser`
 
 <!--
 這一題非常關鍵。CLI 問的是 public directory，也就是要托管哪個資料夾。
 
-這裡要指向上一章 `ng build` 打包出來的資料夾，也就是 `dist`、專案名稱、`browser`。例如專案名稱是 quest，就輸入 `dist/quest/browser`。
+這裡要指向上一章 `ng build` 打包出來的資料夾，也就是 `dist`、專案名稱、`browser`。例如專案名稱是 cafe-shop-web，就輸入 `dist/cafe-shop-web/browser`。
 
 最常見的錯誤，是輸入成專案的根目錄，或是忘了加上 `browser` 這一層。判斷的方法很簡單：這個資料夾裡一定要有 `index.html`，找不到就代表路徑寫錯了。
 -->
@@ -572,7 +572,7 @@ dist/
 ```json
 {
   "hosting": {
-    "public": "dist/quest/browser",
+    "public": "dist/cafe-shop-web/browser",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [{ "source": "**", "destination": "/index.html" }]
   }
