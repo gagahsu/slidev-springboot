@@ -548,6 +548,49 @@ Changes 分頁要顯示 No local changes，代表所有修改都存好了。
 -->
 
 ---
+
+# 專題練習：建立轉角咖啡的兩個 repository
+
+基礎學程最後要做「轉角咖啡」網站：前端、後端各放一個 repository。現在先把家準備好：
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; text-align:left;">
+<div>
+
+1. **File → New repository**，Name 填 `cafe-web`，勾 **Initialize this repository with a README**
+2. 用 VS Code 打開 `README.md`，改成：
+   ```markdown
+   # cafe-web
+   轉角咖啡一頁式網站的前端（Angular）
+   ```
+3. Commit，Summary 寫 `加上專案說明`
+4. 同樣做一個 `cafe-api`，說明寫「轉角咖啡的後端（Spring Boot）」
+
+</div>
+<div>
+
+<HistoryCheck :commits="[
+  { text: '加上專案說明', highlight: true },
+  { text: 'Initial commit', note: '勾了 README 自動建立' },
+]" />
+
+<CliBox :cmds="['git init cafe-web', 'git add README.md', 'git commit -m &quot;加上專案說明&quot;']" note="同樣的事用指令做" />
+
+</div>
+</div>
+
+<!--
+最後來做專題的第一步。整個基礎學程的期末專題，是轉角咖啡的一頁式網站，前端用 Angular、後端用 Spring Boot，兩邊各放一個 repository。
+
+（下一步）步驟跟這一章做 my-profile 一樣，只是這次在對話框裡勾選 Initialize this repository with a README，Desktop 會順便建一個 README.md。README 是專案的說明書，放上 GitHub 之後，打開專案首頁第一眼看到的就是它。
+
+把 README 改成兩行，第一行是專案名稱，第二行一句話說明這是什麼。存檔、回到 Desktop、打勾、寫 Summary、Commit。
+
+cafe-api 照樣再做一次。現在兩個 repository 裡都只有說明，等學到 HTML 和 Spring Boot，專題的程式碼就會放進來。
+
+【講師】給大家 8 分鐘，完成的同學 History 應該跟右邊一樣有兩個 commit。
+-->
+
+---
 layout: default
 ---
 

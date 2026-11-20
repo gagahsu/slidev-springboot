@@ -1209,6 +1209,85 @@ System.out.println("選課人數最多：" + maxCourse + "（" + maxCount + " �
 -->
 
 ---
+layout: default
+---
+
+# 練習 8（咖啡店）：轉角咖啡的菜單
+### 任務說明
+
+基礎專題「轉角咖啡」的菜單（`specs/CAFE-SPEC.md`），先用集合整理看看：
+
+```java
+record Product(String category, String name, int price, boolean available) { }
+
+List<Product> menu = List.of(
+    new Product("咖啡", "美式咖啡", 90, true),
+    new Product("咖啡", "拿鐵", 120, true),
+    new Product("咖啡", "手沖單品", 160, true),
+    new Product("茶飲", "伯爵紅茶", 100, true),
+    new Product("甜點", "原味司康", 85, true),
+    new Product("甜點", "季節水果塔", 160, false),
+    new Product("輕食", "蔬菜貝果", 120, true));
+```
+
+1. 用 for-each 印出**供應中**（`available()` 為 true）的品項，格式 `美式咖啡 $90`
+2. 用 `Map<String, List<String>>` 把供應中的品名依分類分組，印出 `咖啡：[美式咖啡, 拿鐵, 手沖單品]`，分類順序要跟菜單一樣
+3. 用 `Set<String>` 算出菜單上一共有幾個分類
+
+<!--
+【出題前的鋪陳】
+這一題換成我們期末專題的資料：轉角咖啡的菜單。之後在 Spring Boot 課，這份菜單會從 MySQL 查出來、變成 API；現在先在 Java 裡用集合把它整理好。
+
+`Product` 用的是繼承那一章學過的 record，一行就有建構方法和 `name()`、`price()` 這些取值方法。注意季節水果塔的 available 是 false，代表暫停供應。
+
+【問題引導】
+第二題請大家想一想：HashMap、LinkedHashMap、TreeMap，哪一種會照我們放進去的順序排？第三題，為什麼用 Set 就能算出有幾個分類，不會重複算？
+
+【等待與觀察】
+給大家 8 分鐘。
+-->
+
+---
+
+# 練習 8：解題提示
+
+```java
+for (Product p : menu) {
+    if (p.available()) {
+        System.out.println(p.name() + " $" + p.price());
+    }
+}
+
+Map<String, List<String>> byCategory = new LinkedHashMap<>();   // 保持放進去的順序
+for (Product p : menu) {
+    if (!p.available()) continue;
+    if (!byCategory.containsKey(p.category())) {
+        byCategory.put(p.category(), new ArrayList<>());
+    }
+    byCategory.get(p.category()).add(p.name());
+}
+for (Map.Entry<String, List<String>> e : byCategory.entrySet()) {
+    System.out.println(e.getKey() + "：" + e.getValue());   // 咖啡：[美式咖啡, 拿鐵, 手沖單品]
+}
+
+Set<String> categories = new HashSet<>();
+for (Product p : menu) categories.add(p.category());
+System.out.println("分類數：" + categories.size());           // 分類數：4
+```
+
+<!--
+【逐步解說】
+第一題就是 for-each 加上 if，季節水果塔不會印出來，所以會印六行。
+
+第二題的重點是 LinkedHashMap。HashMap 不保證順序，TreeMap 會照字的編碼排序，只有 LinkedHashMap 會照我們放進去的順序，所以咖啡、茶飲、甜點、輕食會照菜單的順序出現。分組的寫法是固定套路：這個分類還沒有清單，就先放一個空的 ArrayList 進去，然後把品名加進那個分類的清單。之後學到 `computeIfAbsent`，這四行可以縮成一行。
+
+第三題，Set 不收重複的值，七個品項的分類丟進去，重複的咖啡和甜點只會留一份，所以 size 是 4。
+
+【延伸】
+下一章學 Stream 之後，同樣的問題會變得更短，我們會再用這份菜單練一次。
+-->
+
+---
 
 # 總結
 

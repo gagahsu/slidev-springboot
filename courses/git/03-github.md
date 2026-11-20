@@ -558,6 +558,47 @@ Local path 要換一個資料夾，假裝這是另一台電腦，例如在桌面
 -->
 
 ---
+
+# 專題練習：把兩個 repository 放上 GitHub
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; text-align:left;">
+<div>
+
+延續 B2 的 `cafe-web`、`cafe-api`：
+
+1. 兩個都按 **Publish repository** 放上 GitHub
+2. 在 GitHub 網頁上編輯 `cafe-web` 的 `README.md`，加一行 `作者：你的名字`，直接在網頁上 Commit（訊息寫 `加上作者`）
+3. 回到 Desktop：**Fetch origin → Pull origin**，確認本機的 README 也有這一行
+4. 在本機再改一次 README（例如加上 `開發中`），Commit（`標示開發中`）後 **Push origin**
+
+</div>
+<div>
+
+<HistoryCheck :commits="[
+  { text: '標示開發中', note: '本機做的，已 Push', highlight: true },
+  { text: '加上作者', note: '在 GitHub 網頁做的', highlight: true },
+  '加上專案說明',
+  'Initial commit',
+]" />
+
+<CliBox :cmds="['git push -u origin main', 'git pull']" note="Publish 之後的 Push / Pull" />
+
+</div>
+</div>
+
+<!--
+把上一章建好的兩個專題 repository 放上 GitHub，順便把這一章的 Push 和 Pull 各練一次。
+
+（下一步）第一步兩個都按 Publish。第二步故意在 GitHub 網頁上改 README，模擬「組員在別的地方改了東西」。第三步回到 Desktop 先 Fetch 再 Pull，本機就拿到網頁上的修改。第四步反過來，本機改、本機 Commit、Push 上去，到 GitHub 網頁重新整理就看得到。
+
+做完之後，cafe-web 的 History 會有四個 commit，跟右邊一樣。
+
+這兩個 repository 就是期末專題的家，之後每做完一個段落，就 Commit 再 Push 一次，養成習慣，電腦壞了也不怕。
+
+【講師】給大家 10 分鐘。提醒順序：開工先 Pull，收工記得 Push。
+-->
+
+---
 layout: default
 ---
 

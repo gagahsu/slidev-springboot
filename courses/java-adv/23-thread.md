@@ -1662,6 +1662,79 @@ Virtual Threads 不是用來取代 `synchronized` 或前面學的所有執行緒
 -->
 
 ---
+layout: default
+---
+
+# 練習 8（線上商店）：為什麼會超賣？
+### 任務說明
+
+線上商店的耶加雪菲只剩最後 **1 包**，小明和小美同時按下「結帳」。執行下面的程式幾次：
+
+```java
+class Stock {
+    private int quantity = 1;
+
+    boolean buy(String who) {
+        if (quantity > 0) {
+            try { Thread.sleep(10); } catch (InterruptedException e) { }   // 假裝在建立訂單
+            quantity--;
+            System.out.println(who + " 買到了，剩 " + quantity);
+            return true;
+        }
+        System.out.println(who + " 沒買到：庫存不足");
+        return false;
+    }
+}
+// main：同一個 Stock，兩條執行緒各呼叫一次 buy("小明")、buy("小美")，再 join
+```
+
+1. 會印出什麼？庫存最後是多少？
+2. 加一個關鍵字修好它，讓只有一個人買到
+
+<!--
+【情境切入】
+這是電商最經典的 bug：超賣。網站同時會有很多人下單，每個請求都是一條執行緒，就跟這題的小明和小美一樣。
+
+【引導思考】
+請先預測，再執行。關鍵在 if 判斷和 quantity 減一之間隔了一段時間：小明檢查「還有 1 包」之後、還沒扣掉之前，小美也檢查了一次，看到的還是 1 包。這跟售票系統那一題是同一個問題。
+
+【等待與觀察】
+給大家 5 分鐘，記得多跑幾次。
+-->
+
+---
+
+# 練習 8：解題提示
+
+```text
+小明 買到了，剩 0
+小美 買到了，剩 -1          ← 一包豆子賣給了兩個人
+```
+
+```java
+synchronized boolean buy(String who) { ... }   // 同一時間只有一條執行緒能進來
+```
+
+```text
+小明 買到了，剩 0
+小美 沒買到：庫存不足
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 <b>真正的後端怎麼做？</b> 商店的後端通常不只一台、庫存放在資料庫，<code>synchronized</code> 只管得到同一個程式裡的執行緒。所以專題用一句 SQL 讓資料庫幫忙把關：<code>UPDATE … SET stock = stock - ? WHERE id = ? AND stock >= ?</code>，更新到 0 筆就代表庫存不足（Spring Boot ch55）。
+</div>
+
+<!--
+【帶讀解法】
+沒有同步的版本，兩個人都買到，庫存變成負一，這就是超賣。
+
+修法是在 buy 前面加 synchronized。同一個 Stock 物件，一次只讓一條執行緒進到 buy 裡面，小美要等小明整個做完才進得來，那時候她看到的庫存已經是 0。
+
+【延伸到專題】
+但真正的線上商店不能只靠 synchronized。網站人多的時候會開好幾台後端，每一台都有自己的 synchronized，彼此管不到；庫存也不是放在 Java 的變數，而是放在資料庫。所以專題後端的做法，是把「檢查」和「扣除」寫在同一句 UPDATE 裡，讓資料庫自己保證只有一個人扣得到。這個寫法在 Spring Boot 第五十五章會實際做一次。
+-->
+
+---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>轉角咖啡 Corner Café</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 頂部導覽：店名 + 三個錨點連結 -->
+  <header class="header">
+    <a class="logo" href="#">轉角咖啡</a>
+    <nav class="nav">
+      <a class="nav-link" href="#menu">菜單</a>
+      <a class="nav-link" href="#reservation">訂位</a>
+      <a class="nav-link" href="#info">營業資訊</a>
+    </nav>
+  </header>
+
+  <!-- 主視覺 -->
+  <section class="hero">
+    <h1 class="hero-title">巷口的一杯好咖啡</h1>
+    <p class="hero-text">每天現烘的豆子、手作甜點，和一個可以坐下來的角落。</p>
+    <a class="cta" href="#reservation">立即訂位</a>
+  </section>
+
+  <!-- 菜單：先寫死三張卡片，之後在 Angular 課改成從 API 取得 -->
+  <section id="menu" class="section">
+    <h2 class="section-title">菜單</h2>
+    <div class="cards">
+      <article class="card">
+        <span class="badge">推薦</span>
+        <img class="card-img" src="menu/americano.svg" alt="美式咖啡">
+        <h3 class="card-title">美式咖啡</h3>
+        <p class="card-text">深焙豆萃取，加熱水</p>
+        <span class="price">NT$ 90</span>
+      </article>
+      <article class="card">
+        <img class="card-img" src="menu/latte.svg" alt="拿鐵">
+        <h3 class="card-title">拿鐵</h3>
+        <p class="card-text">濃縮咖啡加上綿密奶泡</p>
+        <span class="price">NT$ 120</span>
+      </article>
+      <article class="card">
+        <img class="card-img" src="menu/scone.svg" alt="原味司康">
+        <h3 class="card-title">原味司康</h3>
+        <p class="card-text">附奶油與果醬</p>
+        <span class="price">NT$ 85</span>
+      </article>
+    </div>
+  </section>
+
+  <!-- 訂位表單：欄位對應 CAFE-SPEC 的 reservations 資料表 -->
+  <section id="reservation" class="section">
+    <h2 class="section-title">訂位</h2>
+    <form class="form">
+      <label for="name">姓名</label>
+      <input class="input" id="name" type="text" placeholder="王小明">
+      <label for="phone">手機</label>
+      <input class="input" id="phone" type="tel" placeholder="0912345678">
+      <label for="date">日期</label>
+      <input class="input" id="date" type="date">
+      <label for="time">時間</label>
+      <input class="input" id="time" type="time">
+      <label for="people">人數</label>
+      <input class="input" id="people" type="number" min="1" max="8" value="2">
+      <label for="note">備註</label>
+      <textarea class="input" id="note" rows="3" placeholder="例如：靠窗、有小朋友"></textarea>
+      <button class="button" type="submit">送出訂位</button>
+    </form>
+  </section>
+
+  <!-- 營業資訊 -->
+  <footer id="info" class="footer">
+    <h2>營業資訊</h2>
+    <ul class="info-list">
+      <li>地址：台北市大安區轉角路 1 號</li>
+      <li>電話：02-1234-5678</li>
+      <li>營業時間：每天 10:00–20:00（每週一公休）</li>
+    </ul>
+    <a class="map-link" href="https://maps.google.com/?q=台北市大安區轉角路1號" target="_blank">在地圖上查看</a>
+  </footer>
+</body>
+</html>

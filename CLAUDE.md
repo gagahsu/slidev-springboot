@@ -53,7 +53,9 @@ tracks/basic.yaml        ← learning tracks (學程): ordered stages of chapter
 tracks/advanced.yaml
 specs/CAFE-SPEC.md       ← basic-track project (Corner Café one-page site); shared by all courses
 specs/SHOP-SPEC.md       ← advanced-track project (Corner Café online shop + ECPay sandbox); replaced the retired survey project
+TODO.md                  ← open items (manual ECPay card test, version re-checks); update its status when finishing one
 projects/                ← reference solutions the chapters quote (not part of the site build; each has its own build tool)
+  cafe-static/           ← plain HTML + CSS one-page café layout (no build); Angular ch08–11 「專題練習」. Same class names as cafe-web
   cafe-api/              ← Spring Boot 4.1.2 / Java 21 / Gradle, DB corner_cafe (CAFE-SPEC); Spring Boot ch50
   cafe-web/              ← Angular 21 (npm), menu + reservation form; Angular ch58
   cafe-shop-api/         ← Spring Boot 4.1.2 + Security/JWT + Flyway (V1 schema, V2 seed) + MyBatis reports + ECPay;

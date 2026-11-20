@@ -14,7 +14,7 @@
 
 要在瀏覽器手動跑一次：
 
-1. 開 Cloudflare Tunnel（`cloudflared tunnel --url http://localhost:8080`）。
+1. 開 Cloudflare Tunnel（`cloudflared tunnel --url http://localhost:8080`；用 Docker 部署時改接 `http://localhost:80`，網址填進 `.env` 的 `ECPAY_PUBLIC_URL`）。
 2. 設定 `ECPAY_RETURN_URL=https://<tunnel 網址>/api/payments/ecpay/notify` 後重啟 `cafe-shop-api`。
 3. 前台下單，用測試卡 `4311-9522-2222-2222`（有效期限任一未來月年、CVV 任意三碼）付款。
 4. 確認訂單自動變成「已付款」（`PAID`），後台看得到付款紀錄。
@@ -30,19 +30,20 @@ SHOP-SPEC §10：`docker compose` 跑三個服務（`db` MySQL、`api` 後端、
 - [x] 進階學程最後一個階段（Docker）接上專題。
 - 沒做：Docker 課仍是原本 slidev-docker 的講法（沒有改成 CLAUDE.md 的「生活故事 → Pairs → Poll」初學者格式）；GitHub Actions 自動建置推送只講概念。
 
-### 3. 其他課的專題切入點 — `待辦`
+### 3. 其他課的專題切入點 — `完成`（2026-11-20）
 
 規格書（CAFE-SPEC §8、SHOP-SPEC §11）列的各課咖啡店練習，目前只做了 MySQL。
 
-- [ ] Git 入門：建立 `cafe-api`、`cafe-web` 兩個 repo，練習 commit 和 push
-- [ ] Git 一般版：分支、Pull Request 的分組流程
-- [ ] Angular ch08–11：先刻出咖啡店的靜態版面
-- [ ] Java 基礎：用 `Product` 練習集合和 Stream
-- [ ] Java 進階：訂單狀態 enum、`BizException`
+- [x] Git 入門 ch02–04：各加一頁「專題練習」（建 `cafe-web` / `cafe-api`、Publish / Push / Pull、`menu-draft` 分支），附 HistoryCheck 與 CLI 對照
+- [x] Git ch17：「三人一組開發線上商店」兩頁（分工與分支保護、指令流程與 PR 描述範本）
+- [x] Angular ch08–11：每章一組「專題練習」（題目 + 參考答案），參考解答 `projects/cafe-static/`，截圖在 `public/images/08-html/`、`public/images/11-css/`
+- [x] Java 基礎 ch26 練習 8、ch27 練習 5：轉角咖啡菜單（集合、Stream）
+- [x] Java 進階 ch22 練習 5（`OrderStatus`、`RspCode`、`BizException`）、ch23 練習 8（超賣與 `synchronized`）
+- Java 範例都用 JDK 21 實際執行過，投影片上的輸出是實際結果
 
-### 4. 規格書標頭改成定稿 — `待辦`
+### 4. 規格書標頭改成定稿 — `完成`（2026-11-20）
 
-`specs/CAFE-SPEC.md`、`specs/SHOP-SPEC.md` 標頭還寫「初稿」。
+`specs/CAFE-SPEC.md`、`specs/SHOP-SPEC.md` 標頭與「各課切入點」標題的「初稿」已拿掉，狀態改成定稿，切入點表格改成實際做好的章節。
 
 ## 三、舊教材的版本相容性（沒有逐章驗證）
 

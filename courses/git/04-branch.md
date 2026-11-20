@@ -516,6 +516,49 @@ class: flex flex-col justify-center items-center text-center
 -->
 
 ---
+
+# 專題練習：在分支上寫菜單草稿
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; text-align:left;">
+<div>
+
+在 `cafe-web` 練一次完整的分支流程：
+
+1. 開一條分支 `menu-draft`
+2. 新增 `menu.md`，寫下三個品項（例如 `美式咖啡 90 元`），Commit（`新增菜單草稿`）
+3. 切回 **main**，看看 `menu.md` 是不是不見了
+4. **Branch → Merge into current branch**，把 `menu-draft` 合進 main，Push
+5. 刪掉 `menu-draft`
+
+</div>
+<div>
+
+<HistoryCheck :commits="[
+  { text: '新增菜單草稿', note: '在 menu-draft 做的', highlight: true },
+  '標示開發中',
+  '加上作者',
+  '加上專案說明',
+  'Initial commit',
+]" />
+
+<CliBox :cmds="['git switch -c menu-draft', 'git switch main', 'git merge menu-draft', 'git branch -d menu-draft']" note="同樣的流程用指令做" />
+
+</div>
+</div>
+
+<!--
+用專題的 cafe-web，把這一章的分支流程從頭到尾再走一次。
+
+（下一步）開一條叫 menu-draft 的分支，新增一個 menu.md，寫下三個品項和價格，這是之後網站菜單的草稿。Commit 之後切回 main，menu.md 會從資料夾裡消失，因為它只存在 menu-draft 這條分支上。
+
+合併回 main、Push、刪掉分支，一條分支的一生就走完了。
+
+真正做專題的時候，每做一個新功能，例如菜單、訂位表單，都開一條分支來做，做完再合回 main。下一章會遇到兩條分支改到同一行的情況，也就是衝突。
+
+【講師】給大家 8 分鐘。
+-->
+
+---
 layout: default
 ---
 

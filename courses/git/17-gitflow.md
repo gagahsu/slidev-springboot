@@ -799,6 +799,116 @@ Trunk-based 則是大家都在主幹上頻繁整合，每天部署好幾次。
 -->
 
 ---
+
+# 專題練習：三人一組開發線上商店（分工）
+
+進階專題 `cafe-shop-api`（`specs/SHOP-SPEC.md`）用 Git Flow 分組開發：
+
+<div class="grid grid-cols-2 gap-6">
+<div>
+
+**組長（開工前）**
+
+1. 建 `cafe-shop-api` repo，從 main 開出 `develop` 並 push
+2. Settings → Collaborators 邀請組員
+3. Settings → Branches：`main`、`develop` 禁止直接 push，PR 至少 **1 人 Approve** 才能合併
+
+</div>
+<div>
+
+**每人一條 feature 分支（從 develop 開）**
+
+| 組員 | 分支 | 內容 |
+| --- | --- | --- |
+| A | `feature/cart` | 購物車 API（Spring Boot ch54） |
+| B | `feature/orders` | 下單與取消（ch55） |
+| C | `feature/admin-orders` | 後台出貨、報表（ch57） |
+
+</div>
+</div>
+
+<div style="background: #fff8f0; border-left: 4px solid #d97706; padding: 0.8rem 1.2rem; border-radius: 4px; margin-top: 1rem;">
+
+**規則：** PR 的 base 一律選 `develop`；別人的 PR 至少看過一次才按 Approve；三個功能都合進 develop 後，組長開 `release/1.0.0` 發布。
+
+</div>
+
+<!--
+最後用專題來實際跑一次 Git Flow。進階學程的專題是轉角咖啡線上商店，後端的 cafe-shop-api 三個人一組開發。
+
+左邊是組長開工前要做的三件事：建 repo、開 develop、邀請組員，以及設定分支保護規則，讓 main 和 develop 不能直接推，一定要走 PR，而且要有一個人 Approve。這就是上一頁說的「導入前準備」。
+
+右邊是分工。每個人負責一個功能，各自從 develop 開一條 feature 分支：購物車、下單、後台訂單，剛好對應 Spring Boot 專題的三章。
+
+規則只有三條：PR 的 base 選 develop、互相 review、全部合進來之後由組長開 release 分支發布。
+
+【講師】分組時可以讓組長練習設定 Branch protection，其他人先去 clone。
+-->
+
+---
+
+# 專題練習：三人一組開發線上商店（流程）
+
+<div class="grid grid-cols-2 gap-6">
+<div>
+
+```bash
+# 組員：開工
+git switch develop && git pull
+git switch -c feature/cart
+# ...寫程式、一個小段落 commit 一次...
+git push -u origin feature/cart
+# → GitHub 開 PR：base develop ← feature/cart
+
+# 合併後清理
+git switch develop && git pull
+git branch -d feature/cart
+
+# 組長：發布 1.0.0
+git switch -c release/1.0.0 develop
+git switch main && git merge --no-ff release/1.0.0
+git tag -a v1.0.0 -m "線上商店 1.0.0"
+git switch develop && git merge --no-ff release/1.0.0
+git push origin main develop --tags
+```
+
+</div>
+<div>
+
+**PR 描述範本**
+
+```markdown
+## 做了什麼
+購物車 API：GET /api/cart、POST /api/cart/items
+（SHOP-SPEC §9）
+
+## 怎麼測試
+同一個規格加入兩次，數量會相加；
+超過庫存回 409
+
+## 自我檢查
+- [ ] ./gradlew test 通過
+- [ ] 沒有 commit .env 或密碼
+```
+
+</div>
+</div>
+
+<!--
+這一頁是實際的指令。
+
+組員開工前，先切到 develop 拉最新的版本，再開自己的 feature 分支。寫程式的時候，一個小段落就 commit 一次，做完 push 上去，到 GitHub 開 PR，base 選 develop。
+
+PR 合併之後，回到 develop 拉一次，把自己的本機分支刪掉。
+
+三個功能都合進 develop，組長開 release/1.0.0。release 上只修 bug，確認沒問題就合進 main、打上 v1.0.0 的 tag，再合回 develop，最後連 tag 一起推上去。這個版本號，到了 Docker 課就是 Image 的 tag。
+
+右邊是 PR 描述的範本：做了什麼、怎麼測試、自我檢查。審查的人照著「怎麼測試」操作一次，就知道功能對不對。最後一項提醒，不要把 .env 或密碼 commit 進去。
+
+【講師】可以故意讓 A 和 B 都改到同一個檔案，例如 SecurityConfig，讓大家在 PR 上實際解一次衝突。
+-->
+
+---
 layout: section
 class: flex flex-col justify-center items-center text-center
 ---

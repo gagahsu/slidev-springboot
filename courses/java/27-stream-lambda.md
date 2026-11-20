@@ -1141,6 +1141,83 @@ System.out.println("及格總分：" + total); // 479
 -->
 
 ---
+layout: default
+---
+
+# 練習 5（咖啡店）：用 Stream 整理菜單
+### 任務說明
+
+沿用集合框架練習 8 的轉角咖啡菜單（`record Product(String category, String name, int price, boolean available)`）：
+
+```java
+List<Product> menu = List.of(
+    new Product("咖啡", "美式咖啡", 90, true),
+    new Product("咖啡", "拿鐵", 120, true),
+    new Product("咖啡", "手沖單品", 160, true),
+    new Product("茶飲", "伯爵紅茶", 100, true),
+    new Product("甜點", "原味司康", 85, true),
+    new Product("甜點", "季節水果塔", 160, false),
+    new Product("輕食", "蔬菜貝果", 120, true));
+```
+
+全部用 Stream，而且都只算**供應中**的品項：
+
+1. 平均價格（提示：`mapToInt`、`average`）
+2. 120 元以內的品項，由便宜到貴，品名用「、」串成一行
+3. 每個分類有幾個品項，分類順序跟菜單一樣
+4. 最貴的品項（回傳的是 `Optional`）
+
+<!--
+【出題前的鋪陳】
+上一章我們用 for 迴圈和 Map 整理過這份菜單，寫了十幾行。這一題同樣的資料改用 Stream，大家感受一下差多少。
+
+【問題引導】
+四題的第一步都一樣：先把暫停供應的品項濾掉。第三題請想一想，groupingBy 預設給我們的是哪一種 Map？要怎麼讓分類照菜單的順序？第四題，max 為什麼回傳 Optional 而不是 Product？
+
+【等待與觀察】
+給大家 8 分鐘，可以先寫第一、二題。
+-->
+
+---
+
+# 練習 5：解題提示
+
+```java
+double avg = menu.stream().filter(Product::available)
+    .mapToInt(Product::price).average().orElse(0);
+System.out.println("平均價格：" + avg);                    // 平均價格：112.5
+
+String cheap = menu.stream()
+    .filter(p -> p.available() && p.price() <= 120)
+    .sorted(Comparator.comparingInt(Product::price))
+    .map(Product::name)
+    .collect(Collectors.joining("、"));
+System.out.println(cheap);          // 原味司康、美式咖啡、伯爵紅茶、拿鐵、蔬菜貝果
+
+Map<String, Long> count = menu.stream().filter(Product::available)
+    .collect(Collectors.groupingBy(Product::category, LinkedHashMap::new, Collectors.counting()));
+System.out.println(count);                                 // {咖啡=3, 茶飲=1, 甜點=1, 輕食=1}
+
+menu.stream().filter(Product::available)
+    .max(Comparator.comparingInt(Product::price))
+    .ifPresent(p -> System.out.println("最貴：" + p.name())); // 最貴：手沖單品
+```
+
+<!--
+【逐步解說】
+第一題，`mapToInt` 把每個品項換成價格，變成 IntStream 才有 average 可以用。average 回傳 OptionalDouble，因為清單可能是空的，所以接 `orElse(0)`。六個供應中的品項加起來 675，平均 112.5。
+
+第二題，filter 同時檢查供應中和價格，`Comparator.comparingInt` 依價格排序，再 map 成品名、用 joining 串起來。拿鐵和蔬菜貝果都是 120，排序是穩定的，會照原本菜單的順序。
+
+第三題，groupingBy 預設給 HashMap，順序不固定。中間多傳一個 `LinkedHashMap::new`，分類就會照第一次出現的順序。最後的 counting 是計數。
+
+第四題，max 回傳 Optional，因為如果全部暫停供應，就沒有最貴的品項。用 ifPresent，有值才印。
+
+【延伸】
+到了 Spring Boot 課，這些整理大多交給資料庫的 SQL 做；但拿到資料之後要再加工，例如把 Entity 轉成回傳給前端的 DTO，就會一直用到 stream 加 map。
+-->
+
+---
 
 # 總結
 

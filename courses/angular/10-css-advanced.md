@@ -1321,6 +1321,74 @@ layout: default
 -->
 
 ---
+layout: default
+---
+
+# 專題練習 — 轉角咖啡排版
+
+用這一章的 Flex 和 `:hover`，把轉角咖啡排整齊：
+
+1. `.header`：店名靠左、導覽連結靠右，上下置中（`justify-content: space-between`）
+2. `.nav`：三個連結排成一列，間隔 `20px`；`.nav-link:hover` 換成咖啡色
+3. `.hero`：高 `420px`，標語、說明、按鈕**直排**並水平、垂直都置中
+4. `.cards`：三張卡片排成一列、間隔 `20px`，每張一樣寬（`flex: 1`）
+5. `.form`：欄位直排，間隔 `8px`，最寬 `420px`；`.button:hover` 底色變深
+
+<!--
+上一章卡片還一張疊一張，這一章用 Flex 排成真正的網站版面。
+
+第一項導覽列，用 space-between 把店名推到最左、連結推到最右。第三項主視覺，要直排又要置中，想一想：flex-direction 改成 column 之後，justify-content 和 align-items 哪一個管上下、哪一個管左右？
+
+第四項的 `flex: 1`，讓三張卡片平分整列的寬度。
+
+我們先暫停一下，自己動手試試看。
+
+【講師】給大家 15 分鐘。第三項是這題最容易搞混的地方，可以請同學上台講一下主軸和次軸。
+-->
+
+---
+layout: default
+---
+
+# 專題練習 — 轉角咖啡排版（參考答案節錄）
+
+```css
+.header {
+  display: flex;
+  justify-content: space-between;   /* 店名靠左、連結靠右 */
+  align-items: center;
+  height: 64px;
+  padding: 0 24px;
+}
+.nav { display: flex; gap: 20px; }
+.nav-link:hover { color: #6f4e37; }
+
+.hero {
+  display: flex;
+  flex-direction: column;           /* 主軸變成上下 */
+  justify-content: center;          /* 主軸（上下）置中 */
+  align-items: center;              /* 次軸（左右）置中 */
+  height: 420px;
+}
+
+.cards { display: flex; gap: 20px; }
+.card { flex: 1; }                  /* 三張平分寬度 */
+
+.form { display: flex; flex-direction: column; gap: 8px; max-width: 420px; }
+.button:hover { background-color: #4a3324; }
+```
+
+完整檔案：`projects/cafe-static/style.css`（第二段）
+
+<!--
+回答剛才的問題。flex-direction 改成 column 之後，主軸變成上下，所以 justify-content 管上下置中，align-items 反過來管左右置中。這是 Flex 最常讓人搞混的地方，記住「justify 永遠跟著主軸走」就好。
+
+卡片的 `flex: 1`，三張都設 1，代表三張平分剩下的空間，不管螢幕多寬都一樣寬。
+
+表單也用 Flex 直排，好處是可以用 gap 統一控制每個欄位之間的距離，不用每個欄位各自設 margin。
+-->
+
+---
 layout: end
 ---
 

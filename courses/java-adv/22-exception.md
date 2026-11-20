@@ -556,6 +556,112 @@ enum BorrowResult {
 如果這題能獨立寫完，代表我們已經把「異常處理」這個主題從基礎到進階都串起來了。這份能力在實務專案裡，是區分「程式能跑」和「程式扛得住」的關鍵之一。
 -->
 ---
+layout: default
+---
+
+# 練習 5（線上商店）：訂單狀態與 BizException
+### 任務說明
+
+進階專題「轉角咖啡線上商店」（`specs/SHOP-SPEC.md` §5）的訂單只能照順序往前走：
+
+`待付款 → 已付款 → 已出貨 → 已完成`，`待付款`、`已付款` 可以改成 `已取消`，其他都不行。
+
+1. `enum OrderStatus`：`PENDING_PAYMENT("待付款")`、`PAID`、`SHIPPED`、`COMPLETED`、`CANCELLED`，加上 `getLabel()` 和 `boolean canChangeTo(OrderStatus next)`（用 switch 運算式）
+2. `enum RspCode`：`SUCCESS(200, "操作成功")`、`ORDER_STATUS_ERROR(409, "訂單狀態不允許這個操作")`
+3. `BizException extends RuntimeException`，帶著一個 `RspCode`
+4. `Order` 的 `changeStatus(next)`：不允許就丟出 `BizException`，訊息像「已出貨的訂單不能改成已取消」
+5. `main` 依序改成 `PAID`、`SHIPPED`、`CANCELLED`、`COMPLETED`，每一步都 catch，印出 `[409] 訊息`
+
+<!--
+【任務鋪陳】
+這一題的程式，跟線上商店後端真正在用的幾乎一模一樣（`projects/cafe-shop-api` 的 `OrderStatus`、`RspCode`、`BizException`）。前面學的 enum 錯誤代碼，在專題裡就叫 RspCode。
+
+【引導思考】
+為什麼 BizException 要繼承 RuntimeException，而不是 Exception？想一想：如果是受檢例外，從 Controller、Service 一路往下，每個方法都要寫 throws。後端的做法是讓它一路往上丟，最後由一個統一的地方，Spring Boot 的 `@RestControllerAdvice`，把它轉成 `{ code, message }` 回給前端。
+
+還有，狀態規則為什麼寫在 enum 裡，不寫在 Order 裡？因為規則跟著狀態走，以後多一個狀態，只要改 enum 一個地方。
+
+【等待與觀察】
+給大家 10 分鐘。
+-->
+---
+layout: default
+---
+
+# 練習 5：解題提示
+
+```java
+enum OrderStatus {
+    PENDING_PAYMENT("待付款"), PAID("已付款"), SHIPPED("已出貨"), COMPLETED("已完成"), CANCELLED("已取消");
+    private final String label;
+    OrderStatus(String label) { this.label = label; }
+    public String getLabel() { return label; }
+
+    public boolean canChangeTo(OrderStatus next) {
+        return switch (this) {
+            case PENDING_PAYMENT -> next == PAID || next == CANCELLED;
+            case PAID -> next == SHIPPED || next == CANCELLED;
+            case SHIPPED -> next == COMPLETED;
+            case COMPLETED, CANCELLED -> false;
+        };
+    }
+}
+
+class BizException extends RuntimeException {
+    private final RspCode rspCode;
+    BizException(RspCode rspCode, String message) { super(message); this.rspCode = rspCode; }
+    public RspCode getRspCode() { return rspCode; }
+}
+```
+
+<!--
+【帶讀解法】
+canChangeTo 用的是 switch 運算式：每個 case 直接回傳一個 boolean。最後一行把 COMPLETED 和 CANCELLED 寫在一起，兩個都是「終點」，不能再改。因為五個狀態都列到了，編譯器知道不會漏，不用寫 default；哪天多加一個狀態忘了寫規則，編譯就會失敗提醒我們。
+
+BizException 多帶一個 RspCode，丟出例外的地方決定「這是哪一種錯」，接住的地方就能拿 code 當 HTTP 狀態碼、拿 message 給使用者看。RspCode 的寫法跟本章開頭的 RtnCode 一樣，這裡省略。
+-->
+---
+layout: default
+---
+
+# 練習 5：解題提示（續）
+
+```java
+class Order {
+    private final String orderNo;
+    private OrderStatus status = OrderStatus.PENDING_PAYMENT;
+    Order(String orderNo) { this.orderNo = orderNo; }
+
+    void changeStatus(OrderStatus next) {
+        if (!status.canChangeTo(next)) {
+            throw new BizException(RspCode.ORDER_STATUS_ERROR,
+                status.getLabel() + "的訂單不能改成" + next.getLabel());
+        }
+        status = next;
+        System.out.println(orderNo + " → " + status.getLabel());
+    }
+}
+
+// main：PAID、SHIPPED、CANCELLED、COMPLETED 各試一次，catch 印出 "[" + code + "] " + message
+```
+
+```text
+CS2611200001 → 已付款
+CS2611200001 → 已出貨
+[409] 已出貨的訂單不能改成已取消
+CS2611200001 → 已完成
+```
+
+<!--
+【帶讀解法】
+changeStatus 先問 enum 能不能改，不行就丟 BizException，可以才真的改。
+
+看執行結果：付款、出貨都成功；第三步想取消一張已出貨的訂單，被擋下來，印出 409 和我們組好的訊息；因為每一步各自 try-catch，第四步完成照樣執行。
+
+【最後叮嚀】
+這就是專題後端的「商業規則」寫法：規則寫在一個地方，違反規則就丟 BizException，由最外層統一轉成回應。到了 Spring Boot 第五十二章和第五十五章，會看到同樣的三個類別。
+-->
+---
 layout: end
 ---
 

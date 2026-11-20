@@ -1151,6 +1151,78 @@ HTML 要一層包一層：深灰色包住橘色，橘色再包住綠色。
 -->
 
 ---
+layout: default
+---
+
+# 專題練習 — 轉角咖啡完成版面
+
+<div style="display: flex; gap: 1.5rem; align-items: flex-start;">
+<div style="flex: 1;">
+
+最後用這一章的背景、定位和 `z-index` 收尾：
+
+1. `.hero`：背景圖 `images/hero.svg`，鋪滿（`cover`）、置中，文字白色
+2. `.header`：捲動時固定在最上面（`fixed`），`z-index: 10` 蓋住內容；`body` 加 `padding-top: 64px` 讓出位置
+3. 第一張卡片加上「推薦」徽章：`.card` 設 `relative`，`.badge` 用 `absolute` 釘在右上角
+
+</div>
+<img src="/images/11-css/cafe-static.jpg" alt="轉角咖啡完成版面" style="width: 420px; border: 1px solid #e2e8f0;" />
+</div>
+
+<!--
+這是靜態版面的最後一步，做完就是右邊這個樣子。
+
+第一項主視覺的背景圖，用的是這一章學的 background-image、background-size 和 background-position。圖片在 `projects/cafe-static/images` 裡，也可以換成自己找的咖啡店照片。
+
+第二項，導覽列設成 fixed，捲到哪裡都會固定在最上面。但 fixed 會讓它脫離原本的排版，下面的內容會跑上來被蓋住，所以 body 要加一個跟導覽列一樣高的 padding-top。想一想，為什麼要加 z-index？
+
+第三項的徽章，跟這一章小節練習的徽章是同一招：父層 relative 當基準，子層 absolute 釘在角落。
+
+我們先暫停一下，自己動手試試看。
+-->
+
+---
+layout: default
+---
+
+# 專題練習 — 轉角咖啡完成版面（參考答案節錄）
+
+```css
+.hero {
+  background-image: url("images/hero.svg");
+  background-size: cover;
+  background-position: center;
+  color: white;
+}
+
+body { padding-top: 64px; }          /* 讓出導覽列的高度 */
+.header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 10;                       /* 捲動時蓋在卡片上面 */
+  background-color: white;
+}
+
+.card { position: relative; }        /* 徽章的定位基準 */
+.badge {
+  position: absolute;
+  top: 12px; right: 12px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background-color: #c0392b;
+  color: white;
+}
+```
+
+完整的 HTML 與 CSS：`projects/cafe-static/`（瀏覽器直接打開 `index.html`）
+
+<!--
+回答剛才的問題。卡片設了 position: relative 之後，在畫面上的堆疊順序會跟導覽列打架，捲動時卡片可能蓋到導覽列上面。給導覽列 z-index: 10，它就一定在最上層。另外導覽列一定要有背景色，不然透明的導覽列會看到底下的內容穿過去。
+
+到這裡，轉角咖啡的靜態版面就完成了。菜單是寫死的三張卡片，訂位表單也還不能送出。接下來學完 TypeScript 和 Angular，我們會在第五十八章把這一頁拆成元件，菜單改成從後端 API 取得，表單真的把訂位送到資料庫。
+-->
+
+---
 layout: end
 ---
 

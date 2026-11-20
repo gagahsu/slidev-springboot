@@ -1,4 +1,4 @@
-# 基礎專題：轉角咖啡一頁式網站 — 共用規格（初稿）
+# 基礎專題：轉角咖啡一頁式網站 — 共用規格
 
 > 基礎學程（Git / Java / MySQL / Spring Boot / Angular）的專題，以及這些課程裡跟專題有關的範例與練習，一律以本文件為準。
 > 要改規格就先改本文件，再改投影片。
@@ -6,7 +6,7 @@
 > 目標：零程式經驗的學生上完基礎學程後，能**自己做出一個前後端串通的小網站**：Angular 畫面 → 呼叫 Spring Boot API → 讀寫 MySQL。
 > 進階學程的電商專題（`SHOP-SPEC.md`）是同一家店的線上商店，資料表會沿用並擴充本文件的 `categories`、`products`。
 
-狀態：**初稿**。技術版本、範圍已確認（2026-11-18），目前沒有待確認項目。
+狀態：**定稿**（2026-11-20）。技術版本、範圍已確認（2026-11-18）；參考解答 `projects/cafe-static`（靜態版面）、`projects/cafe-api`、`projects/cafe-web` 已依本規格完成並驗證。之後要改規格，先改本文件再改投影片。
 
 ---
 
@@ -135,15 +135,15 @@ reservations（獨立，不跟其他表關聯）
 - 不用 Angular Material（進階內容），樣式用一般 CSS。
 - RWD：手機寬度下菜單卡片改成一欄即可（不要求完整 RWD 章節的內容）。
 
-## 8. 各課切入點（初稿）
+## 8. 各課切入點
 
 基礎學程上課順序：Git 入門 → HTML/CSS → Java → MySQL → Spring Boot → Angular → 專題整合。
 
 | 課程 / 章節 | 專題相關內容 |
 | ----------- | ------------ |
-| Git 入門版 b01–b06 | 建立 `cafe-api`、`cafe-web` 兩個 repo，練習 commit、push、分支 |
-| Angular ch08–11（HTML / CSS） | 先刻出一頁式網站的靜態版面（還沒有資料） |
-| Java 基礎 | 用 `Product` 類別、`List<Product>` 練習物件、集合、Stream（例如算菜單平均價格） |
+| Git 入門 ch02–04（原 b02–b04） | 「專題練習」：建立 `cafe-web`、`cafe-api` 兩個 repo（README）、Publish / Push / Pull、在 `menu-draft` 分支寫菜單草稿再合併 |
+| Angular ch08–11（HTML / CSS） | 「專題練習」：ch08 HTML 骨架 → ch09 上色與 Box Model → ch10 Flex 排版 → ch11 背景圖、固定導覽列、徽章；參考解答 `projects/cafe-static`（class 名稱與 cafe-web 一致） |
+| Java 基礎 ch26–27 | 集合 ch26 練習 8：`record Product` 的菜單用 `List` / `LinkedHashMap` 分組 / `Set`；Stream ch27 練習 5：平均價格、篩選排序 joining、groupingBy 計數、`max` 回傳 `Optional` |
 | MySQL ch01、ch04–07 | 建 `corner_cafe` 三張表（DDL）、查菜單（SELECT、WHERE、ORDER BY）、新增訂位（INSERT）、分類 JOIN 品項 |
 | Spring Boot ch03 | 建立 `cafe-api` 專案 |
 | Spring Boot ch12–21 | 菜單 API（GET）、訂位 API（POST、`@RequestBody`）、RESTful 路徑設計 |

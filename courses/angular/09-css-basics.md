@@ -1157,6 +1157,75 @@ layout: default
 -->
 
 ---
+layout: default
+---
+
+# 專題練習 — 幫轉角咖啡上色
+
+延續上一章的骨架，新增 `style.css`，用這一章學的選擇器、文字、顏色和 Box Model：
+
+1. `body`：去掉預設外距，字型用微軟正黑體，文字色 `#2f2a26`
+2. `.section`：最寬 `960px` 置中（`margin: 0 auto`），內距 `48px 20px`
+3. `.section-title`：咖啡色 `#4a3324`、`28px`
+4. `.card`：內距 `16px`、邊框 `1px solid #e7dccd`、圓角 `12px`、底色 `#fbf6ef`；`.price` 用 `#6f4e37` 粗體
+5. `.button`：咖啡色底、白字、無邊框、圓角 `999px`
+6. `.footer`：深咖啡色 `#4a3324` 底、白字、置中
+
+<!--
+上一章做好的骨架，這一章幫它穿上衣服。
+
+這六項都只用到這一章教過的東西：class 選擇器、文字顏色、字級、padding、margin、border、border-radius 和背景色。第二項的 `margin: 0 auto` 是讓區塊水平置中的常用寫法，左右外距自動平分。
+
+顏色大家可以換成自己喜歡的，但同一個網站建議只用兩三個主色，看起來才會一致。
+
+記得在 HTML 的 head 裡用 link 標籤把 style.css 接進來。
+
+我們先暫停一下，自己動手試試看。
+
+【講師】給大家 15 分鐘。這時候卡片還是一張疊一張往下排，下一章學 Flex 才會排成一列，這是正常的。
+-->
+
+---
+layout: default
+---
+
+# 專題練習 — 幫轉角咖啡上色（參考答案節錄）
+
+```css
+body {
+  margin: 0;
+  font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+  color: #2f2a26;
+}
+.section { max-width: 960px; margin: 0 auto; padding: 48px 20px; }
+.section-title { margin: 0 0 24px; color: #4a3324; font-size: 28px; }
+
+.card {
+  padding: 16px;
+  border: 1px solid #e7dccd;
+  border-radius: 12px;
+  background-color: #fbf6ef;
+}
+.price { color: #6f4e37; font-size: 18px; font-weight: bold; }
+
+.button {
+  padding: 10px 28px; border: none; border-radius: 999px;
+  background-color: #6f4e37; color: white; font-weight: bold;
+}
+.footer { padding: 40px 20px; background-color: #4a3324; color: white; text-align: center; }
+```
+
+完整檔案：`projects/cafe-static/style.css`（第一段）
+
+<!--
+這是參考答案的節錄，完整的 style.css 分成三段，第一段就是這一章的內容。
+
+注意 `.card` 的寫法，padding、border、border-radius、background-color 剛好是 Box Model 由內到外的順序，內距、邊框，再加上圓角和底色，一張卡片的樣子就出來了。
+
+`.button` 的 `border-radius: 999px` 是個小技巧：圓角設得比按鈕高度還大，兩端就會變成完整的半圓，看起來像一顆膠囊。
+-->
+
+---
 layout: end
 ---
 

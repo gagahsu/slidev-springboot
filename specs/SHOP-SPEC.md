@@ -1,4 +1,4 @@
-# 進階專題：轉角咖啡線上商店（電商前台＋後台）— 共用規格（初稿）
+# 進階專題：轉角咖啡線上商店（電商前台＋後台）— 共用規格
 
 > 進階學程（Git / Java / MySQL / Spring Boot / Angular / Docker）的專題，以及這些課程裡跟專題有關的範例與練習，一律以本文件為準。
 > 取代舊的「動態問卷系統」（已於 2026-11-20 從教材移除）。要改規格就先改本文件，再改投影片。
@@ -6,7 +6,7 @@
 > 目標：上完基礎學程的學生，做出一個**可以實際下單、用綠界測試環境付款**的電商網站，含會員前台與管理後台，最後用 Docker 部署。
 > 情境延續基礎專題（`CAFE-SPEC.md`）：同一家「轉角咖啡」開線上商店，賣咖啡豆、濾掛包和器材。
 
-狀態：**初稿**（後端已依本規格實作並驗證，見 §13）。技術版本、運費、逾時、管理員帳號、章數、公開網址工具、前端放 Angular 課都已確認（2026-11-18）。綠界相關內容依 2026-11 查閱的官方技術文件撰寫（來源見 §8.8），寫教材時要再核對一次。
+狀態：**定稿**（2026-11-20；後端、前端、Docker 部署都已依本規格實作並驗證，見 §10、§13）。技術版本、運費、逾時、管理員帳號、章數、公開網址工具、前端放 Angular 課都已確認（2026-11-18）。綠界相關內容依 2026-11 查閱的官方技術文件撰寫（來源見 §8.8），寫教材時要再核對一次。
 
 ---
 
@@ -314,12 +314,12 @@ Angular                    Spring Boot                          綠界（測試�
 
 本機用 Docker 測綠界時，`cloudflared tunnel --url http://localhost:80`，網址填進 `.env` 的 `ECPAY_PUBLIC_URL`。部署到雲端主機後，`PUBLIC_URL` / `ECPAY_PUBLIC_URL` 改成正式網域，就不需要 Cloudflare Tunnel。2026-11-20 以 Docker 29.10 / Compose 5.7 實際啟動驗證（見 `projects/cafe-shop-deploy/README.md`）。
 
-## 11. 各課切入點（初稿）
+## 11. 各課切入點
 
 | 課程 / 章節 | 專題相關內容 |
 | ----------- | ------------ |
-| Git 一般版 ch05、ch09 | 分組開發：功能分支、Git Flow、Pull Request 審查 |
-| Java 進階 | 泛型、enum（訂單狀態）、Optional、例外設計（`BizException`）、多執行緒概念（為什麼會超賣） |
+| Git ch17（Git Flow，原一般版 ch09） | 「專題練習：三人一組開發線上商店」：組長設 develop 與分支保護、`feature/cart` / `feature/orders` / `feature/admin-orders`、PR 描述範本、`release/1.0.0` 與 `v1.0.0` tag |
+| Java 進階 ch22–23 | ch22 練習 5：`OrderStatus.canChangeTo`（switch 運算式）、`RspCode`、`BizException extends RuntimeException`；ch23 練習 8：兩條執行緒搶最後一包豆子（超賣）→ `synchronized`，再連到 ch55 的條件式 UPDATE |
 | MySQL ch02–03 | 正規化、8 張表的關聯設計（為什麼訂單明細要存快照） |
 | MySQL ch08–10 | 商品搜尋的索引、報表查詢（GROUP BY、子查詢）、VIEW |
 | MySQL ch11 | 用 Flyway 管理 `cafe_shop` 的結構 |

@@ -898,6 +898,83 @@ layout: default
 -->
 
 ---
+layout: default
+---
+
+# 專題練習 — 轉角咖啡的骨架
+
+基礎專題要做「轉角咖啡」的一頁式網站（`specs/CAFE-SPEC.md`）。先只用 HTML 搭出骨架，從上到下五個區塊：
+
+<div style="display: flex; gap: 1.5rem; align-items: flex-start;">
+<div style="flex: 1;">
+
+| 區塊 | 標籤 |
+| --- | --- |
+| 頂部導覽：店名 + 菜單／訂位／營業資訊 | `<header>` `<nav>` `<a href="#menu">` |
+| 主視覺：標語 + 立即訂位 | `<section>` `<h1>` `<p>` `<a>` |
+| 菜單：三張品項卡片 | `<section id="menu">` `<article>` `<img>` `<h3>` |
+| 訂位：姓名、手機、日期、時間、人數、備註 | `<form>` `<label>` `<input>` `<textarea>` `<button>` |
+| 營業資訊：地址、電話、營業時間 | `<footer id="info">` `<ul>` `<li>` |
+
+</div>
+<img src="/images/08-html/cafe-static-plain.png" alt="轉角咖啡骨架" style="width: 260px; border: 1px solid #e2e8f0;" />
+</div>
+
+<!--
+這一題是我們期末專題的第一步。整個基礎學程最後要做出一個轉角咖啡的一頁式網站，這一章先用 HTML 把骨架搭起來，還不用管好不好看。
+
+由上往下五個區塊：導覽列、主視覺、菜單、訂位表單、營業資訊。表格右邊列了每個區塊會用到的標籤，右邊的圖是只有 HTML、還沒有 CSS 的樣子。
+
+導覽列的連結要跳到同一頁的某個區塊，寫法是 `href="#menu"`，再在菜單區塊加上 `id="menu"`，點下去就會捲過去。
+
+菜單的圖片可以先用任何一張圖，或是從 `projects/cafe-static/menu` 複製。
+
+我們先暫停一下，自己動手試試看。
+
+【講師】給大家 20 分鐘。這份 HTML 接下來三章會一路加上 CSS，請大家存好。
+-->
+
+---
+layout: default
+---
+
+# 專題練習 — 轉角咖啡的骨架（參考答案節錄）
+
+```html
+<header class="header">
+  <a class="logo" href="#">轉角咖啡</a>
+  <nav class="nav">
+    <a class="nav-link" href="#menu">菜單</a>
+    <a class="nav-link" href="#reservation">訂位</a>
+    <a class="nav-link" href="#info">營業資訊</a>
+  </nav>
+</header>
+
+<section id="menu" class="section">
+  <h2 class="section-title">菜單</h2>
+  <div class="cards">
+    <article class="card">
+      <img class="card-img" src="menu/americano.svg" alt="美式咖啡">
+      <h3 class="card-title">美式咖啡</h3>
+      <p class="card-text">深焙豆萃取，加熱水</p>
+      <span class="price">NT$ 90</span>
+    </article>
+    <!-- 拿鐵、原味司康照樣再寫兩張 -->
+  </div>
+</section>
+```
+
+完整檔案：`projects/cafe-static/index.html`
+
+<!--
+這是參考答案的節錄，完整的檔案在 `projects/cafe-static/index.html`。
+
+大家應該注意到，每個標籤都先加好了 class，像 header、card、price。現在還用不到，下一章學 CSS 選擇器時，就會靠這些 class 幫每個區塊上樣式。
+
+每張菜單卡片都用 `article` 包起來，裡面是圖片、品名、說明和價格。三張卡片的結構一模一樣，只是內容不同。到了 Angular 課，我們會把這種重複的結構，改成用 `@for` 從資料自動產生。
+-->
+
+---
 layout: end
 ---
 
