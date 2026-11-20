@@ -1,4 +1,6 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, Injector, OnInit, afterNextRender, inject } from '@angular/core';
+import { ViewportScroller } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 
 import { Category, Product } from '../../models';
 import { CafeApiService } from '../../services/cafe-api.service';
@@ -11,6 +13,9 @@ import { CafeApiService } from '../../services/cafe-api.service';
 })
 export class MenuComponent implements OnInit {
   private api = inject(CafeApiService);
+  private route = inject(ActivatedRoute);
+  private scroller = inject(ViewportScroller);
+  private injector = inject(Injector);
 
   categories: Category[] = [];
   products: Product[] = [];
@@ -27,6 +32,7 @@ export class MenuComponent implements OnInit {
           this.categories = cats.filter((c) => data.some((p) => p.categoryId === c.id));
           this.selectedId = this.categories[0]?.id ?? 0;
           this.loading = false;
+          this.scrollAgain();
         },
         error: () => this.showError(),
       }),
@@ -37,6 +43,14 @@ export class MenuComponent implements OnInit {
   // 目前選中分類的品項
   get shown(): Product[] {
     return this.products.filter((p) => p.categoryId === this.selectedId);
+  }
+
+  // 菜單載入後畫面變長，網址有 #reservation 這類錨點的話，等畫面更新完再捲一次才會對準
+  private scrollAgain(): void {
+    const fragment = this.route.snapshot.fragment;
+    if (fragment) {
+      afterNextRender(() => this.scroller.scrollToAnchor(fragment), { injector: this.injector });
+    }
   }
 
   private showError(): void {

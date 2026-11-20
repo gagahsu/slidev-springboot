@@ -385,79 +385,84 @@ MySQL 是什麼？
 
 # 安裝 MySQL（一）：下載
 
-前往 `dev.mysql.com/downloads/installer/`，下載下方 **Full Bundle** 的版本。
+前往 `dev.mysql.com/downloads/mysql/`，版本選 **9.7.4 LTS**、作業系統選 **Microsoft Windows**，下載第一個 **MSI Installer**。
 
-<img src="/screenshots/ch02-01-mysql-download.png" alt="MySQL 下載頁面" style="width:100%; max-height:250px; object-fit:contain; margin-top:8px;" />
+<img src="/screenshots/ch02-01-mysql97-download.png" alt="MySQL 9.7.4 LTS 下載頁面" style="width:100%; max-height:240px; object-fit:contain; margin-top:8px;" />
 
 <v-click>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
-💡 下載前會請你登入 Oracle 帳號，點下方的「No thanks, just start my download.」就可以跳過。
+💡 下載前會請你登入 Oracle 帳號，點下方的「No thanks, just start my download.」就可以跳過。<br>
+⚠️ 網路上的舊教學會叫你去 <code>downloads/installer</code> 下載「MySQL Installer」，那只有舊的 8.0 版，<b>不要用</b>。
 </div>
 
 </v-click>
 
 <!--
-前往 dev.mysql.com/downloads/installer，下載下方比較大的那一個，Full Bundle 的版本。
+前往 dev.mysql.com/downloads/mysql。Select Version 選 9.7.4 LTS，LTS 是長期支援版，會維護比較久，這門課都用這個版本。Select Operating System 選 Microsoft Windows。下面第一個，Windows x86 64-bit 的 MSI Installer，按 Download。
 
 （下一步）按下載之後，會請你登入 Oracle 帳號。不用登入，點下方的「No thanks, just start my download.」就可以直接下載。
+
+另外提醒，網路上很多舊教學會叫你去 downloads 斜線 installer 下載 MySQL Installer。那個安裝程式只有舊的 8.0 版，而且 8.0 已經停止維護了，請不要用它。
 -->
 
 ---
 
-# 安裝 MySQL（二）：選擇要裝的元件
+# 安裝 MySQL（二）：安裝 Server 和 Workbench
 
 <v-clicks>
 
-1. 執行下載的安裝程式，Setup Type 選 **Server only**
-2. 在 **Select Products** 畫面，從左邊把 **MySQL Workbench** 和 **MySQL Shell** 加到右邊
-3. 按 **Next**，再按 **Execute** 開始安裝
+1. 執行下載的 `mysql-9.7.4-winx64.msi`，Setup Type 選 **Typical**，按 **Install**
+2. 最後一頁勾著 **Run MySQL Configurator**，按 **Finish**：會接著打開設定精靈（下一頁）
+3. 操作畫面另外裝：到 `dev.mysql.com/downloads/workbench/` 下載 **MySQL Workbench** 的 MSI，一路按 Next 安裝
 
 </v-clicks>
 
-<img src="/screenshots/ithome/img-04.png" alt="MySQL Select Products" style="width:100%; max-height:230px; object-fit:contain; margin-top:8px;" />
-
 <!--
-執行下載的安裝程式。
+執行剛才下載的安裝檔。
 
-（下一步）Setup Type 選 Server only。
+（下一步）Setup Type 選 Typical，一般安裝，按 Install，等它跑完。
 
-（下一步）只裝 Server 不夠，我們還需要操作畫面。在 Select Products 這個畫面，就是下面這張圖，從左邊的清單找到 MySQL Workbench 和 MySQL Shell，加到右邊。右邊最後應該有三樣：Server、Workbench、Shell。
+（下一步）最後一頁有一個 Run MySQL Configurator 的選項，保持勾選，按 Finish。Configurator 是 MySQL 的設定精靈，下一頁就用它設定密碼。
 
-（下一步）按 Next，再按 Execute，等它安裝完成。
+（下一步）這個安裝檔只有資料庫本身，操作畫面 Workbench 要另外裝。到 dev.mysql.com/downloads/workbench，一樣選 Microsoft Windows，下載 MSI，安裝時一路按 Next 就好。可以等設定精靈做完再裝。
 -->
 
 ---
 
 # 安裝 MySQL（三）：設定伺服器
 
-接著會進入設定精靈，前面幾頁**保持預設**：
+**MySQL Configurator** 一頁一頁往下，前面幾頁**保持預設**：
 
 <v-clicks>
 
+- Data Directory：資料存放的位置，保持預設
 - Config Type：**Development Computer**（開發用，佔用記憶體比較少）
 - Port：**3306**（MySQL 的門牌號碼，不要改）
-- Authentication：保持預設
 
 </v-clicks>
 
-<img src="/screenshots/ithome/img-07.png" alt="MySQL Type and Networking" style="width:100%; max-height:220px; object-fit:contain; margin-top:8px;" />
+<img src="/screenshots/ithome/img-07.png" alt="MySQL Type and Networking" style="width:100%; max-height:200px; object-fit:contain; margin-top:8px;" />
+
+<p class="text-xs text-gray-500 text-center">截圖是舊版 8.0 的畫面，9.7 的 Type and Networking 這一頁內容一樣</p>
 
 <!--
-安裝完成後，會進入設定精靈。前面幾頁都保持預設就好。
+Configurator 會一頁一頁問你設定，前面幾頁都保持預設就好。
 
-（下一步）Config Type 是 Development Computer，開發用的電腦，佔用的記憶體比較少。
+（下一步）第一頁 Data Directory，是資料要存在電腦的哪裡，保持預設。
+
+（下一步）Type and Networking 這一頁，Config Type 是 Development Computer，開發用的電腦，佔用的記憶體比較少。
 
 （下一步）Port 是 3306。Port 可以想成門牌號碼，程式要找 MySQL，就去敲 3306 這扇門。請不要改，之後的設定都會用這個號碼。
 
-（下一步）Authentication 驗證方式，保持預設。
+截圖是舊版 8.0 的畫面，左上角寫的是 MySQL Installer，9.7 的這一頁內容是一樣的。
 -->
 
 ---
 
 # 安裝 MySQL（四）：設定 root 密碼
 
-**最重要的一步**：替最高權限的帳號 `root` 設定密碼。
+**最重要的一步**：在 **Accounts and Roles** 這一頁，替最高權限的帳號 `root` 設定密碼。
 
 <img src="/screenshots/ithome/img-09.png" alt="MySQL root 密碼設定" style="width:100%; max-height:220px; object-fit:contain; margin-top:8px;" />
 
@@ -470,9 +475,9 @@ MySQL 是什麼？
 </v-click>
 
 <!--
-接下來是最重要的一步：替 root 這個帳號設定密碼。root 是 MySQL 裡權限最高的帳號，什麼都能做。
+接下來是最重要的一步：在 Accounts and Roles 這一頁，替 root 這個帳號設定密碼。root 是 MySQL 裡權限最高的帳號，什麼都能做。
 
-在 MySQL Root Password 輸入密碼，Repeat Password 再輸入一次。
+在 MySQL Root Password 輸入密碼，Repeat Password 再輸入一次。下面新增其他使用者的部分不用管。
 
 （下一步）這個密碼一定要記下來。之後 Spring Boot 連資料庫、用 Workbench 開資料庫，都要用它。忘了的話，要重設很麻煩。上課練習的話，可以用簡單好記的密碼，但是請不要和你其他重要帳號的密碼一樣。
 -->
@@ -483,22 +488,25 @@ MySQL 是什麼？
 
 <v-clicks>
 
-1. Windows Service 的頁面保持預設：服務名稱 `MySQL80`、**開機自動啟動**
-2. 按 **Execute** 套用設定，最後按 **Finish**
-3. 開啟 **MySQL Workbench**，點 **Local instance MySQL80**，輸入 root 密碼
+1. Windows Service 保持預設：服務名稱 `MySQL97`、**開機自動啟動**；之後幾頁（Sample Databases 等）也保持預設
+2. 按 **Execute** 套用設定，全部打勾後按 **Finish**
+3. 開啟 **MySQL Workbench**，點 **Local instance MySQL97**，輸入 root 密碼
+4. 沒有這張卡片：按 **MySQL Connections** 旁的 ⊕，Hostname `127.0.0.1`、Port `3306`、Username `root`，按 OK
 
 </v-clicks>
 
-<img src="/screenshots/ithome/img-15.png" alt="MySQL Workbench 主畫面" style="width:100%; max-height:210px; object-fit:contain; margin-top:8px;" />
+<img src="/screenshots/ithome/img-15.png" alt="MySQL Workbench 主畫面" style="width:100%; max-height:190px; object-fit:contain; margin-top:8px;" />
 
 <!--
 最後幾步。
 
-（下一步）Windows Service 的頁面保持預設。服務名稱是 MySQL80，勾選開機自動啟動。這樣每次開機，MySQL 就會自己開始運作，不用手動打開。
+（下一步）Windows Service 這一頁保持預設。服務名稱是 MySQL97，九點七版的意思，勾選開機自動啟動。這樣每次開機，MySQL 就會自己開始運作，不用手動打開。後面還有幾頁，例如要不要安裝範例資料庫，都保持預設，直接下一步。
 
 （下一步）按 Execute 套用所有設定，全部打勾之後，按 Finish。
 
-（下一步）確認一下。開啟 MySQL Workbench，主畫面上有一張卡片叫 Local instance MySQL80。點它，輸入剛才的 root 密碼。能進去，就代表檔案櫃裝好了。
+（下一步）確認一下。開啟 MySQL Workbench，主畫面上有一張卡片叫 Local instance MySQL97。截圖是舊版的，所以寫的是 MySQL80。點它，輸入剛才的 root 密碼。能進去，就代表檔案櫃裝好了。
+
+（下一步）如果沒有看到這張卡片，自己加一個：按 MySQL Connections 旁邊的加號，Hostname 填 127.0.0.1，Port 3306，Username 是 root，按 OK，就會出現一張新的卡片。
 -->
 
 ---

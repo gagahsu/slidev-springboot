@@ -1232,5 +1232,5 @@ layout: end
 <!--
 這一章我們學了幾個掌控版面細節的工具：背景圖片的四個屬性；`display` 的各種值，特別是 `inline-block`；Position 定位，`fixed` 以視窗為基準，`relative` 加 `absolute` 讓子元素在父元素裡定位；`z-index` 控制堆疊順序；以及 CSS 優先權，id 大於 class 大於標籤，分數相同時才是後蓋前。
 
-下一章，我們要進入 JavaScript 的世界。我們下一章見。
+HTML 和 CSS 讓網頁有了骨架和外觀。接下來，我們要開始學寫程式，讓畫面真的動起來。我們下次見。
 -->

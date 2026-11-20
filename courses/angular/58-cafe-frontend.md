@@ -366,7 +366,7 @@ provideHttpClient(),
 
 - `fragment="menu"` → 網址變成 `/#menu`，捲到 `id="menu"` 的區塊
 - `anchorScrolling: 'enabled'`：讓 Angular 的路由幫我們捲動
-- 在 `/admin/reservations` 點「菜單」，會先回首頁再捲過去（菜單還在載入時，位置可能差一點，再點一次就對了）
+- 在 `/admin/reservations` 點「菜單」，會先回首頁再捲過去（菜單載入後要再捲一次，第 2 部分會補上）
 
 </v-clicks>
 
@@ -381,7 +381,7 @@ app.config 裡，provideRouter 加上 withInMemoryScrolling，把 anchorScrollin
 
 （下一步）anchorScrolling 打開，Angular 的路由才會幫我們捲動。
 
-（下一步）好處是，就算在訂位清單頁點「菜單」，也會先回首頁、再捲過去。不過首頁一打開，菜單還在跟後端拿資料，拿到之後畫面變長，訂位區塊會被往下推，所以位置可能差一點，再點一次就對了。
+（下一步）好處是，就算在訂位清單頁點「菜單」，也會先回首頁、再捲過去。不過首頁一打開，菜單還在跟後端拿資料，拿到之後畫面變長，下面的訂位區塊會被往下推，捲好的位置就偏掉了。等一下寫菜單元件的時候，會補一個小步驟解決。
 -->
 
 ---
@@ -513,7 +513,7 @@ Service 把所有呼叫後端的程式集中在一起。上面記得 import 剛�
 
 # 菜單元件：先載入，再顯示
 
-```ts {all|7|8-13|21-23|25-28}
+```ts {all|7|8-13|21-23|25}
 export class MenuComponent implements OnInit {
   private api = inject(CafeApiService);
   categories: Category[] = [];  products: Product[] = [];
@@ -538,10 +538,7 @@ export class MenuComponent implements OnInit {
     return this.products.filter((p) => p.categoryId === this.selectedId);
   }
 
-  private showError(): void {
-    this.loading = false;
-    this.error = '目前無法連線，請稍後再試';
-  }
+  private showError(): void { this.loading = false;  this.error = '目前無法連線，請稍後再試'; }
 }
 ```
 
@@ -598,6 +595,38 @@ export class MenuComponent implements OnInit {
 （下一步）分類按鈕用 @for 產生，目前選中的加上 active 樣式，點了就改 selectedId。
 
 （下一步）品項卡片也用 @for。圖片和說明可能沒有，所以各自用 @if 包起來。
+-->
+
+---
+
+# 菜單載入完，再捲一次
+
+從 `/admin/reservations` 點「訂位」：先捲到訂位區塊，菜單才載入完、把它往下推。載入完之後**再捲一次**：
+
+```ts {all|1-3|6-11|13}
+private route = inject(ActivatedRoute);       // 目前的網址
+private scroller = inject(ViewportScroller);  // 負責捲動畫面
+private injector = inject(Injector);
+
+private scrollAgain(): void {
+  const fragment = this.route.snapshot.fragment;   // 網址 # 後面的字，例如 reservation
+  if (fragment) {
+    afterNextRender(() => this.scroller.scrollToAnchor(fragment),
+                    { injector: this.injector });   // 等畫面更新完才捲
+  }
+}
+
+// ngOnInit 裡，this.loading = false; 的下一行加上：this.scrollAgain();
+```
+
+<!--
+還記得導覽列那一頁說的問題嗎？在訂位清單頁點「訂位」，Angular 會先回首頁、捲到訂位區塊。可是這時候菜單還在跟後端拿資料，等資料回來，菜單的卡片一張張出現，畫面變長，訂位區塊就被推到下面去了。
+
+（下一步）解法是：菜單載入完，再捲一次。先注入三個東西。ActivatedRoute 可以讀目前的網址；ViewportScroller 是 Angular 負責捲動畫面的服務；Injector 等一下 afterNextRender 會用到。import 的時候，ViewportScroller 來自 @angular/common，ActivatedRoute 來自 @angular/router，Injector 和 afterNextRender 來自 @angular/core，VS Code 通常會幫你自動加上。
+
+（下一步）scrollAgain 先讀網址井字號後面的字，例如 reservation。有的話，就捲到那個 id。為什麼要包一層 afterNextRender？因為我們改了資料之後，Angular 要等一下才會把卡片畫到畫面上。如果馬上捲，量到的還是卡片出現之前的位置。afterNextRender 的意思是：等畫面更新完，再執行裡面的程式。
+
+（下一步）最後在 ngOnInit 裡，loading 改成 false 的下一行，呼叫 scrollAgain。網址沒有井字號的時候，例如直接打開首頁，什麼都不會發生。
 -->
 
 ---

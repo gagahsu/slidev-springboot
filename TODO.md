@@ -19,6 +19,14 @@
 3. 前台下單，用測試卡 `4311-9522-2222-2222`（有效期限任一未來月年、CVV 任意三碼）付款。
 4. 確認訂單自動變成「已付款」（`PAID`），後台看得到付款紀錄。
 
+### 9. 重拍 MySQL 9.7 的安裝截圖（Spring Boot ch02） — `待辦`
+
+ch02 已改成 9.7.4 LTS 的安裝方式（`dev.mysql.com/downloads/mysql/` 的 MSI → MySQL Configurator → 另外安裝 Workbench；MySQL Installer 只剩 8.0）。下載頁截圖是新的（`ch02-01-mysql97-download.png`），其餘三張還是舊版 8.0 Installer 的畫面，投影片上有註明：
+
+- `ithome/img-07.png`（Type and Networking）、`ithome/img-09.png`（root 密碼）：換成 MySQL Configurator 的畫面
+- `ithome/img-15.png`（Workbench 主畫面）：卡片應該是 `Local instance MySQL97`
+- 順便確認 MSI 的 Setup Type 名稱（投影片寫 Typical）、最後一頁的 Run MySQL Configurator 選項，以及 Workbench 連 9.7 會不會跳出版本警告
+
 ## 二、專題相關，規格書有寫但還沒做
 
 ### 2. Docker 部署 — `完成`（2026-11-20）
