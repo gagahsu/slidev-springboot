@@ -903,7 +903,7 @@ layout: default
 
 # 專題練習 — 轉角咖啡的骨架
 
-基礎專題要做「轉角咖啡」的一頁式網站（`specs/CAFE-SPEC.md`）。先只用 HTML 搭出骨架，從上到下五個區塊：
+基礎專題要做「轉角咖啡」的一頁式網站。先只用 HTML 搭出骨架，從上到下五個區塊：
 
 <div style="display: flex; gap: 1.5rem; align-items: flex-start;">
 <div style="flex: 1;">
@@ -927,7 +927,7 @@ layout: default
 
 導覽列的連結要跳到同一頁的某個區塊，寫法是 `href="#menu"`，再在菜單區塊加上 `id="menu"`，點下去就會捲過去。
 
-菜單的圖片可以先用任何一張圖，或是從 `projects/cafe-static/menu` 複製。
+菜單的圖片可以先用任何一張圖，或是下載投影片上的 cafe-static.zip，裡面的 menu 資料夾就是菜單圖片。
 
 我們先暫停一下，自己動手試試看。
 
@@ -964,10 +964,10 @@ layout: default
 </section>
 ```
 
-完整檔案：`projects/cafe-static/index.html`
+完整檔案（含圖片）：下載 <a href="/downloads/cafe-static.zip" download><code>cafe-static.zip</code></a>，解壓縮後打開 `index.html`
 
 <!--
-這是參考答案的節錄，完整的檔案在 `projects/cafe-static/index.html`。
+這是參考答案的節錄，完整的檔案可以下載 cafe-static.zip，解壓縮之後，用瀏覽器打開 index.html 就能看。
 
 大家應該注意到，每個標籤都先加好了 class，像 header、card、price。現在還用不到，下一章學 CSS 選擇器時，就會靠這些 class 幫每個區塊上樣式。
 

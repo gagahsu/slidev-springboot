@@ -1161,7 +1161,7 @@ layout: default
 
 最後用這一章的背景、定位和 `z-index` 收尾：
 
-1. `.hero`：背景圖 `images/hero.svg`，鋪滿（`cover`）、置中，文字白色
+1. `.hero`：背景圖 `images/hero.svg`（在 <a href="/downloads/cafe-static.zip" download>cafe-static.zip</a> 裡），鋪滿（`cover`）、置中，文字白色
 2. `.header`：捲動時固定在最上面（`fixed`），`z-index: 10` 蓋住內容；`body` 加 `padding-top: 64px` 讓出位置
 3. 第一張卡片加上「推薦」徽章：`.card` 設 `relative`，`.badge` 用 `absolute` 釘在右上角
 
@@ -1172,7 +1172,7 @@ layout: default
 <!--
 這是靜態版面的最後一步，做完就是右邊這個樣子。
 
-第一項主視覺的背景圖，用的是這一章學的 background-image、background-size 和 background-position。圖片在 `projects/cafe-static/images` 裡，也可以換成自己找的咖啡店照片。
+第一項主視覺的背景圖，用的是這一章學的 background-image、background-size 和 background-position。圖片在 cafe-static.zip 的 images 資料夾裡，也可以換成自己找的咖啡店照片。
 
 第二項，導覽列設成 fixed，捲到哪裡都會固定在最上面。但 fixed 會讓它脫離原本的排版，下面的內容會跑上來被蓋住，所以 body 要加一個跟導覽列一樣高的 padding-top。想一想，為什麼要加 z-index？
 
@@ -1214,7 +1214,7 @@ body { padding-top: 64px; }          /* 讓出導覽列的高度 */
 }
 ```
 
-完整的 HTML 與 CSS：`projects/cafe-static/`（瀏覽器直接打開 `index.html`）
+完整的 HTML 與 CSS：下載 <a href="/downloads/cafe-static.zip" download><code>cafe-static.zip</code></a>（解壓縮後用瀏覽器打開 `index.html`）
 
 <!--
 回答剛才的問題。卡片設了 position: relative 之後，在畫面上的堆疊順序會跟導覽列打架，捲動時卡片可能蓋到導覽列上面。給導覽列 z-index: 10，它就一定在最上層。另外導覽列一定要有背景色，不然透明的導覽列會看到底下的內容穿過去。

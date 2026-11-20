@@ -1215,7 +1215,7 @@ body {
 .footer { padding: 40px 20px; background-color: #4a3324; color: white; text-align: center; }
 ```
 
-完整檔案：`projects/cafe-static/style.css`（第一段）
+完整檔案：<a href="/downloads/cafe-static.zip" download><code>cafe-static.zip</code></a> 裡的 `style.css`（第一段）
 
 <!--
 這是參考答案的節錄，完整的 style.css 分成三段，第一段就是這一章的內容。

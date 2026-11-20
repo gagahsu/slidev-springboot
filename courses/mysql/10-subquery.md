@@ -667,7 +667,7 @@ layout: default
 # 練習 1：任務說明
 ### 轉角咖啡：用子查詢與 EXISTS 找答案
 
-使用 `cafe_shop` 資料庫（`sql/cafe_shop/schema.sql` + `seed.sql`）。「有效訂單」指狀態是已付款、已出貨或已完成。
+使用 `cafe_shop` 資料庫（<a href="/downloads/cafe_shop/schema.sql" download><code>schema.sql</code></a> + <a href="/downloads/cafe_shop/seed.sql" download><code>seed.sql</code></a>）。「有效訂單」指狀態是已付款、已出貨或已完成。
 
 **任務：**
 1. 找出金額**高於平均**的有效訂單，顯示訂單編號與金額（平均也只算有效訂單）

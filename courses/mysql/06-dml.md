@@ -473,7 +473,7 @@ layout: default
 # 練習 1：任務說明
 ### 轉角咖啡：菜單的新增、調價與下架
 
-請重新執行 `sql/corner_cafe/schema.sql` 與 `sql/corner_cafe/seed.sql` 重置資料，再模擬老闆整理菜單：
+請重新執行 <a href="/downloads/corner_cafe/schema.sql" download><code>schema.sql</code></a> 與 <a href="/downloads/corner_cafe/seed.sql" download><code>seed.sql</code></a> 重置資料，再模擬老闆整理菜單：
 
 **任務：**
 1. 新增品項「冰滴咖啡」到咖啡分類（`category_id = 1`）：說明「低溫萃取 12 小時」、價格 150、排序 5

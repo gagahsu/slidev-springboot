@@ -366,7 +366,7 @@ layout: default
 # 練習 1：任務說明
 ### 轉角咖啡：菜單頁的 JOIN
 
-使用 `corner_cafe` 資料庫（`sql/corner_cafe/schema.sql` + `seed.sql`）。網站的菜單要顯示分類名稱，後台還要檢查分類有沒有內容：
+使用 `corner_cafe` 資料庫（<a href="/downloads/corner_cafe/schema.sql" download><code>schema.sql</code></a> + <a href="/downloads/corner_cafe/seed.sql" download><code>seed.sql</code></a>）。網站的菜單要顯示分類名稱，後台還要檢查分類有沒有內容：
 
 **任務：**
 1. 列出供應中的菜單：分類名稱、品項名稱、價格，依分類的排序、再依品項的排序（INNER JOIN）

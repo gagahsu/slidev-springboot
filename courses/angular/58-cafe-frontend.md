@@ -158,11 +158,39 @@ class: flex flex-col justify-center items-center text-center
 
 # 建立 cafe-web 專案
 
-和第 5 章一樣的指令：
+專案直接建在 Git 課做好的 `cafe-web` repository 資料夾裡：
+
+<v-clicks>
+
+1. 先把資料夾裡的 `README.md` **刪掉**（留著的話，`ng new` 會出現 `A merge conflicted on path "/README.md"`）
+2. 用 VS Code 打開這個資料夾，開終端機，執行第 5 章的指令，多加 `--directory .`（建在目前的資料夾）：
+
+   ```bash
+   ng new cafe-web --directory . --style=scss --ssr=false --file-name-style-guide=2016 --zoneless=false
+   ```
+
+3. 照第 5 章，打開 `angular.json`，把 `addTypeToClassName` 改成 `true`
+4. Angular 會產生新的 `README.md`，把原本的專案說明寫回去，用 GitHub Desktop commit
+
+</v-clicks>
+
+<!--
+專案要放進 Git 課建好的 cafe-web repository，這樣才能用 GitHub Desktop 保存、推上 GitHub。
+
+（下一步）第一步，先把資料夾裡的 README 刪掉。ng new 會自己產生一個 README，兩個撞在一起，就會出現 merge conflicted 的錯誤，專案建不起來。
+
+（下一步）用 VS Code 打開這個資料夾，開終端機，執行第五章的指令。多加一個 --directory 點，意思是建在目前這個資料夾，不要再多開一層。Angular 看到這裡已經是 Git 的 repository，會跳過 git init，直接用原本的。
+
+（下一步）別忘了第五章那個小設定：angular.json 的 addTypeToClassName 改成 true，元件的類別名稱才會是 HomeComponent，跟投影片一樣。
+
+（下一步）最後打開 README，把原本那兩行專案說明寫回去，在 GitHub Desktop commit 一次，例如「建立 Angular 專案」。
+-->
+
+---
+
+# 產生元件與 Service
 
 ```bash
-ng new cafe-web --style=scss --ssr=false --file-name-style-guide=2016 --zoneless=false
-cd cafe-web
 ng g c components/header
 ng g c components/hero
 ng g c components/menu
@@ -173,14 +201,44 @@ ng g c pages/reservation-list
 ng g s services/cafe-api
 ```
 
-<!--
-用第五章的指令建立專案，叫做 cafe-web。
+<v-click>
 
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ <code>ng g s</code> 產生的類別叫 <code>CafeApi</code>（<code>addTypeToClassName</code> 只管元件），請手動改成 <code>CafeApiService</code>，跟投影片一樣。
+</div>
+
+</v-click>
+
+<!--
 接著用 ng g c 產生元件。畫面上的五個區塊，放在 components 資料夾；完整的頁面放在 pages 資料夾，有首頁 home，和加分題的訂位清單。
 
 最後用 ng g s 產生呼叫後端的 Service。
 
-菜單的圖片放在 public 資料夾底下的 menu 資料夾，網址就是斜線 menu 斜線檔名，跟資料庫裡存的路徑一樣。
+（下一步）注意，Service 的類別名稱是 CafeApi，因為剛才改的設定只管元件。打開 cafe-api.service.ts，把 CafeApi 改成 CafeApiService，旁邊的 spec 測試檔也一起改，或直接刪掉。這樣等一下照投影片寫，名稱才對得起來。
+-->
+
+---
+
+# 下載素材包：圖片和樣式
+
+這一章專心寫程式，畫面的樣式和菜單圖片已經準備好：
+
+<v-clicks>
+
+- 下載 <a href="/downloads/cafe-web-starter.zip" download><code>cafe-web-starter.zip</code></a>，解壓縮後，把裡面的 `public` 和 `src` **複製到專案資料夾**，覆蓋同名檔案
+- `public/menu/`：12 張菜單圖片，網址是 `/menu/latte.svg`，跟資料庫存的 `image_url` 一樣
+- `src/styles.scss` 和每個元件的 `.scss`：樣式靠 class 名稱對上，所以接下來 HTML 裡的 `class="…"` 要照投影片寫
+
+</v-clicks>
+
+<!--
+HTML 和 CSS 在第八到十一章已經練過了，這一章專心把畫面接上後端。所以樣式和圖片已經幫大家準備好。
+
+（下一步）下載投影片上的素材包，解壓縮之後，裡面有 public 和 src 兩個資料夾。把它們複製到專案資料夾，跟原本的 public、src 合併，同名的檔案直接覆蓋。剛才 ng g c 產生的空白 scss，就會換成寫好的樣式。
+
+（下一步）public 底下的 menu 資料夾有十二張菜單圖片。public 是 Angular 放靜態檔的地方，裡面的檔案網址就是斜線 menu 斜線檔名，跟資料庫裡存的路徑一模一樣。
+
+（下一步）樣式是靠 class 名稱找到元素的。所以接下來寫 HTML 的時候，class 要照投影片寫，名稱對不上，那一塊就不會有樣式。
 -->
 
 ---
@@ -208,12 +266,85 @@ export const routes: Routes = [
 <app-reservation-form />
 ```
 
+<v-click>
+
+<div class="mt-2 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left text-sm">
+💡 用到哪個元件，就要加進那個元件的 <code>imports</code>：<code>app.component.ts</code> 加 <code>HeaderComponent</code>、<code>FooterComponent</code>，<code>home.component.ts</code> 加 <code>HeroComponent</code>、<code>MenuComponent</code>、<code>ReservationFormComponent</code>。
+</div>
+
+</v-click>
+
 <!--
 路由只有兩頁：首頁，和加分題的訂位清單。打錯網址就回首頁。
 
 app 元件放導覽列和頁尾，中間的 router-outlet 顯示目前的頁面。
 
 首頁 home 把主視覺、菜單、訂位表單依序放進來。這就是「拼成一間店」。
+
+（下一步）提醒一下，在 HTML 裡用到別的元件，要先在 TypeScript 的 imports 陣列加上它，不然會看到 is not a known element 的錯誤。VS Code 通常會提示你自動加上。
+-->
+
+---
+
+# 寫死的三個區塊
+
+<div class="grid grid-cols-2 gap-4">
+<div>
+
+```html
+<!-- header.component.html -->
+<header class="header">
+  <a class="logo" routerLink="/">轉角咖啡</a>
+  <nav>
+    <a routerLink="/" fragment="menu">菜單</a>
+    <a routerLink="/" fragment="reservation">訂位</a>
+    <a routerLink="/" fragment="info">營業資訊</a>
+  </nav>
+</header>
+
+<!-- hero.component.html -->
+<section class="hero">
+  <div class="text">
+    <h1>巷口的一杯好咖啡</h1>
+    <p>每天現烘的豆子、手作甜點。</p>
+    <a class="cta" routerLink="/" fragment="reservation">立即訂位</a>
+  </div>
+</section>
+```
+
+</div>
+<div>
+
+```html
+<!-- footer.component.html -->
+<footer id="info" class="footer">
+  <h2>營業資訊</h2>
+  <ul>
+    <li>📍 {{ info.address }}</li>
+    <li>☎️ {{ info.phone }}</li>
+    <li>🕙 {{ info.hours }}</li>
+  </ul>
+</footer>
+```
+
+```ts
+// footer.component.ts
+info = {
+  address: '台北市大安區轉角路 1 號',
+  phone: '02-1234-5678',
+  hours: '每天 10:00–20:00（週一公休）',
+};
+```
+
+</div>
+</div>
+
+<!--
+導覽列、主視覺、營業資訊這三塊不用後端，內容寫死在前端。
+
+左邊是導覽列和主視覺。連結用 routerLink 加 fragment，下一頁說明。用了 routerLink，這兩個元件的 imports 都要加上 RouterLink。
+
+右邊是營業資訊。地址、電話、營業時間放在元件的 info 物件裡，畫面用內嵌繫結，也就是兩個大括號，把它們顯示出來。footer 的 id 是 info，導覽列的「營業資訊」就是捲到這裡。
 -->
 
 ---
@@ -235,7 +366,7 @@ provideHttpClient(),
 
 - `fragment="menu"` → 網址變成 `/#menu`，捲到 `id="menu"` 的區塊
 - `anchorScrolling: 'enabled'`：讓 Angular 的路由幫我們捲動
-- 從 `/admin/reservations` 點「菜單」，也會先回首頁再捲過去
+- 在 `/admin/reservations` 點「菜單」，會先回首頁再捲過去（菜單還在載入時，位置可能差一點，再點一次就對了）
 
 </v-clicks>
 
@@ -250,7 +381,7 @@ app.config 裡，provideRouter 加上 withInMemoryScrolling，把 anchorScrollin
 
 （下一步）anchorScrolling 打開，Angular 的路由才會幫我們捲動。
 
-（下一步）好處是，就算在訂位清單頁點「菜單」，也會先回首頁、再捲過去。
+（下一步）好處是，就算在訂位清單頁點「菜單」，也會先回首頁、再捲過去。不過首頁一打開，菜單還在跟後端拿資料，拿到之後畫面變長，訂位區塊會被往下推，所以位置可能差一點，再點一次就對了。
 -->
 
 ---
@@ -269,7 +400,7 @@ class: flex flex-col justify-center items-center text-center
 
 # 資料的形狀：interface
 
-照規格書的 JSON 寫成 interface（第 29 章）：
+在 `src/app` 新增 `models.ts`，照規格書的 JSON 寫成 interface（第 29 章）：
 
 ```ts
 export interface Category {
@@ -292,6 +423,48 @@ export interface Product {
 先照規格書的 JSON，寫出資料的形狀。這是第二十九章的 interface。
 
 欄位名稱要跟後端一模一樣，大小寫也要一樣。description 和 imageUrl 可能是空的，型別寫成 string 或 null，等一下畫面上就要記得處理沒有的情況。
+
+這個檔案不是用 ng g 產生的，在 VS Code 的 src/app 資料夾按右鍵，新增檔案，命名為 models.ts。訂位用的三個 interface，下一頁接著寫在同一個檔案。
+-->
+
+---
+
+# 訂位的資料形狀
+
+接著寫在同一個 `models.ts`：
+
+```ts {all|1-9|11-17|19-22}
+export interface ReservationRequest {     // 送出去的表單
+  name: string;
+  phone: string;
+  email: string;
+  reserveDate: string;                    // yyyy-MM-dd
+  reserveTime: string;                    // HH:mm
+  people: number | null;                  // 數字欄位清空時是 null
+  note: string;
+}
+
+export interface Reservation {            // 後端回來的訂位
+  id: number;
+  name: string;  phone: string;  email: string | null;
+  reserveDate: string;  reserveTime: string;
+  people: number;  note: string | null;
+}
+
+export interface ApiError {               // 後端的錯誤回應
+  message: string;
+  fields: Record<string, string>;         // 欄位名稱 → 錯誤訊息
+}
+```
+
+<!--
+訂位需要三個 interface。
+
+（下一步）ReservationRequest 是送給後端的表單，欄位跟後端的 ReservationRequest 一樣。日期和時間在前端是字串，格式照規格書。人數寫成 number 或 null，因為客人把人數欄位清空的時候，ngModel 會給 null。
+
+（下一步）Reservation 是後端回來的訂位，比表單多一個 id。客人沒填的 Email 和備註，後端存成 null，所以這兩個欄位可能是 null。
+
+（下一步）ApiError 是後端錯誤的格式，就是後端章的 message 和 fields。Record 加上兩個 string，意思是「key 是字串、value 也是字串」的物件。
 -->
 
 ---
@@ -317,11 +490,15 @@ export class CafeApiService {
   createReservation(req: ReservationRequest): Observable<Reservation> {
     return this.http.post<Reservation>(`${this.baseUrl}/reservations`, req);
   }
+
+  getReservations(date: string): Observable<Reservation[]> {   // 加分題
+    return this.http.get<Reservation[]>(`${this.baseUrl}/reservations?date=${date}`);
+  }
 }
 ```
 
 <!--
-Service 把所有呼叫後端的程式集中在一起。
+Service 把所有呼叫後端的程式集中在一起。上面記得 import 剛才 models.ts 裡的 interface。
 
 （下一步）baseUrl 是我們自己的後端。
 
@@ -329,14 +506,14 @@ Service 把所有呼叫後端的程式集中在一起。
 
 （下一步）查品項，可以帶分類編號，也可以不帶。
 
-新增訂位用 post，把表單資料送出去。元件只要呼叫這些方法，不用知道網址長什麼樣子。
+新增訂位用 post，把表單資料送出去。最後一個是加分題用的，用日期查訂位。元件只要呼叫這些方法，不用知道網址長什麼樣子。
 -->
 
 ---
 
 # 菜單元件：先載入，再顯示
 
-```ts {all|7|8-13|21-23}
+```ts {all|7|8-13|21-23|25-28}
 export class MenuComponent implements OnInit {
   private api = inject(CafeApiService);
   categories: Category[] = [];  products: Product[] = [];
@@ -360,6 +537,11 @@ export class MenuComponent implements OnInit {
   get shown(): Product[] {
     return this.products.filter((p) => p.categoryId === this.selectedId);
   }
+
+  private showError(): void {
+    this.loading = false;
+    this.error = '目前無法連線，請稍後再試';
+  }
 }
 ```
 
@@ -372,18 +554,20 @@ export class MenuComponent implements OnInit {
 
 （下一步）shown 是一個 getter，算出目前分類的品項。點分類的時候只要改 selectedId，畫面就會跟著變，不用再呼叫一次後端。
 
-任何一個呼叫失敗，都顯示錯誤訊息。
+（下一步）任何一個呼叫失敗，都交給 showError：不再載入中，改顯示錯誤訊息。
 -->
 
 ---
 
 # 菜單的畫面
 
-```html {all|1-4|6-10|12-20}
+```html {all|1-6|8-12|13-23}
+<section id="menu" class="section">
+  <h2 class="section-title">菜單</h2>
 @if (loading) {
-  <p>載入中…</p>
+  <p class="hint">載入中…</p>
 } @else if (error) {
-  <p class="error">{{ error }}</p>
+  <p class="hint error">{{ error }}</p>
 } @else {
   <div class="tabs">
     @for (c of categories; track c.id) {
@@ -394,19 +578,22 @@ export class MenuComponent implements OnInit {
     @for (p of shown; track p.id) {
       <article class="card">
         @if (p.imageUrl) { <img [src]="p.imageUrl" [alt]="p.name" /> }
-        <h3>{{ p.name }}</h3>
-        @if (p.description) { <p>{{ p.description }}</p> }
-        <span class="price">NT$ {{ p.price }}</span>
+        <div class="body">
+          <h3>{{ p.name }}</h3>
+          @if (p.description) { <p>{{ p.description }}</p> }
+          <span class="price">NT$ {{ p.price }}</span>
+        </div>
       </article>
     }
   </div>
 }
+</section>
 ```
 
 <!--
 畫面用 @if 分成三種情況。
 
-（下一步）載入中，顯示載入中；出錯了，顯示錯誤訊息。千萬不要一片空白。
+（下一步）整個菜單包在 id 是 menu 的 section 裡，導覽列的「菜單」就是捲到這裡。載入中，顯示載入中；出錯了，顯示錯誤訊息。千萬不要一片空白。
 
 （下一步）分類按鈕用 @for 產生，目前選中的加上 active 樣式，點了就改 selectedId。
 
@@ -441,14 +628,18 @@ class: flex flex-col justify-center items-center text-center
 
 # 表單的資料與選項
 
-```ts {all|1|3-4|6-7|9-14}
-form: ReservationRequest = { name: '', phone: '', email: '', reserveDate: '', reserveTime: '', people: 2, note: '' };
+```ts {all|1-4|6-8|10-11|13-17}
+form: ReservationRequest = this.emptyForm();
+private emptyForm(): ReservationRequest {
+  return { name: '', phone: '', email: '', reserveDate: '', reserveTime: '', people: 2, note: '' };
+}
 
 errors: Record<string, string> = {};   // 欄位名稱 → 錯誤訊息
 message = '';
+sending = false;                        // 送出中，按鈕先停用
 
-minDate = this.toDateString(new Date());                                  // 今天
-maxDate = this.toDateString(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));  // 30 天後
+minDate = new Date().toLocaleDateString('sv-SE');                              // 今天
+maxDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('sv-SE');  // 30 天後
 
 timeSlots = this.buildTimeSlots();      // ['10:00', '10:30', … '19:30']
 private buildTimeSlots(): string[] {
@@ -461,11 +652,13 @@ private buildTimeSlots(): string[] {
 <!--
 表單元件的資料。
 
-（下一步）form 物件的欄位，跟後端的 ReservationRequest 一模一樣，送出時整個物件丟給後端。
+元件的 imports 記得加上 FormsModule，等一下的 ngModel 才能用。
 
-（下一步）errors 是一個物件，key 是欄位名稱，value 是錯誤訊息。這個形狀跟後端回來的 fields 一樣，後端的錯誤可以直接放進來。message 是成功或連線失敗的訊息。
+（下一步）form 物件的欄位，跟後端的 ReservationRequest 一模一樣，送出時整個物件丟給後端。emptyForm 產生一張空白的表單，一開始用它，送出成功後也用它清空。人數預設兩位。
 
-（下一步）日期的最小值是今天，最大值是三十天後，等一下放在日期欄位上，客人就選不到範圍外的日子。
+（下一步）errors 是一個物件，key 是欄位名稱，value 是錯誤訊息。這個形狀跟後端回來的 fields 一樣，後端的錯誤可以直接放進來。message 是成功或連線失敗的訊息。sending 記錄是不是送出中。
+
+（下一步）日期的最小值是今天，最大值是三十天後，等一下放在日期欄位上，客人就選不到範圍外的日子。toLocaleDateString 帶 sv-SE 是一個小技巧：瑞典的日期格式剛好是 yyyy-MM-dd，跟日期欄位和後端要的格式一樣。
 
 （下一步）時段從十點到七點半，每三十分鐘一個，用迴圈產生，放進下拉選單，客人就不會選到十點十五分。
 -->
@@ -474,35 +667,41 @@ private buildTimeSlots(): string[] {
 
 # 表單的畫面
 
-```html {all|1|3-6|8-14|16}
-<form (ngSubmit)="submit()">
-  <label>手機 *
-    <input name="phone" [(ngModel)]="form.phone" placeholder="0912345678" />
-    @if (errors['phone']) { <span class="error">{{ errors['phone'] }}</span> }
-  </label>
+```html {all|1-3|4-7|9-17|19-20}
+<section id="reservation" class="section">
+  <h2 class="section-title">線上訂位</h2>
+  <form class="form" (ngSubmit)="submit()">
+    <label>手機 *
+      <input name="phone" [(ngModel)]="form.phone" placeholder="0912345678" />
+      @if (errors['phone']) { <span class="error">{{ errors['phone'] }}</span> }
+    </label>
 
-  <label>時段 *
-    <select name="reserveTime" [(ngModel)]="form.reserveTime">
-      <option value="">請選擇</option>
-      @for (t of timeSlots; track t) { <option [value]="t">{{ t }}</option> }
-    </select>
-  </label>
-  <input name="reserveDate" type="date" [(ngModel)]="form.reserveDate" [min]="minDate" [max]="maxDate" />
+    <label>日期 *
+      <input name="reserveDate" type="date" [(ngModel)]="form.reserveDate" [min]="minDate" [max]="maxDate" />
+    </label>
+    <label>時段 *
+      <select name="reserveTime" [(ngModel)]="form.reserveTime">
+        <option value="">請選擇</option>
+        @for (t of timeSlots; track t) { <option [value]="t">{{ t }}</option> }
+      </select>
+    </label>
 
-  <button type="submit" [disabled]="sending">送出訂位</button>
-</form>
+    <button type="submit" class="wide" [disabled]="sending">送出訂位</button>
+    @if (message) { <p class="wide message">{{ message }}</p> }
+  </form>
+</section>
 ```
 
 <!--
 表單的畫面，用第二十一章的雙向繫結 ngModel。記得在元件的 imports 加上 FormsModule。
 
-（下一步）form 標籤的 ngSubmit，按下送出按鈕時呼叫 submit。
+（下一步）整個表單包在 id 是 reservation 的 section 裡，導覽列的「訂位」就是捲到這裡。form 標籤的 ngSubmit，按下送出按鈕時呼叫 submit。
 
-（下一步）每個欄位用 ngModel 綁到 form 物件，下面用 @if 顯示這個欄位的錯誤訊息。這裡只列出手機，其他欄位照樣寫。
+（下一步）每個欄位用 ngModel 綁到 form 物件，下面用 @if 顯示這個欄位的錯誤訊息。這裡只列出手機，姓名、Email、人數、備註照樣寫，name 和 ngModel 換成各自的欄位名稱。人數用 type 等於 number 的 input，備註用 textarea。Email 和備註比較長，label 加上 class 等於 wide，就會佔滿一整行。
 
-（下一步）時段是下拉選單，選項用 @for 產生。日期欄位用 min 和 max 限制範圍。
+（下一步）日期欄位用 min 和 max 限制範圍。時段是下拉選單，選項用 @for 產生。這兩個欄位下面，也照手機的寫法加上錯誤訊息。
 
-（下一步）送出中把按鈕停用，避免客人連按兩次，送出兩筆訂位。
+（下一步）送出中把按鈕停用，避免客人連按兩次，送出兩筆訂位。按鈕下面顯示成功或失敗的訊息。
 -->
 
 ---
@@ -611,9 +810,12 @@ class: flex flex-col justify-center items-center text-center
 
 ```ts
 export class ReservationListComponent implements OnInit {
+  private api = inject(CafeApiService);
   date = new Date().toLocaleDateString('sv-SE');   // 今天，yyyy-MM-dd
   reservations: Reservation[] = [];
+  error = '';
 
+  ngOnInit(): void { this.load(); }               // 一打開就查今天
   load(): void {
     this.api.getReservations(this.date).subscribe({
       next: (data) => (this.reservations = data),
@@ -632,9 +834,9 @@ export class ReservationListComponent implements OnInit {
 ```
 
 <!--
-加分題是店家查訂位的頁面。
+加分題是店家查訂位的頁面，後端要先完成第五十章的 GET /api/reservations?date=。imports 一樣要加 FormsModule。
 
-date 預設是今天。toLocaleDateString 帶 sv-SE，是一個小技巧：瑞典的日期格式剛好是 yyyy-MM-dd，跟後端要的一樣。
+date 預設是今天，一打開頁面就在 ngOnInit 查今天的訂位。toLocaleDateString 帶 sv-SE，是一個小技巧：瑞典的日期格式剛好是 yyyy-MM-dd，跟後端要的一樣。
 
 load 用日期呼叫後端，拿到的訂位放進陣列，畫面用 @for 畫成表格。totalPeople 用 reduce 把人數加總，店家就知道那天要準備幾個位子。
 

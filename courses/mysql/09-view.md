@@ -363,7 +363,7 @@ layout: default
 # 練習 1：任務說明
 ### 把「訂單摘要」與「每日營業額」封裝成 VIEW
 
-後台的訂單列表和營運摘要，每次都要 JOIN、算狀態、加總金額，寫起來很長。請在 `cafe_shop` 用 VIEW 封裝：
+後台的訂單列表和營運摘要，每次都要 JOIN、算狀態、加總金額，寫起來很長。請在 `cafe_shop`（<a href="/downloads/cafe_shop/schema.sql" download><code>schema.sql</code></a> + <a href="/downloads/cafe_shop/seed.sql" download><code>seed.sql</code></a>）用 VIEW 封裝：
 
 **任務：**
 1. 建立 `order_summary_view`：訂單 `id`、`order_no`、會員姓名、中文狀態（待付款 / 已付款 / 已出貨 / 已完成 / 已取消）、商品件數、`total_amount`、`created_at`
@@ -371,7 +371,7 @@ layout: default
 3. 用 `daily_sales_view` 找出近 7 天（含今天）營業額最高的 3 天
 
 <!--
-第一題，我們把後台常用的兩個查詢封裝成 VIEW。先執行 `sql/cafe_shop/schema.sql` 和 `seed.sql`，取得線上商店的範例資料。
+第一題，我們把後台常用的兩個查詢封裝成 VIEW。先執行第三章下載的 schema.sql 和 seed.sql，取得線上商店的範例資料。
 
 訂單摘要要 JOIN 會員和訂單明細，狀態要從英文代碼轉成中文，商品件數要把明細的數量加總。每日營業額要注意，待付款和已取消的訂單不能算進去。
 

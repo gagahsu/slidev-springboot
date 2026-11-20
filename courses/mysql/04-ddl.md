@@ -520,7 +520,7 @@ layout: default
 
 **任務：**
 1. 建立資料庫 `corner_cafe`（字元集 `utf8mb4`）
-2. 建立三張表（欄位見下一頁的提示，或 `specs/CAFE-SPEC.md` §4）
+2. 建立三張表（欄位見下一頁的提示）
 3. 用**條件約束**保證資料品質：
    - 分類名稱不可重複
    - 品項價格不可小於 0
@@ -620,7 +620,7 @@ CREATE TABLE reservations (
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>驗證約束：</b>試著新增一筆 9 人的訂位，會看到 <code>Check constraint 'chk_reservations_people' is violated</code>。完整腳本與範例資料在 <code>sql/corner_cafe/</code>。
+💡 <b>驗證約束：</b>試著新增一筆 9 人的訂位，會看到 <code>Check constraint 'chk_reservations_people' is violated</code>。完整腳本：下載 <a href="/downloads/corner_cafe/schema.sql" download><code>schema.sql</code></a>；範例資料：下載 <a href="/downloads/corner_cafe/seed.sql" download><code>seed.sql</code></a>（下一章開始用）。
 </div>
 
 <!--
@@ -628,7 +628,7 @@ CREATE TABLE reservations (
 
 日期和時間分成兩個欄位，方便查「某一天的所有訂位」。人數用 CHECK 限制在一到八人，一次最多預約八位，跟網站的規則一樣。
 
-寫完之後，可以故意新增一筆九人的訂位，看看約束有沒有擋下來。完整的腳本和範例資料都放在 `sql/corner_cafe` 資料夾，下一章開始就會用到。
+寫完之後，可以故意新增一筆九人的訂位，看看約束有沒有擋下來。完整的腳本和範例資料，點投影片上的 schema.sql 和 seed.sql 就能下載，下一章開始就會用到。
 -->
 
 ---

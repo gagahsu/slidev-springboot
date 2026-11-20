@@ -192,12 +192,10 @@ class: flex flex-col justify-center items-center text-center
 
 # 資料庫：corner_cafe
 
-在 MySQL 課已經建過，執行 `courses/mysql/sql/corner_cafe/` 的兩個檔案：
+在 MySQL 課已經建過。還沒有的話，下載兩個檔案，用 Workbench 的 **File → Open SQL Script** 打開，按閃電圖示依序執行：
 
-```sql
-SOURCE schema.sql;   -- 建立 corner_cafe 與三張表
-SOURCE seed.sql;     -- 5 個分類、12 個品項、6 筆訂位
-```
+- <a href="/downloads/corner_cafe/schema.sql" download><code>schema.sql</code></a>：建立 `corner_cafe` 與三張表
+- <a href="/downloads/corner_cafe/seed.sql" download><code>seed.sql</code></a>：5 個分類、12 個品項、6 筆訂位
 
 <v-clicks>
 
@@ -208,7 +206,7 @@ SOURCE seed.sql;     -- 5 個分類、12 個品項、6 筆訂位
 </v-clicks>
 
 <!--
-資料庫在 MySQL 課已經建過了。如果還沒有，執行 corner_cafe 資料夾裡的 schema 和 seed 兩個檔案。
+資料庫在 MySQL 課已經建過了。如果還沒有，點投影片上的兩個檔名下載，在 Workbench 用 File、Open SQL Script 打開，按閃電圖示執行。先執行 schema，再執行 seed。
 
 （下一步）categories 是分類，有五個，其中季節限定還沒有品項。
 
@@ -240,9 +238,18 @@ class: flex flex-col justify-center items-center text-center
 - **Gradle - Groovy**、**Java**、Spring Boot **4.1.x**、Java **21**
 - Group `com.example`、Artifact `cafe-api`、Package name `com.example.cafe`
 - Dependencies：**Spring Web**、**Spring Data JPA**、**Validation**、**MySQL Driver**、**Lombok**、**Spring Boot DevTools**
-- 下載、解壓縮、Eclipse 匯入（Import → Existing Gradle Project）
+- 下載、解壓縮，把 `cafe-api` 資料夾**裡面的檔案**全部複製到 Git 課建好的 `cafe-api` repository 資料夾（和 `README.md` 放在一起）
+- Eclipse 匯入那個資料夾（Import → Existing Gradle Project）
 
 </v-clicks>
+
+<v-click>
+
+<div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-left">
+⚠️ 不要把整個資料夾拖進去變成 <code>cafe-api/cafe-api</code>：GitHub Desktop 要看得到 <code>build.gradle</code> 就在第一層。
+</div>
+
+</v-click>
 
 <!--
 到 start.spring.io 建立專案。
@@ -253,7 +260,11 @@ class: flex flex-col justify-center items-center text-center
 
 （下一步）Dependencies 加六個：Spring Web 寫 API、Spring Data JPA 存取資料庫、Validation 做欄位檢查、MySQL Driver 連 MySQL、Lombok 省掉 getter setter，還有 DevTools，改完程式會自動重新啟動。
 
-（下一步）下載後解壓縮，在 Eclipse 用 Import，選 Existing Gradle Project 匯入。
+（下一步）下載後解壓縮。Git 課的時候，我們已經用 GitHub Desktop 建好一個 cafe-api 的 repository，裡面只有 README。把解壓縮出來的 cafe-api 資料夾打開，裡面的檔案全部複製到那個 repository 的資料夾，跟 README 放在一起。
+
+（下一步）然後在 Eclipse 用 Import，選 Existing Gradle Project，匯入那個資料夾。
+
+（下一步）注意不要把整個資料夾拖進去，變成 cafe-api 裡面又有一個 cafe-api。打開 GitHub Desktop，應該看到 build.gradle、src 這些新檔案等著 commit。
 -->
 
 ---
@@ -332,7 +343,66 @@ public class Product {
 
 （下一步）available 用 Boolean，資料庫的 1 和 0 會自動轉成 true 和 false。
 
-（下一步）sortOrder 也一樣用 @Column 對應。Category 和 Reservation 兩個 Entity 照同樣的方式寫，請大家自己完成。
+（下一步）sortOrder 也一樣用 @Column 對應。Category 和 Reservation 兩個 Entity 照同樣的方式寫，下一頁就是。
+-->
+
+---
+
+# 另外兩個 Entity
+
+<div class="grid grid-cols-2 gap-4">
+<div>
+
+```java
+@Entity
+@Table(name = "categories")
+@Getter
+@Setter
+public class Category {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+    private String name;
+    @Column(name = "sort_order")
+    private Integer sortOrder;
+}
+```
+
+</div>
+<div>
+
+```java
+@Entity
+@Table(name = "reservations")
+@Getter
+@Setter
+public class Reservation {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+    private String name;
+    private String phone;
+    private String email;
+    @Column(name = "reserve_date")
+    private LocalDate reserveDate;
+    @Column(name = "reserve_time")
+    private LocalTime reserveTime;
+    private Integer people;
+    private String note;
+}
+```
+
+</div>
+</div>
+
+<!--
+另外兩張表的 Entity，寫法跟 Product 完全一樣，一樣放在 entity 資料夾。
+
+左邊是分類，只有編號、名稱和排序。
+
+右邊是訂位。日期用 LocalDate，時間用 LocalTime，對應資料表的 DATE 和 TIME。有底線的欄位一樣用 @Column 寫出資料表的名稱。
+
+資料表還有一個 created_at，由資料庫自己填上現在的時間，我們用不到，所以不寫也沒關係。
 -->
 
 ---
@@ -370,6 +440,38 @@ Repository 用第二十七章學過的方法名稱查詢。
 
 ---
 
+# 另外兩個 Repository
+
+```java {all|2|6}
+public interface CategoryRepository extends JpaRepository<Category, Integer> {
+    List<Category> findAllByOrderBySortOrder();   // 全部分類，依排序欄位
+}
+
+public interface ReservationRepository extends JpaRepository<Reservation, Integer> {
+    List<Reservation> findByReserveDateOrderByReserveTime(LocalDate reserveDate);  // 加分題用
+}
+```
+
+<v-click>
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
+💡 新增訂位用的 <code>save</code>、檢查分類存不存在的 <code>existsById</code>，<code>JpaRepository</code> 都已經有了，不用自己寫。
+</div>
+
+</v-click>
+
+<!--
+分類和訂位也各要一個 Repository，一樣放在 repository 資料夾，一個檔案一個介面。
+
+（下一步）分類：findAll 加上 OrderBySortOrder，就是查全部、依排序欄位排好。
+
+（下一步）訂位：用日期查，依時段排好。這是加分題「店家查訂位」要用的，先寫好放著。
+
+（下一步）新增訂位用的 save，還有等一下檢查分類存不存在的 existsById，JpaRepository 都已經幫我們準備好了。
+-->
+
+---
+
 # DTO 與 Service
 
 ```java {all|1-2|8-12|13-14}
@@ -401,7 +503,38 @@ public class MenuService {
 
 （下一步）最後用 Stream 的 map，把每個 Entity 轉成 DTO，再收集成 List。這是第三十八章學過的寫法。
 
-規格書還要求：帶了不存在的分類編號，要回 404。這個請大家用 existsById 自己補上。
+規格書還要求：帶了不存在的分類編號，要回 404。下一頁補上。
+-->
+
+---
+
+# 查分類，找不到就 404
+
+```java {all|1|5-9|12-16}
+public record CategoryDto(Integer id, String name, Integer sortOrder) {}
+
+// MenuService 再加上：
+@Autowired private CategoryRepository categoryRepository;
+public List<CategoryDto> getCategories() {
+    return categoryRepository.findAllByOrderBySortOrder().stream()
+        .map(c -> new CategoryDto(c.getId(), c.getName(), c.getSortOrder()))
+        .toList();
+}
+
+// getProducts 裡，有帶 categoryId 時先檢查：
+if (categoryId != null && !categoryRepository.existsById(categoryId)) {
+    throw new NotFoundException("找不到這個分類");
+}
+```
+
+<!--
+菜單還需要分類的資料，前端要用它做分類頁籤。
+
+（下一步）CategoryDto 也是 record，三個欄位跟規格書的 JSON 一樣。放在 dto 資料夾。
+
+（下一步）MenuService 多注入一個 CategoryRepository，加上 getCategories：查出全部分類，一樣用 Stream 轉成 DTO。
+
+（下一步）getProducts 的最前面，加上這個檢查：有帶分類編號，而且這個分類不存在，就丟出 NotFoundException。這是我們自己寫的例外，等一下在統一的錯誤處理裡，會把它變成 404。
 -->
 
 ---
@@ -528,7 +661,7 @@ public ReservationDto create(ReservationRequest req) {
     if (!onSlot || t.isBefore(LocalTime.of(10, 0)) || t.isAfter(LocalTime.of(19, 30))) {
         throw new FieldException("reserveTime", "請選擇營業時段");
     }
-    // …把 req 的欄位複製到 Reservation，save 之後轉成 ReservationDto 回傳
+    // …下一頁：把 req 的欄位複製到 Reservation，save 之後轉成 ReservationDto 回傳
 }
 ```
 
@@ -539,16 +672,86 @@ public ReservationDto create(ReservationRequest req) {
 
 （下一步）時段要是整點或半點，而且在十點到七點半之間。
 
-（下一步）都通過了，才建立 Reservation 物件、存進資料庫，再轉成 DTO 回傳。Email 和備註如果是空字串，存成 null 比較乾淨。
+（下一步）都通過了，才建立 Reservation 物件、存進資料庫，再轉成 DTO 回傳。下一頁就是這一段。
+-->
+
+---
+
+# 存進資料庫，再轉成 DTO
+
+```java {all|1-3|6-13|14-16}
+public record ReservationDto(Integer id, String name, String phone, String email,
+        LocalDate reserveDate, @JsonFormat(pattern = "HH:mm") LocalTime reserveTime,
+        Integer people, String note) {}
+
+// create() 的後半段：
+Reservation r = new Reservation();
+r.setName(req.name());
+r.setPhone(req.phone());
+r.setEmail(req.email() == null || req.email().isBlank() ? null : req.email());
+r.setReserveDate(req.reserveDate());
+r.setReserveTime(req.reserveTime());
+r.setPeople(req.people());
+r.setNote(req.note());
+Reservation saved = reservationRepository.save(r);
+return new ReservationDto(saved.getId(), saved.getName(), saved.getPhone(), saved.getEmail(),
+        saved.getReserveDate(), saved.getReserveTime(), saved.getPeople(), saved.getNote());
+```
+
+<!--
+這一頁把 create 寫完。
+
+（下一步）先看回傳的 ReservationDto，放在 dto 資料夾。比 Request 多了一個 id，前端才知道這筆訂位的編號。時間加上 @JsonFormat，回傳的格式是規格書的 18:30；沒加的話，會變成 18:30:00，多了秒數。
+
+（下一步）兩關都過了，建立一個 Reservation，把客人填的欄位一個一個抄過去。Email 是選填，客人沒填的時候前端會送空字串，我們存成 null，資料庫比較乾淨。
+
+（下一步）save 存進資料庫，回傳的物件已經有資料庫產生的 id。最後轉成 DTO 回給 Controller。
+-->
+
+---
+
+# 兩個自己寫的例外
+
+放在 `exception` 資料夾：
+
+```java {all|1-11|13-17}
+// 欄位格式對，但是不符合店家規則（日期、時段）→ 400
+public class FieldException extends RuntimeException {
+    private final String field;          // 哪個欄位出錯
+    public FieldException(String field, String message) {
+        super(message);
+        this.field = field;
+    }
+    public String getField() {
+        return field;
+    }
+}
+
+// 找不到資料（例如分類不存在）→ 404
+public class NotFoundException extends RuntimeException {
+    public NotFoundException(String message) {
+        super(message);
+    }
+}
+```
+
+<!--
+剛才 Service 丟出了兩種例外，都是我們自己寫的，放在 exception 資料夾。
+
+（下一步）FieldException 用在第二關：格式都對，但是不符合店家的規則。它比一般的例外多記了一個欄位名稱，這樣才知道錯誤訊息要顯示在哪個欄位下面。super(message) 是把訊息交給父類別保管，之後用 getMessage 拿得到。
+
+（下一步）NotFoundException 用在找不到資料的時候，例如分類編號不存在。它只需要一句訊息。
+
+兩個都繼承 RuntimeException，所以丟出來的時候，方法上不用寫 throws。
 -->
 
 ---
 
 # 統一的錯誤格式
 
-規格書規定：所有 400 都回同一個格式，前端才好處理。
+規格書規定：所有錯誤都回同一個格式，前端才好處理。
 
-```java {all|1|5-11|13-17}
+```java {all|1|5-11|12-16|17-21}
 public record ApiError(String message, Map<String, String> fields) {}
 
 @RestControllerAdvice
@@ -566,6 +769,11 @@ public class GlobalExceptionHandler {
     public ApiError handleField(FieldException ex) {
         return new ApiError("資料格式不正確", Map.of(ex.getField(), ex.getMessage()));
     }
+    @ExceptionHandler(NotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiError handleNotFound(NotFoundException ex) {
+        return new ApiError(ex.getMessage(), Map.of());
+    }
 }
 ```
 
@@ -578,6 +786,10 @@ public class GlobalExceptionHandler {
 
 （下一步）第二個方法處理第二關的 FieldException，欄位名稱和訊息直接放進 fields。
 
+（下一步）第三個方法處理 NotFoundException，回 404。fields 是空的，因為不是哪個欄位填錯。
+
+ApiError 和 GlobalExceptionHandler 都放在 exception 資料夾。
+
 這兩個方法都在第四十一章學過的 @RestControllerAdvice 裡，所有 Controller 共用。
 -->
 
@@ -585,7 +797,7 @@ public class GlobalExceptionHandler {
 
 # Controller：成功回 201
 
-```java {all|5-6|7}
+```java {all|5-6|7|11-14}
 @RestController
 @RequestMapping("/api/reservations")
 public class ReservationController {
@@ -595,6 +807,11 @@ public class ReservationController {
     @ResponseStatus(HttpStatus.CREATED)
     public ReservationDto create(@Valid @RequestBody ReservationRequest req) {
         return reservationService.create(req);
+    }
+
+    @GetMapping   // 加分題：GET /api/reservations?date=2026-11-20
+    public List<ReservationDto> findByDate(@RequestParam(name = "date") LocalDate date) {
+        return reservationService.findByDate(date);
     }
 }
 ```
@@ -613,6 +830,8 @@ Controller 很短。
 （下一步）@PostMapping 接收新增訂位，@ResponseStatus 讓成功的時候回 201，而不是預設的 200。
 
 （下一步）參數前面的 @Valid 千萬別忘了，沒有它，第一關的規則全部不會檢查。
+
+（下一步）下面是加分題，店家用日期查訂位。同一個路徑，GET 就是查詢。網址上的日期 2026-11-20 會自動轉成 LocalDate。ReservationService 裡的 findByDate，就是呼叫剛才 Repository 的 findByReserveDateOrderByReserveTime，再用 Stream 轉成 DTO，跟 getCategories 的寫法一樣，請大家自己完成。前端的加分題會用到這支 API。
 
 （下一步）最後，把上一章的 CorsConfig 也放進 config 資料夾，允許 localhost 4200，前端才接得起來。
 -->
@@ -651,6 +870,7 @@ class: flex flex-col justify-center items-center text-center
 - `GET /api/products?categoryId=999`：**404**
 - `POST /api/reservations`，資料正確：**201**，資料庫多一筆
 - 手機 `0912`、人數 `9`、日期 60 天後、時段 `10:15`：**400**，`fields` 說明原因
+- （加分）`GET /api/reservations?date=今天`：當天的訂位，依時段排序
 - 從 Angular 網頁呼叫：Console **沒有** CORS 錯誤
 
 </v-clicks>
@@ -673,6 +893,8 @@ class: flex flex-col justify-center items-center text-center
 （下一步）送出正確的訂位，回 201，去資料庫看，多了一筆。
 
 （下一步）故意送錯的資料：手機只有四碼、人數九位、日期六十天後、時段十點十五分，每一個都要回 400，而且 fields 說明原因。注意前兩個和後兩個要分開送，原因剛才的想一想說過了。
+
+（下一步）加分題：用今天的日期查訂位，範例資料裡今天就有訂位，應該依時段排好。
 
 （下一步）最後從 Angular 網頁呼叫，Console 沒有 CORS 錯誤。
 

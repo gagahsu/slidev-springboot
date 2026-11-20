@@ -527,7 +527,7 @@ layout: default
 # 練習 1：任務說明
 ### 轉角咖啡：菜單頁的查詢
 
-先執行 `sql/corner_cafe/schema.sql` 與 `sql/corner_cafe/seed.sql`，取得 `corner_cafe` 的範例資料。
+先依序執行 <a href="/downloads/corner_cafe/schema.sql" download><code>schema.sql</code></a> 與 <a href="/downloads/corner_cafe/seed.sql" download><code>seed.sql</code></a>，取得 `corner_cafe` 的範例資料（下載後用 Workbench 的 File → Open SQL Script 打開，按閃電圖示執行）。
 
 **任務：**
 1. 「百元左右」專區：查詢供應中、價格 **120 元以下**的品項，依價格由低到高排序（同價再依 id），取前 5 筆

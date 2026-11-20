@@ -661,7 +661,7 @@ CREATE TABLE product_variants (
 
 規格的外鍵用 `ON DELETE CASCADE`，商品刪掉，它的規格也沒有意義了。不過實務上商品通常只「下架」不刪除，這點等一下的訂單會看到原因。
 
-完整的欄位，例如說明、圖片、排序，都在 `sql/cafe_shop/schema.sql` 裡，這裡只列出和關聯有關的部分。
+完整的欄位，例如說明、圖片、排序，都在投影片上可以下載的 schema.sql 裡，這裡只列出和關聯有關的部分。
 -->
 
 ---
@@ -760,7 +760,7 @@ CREATE TABLE payments (
 ```
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
-💡 <b>完整的八張表</b>（含所有欄位與約束）在 <code>sql/cafe_shop/schema.sql</code>，範例資料在 <code>sql/cafe_shop/seed.sql</code>。第八到十章的練習都會用到。
+💡 <b>完整的八張表</b>（含所有欄位與約束）：下載 <a href="/downloads/cafe_shop/schema.sql" download><code>schema.sql</code></a>，範例資料：下載 <a href="/downloads/cafe_shop/seed.sql" download><code>seed.sql</code></a>。第八到十章的練習都會用到。
 </div>
 
 <!--

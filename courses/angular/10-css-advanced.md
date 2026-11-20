@@ -1378,7 +1378,7 @@ layout: default
 .button:hover { background-color: #4a3324; }
 ```
 
-完整檔案：`projects/cafe-static/style.css`（第二段）
+完整檔案：<a href="/downloads/cafe-static.zip" download><code>cafe-static.zip</code></a> 裡的 `style.css`（第二段）
 
 <!--
 回答剛才的問題。flex-direction 改成 column 之後，主軸變成上下，所以 justify-content 管上下置中，align-items 反過來管左右置中。這是 Flex 最常讓人搞混的地方，記住「justify 永遠跟著主軸走」就好。

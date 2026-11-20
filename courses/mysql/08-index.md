@@ -313,7 +313,7 @@ LIMIT 20;
 3. 說明加索引後 `key`、`rows` 和 `Extra` 預期會有什麼改變
 
 <!--
-第一題，我們來讀一份 EXPLAIN 的結果。這是後台的待出貨列表：找出已付款的訂單，最新的排在最上面，一頁二十筆。資料表結構請看 `sql/cafe_shop/schema.sql`。
+第一題，我們來讀一份 EXPLAIN 的結果。這是後台的待出貨列表：找出已付款的訂單，最新的排在最上面，一頁二十筆。資料表結構請看第三章下載的 schema.sql。
 
 除了 key 和 rows，這次多看一個欄位 Extra。Using filesort 的意思是，MySQL 找到資料之後，還要自己另外排序一次。
 
@@ -383,7 +383,7 @@ layout: default
 # 練習 2：任務說明
 ### 設計線上商店的索引策略
 
-以下是線上商店常用的五個查詢（資料表結構見 `sql/cafe_shop/schema.sql`）：
+以下是線上商店常用的五個查詢（資料表結構見 <a href="/downloads/cafe_shop/schema.sql" download><code>schema.sql</code></a>）：
 
 1. 訂單明細頁：`order_items WHERE order_id = ?`
 2. 會員的訂單列表：`orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 10`
