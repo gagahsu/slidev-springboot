@@ -35,7 +35,7 @@ stages:
     desc: Angular Material、RxJS、Signals、Reactive Forms、RWD、打包部署
     items:
       - { course: angular, chapters: ["31-57"] }
-      - { soon: "HTTP 攔截器與路由守衛", course: angular }
+      - { course: angular, chapters: [59] }
 
   - title: 專題後端：線上商店
     desc: 照 specs/SHOP-SPEC.md，Spring Boot 7 章
@@ -45,8 +45,7 @@ stages:
   - title: 專題前端：線上商店
     desc: 前台購物流程與管理後台
     items:
-      - { soon: "電商前台：商品、購物車、結帳、付款結果", course: angular }
-      - { soon: "電商後台：商品、訂單、報表", course: angular }
+      - { course: angular, chapters: [60, 61] }
 
   - title: 部署：Docker
     desc: 映像檔、容器、Compose、Volume，把商店部署上線

@@ -84,3 +84,6 @@ chapters:
   ch56: { title: "綜合練習 Ch32–39", subtitle: "員工管理系統實作" }
   ch57: { title: "全課程總複習 Ch1–55", subtitle: "九站速記・快問快答・易錯 Top 10" }
   ch58: { title: "專題：轉角咖啡前端", subtitle: "元件拼頁面 / 菜單 API / 訂位表單" }
+  ch59: { title: "HTTP 攔截器與路由守衛", subtitle: "HttpInterceptorFn / CanActivateFn / lazy loading" }
+  ch60: { title: "專題：電商前台", subtitle: "Signals 購物車 / Reactive Forms 結帳 / 綠界付款" }
+  ch61: { title: "專題：電商後台", subtitle: "Sidenav / FormArray 規格 / 上傳 / 報表" }
