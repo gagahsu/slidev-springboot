@@ -151,7 +151,7 @@ class: flex flex-col justify-center items-center text-center
 
 ```groovy
 dependencies {
-    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:4.0.1'
+    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:4.1.0'
     implementation 'com.mysql:mysql-connector-j'
 }
 
@@ -162,7 +162,7 @@ compileJava {
 
 <v-clicks>
 
-- `mybatis-spring-boot-starter`：MyBatis 本人。`4.0.x` 搭配 Spring Boot 4；如果你是 Spring Boot 3，請用 `3.0.x`
+- `mybatis-spring-boot-starter`：MyBatis 本人。`4.1.x` 搭配 Spring Boot 4.1（4.0 用 `4.0.x`）；如果你是 Spring Boot 3，請用 `3.0.x`
 - `mysql-connector-j`：翻譯，之前加過了
 - `compileJava` 那一段：讓 MyBatis 看得到方法參數的名字，等一下填空格會用到
 
@@ -171,7 +171,7 @@ compileJava {
 <!--
 第一步，在 build.gradle 加入 MyBatis。
 
-（下一步）mybatis-spring-boot-starter 就是 MyBatis 本人。注意它要寫版本號。4.0 開頭的版本搭配 Spring Boot 4；如果你的專案是 Spring Boot 3，請用 3.0 開頭的版本。
+（下一步）mybatis-spring-boot-starter 就是 MyBatis 本人。注意它要寫版本號。它的版本要跟 Spring Boot 對上：我們用 Spring Boot 4.1，就寫 4.1.0；Spring Boot 4.0 用 4.0 開頭的版本；如果你的專案是 Spring Boot 3，請用 3.0 開頭的版本。
 
 （下一步）mysql-connector-j 是翻譯，之前加過了。
 

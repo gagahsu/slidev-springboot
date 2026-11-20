@@ -47,7 +47,13 @@ SHOP-SPEC §10：`docker compose` 跑三個服務（`db` MySQL、`api` 後端、
 
 ## 三、舊教材的版本相容性（沒有逐章驗證）
 
-### 5. Spring Boot ch04–48 用 4.1.2 重跑 — `待辦`
+### 5. Spring Boot ch04–48 用 4.1.2 重跑 — `進行中`
+
+進度（2026-11-20）：
+- 編譯：ch04–47 每章的完整類別都放進 Spring Boot 4.1.2 專案編譯，沒有框架 API 錯誤（剩下的錯誤都是投影片節錄造成的）。4.1 release notes 列的移除項目（舊 logging 屬性、Derby、layertools）投影片都沒用到。
+- 執行：ch12–21（MVC，curl 全部端點）、ch22–25（JDBC）、ch26–29（JPA 查詢、關聯、`@JsonIgnore`）、ch30–32（MyBatis 註解與 XML）在 MySQL 9.7 上通過。
+- 修正：ch30 `mybatis-spring-boot-starter` 4.0.1 → 4.1.0（4.1.0 對應 Spring Boot 4.1；4.0.1 實測也能跑）。
+- 待做：ch33–35、ch39–47 school 專案、ch48 Spring Cloud（Boot 4.1 要搭 Spring Cloud 2026.0）、JSON 範例的欄位順序（Jackson 3 預設照字母排序）。
 
 範例程式當初用 Spring Boot 4.0.9 編譯驗證，沒有用 4.1.2 重跑。新專案用 4.1.2 沒問題，風險不大，但沒有逐章確認。
 
