@@ -436,7 +436,7 @@ export class AppComponent {
 | 屬性 | 說明 | 範例值 |
 | --- | --- | --- |
 | `selector` | 此元件在 HTML 中使用的自訂標籤名稱 | `'app-root'` |
-| `standalone` | 是否為獨立元件（Angular 14+ 推薦） | `true` |
+| `standalone` | 是否為獨立元件；Angular 19 起預設就是 `true`，可以省略 | `true` |
 | `templateUrl` | 此元件對應的 HTML 模板檔案路徑 | `'./app.component.html'` |
 
 ```typescript
@@ -453,7 +453,7 @@ export class AppComponent { }
 
 `selector` 是這個元件在 HTML 裡使用的標籤名稱。設成 `app-root`，就可以在 HTML 裡用 `app-root` 這個標籤把元件放進來。
 
-`standalone: true` 代表這是一個獨立元件，不需要另外用 NgModule 來管理，這是新版 Angular 推薦的寫法。
+`standalone: true` 代表這是一個獨立元件，不需要另外用 NgModule 來管理。從 Angular 19 開始，元件預設就是獨立元件，所以我們用 ng generate 產生的檔案裡不會有這一行。之後的範例有些會寫出來、有些不會，寫不寫效果都一樣，看到時不用驚訝。
 
 `templateUrl` 指定這個元件對應的 HTML 檔案，也就是元件的畫面要去哪個檔案找。
 

@@ -547,7 +547,7 @@ layout: default
 
 1. `loading` 要在發出請求「之前」設為 `true`，並在 `next` 與 `error` 兩個回呼裡都要設回 `false`
 2. `error` 回呼一定要處理，否則 API 失敗時畫面會永遠停在「載入中」
-3. 樣板可用 `@if` / `*ngIf` 依 `loading`、`errorMessage`、`users` 三種狀態切換內容
+3. 樣板用 `@if` 依 `loading`、`errorMessage`、`users` 三種狀態切換內容
 4. `subscribe()` 是非同步的，`ngOnInit()` 方法本身不會等 API 回應才結束
 5. `fakerapi.it` 這支 API 回傳的是一個物件，實際使用者陣列在 `res.data`，不是 `res`
 

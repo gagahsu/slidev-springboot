@@ -469,7 +469,7 @@ layout: default
 ```
 
 <div class="mt-3 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ 目前用索引取值是暫時做法。完整的動態清單需使用 <b>第 26 章</b>的 <code>*ngFor</code> 語法。
+⚠️ 目前用索引取值是暫時做法。完整的動態清單需使用 <b>第 25 章</b>的 <code>@for</code> 語法。
 </div>
 
 <!--

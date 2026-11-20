@@ -61,13 +61,11 @@ layout: default
 
 - **什麼是 Angular Material** — 內建模組與樣式的 UI 元件庫
 - **執行安裝指令** — 使用 `ng add @angular/material`
-- **選擇主題（配色）** — Azure/Blue、Rose/Red、Magenta/Violet、Cyan/Orange、Custom
-- **設定排版樣式** — 是否套用全域 Angular Material typography
-- **選擇動畫模組** — Include and enable / disable / Do not include
+- **選擇主題（配色）** — Azure/Blue、Rose/Red、Magenta/Violet、Cyan/Orange
 - **安裝完成** — 自動更新的專案檔案一覽
 
 <!--
-這一章的順序是：先介紹什麼是 Angular Material，接著執行安裝指令。安裝過程中，CLI 會問我們三個問題，分別是主題配色、全域排版樣式和動畫模組，我們會一個一個說明。最後看安裝完成之後，專案裡有哪些檔案被修改了。
+這一章的順序是：先介紹什麼是 Angular Material，接著執行安裝指令。安裝過程中，CLI 只會問我們一個問題：主題配色。最後看安裝完成之後，專案裡有哪些檔案被修改了。
 -->
 
 ---
@@ -111,16 +109,18 @@ Angular Material 內建了豐富的元件和樣式，之後會學到的圖示元
 # 安裝 @angular/material
 ### 執行安裝指令
 
-執行後 Angular CLI 會下載套件，並依序詢問幾個設定選項。
+執行後 Angular CLI 會先問要不要安裝（按 Enter），接著只問一個問題：主題配色。
 
 ```bash
 ng add @angular/material
 ```
 
 <!--
-執行指令之後，Angular CLI 會先下載套件，接著依序問我們幾個設定問題：要用哪一種主題配色、要不要套用全域的排版樣式，以及要不要引入動畫模組。
+執行指令之後，Angular CLI 會先告訴我們要安裝哪一個版本的 Angular Material，問要不要繼續，直接按 Enter 就好。它會自動挑選和我們專案的 Angular 版本搭配的那一版，所以 Angular 21 的專案會裝到 Material 21。
 
-接下來我們一個一個看，每個問題在問什麼，以及建議怎麼選。
+接著只問一個問題：主題配色。
+
+如果在網路上看到比較舊的教學，會看到 CLI 還問了排版樣式和動畫模組兩個問題。新版的 Angular Material 已經把這兩題拿掉了：排版直接寫在主題設定裡，元件的動畫也不需要另外安裝動畫模組。
 -->
 
 ---
@@ -140,7 +140,7 @@ class: flex flex-col justify-center items-center text-center
 # 安裝 @angular/material
 ### 步驟一：選擇主題
 
-CLI 詢問要使用哪種內建主題，若不使用預設主題可選 **Custom**。
+CLI 詢問要使用哪一組內建配色（Select a pair of starter prebuilt color palettes），用方向鍵選擇後按 Enter。
 
 <div class="grid grid-cols-2 gap-4 my-3">
 <div>
@@ -153,97 +153,24 @@ CLI 詢問要使用哪種內建主題，若不使用預設主題可選 **Custom*
 <div>
 
 - **Cyan/Orange** — 青橙色系
-- **Custom** — 自訂主題
 
 </div>
 </div>
 
-<div class="flex justify-center">
-  <img src="/images/31-angular-material/theme-selector.png" class="rounded shadow-md max-h-52" />
-</div>
+```bash
+? Select a pair of starter prebuilt color palettes for your Angular Material theme
+❯ Azure/Blue         [Preview: https://material.angular.dev?theme=azure-blue]
+  Rose/Red           [Preview: https://material.angular.dev?theme=rose-red]
+  Magenta/Violet     [Preview: https://material.angular.dev?theme=magenta-violet]
+  Cyan/Orange        [Preview: https://material.angular.dev?theme=cyan-orange]
+```
 
 <!--
 CLI 會列出幾個內建主題，名稱是兩個顏色的組合。Azure/Blue 是藍色系，Rose/Red 是紅色系，Magenta/Violet 是紫色系，Cyan/Orange 是青橙色系。
 
-如果專案已經有自己的品牌色，想要客製化，可以選 Custom，之後再自己調整顏色。
+每一個選項後面都附了預覽網址，貼到瀏覽器就能先看看那組顏色套在元件上的樣子。
 
-沒有特別需求的話，選一個喜歡的內建主題就好，之後也可以再到 `styles.scss` 修改。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# 設定全域排版樣式
-# Global Typography Styles
-
-<!--
-第二個問題是全域排版樣式，它會影響整個專案的文字，要小心選擇。
--->
-
----
-
-# 安裝 @angular/material
-### 步驟二：設定全域排版樣式
-
-CLI 詢問是否套用全域 Angular Material 排版樣式，建議選 **N**，避免覆蓋專案現有的 CSS 設定。
-
-```bash
-? Set up global Angular Material typography styles? (y/N) N
-```
-
-<!--
-如果選 Yes，Angular Material 會把它的字體大小、行高等規則套用到整個頁面，我們原本寫好的標題和段落樣式，可能會被覆蓋掉。
-
-大部分專案都已經有自己的樣式規範，所以這裡建議選 N，這也是預設值。這樣 Material 的樣式只會影響 Material 元件本身。
--->
-
----
-layout: section
-class: flex flex-col justify-center items-center text-center
----
-
-# 選擇動畫模組
-# Angular Animations Module
-
-<!--
-最後一個問題是要不要引入動畫模組。像對話框展開、選單滑出這些過場效果，都要靠 Angular 的動畫模組來執行。
--->
-
----
-
-# 安裝 @angular/material
-### 步驟三：選擇動畫模組
-
-CLI 詢問是否引入 Angular 動畫模組，依開發需求選擇後即開始安裝。
-
-<div class="grid grid-cols-2 gap-4 my-3">
-<div>
-
-- **Include and enable animations** — 引入並啟用動畫（預設）
-- **Include, but disable animations** — 引入但停用動畫
-
-</div>
-<div>
-
-- **Do not include** — 不引入動畫模組
-
-</div>
-</div>
-
-<div class="flex justify-center">
-  <img src="/images/31-angular-material/animations-prompt.png" class="rounded shadow-md max-h-52" />
-</div>
-
-<!--
-這裡有三個選項。
-
-第一個是引入並啟用動畫，這是預設值，元件的過場效果會很流暢，大部分專案都選這個。
-
-第二個是引入但停用動畫，動畫模組還在，只是關閉效果，適合對效能特別要求，或刻意不要動畫的介面。
-
-第三個是完全不引入，這樣有些依賴動畫的元件可能會受到影響，一般不建議初學者選擇。
+沒有特別需求的話，選一個喜歡的就好，第一個 Azure/Blue 是預設值。選錯了也沒關係，之後在 `styles.scss` 改一個字就能換，本章最後的補充練習會做一次。
 -->
 
 ---
@@ -255,7 +182,7 @@ class: flex flex-col justify-center items-center text-center
 # Installation Complete
 
 <!--
-三個問題回答完，CLI 就會開始安裝，並自動修改幾個專案檔案。我們來看看改了哪些地方。
+選好主題，CLI 就會開始安裝，並自動修改幾個專案檔案。我們來看看改了哪些地方。
 -->
 
 ---
@@ -267,29 +194,26 @@ layout: two-cols
 
 安裝完成後，Angular CLI 會自動更新以下專案檔案：
 
-- `package.json` — 新增 @angular/material 相依套件
-- `src/app/app.config.ts` — 加入 Material 設定
-- `angular.json` — 加入主題 CSS 樣式路徑
-- `src/index.html` — 加入 Google Fonts 字型連結
-- `src/styles.scss` — 加入主題樣式匯入
+- `package.json` — 新增 `@angular/material`、`@angular/cdk` 相依套件
+- `src/styles.scss` — 用 `mat.theme()` 設定主題配色、字型
+- `src/index.html` — 加入 Roboto 字型與 Material Icons 的連結
 
 ::right::
 
 ```bash
-UPDATE package.json (1105 bytes)
+✔ Installing package
+UPDATE package.json (878 bytes)
 ✔ Packages installed successfully.
-UPDATE src/app/app.config.ts (421 bytes)
-UPDATE angular.json (2892 bytes)
-UPDATE src/index.html (491 bytes)
-UPDATE src/styles.scss (181 bytes)
+UPDATE src/styles.scss (1259 bytes)
+UPDATE src/index.html (625 bytes)
 ```
 
 <!--
-從右邊的訊息可以看到，`ng add` 一次修改了五個檔案。
+從右邊的訊息可以看到，`ng add` 修改了三個檔案。
 
-`package.json` 新增了 Angular Material 套件；`app.config.ts` 加入了 Material 需要的設定；`angular.json` 加入了主題 CSS 的路徑；`index.html` 加入了 Google Fonts 的字型連結；`styles.scss` 則匯入了主題樣式。
+`package.json` 新增了 Angular Material 和它依賴的 CDK 套件；`styles.scss` 寫入了主題設定，剛才選的配色就在這裡；`index.html` 加入了 Roboto 字型和 Material Icons 圖示字型的連結，之後的 mat-icon 會用到。
 
-安裝完成後，建議重新啟動開發伺服器，因為 `angular.json` 的設定變更，需要重新啟動才會生效。之後就可以在 HTML 裡使用 Material 的元件了。
+安裝完成後，重新執行 `ng serve`，就可以在 HTML 裡使用 Material 的元件了。
 -->
 
 ---
@@ -312,18 +236,18 @@ layout: default
 
 如果安裝時選錯了主題顏色，不需要移除重裝，直接修改設定檔即可：
 
-1. 打開專案根目錄的 `angular.json`
-2. 用 VS Code 搜尋 `"styles"`，找到樣式陣列
-3. 觀察裡面引入的主題 CSS 路徑，把 `azure-blue.css` 改成 `magenta-violet.css`
-4. 修改後在終端機按 `Ctrl + C` 停止，再重新執行 `ng serve`
-5. 觀察 Material 元件（如按鈕）的主色是否從藍色變成紫色
+1. 打開 `src/styles.scss`，找到 `@include mat.theme(...)`
+2. 把 `primary: mat.$azure-palette` 改成 `mat.$magenta-palette`
+3. 把 `tertiary: mat.$blue-palette` 改成 `mat.$violet-palette`
+4. 存檔，`ng serve` 會自動重新整理畫面
+5. 觀察 Material 元件（如按鈕）的主色是否從藍色變成紫紅色
 
 <!--
 這題補充練習，模擬安裝時選錯主題的情況。
 
-不需要重新安裝，只要打開 `angular.json`，找到 `styles` 陣列，把主題 CSS 的檔名換掉就好。
+不需要重新安裝。剛才看到 ng add 把主題設定寫在 styles.scss 裡，打開它，找到 mat.theme 這一段，把裡面兩個顏色的名稱換掉就好。
 
-要特別注意，改完 `angular.json` 一定要重新啟動 `ng serve`。我們先暫停一下，自己動手試試看。
+styles.scss 是一般的樣式檔，存檔之後 ng serve 會自動重新編譯，不用重新啟動。我們先暫停一下，自己動手試試看。
 -->
 
 ---
@@ -333,32 +257,32 @@ layout: default
 
 # 補充練習：手動更換主題配色 — 參考答案
 
-```json
-"styles": [
-  "@angular/material/prebuilt-themes/magenta-violet.css",
-  "src/styles.scss"
-]
+```scss
+@include mat.theme(
+  (
+    color: (
+      primary: mat.$magenta-palette,
+      tertiary: mat.$violet-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  )
+);
 ```
 
-可用的內建主題檔：
-
-| 檔名 | 色系 |
-| --- | --- |
-| `azure-blue.css` | 藍色系 |
-| `rose-red.css` | 紅色系 |
-| `magenta-violet.css` | 紫色系 |
-| `cyan-orange.css` | 青橙色系 |
-
-<div class="mt-3 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-700 text-sm text-left">
-⚠️ <code>ng serve</code> 只在啟動時讀取 <code>angular.json</code>，修改後不重啟，畫面不會有任何變化
-</div>
+| 安裝時的選項 | primary | tertiary |
+| --- | --- | --- |
+| Azure/Blue | `mat.$azure-palette` | `mat.$blue-palette` |
+| Rose/Red | `mat.$rose-palette` | `mat.$red-palette` |
+| Magenta/Violet | `mat.$magenta-palette` | `mat.$violet-palette` |
+| Cyan/Orange | `mat.$cyan-palette` | `mat.$orange-palette` |
 
 <!--
 我們來看答案。
 
-`styles` 陣列裡，第一行就是 Material 的內建主題檔，把檔名換成 `magenta-violet.css` 就完成了。表格列出四個內建主題，可以每個都換換看。
+mat.theme 裡面的 color 有兩個顏色：primary 是主色，按鈕、選取狀態都用它；tertiary 是第三色，用在需要對比的地方。安裝時選的四組配色，就是這兩個名稱的四種組合，表格都列出來了，可以每一組都換換看。
 
-`angular.json` 是專案的設定檔，`ng serve` 只有在啟動時才會讀取，所以一定要重新啟動才會生效。
+另外 typography 寫的是字型，density 是元件的密度，0 是預設值，數字越小元件越緊湊。
 -->
 
 ---
@@ -369,7 +293,7 @@ layout: end
 ### Angular Material 安裝完成，即可開始使用豐富的 UI 元件
 
 <!--
-這一章我們安裝了 Angular Material。用 `ng add @angular/material` 安裝，執行前要先關掉開發伺服器。安裝過程會問三個問題：主題配色選一個喜歡的就好，全域排版樣式建議選 N，動畫模組建議引入並啟用。安裝完會自動修改五個檔案，記得重新啟動伺服器。
+這一章我們安裝了 Angular Material。用 `ng add @angular/material` 安裝，執行前要先關掉開發伺服器。安裝過程只問一個問題：主題配色，選一個喜歡的就好，之後也能在 styles.scss 換。安裝完會自動修改三個檔案，主題設定寫在 styles.scss，記得重新啟動伺服器。
 
 下一章，我們會使用 Material 的表格元件 `mat-table`。我們下一章見。
 -->
