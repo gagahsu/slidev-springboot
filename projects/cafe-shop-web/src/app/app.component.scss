@@ -1,0 +1,16 @@
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  gap: 4px;
+  background: var(--coffee);
+  color: #fff;
+  a, button { color: #fff; }
+}
+.logo {
+  font-weight: 800;
+  margin-right: 16px;
+  text-decoration: none;
+  small { font-weight: 400; opacity: 0.8; font-size: 12px; }
+}
+.spacer { flex: 1; }

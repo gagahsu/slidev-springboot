@@ -1,0 +1,58 @@
+<h1>{{ id() ? '編輯商品' : '新增商品' }}</h1>
+
+@if (loaded()) {
+<form [formGroup]="form" (ngSubmit)="save()" class="edit-form">
+  <div class="cols">
+    <div>
+      <mat-form-field>
+        <mat-label>分類</mat-label>
+        <mat-select formControlName="categoryId">
+          @for (c of categories(); track c.id) { <mat-option [value]="c.id">{{ c.name }}</mat-option> }
+        </mat-select>
+        @if (form.controls.categoryId.invalid) { <mat-error>請選擇分類</mat-error> }
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>商品名稱</mat-label>
+        <input matInput formControlName="name" />
+        @if (form.controls.name.invalid) { <mat-error>請輸入名稱（最多 50 字）</mat-error> }
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>說明</mat-label>
+        <textarea matInput formControlName="description" rows="3"></textarea>
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>排序</mat-label>
+        <input matInput type="number" formControlName="sortOrder" />
+      </mat-form-field>
+    </div>
+    <div class="image-box">
+      <img [src]="form.controls.imageUrl.value | imgUrl" alt="商品圖片" />
+      <label class="upload">
+        <input type="file" accept="image/jpeg,image/png,image/webp" (change)="upload($event)" hidden />
+        <span mat-stroked-button>{{ uploading() ? '上傳中…' : '上傳圖片（jpg / png / webp，2 MB 內）' }}</span>
+      </label>
+    </div>
+  </div>
+
+  <h2>規格</h2>
+  <div formArrayName="variants">
+    @for (group of variants.controls; track group; let i = $index) {
+      <div class="variant-row" [formGroupName]="i">
+        <mat-form-field><mat-label>規格名稱</mat-label><input matInput formControlName="name" /></mat-form-field>
+        <mat-form-field><mat-label>SKU</mat-label><input matInput formControlName="sku" /></mat-form-field>
+        <mat-form-field class="num"><mat-label>價格</mat-label><input matInput type="number" formControlName="price" /></mat-form-field>
+        <mat-form-field class="num"><mat-label>庫存</mat-label><input matInput type="number" formControlName="stock" /></mat-form-field>
+        <button mat-icon-button type="button" (click)="removeVariant(i)" [disabled]="variants.length === 1" aria-label="刪除規格">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+    }
+  </div>
+  <button mat-stroked-button type="button" (click)="addVariant()">＋ 新增規格</button>
+
+  <div class="actions">
+    <button mat-flat-button type="submit">儲存</button>
+    <a mat-button routerLink="/admin/products">取消</a>
+  </div>
+</form>
+}

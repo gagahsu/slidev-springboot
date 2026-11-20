@@ -1,0 +1,45 @@
+<h1>所有商品</h1>
+
+<div class="filters">
+  <mat-form-field>
+    <mat-label>分類</mat-label>
+    <mat-select [formControl]="categoryId">
+      <mat-option [value]="null">全部</mat-option>
+      @for (c of categories(); track c.id) {
+        <mat-option [value]="c.id">{{ c.name }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field>
+    <mat-label>搜尋商品名稱</mat-label>
+    <input matInput [formControl]="keyword" placeholder="例如：雪菲" />
+  </mat-form-field>
+
+  <mat-form-field>
+    <mat-label>排序</mat-label>
+    <mat-select [formControl]="sort">
+      <mat-option value="">推薦</mat-option>
+      <mat-option value="price,asc">價格：低到高</mat-option>
+      <mat-option value="price,desc">價格：高到低</mat-option>
+      <mat-option value="createdAt,desc">最新上架</mat-option>
+    </mat-select>
+  </mat-form-field>
+</div>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+} @else if (result(); as r) {
+  @if (r.content.length === 0) {
+    <p class="hint">找不到符合的商品。</p>
+  }
+  <div class="grid" [class.dim]="loading()">
+    @for (p of r.content; track p.id) {
+      <app-product-card [product]="p" />
+    }
+  </div>
+  <mat-paginator [length]="r.totalElements" [pageSize]="r.size" [pageIndex]="r.page"
+                 [hidePageSize]="true" (page)="onPage($event)" />
+} @else {
+  <mat-spinner diameter="40" />
+}

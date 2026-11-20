@@ -1,0 +1,19 @@
+<section class="hero">
+  <h1>把巷口的咖啡帶回家</h1>
+  <p>現烘咖啡豆、濾掛包與手沖器材，滿 1,000 元免運。</p>
+  <a mat-flat-button routerLink="/products">開始選購</a>
+</section>
+
+<h2>商品分類</h2>
+<div class="chips">
+  @for (c of categories(); track c.id) {
+    <a mat-stroked-button routerLink="/products" [queryParams]="{ categoryId: c.id }">{{ c.name }}</a>
+  }
+</div>
+
+<h2>精選商品</h2>
+<div class="grid">
+  @for (p of featured(); track p.id) {
+    <app-product-card [product]="p" />
+  }
+</div>

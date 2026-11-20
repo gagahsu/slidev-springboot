@@ -1,0 +1,54 @@
+<h1>結帳</h1>
+
+@if (cart().items.length === 0 && !sending()) {
+  <p class="hint">購物車是空的。</p>
+  <a mat-flat-button routerLink="/products">去逛逛</a>
+} @else {
+  <div class="checkout">
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <h2>收件資料</h2>
+      <mat-form-field>
+        <mat-label>收件人姓名</mat-label>
+        <input matInput formControlName="receiverName" />
+        @if (form.controls.receiverName.invalid) { <mat-error>請輸入姓名（最多 20 字）</mat-error> }
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>手機</mat-label>
+        <input matInput formControlName="receiverPhone" placeholder="0912345678" />
+        @if (form.controls.receiverPhone.hasError('required')) { <mat-error>請輸入手機</mat-error> }
+        @if (form.controls.receiverPhone.hasError('pattern')) { <mat-error>手機格式不正確</mat-error> }
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>地址</mat-label>
+        <input matInput formControlName="receiverAddress" />
+        @if (form.controls.receiverAddress.invalid) { <mat-error>請輸入地址（最多 200 字）</mat-error> }
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>備註（選填）</mat-label>
+        <textarea matInput formControlName="note" rows="2"></textarea>
+      </mat-form-field>
+
+      <h2>付款方式</h2>
+      <mat-radio-group formControlName="payment" class="radios">
+        <mat-radio-button value="ECPAY">信用卡（綠界測試環境）</mat-radio-button>
+        <mat-radio-button value="MOCK">模擬付款（開發用）</mat-radio-button>
+      </mat-radio-group>
+
+      @if (error()) { <p class="error">{{ error() }}</p> }
+      <button mat-flat-button type="submit" [disabled]="sending()">{{ sending() ? '處理中…' : '確認下單並付款' }}</button>
+    </form>
+
+    <aside class="summary">
+      <h2>訂單摘要</h2>
+      @for (item of cart().items; track item.variantId) {
+        <div class="line">
+          <span>{{ item.productName }} {{ item.variantName }} x{{ item.quantity }}</span>
+          <span>{{ item.subtotal | currency: 'TWD' : 'symbol-narrow' : '1.0-0' }}</span>
+        </div>
+      }
+      <div class="line"><span>運費</span><span>{{ cart().shippingFee | currency: 'TWD' : 'symbol-narrow' : '1.0-0' }}</span></div>
+      <div class="line total"><span>合計</span><span>{{ cart().totalAmount | currency: 'TWD' : 'symbol-narrow' : '1.0-0' }}</span></div>
+      <p class="hint">實際金額以送出時的價格為準。</p>
+    </aside>
+  </div>
+}

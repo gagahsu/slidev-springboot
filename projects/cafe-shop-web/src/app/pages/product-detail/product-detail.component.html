@@ -1,0 +1,36 @@
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+  <a mat-button routerLink="/products">回商品列表</a>
+} @else if (product(); as p) {
+  <div class="detail">
+    <img [src]="p.imageUrl | imgUrl" [alt]="p.name" />
+    <div>
+      <div class="category">{{ p.categoryName }}</div>
+      <h1>{{ p.name }}</h1>
+      <p>{{ p.description }}</p>
+
+      <mat-form-field>
+        <mat-label>規格</mat-label>
+        <mat-select [value]="variantId()" (valueChange)="variantId.set($event); quantity = 1">
+          @for (v of p.variants; track v.id) {
+            <mat-option [value]="v.id" [disabled]="v.stock === 0">
+              {{ v.name }}{{ v.stock === 0 ? '（售完）' : '' }}
+            </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      @if (variant(); as v) {
+        <div class="price big">{{ v.price | currency: 'TWD' : 'symbol-narrow' : '1.0-0' }}</div>
+        <div class="hint">庫存 {{ v.stock }} 件</div>
+        <div class="buy">
+          <mat-form-field class="qty">
+            <mat-label>數量</mat-label>
+            <input matInput type="number" min="1" [max]="v.stock < max ? v.stock : max" [(ngModel)]="quantity" />
+          </mat-form-field>
+          <button mat-flat-button (click)="addToCart()" [disabled]="v.stock === 0 || quantity < 1">加入購物車</button>
+        </div>
+      }
+    </div>
+  </div>
+}

@@ -1,0 +1,20 @@
+<div class="narrow result">
+  @if (order(); as o) {
+    @if (paid) {
+      <h1>付款成功</h1>
+      <p>訂單 {{ o.orderNo }}，金額 {{ o.totalAmount | currency: 'TWD' : 'symbol-narrow' : '1.0-0' }}。我們會盡快出貨！</p>
+    } @else if (o.status === 'CANCELLED') {
+      <h1>訂單已取消</h1>
+      <p>{{ o.cancelReason }}</p>
+    } @else if (timedOut()) {
+      <h1>還沒收到付款結果</h1>
+      <p>如果已經完成付款，請稍後到「我的訂單」查看；尚未付款可以在訂單頁繼續付款。</p>
+    } @else {
+      <h1>付款處理中…</h1>
+      <mat-spinner diameter="40" />
+    }
+    <a mat-flat-button [routerLink]="['/me/orders', o.orderNo]">查看訂單</a>
+  } @else {
+    <mat-spinner diameter="40" />
+  }
+</div>

@@ -1,0 +1,60 @@
+<div class="title-row">
+  <h1>商品管理</h1>
+  <a mat-flat-button routerLink="/admin/products/new">新增商品</a>
+</div>
+
+<div class="filters">
+  <mat-form-field>
+    <mat-label>狀態</mat-label>
+    <mat-select [(ngModel)]="status" (selectionChange)="load(0)">
+      <mat-option value="">全部</mat-option>
+      <mat-option value="ON_SALE">上架中</mat-option>
+      <mat-option value="OFF_SHELF">已下架</mat-option>
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field>
+    <mat-label>分類</mat-label>
+    <mat-select [(ngModel)]="categoryId" (selectionChange)="load(0)">
+      <mat-option [value]="null">全部</mat-option>
+      @for (c of categories(); track c.id) { <mat-option [value]="c.id">{{ c.name }}</mat-option> }
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field>
+    <mat-label>商品名稱</mat-label>
+    <input matInput [(ngModel)]="keyword" (keyup.enter)="load(0)" />
+  </mat-form-field>
+</div>
+
+@if (result(); as r) {
+  <table mat-table [dataSource]="r.content" class="mat-elevation-z1">
+    <ng-container matColumnDef="image">
+      <th mat-header-cell *matHeaderCellDef></th>
+      <td mat-cell *matCellDef="let p"><img class="thumb" [src]="p.imageUrl | imgUrl" [alt]="p.name" /></td>
+    </ng-container>
+    <ng-container matColumnDef="name">
+      <th mat-header-cell *matHeaderCellDef>名稱</th>
+      <td mat-cell *matCellDef="let p">{{ p.name }} @if (p.soldOut) { <span class="sold-out">售完</span> }</td>
+    </ng-container>
+    <ng-container matColumnDef="category">
+      <th mat-header-cell *matHeaderCellDef>分類</th>
+      <td mat-cell *matCellDef="let p">{{ p.categoryName }}</td>
+    </ng-container>
+    <ng-container matColumnDef="price">
+      <th mat-header-cell *matHeaderCellDef>起始價</th>
+      <td mat-cell *matCellDef="let p">{{ p.price | currency: 'TWD' : 'symbol-narrow' : '1.0-0' }}</td>
+    </ng-container>
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef>上架</th>
+      <td mat-cell *matCellDef="let p">
+        <mat-slide-toggle [checked]="p.status === 'ON_SALE'" (change)="toggle(p, $event.checked)" />
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef></th>
+      <td mat-cell *matCellDef="let p"><a mat-button [routerLink]="['/admin/products', p.id]">編輯</a></td>
+    </ng-container>
+    <tr mat-header-row *matHeaderRowDef="columns"></tr>
+    <tr mat-row *matRowDef="let row; columns: columns"></tr>
+  </table>
+  <mat-paginator [length]="r.totalElements" [pageSize]="r.size" [pageIndex]="r.page" [hidePageSize]="true" (page)="onPage($event)" />
+}

@@ -1,0 +1,113 @@
+// Include theming for Angular Material with `mat.theme()`.
+// This Sass mixin will define CSS variables that are used for styling Angular Material
+// components according to the Material 3 design spec.
+// Learn more about theming and how to use it for your application's
+// custom components at https://material.angular.dev/guide/theming
+@use '@angular/material' as mat;
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$orange-palette,
+        tertiary: mat.$red-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+body {
+  // Default the application to a light color theme. This can be changed to
+  // `dark` to enable the dark color theme, or to `light dark` to defer to the
+  // user's system settings.
+  color-scheme: light;
+
+  // Set a default background, font and text colors for the application using
+  // Angular Material's system-level CSS variables. Learn more about these
+  // variables at https://material.angular.dev/guide/system-variables
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+
+  // Reset the user agent margin.
+  margin: 0;
+  height: 100%;
+}
+/* You can add global styles to this file, and also import other style files */
+
+/* ===== 轉角咖啡 ===== */
+:root {
+  --coffee: #6f4e37;
+  --coffee-dark: #4b2e20;
+  --cream: #faf6f0;
+  --line: #e7dccf;
+  --muted: #7a6a5c;
+  --error: #c0392b;
+}
+html, body { margin: 0; font-family: Roboto, "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+a { color: var(--coffee); }
+.page { max-width: 1120px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 28px; }
+.hint { color: var(--muted); }
+.error { color: var(--error); }
+.big { font-size: 20px; font-weight: 700; }
+.hero { padding: 48px 24px; border-radius: 20px; text-align: center; color: #fff;
+  background: linear-gradient(135deg, #6f4e37, #a47148); }
+.hero h1 { font-size: 36px; margin: 0 0 12px; }
+.chips, .filters, .actions, .buy, .title-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.title-row { justify-content: space-between; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px; }
+.grid.dim { opacity: 0.5; }
+.product-card { cursor: pointer; height: 100%; }
+.product-card img { aspect-ratio: 1; object-fit: cover; }
+.product-card h3 { margin: 4px 0; font-size: 16px; }
+.category { color: var(--muted); font-size: 13px; }
+.price { font-weight: 700; color: var(--coffee-dark); }
+.price.big { font-size: 28px; margin: 8px 0; }
+.sold-out { margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #eee; color: #888; font-size: 12px; }
+.detail { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.detail img { width: 100%; border-radius: 16px; }
+.qty { width: 100px; }
+.cart-table, .data { width: 100%; border-collapse: collapse; margin: 12px 0; }
+.cart-table th, .cart-table td, .data th, .data td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+.cart-table .item { display: flex; gap: 12px; align-items: center; }
+.cart-table img, .thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
+.summary { margin-left: auto; max-width: 360px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.summary .total, .line.total { font-size: 20px; font-weight: 800; }
+.free-hint { color: #b35c00; font-weight: 700; }
+.narrow { max-width: 420px; margin: 0 auto; }
+.narrow form, .checkout form { display: flex; flex-direction: column; }
+.checkout { display: grid; grid-template-columns: 3fr 2fr; gap: 32px; }
+.checkout .summary { align-items: stretch; max-width: none; padding: 16px; background: var(--cream); border-radius: 16px; }
+.line { display: flex; justify-content: space-between; gap: 12px; }
+.radios { display: flex; flex-direction: column; margin-bottom: 16px; }
+.result { text-align: center; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.status { padding: 2px 10px; border-radius: 999px; font-size: 13px; background: #eee; vertical-align: middle; }
+.status.PENDING_PAYMENT { background: #fff3cd; }
+.status.PAID { background: #d1ecf1; }
+.status.SHIPPED { background: #e2d9f3; }
+.status.COMPLETED { background: #d4edda; }
+.status.CANCELLED { background: #f8d7da; }
+.warning { padding: 12px 16px; border-radius: 12px; background: #fdecea; color: var(--error); font-weight: 700; }
+.admin { min-height: calc(100vh - 160px); background: transparent; }
+.admin-nav { width: 180px; }
+.admin-nav .active { background: var(--cream); font-weight: 700; }
+.admin-content { padding: 0 24px; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.stats .label { color: var(--muted); }
+.stats .value { font-size: 28px; font-weight: 800; }
+.chart-box { max-width: 520px; }
+.edit-form .cols mat-form-field { width: 100%; }
+.image-box img { width: 220px; height: 220px; object-fit: cover; border-radius: 12px; display: block; margin-bottom: 8px; }
+.upload span { cursor: pointer; text-decoration: underline; }
+.variant-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.variant-row .num { width: 110px; }
+input.short { width: 70px; }
+@media (max-width: 720px) {
+  .detail, .checkout, .cols, .stats { grid-template-columns: 1fr; }
+  .admin-nav { width: 120px; }
+}

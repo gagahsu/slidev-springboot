@@ -1,0 +1,26 @@
+<mat-toolbar class="topbar">
+  <a routerLink="/" class="logo">轉角咖啡 <small>Online Shop</small></a>
+  <a mat-button routerLink="/products">所有商品</a>
+  <span class="spacer"></span>
+
+  @if (auth.isAdmin()) {
+    <a mat-button routerLink="/admin">管理後台</a>
+  }
+  <a mat-icon-button routerLink="/cart" aria-label="購物車">
+    <mat-icon [matBadge]="cart.count()" [matBadgeHidden]="cart.count() === 0" matBadgeColor="warn">shopping_cart</mat-icon>
+  </a>
+  @if (auth.user(); as user) {
+    <button mat-button [matMenuTriggerFor]="menu">{{ user.name }}</button>
+    <mat-menu #menu="matMenu">
+      <a mat-menu-item routerLink="/me/orders">我的訂單</a>
+      <a mat-menu-item routerLink="/me">會員資料</a>
+      <button mat-menu-item (click)="logout()">登出</button>
+    </mat-menu>
+  } @else {
+    <a mat-button routerLink="/login">登入</a>
+  }
+</mat-toolbar>
+
+<main class="page">
+  <router-outlet />
+</main>

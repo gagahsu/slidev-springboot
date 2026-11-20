@@ -1,0 +1,27 @@
+<div class="narrow">
+  <h1>註冊會員</h1>
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <mat-form-field>
+      <mat-label>姓名</mat-label>
+      <input matInput formControlName="name" />
+      @if (form.controls.name.invalid) { <mat-error>請輸入姓名（最多 20 字）</mat-error> }
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>Email</mat-label>
+      <input matInput formControlName="email" autocomplete="username" />
+      @if (form.controls.email.invalid) { <mat-error>請輸入正確的 Email</mat-error> }
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>密碼（至少 8 碼）</mat-label>
+      <input matInput type="password" formControlName="password" autocomplete="new-password" />
+      @if (form.controls.password.invalid) { <mat-error>密碼至少 8 碼</mat-error> }
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>手機（選填）</mat-label>
+      <input matInput formControlName="phone" placeholder="0912345678" />
+      @if (form.controls.phone.invalid) { <mat-error>手機格式不正確</mat-error> }
+    </mat-form-field>
+    @if (error()) { <p class="error">{{ error() }}</p> }
+    <button mat-flat-button type="submit">註冊</button>
+  </form>
+</div>

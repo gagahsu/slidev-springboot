@@ -1,0 +1,19 @@
+<div class="narrow">
+  <h1>會員登入</h1>
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <mat-form-field>
+      <mat-label>Email</mat-label>
+      <input matInput formControlName="email" autocomplete="username" />
+      @if (form.controls.email.hasError('email')) { <mat-error>Email 格式不正確</mat-error> }
+      @if (form.controls.email.hasError('required')) { <mat-error>請輸入 Email</mat-error> }
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>密碼</mat-label>
+      <input matInput type="password" formControlName="password" autocomplete="current-password" />
+      @if (form.controls.password.hasError('required')) { <mat-error>請輸入密碼</mat-error> }
+    </mat-form-field>
+    @if (error()) { <p class="error">{{ error() }}</p> }
+    <button mat-flat-button type="submit">登入</button>
+  </form>
+  <p>還沒有帳號？<a routerLink="/register" [queryParams]="{ returnUrl }">註冊</a></p>
+</div>

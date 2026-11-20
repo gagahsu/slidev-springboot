@@ -1,0 +1,46 @@
+<h1>購物車</h1>
+
+@if (cart().items.length === 0) {
+  <p class="hint">購物車是空的。</p>
+  <a mat-flat-button routerLink="/products">去逛逛</a>
+} @else {
+  <table class="cart-table">
+    <thead><tr><th>商品</th><th>單價</th><th>數量</th><th>小計</th><th></th></tr></thead>
+    <tbody>
+      @for (item of cart().items; track item.variantId) {
+        <tr>
+          <td class="item">
+            <img [src]="item.imageUrl | imgUrl" [alt]="item.productName" />
+            <div>
+              <a [routerLink]="['/products', item.productId]">{{ item.productName }}</a>
+              <div class="hint">{{ item.variantName }}</div>
+              @if (item.quantity > item.stock) {
+                <div class="error">庫存只剩 {{ item.stock }} 件</div>
+              }
+            </div>
+          </td>
+          <td>{{ item.price | currency: 'TWD' : 'symbol-narrow' : '1.0-0' }}</td>
+          <td>
+            <select [value]="item.quantity" (change)="change(item, $any($event.target).value)">
+              @for (n of options(item); track n) {
+                <option [value]="n" [selected]="n === item.quantity">{{ n }}</option>
+              }
+            </select>
+          </td>
+          <td>{{ item.subtotal | currency: 'TWD' : 'symbol-narrow' : '1.0-0' }}</td>
+          <td><button mat-icon-button (click)="remove(item)" aria-label="刪除"><mat-icon>delete</mat-icon></button></td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  <div class="summary">
+    @if (cart().freeShippingGap > 0) {
+      <p class="free-hint">再買 {{ cart().freeShippingGap | currency: 'TWD' : 'symbol-narrow' : '1.0-0' }} 就免運！</p>
+    }
+    <div>商品金額：{{ cart().itemsAmount | currency: 'TWD' : 'symbol-narrow' : '1.0-0' }}</div>
+    <div>運費：{{ cart().shippingFee | currency: 'TWD' : 'symbol-narrow' : '1.0-0' }}</div>
+    <div class="total">合計：{{ cart().totalAmount | currency: 'TWD' : 'symbol-narrow' : '1.0-0' }}</div>
+    <button mat-flat-button (click)="checkout()">前往結帳</button>
+  </div>
+}
