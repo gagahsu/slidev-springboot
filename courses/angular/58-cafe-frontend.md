@@ -511,9 +511,9 @@ Service 把所有呼叫後端的程式集中在一起。上面記得 import 剛�
 
 ---
 
-# 菜單元件：先載入，再顯示
+# 菜單元件（一）：一打開就載入
 
-```ts {all|7|8-13|21-23|25}
+```ts {all|3-4|7|8-13}
 export class MenuComponent implements OnInit {
   private api = inject(CafeApiService);
   categories: Category[] = [];  products: Product[] = [];
@@ -533,68 +533,106 @@ export class MenuComponent implements OnInit {
       error: () => this.showError(),
     });
   }
-
-  get shown(): Product[] {
-    return this.products.filter((p) => p.categoryId === this.selectedId);
-  }
-
-  private showError(): void { this.loading = false;  this.error = '目前無法連線，請稍後再試'; }
-}
+  // …下一頁接著寫
 ```
 
 <!--
 菜單元件，一載入就去拿資料。
 
-（下一步）先拿分類。
+（下一步）先看欄位：分類和品項兩個陣列；selectedId 是目前選中的分類；loading 一開始是 true，表示載入中；error 放錯誤訊息。
 
-（下一步）分類拿到之後，再拿全部的品項。季節限定這個分類還沒有品項，所以用 filter 把沒有品項的分類拿掉，免得客人點進去一片空白。然後預設選第一個分類。
+（下一步）ngOnInit 裡，先拿分類。
 
-（下一步）shown 是一個 getter，算出目前分類的品項。點分類的時候只要改 selectedId，畫面就會跟著變，不用再呼叫一次後端。
+（下一步）分類拿到之後，再拿全部的品項。季節限定這個分類還沒有品項，所以用 filter 把沒有品項的分類拿掉，免得客人點進去一片空白。然後預設選第一個分類，最後把 loading 改成 false。
 
-（下一步）任何一個呼叫失敗，都交給 showError：不再載入中，改顯示錯誤訊息。
+任何一個呼叫失敗，都交給 showError，下一頁就是它。
 -->
 
 ---
 
-# 菜單的畫面
+# 菜單元件（二）：目前分類與錯誤訊息
 
-```html {all|1-6|8-12|13-23}
+接在同一個 `MenuComponent` 裡：
+
+```ts {all|1-3|5-8}
+  get shown(): Product[] {
+    return this.products.filter((p) => p.categoryId === this.selectedId);
+  }
+
+  private showError(): void {
+    this.loading = false;
+    this.error = '目前無法連線，請稍後再試';
+  }
+}
+```
+
+<!--
+這一頁接在上一頁的 ngOnInit 下面，還是同一個類別，最後一個大括號才結束。
+
+（下一步）shown 是一個 getter，算出目前分類的品項。點分類的時候只要改 selectedId，畫面就會跟著變，不用再呼叫一次後端。
+
+（下一步）showError 處理呼叫失敗：不再載入中，改顯示錯誤訊息。如果少了這一步，畫面會永遠停在「載入中」。
+-->
+
+---
+
+# 菜單的畫面（一）：三種情況與分類按鈕
+
+```html {all|1-2|3-7|8-13}
 <section id="menu" class="section">
   <h2 class="section-title">菜單</h2>
-@if (loading) {
-  <p class="hint">載入中…</p>
-} @else if (error) {
-  <p class="hint error">{{ error }}</p>
-} @else {
-  <div class="tabs">
-    @for (c of categories; track c.id) {
-      <button [class.active]="c.id === selectedId" (click)="selectedId = c.id">{{ c.name }}</button>
-    }
-  </div>
-  <div class="cards">
-    @for (p of shown; track p.id) {
-      <article class="card">
-        @if (p.imageUrl) { <img [src]="p.imageUrl" [alt]="p.name" /> }
-        <div class="body">
-          <h3>{{ p.name }}</h3>
-          @if (p.description) { <p>{{ p.description }}</p> }
-          <span class="price">NT$ {{ p.price }}</span>
-        </div>
-      </article>
-    }
-  </div>
-}
+  @if (loading) {
+    <p class="hint">載入中…</p>
+  } @else if (error) {
+    <p class="hint error">{{ error }}</p>
+  } @else {
+    <div class="tabs">
+      @for (c of categories; track c.id) {
+        <button [class.active]="c.id === selectedId" (click)="selectedId = c.id">{{ c.name }}</button>
+      }
+    </div>
+    <!-- 品項卡片放這裡（下一頁） -->
+  }
 </section>
 ```
 
 <!--
-畫面用 @if 分成三種情況。
+接著是 menu.component.html。
 
-（下一步）整個菜單包在 id 是 menu 的 section 裡，導覽列的「菜單」就是捲到這裡。載入中，顯示載入中；出錯了，顯示錯誤訊息。千萬不要一片空白。
+（下一步）整個菜單包在 id 是 menu 的 section 裡，導覽列的「菜單」就是捲到這裡。class 名稱照寫，素材包的樣式才對得上。
 
-（下一步）分類按鈕用 @for 產生，目前選中的加上 active 樣式，點了就改 selectedId。
+（下一步）畫面用 @if 分成三種情況：載入中，顯示載入中；出錯了，顯示錯誤訊息。千萬不要一片空白。
 
-（下一步）品項卡片也用 @for。圖片和說明可能沒有，所以各自用 @if 包起來。
+（下一步）資料到了，就顯示分類按鈕。按鈕用 @for 產生，目前選中的加上 active 樣式，點了就改 selectedId。按鈕下面留一個位置給品項卡片，下一頁寫。
+-->
+
+---
+
+# 菜單的畫面（二）：品項卡片
+
+放在分類按鈕下面（`@else` 的大括號裡面）：
+
+```html {all|1-3|4-9}
+<div class="cards">
+  @for (p of shown; track p.id) {
+    <article class="card">
+      @if (p.imageUrl) { <img [src]="p.imageUrl" [alt]="p.name" /> }
+      <div class="body">
+        <h3>{{ p.name }}</h3>
+        @if (p.description) { <p>{{ p.description }}</p> }
+        <span class="price">NT$ {{ p.price }}</span>
+      </div>
+    </article>
+  }
+</div>
+```
+
+<!--
+品項卡片放在上一頁留的位置，也就是 @else 的大括號裡面、分類按鈕的下面。
+
+（下一步）用 @for 跑的是 shown，只有目前分類的品項。每個品項一張 article 卡片。
+
+（下一步）圖片和說明可能沒有，所以各自用 @if 包起來。價格前面加上 NT 錢字號。
 -->
 
 ---
