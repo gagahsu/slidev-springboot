@@ -265,12 +265,12 @@ enum 的每一個選項，還可以帶著自己的資料。
 
 # 想一想
 
-<Poll question="「問卷的狀態」只會有兩種：草稿、已發佈。用哪一種型別來存最合適？" options="String，想填什麼都可以|int，用 0 和 1 代表|enum，把兩種狀態列出來|boolean，true 或 false" answer="3" />
+<Poll question="「商品的狀態」只會有兩種：上架中、已下架。用哪一種型別來存最合適？" options="String，想填什麼都可以|int，用 0 和 1 代表|enum，把兩種狀態列出來|boolean，true 或 false" answer="3" />
 
 <!--
 來想一題。
 
-問卷的狀態只會有兩種：草稿、已發佈。用哪一種型別來存最合適？
+商品的狀態只會有兩種：上架中、已下架。用哪一種型別來存最合適？
 
 （等大家作答）
 
@@ -899,7 +899,7 @@ LocalDateTime now = LocalDateTime.now();            // 現在（含時、分、�
 <v-click>
 
 <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-left">
-💡 選哪一個？「問卷的截止日」只需要日期，用 <code>LocalDate</code>。「什麼時候送出的」需要精確的時間，用 <code>LocalDateTime</code>。
+💡 選哪一個？「學生的生日」只需要日期，用 <code>LocalDate</code>。「什麼時候送出的」需要精確的時間，用 <code>LocalDateTime</code>。
 </div>
 
 </v-click>
@@ -913,7 +913,7 @@ Java 處理日期和時間，常用的型別有兩種。
 
 （下一步）建立的方法。LocalDate.now() 是今天。LocalDate.of 可以指定年、月、日。LocalDateTime.now() 是現在，包含時、分、秒。
 
-（下一步）選哪一個？看需要多精確。問卷的截止日只需要日期，用 LocalDate。什麼時候送出的，需要精確的時間，用 LocalDateTime。
+（下一步）選哪一個？看需要多精確。學生的生日只需要日期，用 LocalDate。什麼時候送出的，需要精確的時間，用 LocalDateTime。
 -->
 
 ---

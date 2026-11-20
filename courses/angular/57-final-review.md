@@ -1206,19 +1206,19 @@ layout: default
 
 ```typescript
 form = new FormGroup({
-  title: new FormControl(''),
-  questions: new FormArray<FormGroup>([]),
+  productName: new FormControl(''),
+  variants: new FormArray<FormGroup>([]),
 });
 
-get questions() { return this.form.get('questions') as FormArray; }
-addQuestion()    { this.questions.push(new FormGroup({ text: new FormControl('') })); }
-removeQuestion(i: number) { this.questions.removeAt(i); }
+get variants() { return this.form.get('variants') as FormArray; }
+addVariant()    { this.variants.push(new FormGroup({ name: new FormControl('') })); }
+removeVariant(i: number) { this.variants.removeAt(i); }
 ```
 
 <!--
-Reactive Forms 的核心，是三個積木的層級關係。FormControl 是一個欄位，FormGroup 把多個欄位包成一組，FormArray 管理數量會變動的欄位，像問卷題目可以一直新增和刪除，就是 FormArray 的用途。
+Reactive Forms 的核心，是三個積木的層級關係。FormControl 是一個欄位，FormGroup 把多個欄位包成一組，FormArray 管理數量會變動的欄位，像商品的規格可以一直新增和刪除，就是 FormArray 的用途。
 
-程式碼是動態問卷的骨架：getter 把 FormArray 取出來方便操作，push 新增一題，removeAt 刪除指定位置的題目。HTML 的繫結要對應記住：formGroup 綁最外層，formControlName 綁欄位，formArrayName 綁陣列，再用 `@for` 跑過 controls，把每一題畫出來。
+程式碼是商品規格表單的骨架：getter 把 FormArray 取出來方便操作，push 新增一個規格，removeAt 刪除指定位置的規格。HTML 的繫結要對應記住：formGroup 綁最外層，formControlName 綁欄位，formArrayName 綁陣列，再用 `@for` 跑過 controls，把每一個規格畫出來。
 -->
 
 ---

@@ -4,7 +4,7 @@
 title: Spring Boot Backend Masterclass
 # 側欄、搜尋結果等空間較小的地方用的短名
 short: Spring Boot
-description: 從 Spring 核心、MVC、資料庫一路到安全與微服務，最後完成「動態問卷系統」後端。
+description: 從 Spring 核心、MVC、資料庫一路到安全與微服務，最後完成轉角咖啡的前後端串接與「線上商店」後端（購物車、訂單、綠界金流）。
 # 課程卡片上的字（1–2 個字元）與主色：green / blue / purple / orange / pink / teal / yellow
 logo: S
 color: green

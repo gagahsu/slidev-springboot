@@ -144,8 +144,8 @@ import { Validators } from '@angular/forms';
 ```typescript
 // 語法結構：[初始值, 驗證器]
 form = this.fb.group({
-  surveyTitle: ['', Validators.required],  // 必填驗證
-  questions:   this.fb.array([])           // 無驗證
+  productName: ['', Validators.required],  // 必填驗證
+  variants:    this.fb.array([])           // 無驗證
 });
 ```
 
@@ -156,7 +156,7 @@ form = this.fb.group({
 <!--
 使用前，先從 `@angular/forms` 匯入 `Validators`。
 
-上一章提過，`fb.group()` 裡每個欄位可以寫成一個陣列：第一個元素是初始值，第二個元素是驗證器。這裡 `surveyTitle` 加上了 `Validators.required`，代表必填；`questions` 不需要驗證，就不用寫第二個元素。
+上一章提過，`fb.group()` 裡每個欄位可以寫成一個陣列：第一個元素是初始值，第二個元素是驗證器。這裡 `productName` 加上了 `Validators.required`，代表必填；`variants` 不需要驗證，就不用寫第二個元素。
 
 要注意順序是固定的，初始值在前，驗證器在後。
 -->
@@ -169,7 +169,7 @@ form = this.fb.group({
 
 ```typescript
 form = this.fb.group({
-  surveyTitle: ['', [Validators.required, Validators.maxLength(5)]],
+  productName: ['', [Validators.required, Validators.maxLength(20)]],
 });
 ```
 
@@ -178,9 +178,9 @@ form = this.fb.group({
 - 避免設定互相衝突的驗證規則（例如同時設定 `minLength(10)` 與 `maxLength(5)`）
 
 <!--
-如果一個欄位要同時符合好幾條規則，就把驗證器用一個陣列包起來，用逗號分隔。這裡 `surveyTitle` 同時是必填，而且最多 5 個字。
+如果一個欄位要同時符合好幾條規則，就把驗證器用一個陣列包起來，用逗號分隔。這裡 `productName` 同時是必填，而且最多 20 個字。
 
-驗證器的數量沒有上限，但要避免規則互相衝突。例如同時設定最少 10 個字、最多 5 個字，這個欄位就永遠不可能通過。這種邏輯錯誤 Angular 不會幫我們檢查，要自己留意。
+驗證器的數量沒有上限，但要避免規則互相衝突。例如同時設定最少 10 個字、最多 20 個字，這個欄位就永遠不可能通過。這種邏輯錯誤 Angular 不會幫我們檢查，要自己留意。
 -->
 
 ---
@@ -342,8 +342,8 @@ class: flex flex-col justify-center items-center text-center
 ```typescript
 // 送出表單
 onSubmit() {
-  if (this.form.get('surveyTitle')?.invalid) {
-    console.log('標題的內容請符合限制');
+  if (this.form.get('productName')?.invalid) {
+    console.log('商品名稱請符合限制');
     return;
   }
   // 繼續執行送出邏輯
@@ -353,7 +353,7 @@ onSubmit() {
 <!--
 第一個例子，是在 TypeScript 裡，送出前先檢查。
 
-`onSubmit` 一開始判斷 `surveyTitle` 是不是 invalid，如果是，就印出提示並 `return`，後面的送出邏輯就不會執行。
+`onSubmit` 一開始判斷 `productName` 是不是 invalid，如果是，就印出提示並 `return`，後面的送出邏輯就不會執行。
 
 就像過海關前的檢查，資料不符合規定就先攔下來。實際專案通常不只是印出 log，而是會在畫面上顯示提示，下一頁就示範這個。
 -->
@@ -365,10 +365,10 @@ onSubmit() {
 在 HTML 範本中，根據驗證狀態動態顯示錯誤提示：
 
 ```html
-<input formControlName="surveyTitle" />
-@if (form.get('surveyTitle')?.invalid &&
-     form.get('surveyTitle')?.touched) {
-  <p>標題為必填，且長度不得超過 5 個字元。</p>
+<input formControlName="productName" />
+@if (form.get('productName')?.invalid &&
+     form.get('productName')?.touched) {
+  <p>商品名稱為必填，且長度不得超過 20 個字元。</p>
 }
 ```
 
@@ -722,19 +722,19 @@ layout: default
 
 在畫面上直接顯示欄位的驗證狀態：
 
-1. 在 `formControlName="surveyTitle"` 輸入框的正下方，加入一行警告：
+1. 在 `formControlName="productName"` 輸入框的正下方，加入一行警告：
 
 ```html
-<p style="color: red">⚠️ 問卷名稱為必填，且長度不能超過 5 個字！</p>
+<p style="color: red">⚠️ 商品名稱為必填，且長度不能超過 20 個字！</p>
 ```
 
-2. 用 `@if (form.get('surveyTitle')?.invalid)` 控制這行警告的顯示
-3. 測試：輸入框為空、或字數超過 5 個字時，紅字警告是否自動出現
+2. 用 `@if (form.get('productName')?.invalid)` 控制這行警告的顯示
+3. 測試：輸入框為空、或字數超過 20 個字時，紅字警告是否自動出現
 
 <!--
 第一題補充練習，把驗證結果直接顯示在畫面上。
 
-在問卷名稱輸入框下方加一行紅字，用 `@if` 判斷這個欄位是不是無效，無效才顯示。
+在商品名稱輸入框下方加一行紅字，用 `@if` 判斷這個欄位是不是無效，無效才顯示。
 
 我們先暫停一下，自己動手試試看。
 -->
@@ -747,15 +747,15 @@ layout: default
 
 ```typescript
 form = this.fb.group({
-  surveyTitle: ['', [Validators.required, Validators.maxLength(5)]],
+  productName: ['', [Validators.required, Validators.maxLength(20)]],
 });
 ```
 
 ```html
-<input formControlName="surveyTitle">
+<input formControlName="productName">
 
-@if (form.get('surveyTitle')?.invalid) {
-  <p style="color: red">⚠️ 問卷名稱為必填，且長度不能超過 5 個字！</p>
+@if (form.get('productName')?.invalid) {
+  <p style="color: red">⚠️ 商品名稱為必填，且長度不能超過 20 個字！</p>
 }
 ```
 
@@ -766,7 +766,7 @@ form = this.fb.group({
 <!--
 我們來看答案。
 
-`form.get('surveyTitle')` 取得這個欄位，問號是避免取不到欄位時報錯，`invalid` 代表沒有通過驗證。必填沒填、或超過 5 個字，`invalid` 都會是 true，紅字就出現。
+`form.get('productName')` 取得這個欄位，問號是避免取不到欄位時報錯，`invalid` 代表沒有通過驗證。必填沒填、或超過 20 個字，`invalid` 都會是 true，紅字就出現。
 
 你會發現，一打開頁面警告就出現了，因為欄位一開始是空的。實務上會再加上 `touched` 判斷，等使用者點過這個欄位才顯示，體驗比較好。
 -->
