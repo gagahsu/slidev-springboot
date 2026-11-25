@@ -34,6 +34,7 @@ import FormCheck from './anim/FormCheck.vue'
 import SessionTag from './anim/SessionTag.vue'
 import RateDelay from './anim/RateDelay.vue'
 import StickyNote from './anim/StickyNote.vue'
+import CacheTrip from './anim/CacheTrip.vue'
 import GateGuard from './anim/GateGuard.vue'
 import PassCard from './anim/PassCard.vue'
 import Campus from './anim/Campus.vue'
@@ -122,6 +123,7 @@ createApp(App)
   .component('SessionTag', SessionTag)
   .component('RateDelay', RateDelay)
   .component('StickyNote', StickyNote)
+  .component('CacheTrip', CacheTrip)
   .component('GateGuard', GateGuard)
   .component('PassCard', PassCard)
   .component('Campus', Campus)
